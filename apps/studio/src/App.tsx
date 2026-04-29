@@ -1177,6 +1177,7 @@ function App() {
       }
       const result = (await response.json()) as {
         manifest?: SceneManifest;
+        controls?: SceneControlsDocument;
         stats?: BundleStats;
         optimization?: OptimizationDocument;
       };
@@ -1185,6 +1186,9 @@ function App() {
         setSelectedViewId(result.manifest.views[0]?.id ?? "");
         setSelectedInteractionId("");
         setSelectedVariantInteractionId("");
+      }
+      if (result.controls) {
+        setControlsDoc(result.controls);
       }
       if (result.stats) {
         setBundleStats(result.stats);

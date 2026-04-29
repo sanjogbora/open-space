@@ -17,6 +17,19 @@ const sceneRoots = [
   path.join(repoRoot, "apps/studio/public/scenes")
 ];
 const publishedRoot = path.join(repoRoot, "apps/viewer-demo/public/published");
+const defaultControlsDocument = {
+  schemaVersion: "0.1",
+  movement: {
+    enabled: true,
+    clickToMove: true,
+    keyboard: true,
+    dragLook: true,
+    moveSpeed: 3.8,
+    lookSensitivityX: 0.004,
+    lookSensitivityY: 0.0035,
+    clickMoveThresholdPx: 8
+  }
+};
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -611,6 +624,10 @@ async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") 
   const nextManifest = {
     ...manifest,
     sceneUrl,
+    rendering: {
+      ...manifest.rendering,
+      doubleSidedMaterials: true
+    },
     views: importedModelViews(bounds, cameraHeight),
     interactions: [],
     navigation: {
@@ -640,7 +657,10 @@ async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") 
       ...(navigationBounds ? { bounds: navigationBounds } : {})
     }
   };
-  await writeProjectAll(projectId, "scene.manifest.json", nextManifest);
+  await Promise.all([
+    writeProjectAll(projectId, "scene.manifest.json", nextManifest),
+    writeProjectAll(projectId, "controls.json", defaultControlsDocument)
+  ]);
 }
 
 async function setManifestSceneUrl(projectId, sceneUrl) {
@@ -780,6 +800,7 @@ async function handleRequest(request, response) {
       sendJson(response, 200, {
         ok: true,
         manifest: project.manifest,
+        controls: project.controls,
         stats: project.stats,
         optimization: project.optimization
       });

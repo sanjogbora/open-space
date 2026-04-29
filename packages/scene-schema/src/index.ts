@@ -111,6 +111,10 @@ export interface QualityProfile {
   antialias: boolean;
 }
 
+export interface RenderingConfig {
+  doubleSidedMaterials?: boolean;
+}
+
 export interface SceneManifest {
   schemaVersion: "0.1";
   sceneUrl?: string;
@@ -118,6 +122,7 @@ export interface SceneManifest {
   materialsUrl?: string;
   objectsUrl?: string;
   controlsUrl?: string;
+  rendering?: RenderingConfig;
   views: readonly SceneView[];
   interactions: readonly SceneInteraction[];
   navigation: NavigationConfig;
@@ -345,6 +350,13 @@ export function isQualityProfile(value: unknown): value is QualityProfile {
   );
 }
 
+export function isRenderingConfig(value: unknown): value is RenderingConfig {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return value["doubleSidedMaterials"] === undefined || typeof value["doubleSidedMaterials"] === "boolean";
+}
+
 export function isSceneManifest(value: unknown): value is SceneManifest {
   if (!isRecord(value)) {
     return false;
@@ -357,6 +369,7 @@ export function isSceneManifest(value: unknown): value is SceneManifest {
     (value["materialsUrl"] === undefined || typeof value["materialsUrl"] === "string") &&
     (value["objectsUrl"] === undefined || typeof value["objectsUrl"] === "string") &&
     (value["controlsUrl"] === undefined || typeof value["controlsUrl"] === "string") &&
+    (value["rendering"] === undefined || isRenderingConfig(value["rendering"])) &&
     Array.isArray(value["views"]) &&
     value["views"].every(isSceneView) &&
     Array.isArray(value["interactions"]) &&

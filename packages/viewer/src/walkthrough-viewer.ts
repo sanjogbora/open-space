@@ -326,6 +326,7 @@ export class WalkthroughViewer {
   }
 
   private prepareLoadedScene(root: THREE.Object3D): void {
+    const forceDoubleSided = this.manifest.rendering?.doubleSidedMaterials === true;
     root.traverse((node) => {
       if (node instanceof THREE.Mesh) {
         this.applyObjectOverride(node);
@@ -337,10 +338,16 @@ export class WalkthroughViewer {
         if (Array.isArray(node.material)) {
           node.material.forEach((material) => {
             this.applyMaterialOverride(material);
+            if (forceDoubleSided || architecturalShell) {
+              material.side = THREE.DoubleSide;
+            }
             material.needsUpdate = true;
           });
         } else {
           this.applyMaterialOverride(node.material);
+          if (forceDoubleSided || architecturalShell) {
+            node.material.side = THREE.DoubleSide;
+          }
           node.material.needsUpdate = true;
         }
       }
@@ -438,22 +445,47 @@ export class WalkthroughViewer {
 
   private collectCollisionBoxes(root: THREE.Object3D): THREE.Box3[] {
     const collisionNames = this.manifest.navigation.collisionMeshNames.map((name) => name.toLowerCase());
+    const floorNames = this.manifest.navigation.floorMeshNames.map((name) => name.toLowerCase());
     const boxes: THREE.Box3[] = [];
+    const inferredBoxes: { box: THREE.Box3; area: number }[] = [];
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) {
         return;
       }
       const name = node.name.toLowerCase();
-      const isCollisionMesh = collisionNames.some((collisionName) => name.includes(collisionName));
-      if (!isCollisionMesh) {
+      if (floorNames.some((floorName) => name.includes(floorName))) {
         return;
       }
       const box = new THREE.Box3().setFromObject(node);
-      if (!box.isEmpty()) {
+      if (box.isEmpty()) {
+        return;
+      }
+      const isCollisionMesh = collisionNames.some((collisionName) => name.includes(collisionName));
+      if (isCollisionMesh) {
         boxes.push(box);
+        return;
+      }
+
+      const size = box.getSize(new THREE.Vector3());
+      const height = size.y;
+      const wideAxis = Math.max(size.x, size.z);
+      const thinAxis = Math.min(size.x, size.z);
+      const looksLikeWall =
+        height >= 0.8 &&
+        wideAxis >= 0.75 &&
+        thinAxis <= Math.max(0.35, wideAxis * 0.18) &&
+        size.x * size.z <= Math.max(8, wideAxis * 0.75);
+      if (looksLikeWall) {
+        inferredBoxes.push({ box, area: wideAxis * height });
       }
     });
-    return boxes;
+    if (boxes.length > 0) {
+      return boxes;
+    }
+    return inferredBoxes
+      .sort((a, b) => b.area - a.area)
+      .slice(0, 160)
+      .map((item) => item.box);
   }
 
   private configureInteractions(): void {
@@ -747,6 +779,14 @@ export class WalkthroughViewer {
   private canOccupyPosition(position: THREE.Vector3): boolean {
     const candidate = position.clone();
     if (this.minBounds && this.maxBounds) {
+      if (
+        candidate.x < this.minBounds.x ||
+        candidate.x > this.maxBounds.x ||
+        candidate.z < this.minBounds.z ||
+        candidate.z > this.maxBounds.z
+      ) {
+        return false;
+      }
       clampToBounds(candidate, this.minBounds, this.maxBounds);
     }
 
