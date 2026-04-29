@@ -881,6 +881,24 @@ function publishedEmbedSnippet(entry: PublishEntry, title: string): string {
   return `<script src="${viewerBaseUrl}/embed.js" data-scene="${entry.scenePath}" data-title="${title}" data-height="640px"></script>`;
 }
 
+function shellQuote(value: string): string {
+  return `"${value.replace(/"/g, '\\"')}"`;
+}
+
+function publishedLocalDeployCommand(entry: PublishEntry): string {
+  if (!entry.deploymentPath) {
+    return "";
+  }
+  return `node scripts/deploy-published-bundle.mjs ${shellQuote(entry.deploymentPath)} --out=dist/published`;
+}
+
+function publishedBucketDeployCommand(entry: PublishEntry): string {
+  if (!entry.deploymentPath) {
+    return "";
+  }
+  return `node scripts/deploy-published-bundle.mjs ${shellQuote(entry.deploymentPath)} --s3=s3://your-bucket/open-space/${entry.version}`;
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -3449,6 +3467,39 @@ function App() {
                         </div>
                         {entry.cdnBasePath && <code>{entry.cdnBasePath}</code>}
                         <code>{publishedEmbedSnippet(entry, manifest.branding.clientName ?? manifest.branding.title)}</code>
+                        {entry.deploymentPath && (
+                          <div className="deploy-command-list">
+                            <div className="publish-row">
+                              <span>Local deploy</span>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => void copyText(publishedLocalDeployCommand(entry))}
+                              >
+                                <Copy size={16} aria-hidden="true" />
+                                Copy
+                              </button>
+                            </div>
+                            <code>{publishedLocalDeployCommand(entry)}</code>
+                            <div className="publish-row">
+                              <span>S3/R2 deploy</span>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => void copyText(publishedBucketDeployCommand(entry))}
+                              >
+                                <Copy size={16} aria-hidden="true" />
+                                Copy
+                              </button>
+                            </div>
+                            <code>{publishedBucketDeployCommand(entry)}</code>
+                          </div>
+                        )}
+                        {!entry.deploymentPath && (
+                          <p className="quiet-note">
+                            Republish this project to generate deployment metadata and copy-ready deploy commands.
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>

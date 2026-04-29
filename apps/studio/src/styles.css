@@ -797,6 +797,13 @@ button.list-row {
   gap: 8px;
 }
 
+.deploy-command-list {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid #e3e8eb;
+}
+
 .surface-mapper {
   display: grid;
   gap: 10px;
