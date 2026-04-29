@@ -494,6 +494,12 @@ button {
   line-height: 1.45;
 }
 
+.loading-phase {
+  margin: -4px 0 10px;
+  color: rgba(238, 243, 247, 0.72);
+  font-size: 13px;
+}
+
 .progress-track {
   height: 6px;
   overflow: hidden;

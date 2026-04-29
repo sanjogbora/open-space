@@ -147,6 +147,7 @@ function App() {
   const [manifest, setManifest] = useState<SceneManifest | null>(null);
   const [manifestError, setManifestError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("Preparing scene");
   const [ready, setReady] = useState(false);
   const [activeViewId, setActiveViewId] = useState("");
   const [activeHotspot, setActiveHotspot] = useState<HotspotActivation | null>(null);
@@ -205,6 +206,7 @@ function App() {
     async function loadManifest() {
       setReady(false);
       setProgress(0);
+      setProgressLabel("Loading manifest");
       setManifestError(null);
 
       try {
@@ -250,9 +252,11 @@ function App() {
       onReady: () => {
         setReady(true);
         setProgress(1);
+        setProgressLabel("Scene ready");
       },
       onProgress: (event) => {
         setProgress(event.ratio);
+        setProgressLabel(event.label);
       },
       onViewChange: (view) => {
         setActiveViewId(view.id);
@@ -274,6 +278,7 @@ function App() {
       },
       onError: (error) => {
         console.error(error);
+        setManifestError(error.message);
       }
     });
 
@@ -392,9 +397,12 @@ function App() {
                 {manifestError ? (
                   <p className="loading-error">{manifestError}</p>
                 ) : (
-                  <div className="progress-track">
-                    <div className="progress-value" style={{ width: `${Math.max(8, progress * 100)}%` }} />
-                  </div>
+                  <>
+                    <p className="loading-phase">{progressLabel}</p>
+                    <div className="progress-track">
+                      <div className="progress-value" style={{ width: `${Math.max(8, progress * 100)}%` }} />
+                    </div>
+                  </>
                 )}
               </div>
             </div>
