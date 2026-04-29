@@ -304,6 +304,7 @@ export class WalkthroughViewer {
       this.pickableMeshes = this.collectPickableMeshes(this.sceneRoot);
       this.configureNavigationSurfaces(this.sceneRoot);
       this.fitLightingToScene(this.sceneRoot);
+      this.repairInitialCameraIfNeeded(this.sceneRoot);
       if (this.floorMeshes.length === 0) {
         this.installFallbackFloor();
       }
@@ -387,6 +388,7 @@ export class WalkthroughViewer {
     this.pickableMeshes = this.collectPickableMeshes(demo.root);
     this.configureNavigationSurfaces(demo.root, [demo.floor]);
     this.fitLightingToScene(demo.root);
+    this.repairInitialCameraIfNeeded(demo.root);
   }
 
   private installFallbackFloor(): void {
@@ -1020,6 +1022,53 @@ export class WalkthroughViewer {
       this.camera.position.set(-4, 1.65, 4);
       this.cameraTarget.set(0, 1.35, 0);
     }
+    this.updateAnglesFromTarget();
+    this.camera.lookAt(this.cameraTarget);
+  }
+
+  private repairInitialCameraIfNeeded(root: THREE.Object3D): void {
+    const box = new THREE.Box3().setFromObject(root);
+    if (box.isEmpty()) {
+      return;
+    }
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const radius = Math.max(1, size.length() * 0.5);
+    const firstView = this.manifest.views[0];
+    const cameraOffset = this.camera.position.distanceTo(center);
+    const targetOffset = this.cameraTarget.distanceTo(center);
+    const invalidCamera =
+      !Number.isFinite(this.camera.position.x) ||
+      !Number.isFinite(this.camera.position.y) ||
+      !Number.isFinite(this.camera.position.z) ||
+      !Number.isFinite(this.cameraTarget.x) ||
+      !Number.isFinite(this.cameraTarget.y) ||
+      !Number.isFinite(this.cameraTarget.z);
+    const yTooFarBelow = this.camera.position.y < box.min.y - Math.max(1, size.y * 0.5);
+    const yTooFarAbove = this.camera.position.y > box.max.y + Math.max(12, size.y * 5);
+    const cameraTooFar = cameraOffset > Math.max(40, radius * 7);
+    const targetTooFar = targetOffset > Math.max(30, radius * 5);
+    if (firstView && !invalidCamera && !yTooFarBelow && !yTooFarAbove && !cameraTooFar && !targetTooFar) {
+      return;
+    }
+
+    this.fitCameraToBox(box);
+  }
+
+  private fitCameraToBox(box: THREE.Box3): void {
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const footprint = Math.max(size.x, size.z, 1);
+    const height = Math.max(size.y, 1);
+    const distance = Math.max(3.5, footprint * 1.15, height * 1.4);
+    const eyeY = Math.max(box.min.y + this.cameraHeight, center.y + Math.min(height * 0.22, 1.2));
+    const targetY = THREE.MathUtils.clamp(eyeY - 0.35, box.min.y + 0.8, box.max.y);
+
+    this.camera.position.set(center.x, eyeY, center.z + distance);
+    this.cameraTarget.set(center.x, targetY, center.z);
+    this.camera.near = Math.max(0.02, distance / 1000);
+    this.camera.far = Math.max(this.camera.far, distance * 8, size.length() * 4);
+    this.camera.updateProjectionMatrix();
     this.updateAnglesFromTarget();
     this.camera.lookAt(this.cameraTarget);
   }
