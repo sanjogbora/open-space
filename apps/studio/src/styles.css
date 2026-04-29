@@ -650,6 +650,44 @@ button.list-row {
   margin-bottom: 4px;
 }
 
+.publish-readiness-list {
+  display: grid;
+  gap: 8px;
+}
+
+.readiness-row {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border: 1px solid #e3e8eb;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.readiness-row span {
+  color: #52636f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.readiness-row strong {
+  color: #24313a;
+  font-size: 13px;
+}
+
+.readiness-row.ready {
+  border-color: rgba(42, 151, 99, 0.26);
+  background: #f3fbf6;
+}
+
+.readiness-row.warn {
+  border-color: rgba(217, 139, 39, 0.32);
+  background: #fff8ed;
+}
+
 .optimization-action-controls {
   min-width: 220px;
   display: flex;

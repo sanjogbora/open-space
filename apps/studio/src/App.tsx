@@ -946,6 +946,44 @@ function App() {
     () => manifest?.interactions.filter(isMaterialVariantInteraction) ?? [],
     [manifest]
   );
+  const publishChecks = useMemo(() => {
+    const errorDiagnostics = bundleStats?.diagnostics?.filter((diagnostic) => diagnostic.severity === "error") ?? [];
+    return [
+      {
+        id: "views",
+        label: "Starting views",
+        ready: (manifest?.views.length ?? 0) > 0,
+        detail: `${manifest?.views.length ?? 0} configured`
+      },
+      {
+        id: "assets",
+        label: "Referenced assets",
+        ready: (bundleStats?.missingAssetCount ?? 0) === 0,
+        detail:
+          bundleStats && bundleStats.missingAssetCount > 0
+            ? `${bundleStats.missingAssetCount} missing`
+            : "All present"
+      },
+      {
+        id: "diagnostics",
+        label: "Blocking diagnostics",
+        ready: errorDiagnostics.length === 0,
+        detail: errorDiagnostics.length > 0 ? `${errorDiagnostics.length} error(s)` : "No errors"
+      },
+      {
+        id: "geometry",
+        label: "Geometry compression",
+        ready: geometryCompressionLabel(bundleStats) !== "None",
+        detail: geometryCompressionLabel(bundleStats)
+      },
+      {
+        id: "texture",
+        label: "Texture transfer compression",
+        ready: textureCompressionLabel(bundleStats) !== "None" || (bundleStats?.imageCount ?? 0) === 0,
+        detail: (bundleStats?.imageCount ?? 0) === 0 ? "No textures" : textureCompressionLabel(bundleStats)
+      }
+    ];
+  }, [bundleStats, manifest]);
 
   const selectedHotspot = useMemo(
     () => hotspotInteractions.find((interaction) => interaction.id === selectedInteractionId),
@@ -2535,6 +2573,15 @@ function App() {
               </div>
 
               {publishError && <p className="error-note">{publishError}</p>}
+
+              <div className="publish-readiness-list" aria-label="Publish readiness">
+                {publishChecks.map((check) => (
+                  <div key={check.id} className={check.ready ? "readiness-row ready" : "readiness-row warn"}>
+                    <span>{check.label}</span>
+                    <strong>{check.detail}</strong>
+                  </div>
+                ))}
+              </div>
 
               <div className="publish-row">
                 <span>Draft Viewer</span>
