@@ -1831,6 +1831,35 @@ function App() {
     setNotice("saved");
   };
 
+  const createWalkZonesFromViews = () => {
+    const walkViews = manifest?.views.filter((view) => view.kind === "walk") ?? [];
+    if (walkViews.length === 0) {
+      return;
+    }
+    updateNavigation((navigation) => {
+      const bounds = navigation.bounds;
+      const existing = (navigation.zones ?? []).filter((zone) => !zone.id.startsWith("walk-view-"));
+      const floorY = bounds ? bounds.min[1] + 0.03 : 0.03;
+      const patchSize = bounds
+        ? Math.max(1.6, Math.min(4, Math.max(bounds.max[0] - bounds.min[0], bounds.max[2] - bounds.min[2]) * 0.16))
+        : 2.4;
+      const viewZones: NavigationZone[] = walkViews.map((view) => ({
+        id: `walk-view-${view.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 64),
+        label: `${view.label} walk patch`,
+        kind: "walk",
+        center: [Number(view.position[0].toFixed(3)), Number(floorY.toFixed(3)), Number(view.position[2].toFixed(3))],
+        size: [patchSize, 0.08, patchSize],
+        rotationY: 0,
+        enabled: true
+      }));
+      return {
+        ...navigation,
+        zones: [...existing, ...viewZones]
+      };
+    });
+    setNotice("saved");
+  };
+
   const addNavigationRepairZone = (kind: "walk" | "pass") => {
     const point = navigationRepairDraft?.point;
     if (!point) {
@@ -5041,6 +5070,15 @@ function App() {
                         >
                           <Plus size={16} aria-hidden="true" />
                           Walk
+                        </button>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          disabled={manifest.views.filter((view) => view.kind === "walk").length === 0}
+                          onClick={createWalkZonesFromViews}
+                        >
+                          <Wrench size={16} aria-hidden="true" />
+                          View Walks
                         </button>
                         <button
                           type="button"
