@@ -708,6 +708,58 @@ function boundsSize(bounds) {
   ];
 }
 
+function boundsArea(bounds) {
+  const size = boundsSize(bounds);
+  return size ? Math.abs(size[0] * size[2]) : 0;
+}
+
+function likelyExteriorPlaneName(name) {
+  const normalized = String(name || "").toLowerCase();
+  return [
+    "terrain",
+    "landscape",
+    "grass",
+    "lawn",
+    "site",
+    "environment",
+    "background",
+    "plane",
+    "plot"
+  ].some((keyword) => normalized.includes(keyword));
+}
+
+function dominantFlatPlane(graph, sceneBounds) {
+  if (!graph || !sceneBounds) {
+    return undefined;
+  }
+  const sceneArea = Math.max(1, boundsArea(sceneBounds));
+  return (graph.nodes ?? [])
+    .map((node) => {
+      if (!node.bounds) {
+        return undefined;
+      }
+      const size = boundsSize(node.bounds);
+      if (!size) {
+        return undefined;
+      }
+      const area = Math.abs(size[0] * size[2]);
+      const flat = Math.abs(size[1]) <= Math.max(0.08, Math.min(Math.abs(size[0]), Math.abs(size[2])) * 0.04);
+      const name = `${node.name} ${node.meshName ?? ""}`;
+      const exteriorNamed = likelyExteriorPlaneName(name);
+      if (!flat || area < sceneArea * (exteriorNamed ? 0.18 : 0.42)) {
+        return undefined;
+      }
+      return {
+        name: node.name || node.meshName || "Flat surface",
+        area,
+        sceneArea,
+        exteriorNamed
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.area - a.area)[0];
+}
+
 function keywordMatchCount(graph, keywords) {
   const normalized = keywords.map((keyword) => keyword.toLowerCase());
   return (graph?.nodes ?? []).filter((node) => {
@@ -722,6 +774,7 @@ function createDiagnostics(manifest, report, graphs) {
   const bounds = graphBounds(graph);
   const size = boundsSize(bounds);
   const largestDimension = size ? Math.max(...size.map(Math.abs)) : 0;
+  const flatPlane = dominantFlatPlane(graph, bounds);
   const modelScale = manifest.rendering?.modelScale ?? 1;
   const missingExternalResources = report.models.reduce(
     (sum, model) => sum + (model.missingExternalResourceCount ?? 0),
@@ -843,6 +896,17 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Model scale normalized",
       message: `The viewer applies a ${modelScale} scale factor so navigation uses meter-like units.`,
       action: "Keep this value unless the model appears too small or too large."
+    });
+  }
+
+  if (flatPlane) {
+    const percent = Math.min(100, Math.round((flatPlane.area / flatPlane.sceneArea) * 100));
+    diagnostics.push({
+      severity: flatPlane.exteriorNamed ? "warning" : "info",
+      code: "dominant-flat-plane",
+      title: "Large flat plane detected",
+      message: `${flatPlane.name} covers about ${percent}% of the scene footprint and can dominate camera framing, top views, and click-floor detection.`,
+      action: "Run model repair to regenerate focused views, or add explicit walk zones and hide/rename exterior terrain if it should not drive navigation."
     });
   }
 
