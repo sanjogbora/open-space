@@ -17,6 +17,7 @@ const sceneRoots = [
   path.join(repoRoot, "apps/studio/public/scenes")
 ];
 const publishedRoot = path.join(repoRoot, "apps/viewer-demo/public/published");
+const imageExtensions = new Set([".avif", ".basis", ".jpg", ".jpeg", ".ktx2", ".png", ".webp"]);
 const defaultControlsDocument = {
   schemaVersion: "0.1",
   movement: {
@@ -195,6 +196,16 @@ function validateGlbBuffer(body) {
   }
 }
 
+function parseGlbJsonDocument(body) {
+  validateGlbBuffer(body);
+  const jsonChunkLength = body.readUInt32LE(12);
+  const jsonChunkType = body.readUInt32LE(16);
+  if (jsonChunkType !== 0x4e4f534a) {
+    throw badRequest("GLB JSON chunk is missing.");
+  }
+  return JSON.parse(body.subarray(20, 20 + jsonChunkLength).toString("utf8").trim());
+}
+
 function validateGltfBuffer(body) {
   let document;
   try {
@@ -205,6 +216,21 @@ function validateGltfBuffer(body) {
   if (document?.asset?.version !== "2.0") {
     throw badRequest("Only glTF 2.0 uploads are supported.");
   }
+}
+
+function localGltfUri(value) {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    !value.startsWith("data:") &&
+    !value.startsWith("blob:") &&
+    !value.startsWith("http://") &&
+    !value.startsWith("https://")
+  );
+}
+
+function stripUriQuery(value) {
+  return value.split(/[?#]/, 1)[0].replace(/\\/g, "/");
 }
 
 function isSafeLocalSceneUrl(value) {
@@ -351,6 +377,92 @@ async function writeProjectArchive(projectId, body) {
   );
 
   return sceneUrl;
+}
+
+async function listProjectImages(root, dir = root, files = []) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (["dist", "node_modules", ".git"].includes(entry.name)) {
+        continue;
+      }
+      await listProjectImages(root, fullPath, files);
+      continue;
+    }
+    if (entry.isFile() && imageExtensions.has(path.extname(entry.name).toLowerCase())) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+function safeProjectOutputPath(root, filePath) {
+  const relative = path.relative(root, filePath);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw badRequest(`Unsafe project path: ${filePath}.`);
+  }
+  return filePath;
+}
+
+async function modelDocument(scenePath) {
+  const extension = path.extname(scenePath).toLowerCase();
+  if (extension === ".glb") {
+    return parseGlbJsonDocument(await readFile(scenePath));
+  }
+  if (extension === ".gltf") {
+    return JSON.parse(await readFile(scenePath, "utf8"));
+  }
+  return undefined;
+}
+
+async function repairExternalTexturePaths(projectId) {
+  let copied = 0;
+  await Promise.all(
+    targetDirs(projectId).map(async (target) => {
+      const manifest = await readJson(path.join(target, "scene.manifest.json"));
+      const sceneUrl = manifest.sceneUrl ?? "scene.glb";
+      if (!isSafeLocalSceneUrl(sceneUrl)) {
+        return;
+      }
+      const scenePath = safeProjectOutputPath(target, path.join(target, sceneUrl));
+      const document = await modelDocument(scenePath);
+      const imageUris = (document?.images ?? [])
+        .map((image) => image?.uri)
+        .filter(localGltfUri)
+        .map(stripUriQuery)
+        .filter((uri) => imageExtensions.has(path.extname(uri).toLowerCase()));
+      if (imageUris.length === 0) {
+        return;
+      }
+
+      const looseImages = await listProjectImages(target);
+      const imageByName = new Map();
+      for (const imagePath of looseImages) {
+        const key = path.basename(imagePath).toLowerCase();
+        if (!imageByName.has(key)) {
+          imageByName.set(key, imagePath);
+        }
+      }
+
+      await Promise.all(
+        imageUris.map(async (uri) => {
+          const expectedPath = safeProjectOutputPath(target, path.resolve(path.dirname(scenePath), uri));
+          if (await fileExists(expectedPath)) {
+            return;
+          }
+          const sourcePath = imageByName.get(path.basename(uri).toLowerCase());
+          if (!sourcePath || path.resolve(sourcePath) === path.resolve(expectedPath)) {
+            return;
+          }
+          await mkdir(path.dirname(expectedPath), { recursive: true });
+          await cp(sourcePath, expectedPath);
+          copied += 1;
+        })
+      );
+    })
+  );
+  return copied;
 }
 
 function validateManifest(value) {
@@ -1134,6 +1246,7 @@ async function handleRequest(request, response) {
     const repairProjectId = projectIdFromPathname(url.pathname, "/repair-import");
     if (request.method === "POST" && repairProjectId) {
       await runAnalyze(repairProjectId);
+      const repairedExternalResources = await repairExternalTexturePaths(repairProjectId);
       const current = await projectPayload(repairProjectId);
       await resetManifestForUploadedModel(repairProjectId, current.manifest.sceneUrl ?? "scene.glb", {
         resetInteractions: false,
@@ -1143,6 +1256,7 @@ async function handleRequest(request, response) {
       const project = await projectPayload(repairProjectId);
       sendJson(response, 200, {
         ok: true,
+        repairedExternalResources,
         manifest: project.manifest,
         controls: project.controls,
         stats: project.stats,
