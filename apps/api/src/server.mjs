@@ -811,6 +811,9 @@ async function resetManifestForUploadedModel(
     environment: {
       ...manifest.environment,
       backgroundColor: manifest.environment?.backgroundColor ?? "#d8dde2",
+      skyBackdropEnabled: manifest.environment?.skyBackdropEnabled ?? true,
+      skyTopColor: manifest.environment?.skyTopColor ?? "#d8e7f5",
+      skyHorizonColor: manifest.environment?.skyHorizonColor ?? "#f3f6f8",
       groundEnabled: manifest.environment?.groundEnabled ?? true,
       groundColor: manifest.environment?.groundColor ?? "#6f8f5a",
       groundSize:

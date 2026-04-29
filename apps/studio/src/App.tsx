@@ -3906,6 +3906,19 @@ function App() {
                 <label>
                   <input
                     type="checkbox"
+                    checked={manifest.environment?.skyBackdropEnabled ?? true}
+                    onChange={(event) =>
+                      updateEnvironment((environment) => ({
+                        ...environment,
+                        skyBackdropEnabled: event.target.checked
+                      }))
+                    }
+                  />
+                  <span>Sky backdrop</span>
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
                     checked={manifest.environment?.groundEnabled ?? true}
                     onChange={(event) =>
                       updateEnvironment((environment) => ({
@@ -3926,6 +3939,30 @@ function App() {
                       updateEnvironment((environment) => ({
                         ...environment,
                         backgroundColor: event.target.value
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Sky top</span>
+                  <input
+                    value={manifest.environment?.skyTopColor ?? "#d8e7f5"}
+                    onChange={(event) =>
+                      updateEnvironment((environment) => ({
+                        ...environment,
+                        skyTopColor: event.target.value
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Sky horizon</span>
+                  <input
+                    value={manifest.environment?.skyHorizonColor ?? "#f3f6f8"}
+                    onChange={(event) =>
+                      updateEnvironment((environment) => ({
+                        ...environment,
+                        skyHorizonColor: event.target.value
                       }))
                     }
                   />

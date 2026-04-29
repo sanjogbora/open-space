@@ -114,6 +114,7 @@ export class WalkthroughViewer {
   private sunLight: THREE.DirectionalLight | undefined;
   private sunTarget: THREE.Object3D | undefined;
   private environmentTexture: THREE.Texture | undefined;
+  private skyTexture: THREE.Texture | undefined;
   private pmremGenerator: THREE.PMREMGenerator | undefined;
   private debug: boolean;
 
@@ -169,6 +170,7 @@ export class WalkthroughViewer {
     this.destroyed = true;
     cancelAnimationFrame(this.frameId);
     this.managedTextures.forEach((item) => item.destroy?.());
+    this.skyTexture?.dispose();
     this.collisionDebugHelpers.forEach((helper) => {
       helper.geometry.dispose();
       if (Array.isArray(helper.material)) {
@@ -526,6 +528,10 @@ export class WalkthroughViewer {
     this.scene.environment = this.environmentTexture;
     roomEnvironment.dispose();
 
+    if (environment?.skyBackdropEnabled !== false) {
+      this.addSkyBackdrop();
+    }
+
     if (environment?.groundEnabled === false) {
       return;
     }
@@ -546,6 +552,38 @@ export class WalkthroughViewer {
     ground.position.y = (environment?.groundY ?? -0.04) * this.manifestScale;
     ground.receiveShadow = true;
     this.scene.add(ground);
+  }
+
+  private addSkyBackdrop(): void {
+    const environment = this.manifest.environment;
+    const canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 128;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+    const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, environment?.skyTopColor ?? "#d8e7f5");
+    gradient.addColorStop(0.62, environment?.skyHorizonColor ?? "#f3f6f8");
+    gradient.addColorStop(1, environment?.backgroundColor ?? "#d8dde2");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    this.skyTexture = new THREE.CanvasTexture(canvas);
+    this.skyTexture.colorSpace = THREE.SRGBColorSpace;
+    const radius = Math.max(120, (environment?.groundSize ?? 90) * this.manifestScale * 1.7);
+    const sky = new THREE.Mesh(
+      new THREE.SphereGeometry(radius, 32, 16),
+      new THREE.MeshBasicMaterial({
+        map: this.skyTexture,
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false
+      })
+    );
+    sky.name = "environment_sky_backdrop";
+    sky.renderOrder = -10;
+    this.scene.add(sky);
   }
 
   private prepareLoadedScene(root: THREE.Object3D): void {

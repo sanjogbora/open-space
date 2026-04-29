@@ -132,6 +132,9 @@ export interface RenderingConfig {
 
 export interface EnvironmentConfig {
   backgroundColor?: string;
+  skyBackdropEnabled?: boolean;
+  skyTopColor?: string;
+  skyHorizonColor?: string;
   groundEnabled?: boolean;
   groundColor?: string;
   groundSize?: number;
@@ -426,6 +429,9 @@ export function isEnvironmentConfig(value: unknown): value is EnvironmentConfig 
   }
   return (
     (value["backgroundColor"] === undefined || typeof value["backgroundColor"] === "string") &&
+    (value["skyBackdropEnabled"] === undefined || typeof value["skyBackdropEnabled"] === "boolean") &&
+    (value["skyTopColor"] === undefined || typeof value["skyTopColor"] === "string") &&
+    (value["skyHorizonColor"] === undefined || typeof value["skyHorizonColor"] === "string") &&
     (value["groundEnabled"] === undefined || typeof value["groundEnabled"] === "boolean") &&
     (value["groundColor"] === undefined || typeof value["groundColor"] === "string") &&
     (value["groundSize"] === undefined || typeof value["groundSize"] === "number") &&
