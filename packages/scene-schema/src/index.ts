@@ -139,6 +139,7 @@ export interface SceneControlsDocument {
     keyboard: boolean;
     dragLook: boolean;
     moveSpeed: number;
+    clickMoveSpeed?: number;
     lookSensitivityX: number;
     lookSensitivityY: number;
     clickMoveThresholdPx: number;

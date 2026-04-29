@@ -61,6 +61,7 @@ export class WalkthroughViewer {
     keyboard: true,
     dragLook: true,
     moveSpeed: 3.8,
+    clickMoveSpeed: 1.9,
     lookSensitivityX: 0.004,
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8
@@ -726,7 +727,8 @@ export class WalkthroughViewer {
       return;
     }
     const nextPosition = this.camera.position.clone();
-    dampVector(nextPosition, target, this.manifest.navigation.moveSpeed, delta);
+    const clickMoveSpeed = this.controls.clickMoveSpeed ?? 1.9;
+    dampVector(nextPosition, target, clickMoveSpeed, delta);
     if (this.canOccupyPosition(nextPosition, this.camera.position)) {
       this.camera.position.copy(nextPosition);
       this.clampCamera();

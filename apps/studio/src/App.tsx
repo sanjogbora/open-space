@@ -2654,6 +2654,19 @@ function App() {
                       }
                     />
                     <NumberField
+                      label="Click Glide"
+                      min={0.4}
+                      max={6}
+                      step={0.1}
+                      value={controlsDoc.movement.clickMoveSpeed ?? 1.9}
+                      onChange={(value) =>
+                        updateControls((current) => ({
+                          ...current,
+                          movement: { ...current.movement, clickMoveSpeed: value }
+                        }))
+                      }
+                    />
+                    <NumberField
                       label="Horizontal Look"
                       min={0.001}
                       max={0.02}

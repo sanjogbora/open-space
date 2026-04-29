@@ -25,6 +25,7 @@ const defaultControlsDocument = {
     keyboard: true,
     dragLook: true,
     moveSpeed: 3.8,
+    clickMoveSpeed: 1.9,
     lookSensitivityX: 0.004,
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8
@@ -370,6 +371,7 @@ function validateControls(value) {
     typeof movement.keyboard !== "boolean" ||
     typeof movement.dragLook !== "boolean" ||
     typeof movement.moveSpeed !== "number" ||
+    (movement.clickMoveSpeed !== undefined && typeof movement.clickMoveSpeed !== "number") ||
     typeof movement.lookSensitivityX !== "number" ||
     typeof movement.lookSensitivityY !== "number" ||
     typeof movement.clickMoveThresholdPx !== "number"
