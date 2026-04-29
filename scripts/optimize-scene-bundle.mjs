@@ -146,23 +146,29 @@ if (isExternalAsset(manifestSceneUrl)) {
 }
 
 const fallbackSource = path.resolve(bundleDir, "scene.glb");
+const originalSource = manifest.originalSceneUrl ? path.resolve(bundleDir, manifest.originalSceneUrl) : undefined;
 const currentSource = path.resolve(bundleDir, manifestSceneUrl);
 const sourceSceneUrl =
-  manifestSceneUrl === optimizedSceneUrl && (await exists(fallbackSource))
+  manifestSceneUrl === optimizedSceneUrl && originalSource && (await exists(originalSource))
+    ? manifest.originalSceneUrl
+    : manifestSceneUrl === optimizedSceneUrl && (await exists(fallbackSource))
     ? "scene.glb"
     : manifestSceneUrl;
 const sourcePath = path.resolve(bundleDir, sourceSceneUrl);
 const outputPath = path.resolve(bundleDir, optimizedSceneUrl);
 const beforeInfo = await stat(sourcePath);
-const sourceBytes = await readFile(sourcePath);
-const compactBytes = compactGlbJson(sourceBytes);
-await writeFile(outputPath, compactBytes);
+if (sourcePath.toLowerCase().endsWith(".glb")) {
+  const sourceBytes = await readFile(sourcePath);
+  const compactBytes = compactGlbJson(sourceBytes);
+  await writeFile(outputPath, compactBytes);
+}
 await optimizeGlb(sourcePath, outputPath, profile);
 const afterInfo = await stat(outputPath);
 
 if (applyOptimized) {
   const nextManifest = {
     ...manifest,
+    originalSceneUrl: manifest.originalSceneUrl ?? sourceSceneUrl,
     sceneUrl: optimizedSceneUrl
   };
   await writeFile(manifestPath, `${JSON.stringify(nextManifest, null, 2)}\n`);

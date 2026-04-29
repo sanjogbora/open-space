@@ -118,6 +118,7 @@ export interface RenderingConfig {
 export interface SceneManifest {
   schemaVersion: "0.1";
   sceneUrl?: string;
+  originalSceneUrl?: string;
   graphUrl?: string;
   materialsUrl?: string;
   objectsUrl?: string;
@@ -365,6 +366,7 @@ export function isSceneManifest(value: unknown): value is SceneManifest {
   return (
     value["schemaVersion"] === "0.1" &&
     (value["sceneUrl"] === undefined || typeof value["sceneUrl"] === "string") &&
+    (value["originalSceneUrl"] === undefined || typeof value["originalSceneUrl"] === "string") &&
     (value["graphUrl"] === undefined || typeof value["graphUrl"] === "string") &&
     (value["materialsUrl"] === undefined || typeof value["materialsUrl"] === "string") &&
     (value["objectsUrl"] === undefined || typeof value["objectsUrl"] === "string") &&

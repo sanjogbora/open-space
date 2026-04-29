@@ -175,6 +175,34 @@ function validateGlbBuffer(body) {
   }
 }
 
+function validateGltfBuffer(body) {
+  let document;
+  try {
+    document = JSON.parse(body.toString("utf8"));
+  } catch {
+    throw badRequest("Uploaded GLTF JSON is invalid.");
+  }
+  if (document?.asset?.version !== "2.0") {
+    throw badRequest("Only glTF 2.0 uploads are supported.");
+  }
+}
+
+function isSafeLocalSceneUrl(value) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return false;
+  }
+  const normalized = value.replace(/\\/g, "/");
+  return (
+    !normalized.startsWith("/") &&
+    !normalized.startsWith("http://") &&
+    !normalized.startsWith("https://") &&
+    !normalized.startsWith("data:") &&
+    !normalized.startsWith("blob:") &&
+    !normalized.split("/").some((part) => part === "" || part === "." || part === "..") &&
+    (normalized.toLowerCase().endsWith(".glb") || normalized.toLowerCase().endsWith(".gltf"))
+  );
+}
+
 function isZipBuffer(body) {
   return body.length >= 4 && body.readUInt32LE(0) === 0x04034b50;
 }
@@ -258,21 +286,35 @@ function extractZipEntries(body) {
 }
 
 function archiveSceneUrl(entries) {
-  const glbEntries = entries
+  const sceneEntries = entries
     .map((entry) => entry.filename)
-    .filter((filename) => filename.toLowerCase().endsWith(".glb"))
-    .sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
-  return glbEntries[0];
+    .filter((filename) => {
+      const lower = filename.toLowerCase();
+      return lower.endsWith(".glb") || lower.endsWith(".gltf");
+    })
+    .sort((a, b) => {
+      const aIsGlb = a.toLowerCase().endsWith(".glb");
+      const bIsGlb = b.toLowerCase().endsWith(".glb");
+      if (aIsGlb !== bIsGlb) {
+        return aIsGlb ? -1 : 1;
+      }
+      return a.split("/").length - b.split("/").length || a.localeCompare(b);
+    });
+  return sceneEntries[0];
 }
 
 async function writeProjectArchive(projectId, body) {
   const entries = extractZipEntries(body);
   const sceneUrl = archiveSceneUrl(entries);
   if (!sceneUrl) {
-    throw badRequest("ZIP uploads must contain a GLB file.");
+    throw badRequest("ZIP uploads must contain a GLB or GLTF scene file.");
   }
   const sceneEntry = entries.find((entry) => entry.filename === sceneUrl);
-  validateGlbBuffer(sceneEntry.data);
+  if (sceneUrl.toLowerCase().endsWith(".gltf")) {
+    validateGltfBuffer(sceneEntry.data);
+  } else {
+    validateGlbBuffer(sceneEntry.data);
+  }
 
   await Promise.all(
     targetDirs(projectId).flatMap((target) =>
@@ -329,8 +371,8 @@ function validateControls(value) {
 }
 
 function validateModelSource(value) {
-  if (value !== "scene.glb" && value !== "scene.optimized.glb") {
-    throw badRequest("Model source must be scene.glb or scene.optimized.glb.");
+  if (!isSafeLocalSceneUrl(value)) {
+    throw badRequest("Model source must be a local GLB or GLTF path.");
   }
 }
 
@@ -624,6 +666,7 @@ async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") 
   const nextManifest = {
     ...manifest,
     sceneUrl,
+    originalSceneUrl: sceneUrl,
     rendering: {
       ...manifest.rendering,
       doubleSidedMaterials: true
@@ -671,7 +714,7 @@ async function setManifestSceneUrl(projectId, sceneUrl) {
     manifests.map((manifest, index) =>
       writeFile(
         path.join(targetDirs(projectId)[index], "scene.manifest.json"),
-        `${JSON.stringify({ ...manifest, sceneUrl }, null, 2)}\n`
+        `${JSON.stringify({ ...manifest, sceneUrl, originalSceneUrl: manifest.originalSceneUrl ?? sceneUrl }, null, 2)}\n`
       )
     )
   );

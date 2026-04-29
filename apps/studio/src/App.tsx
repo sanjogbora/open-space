@@ -1107,7 +1107,7 @@ function App() {
     }
   };
 
-  const switchModelSource = async (sceneUrl: "scene.glb" | "scene.optimized.glb") => {
+  const switchModelSource = async (sceneUrl: string) => {
     if (!apiConnected) {
       setOptimizeState("error");
       setOptimizeError("API is not connected.");
@@ -1156,7 +1156,7 @@ function App() {
     const isGlb = lowerName.endsWith(".glb");
     if (!isGlb && !isZip) {
       setUploadState("error");
-      setUploadError("Upload a GLB file or a ZIP containing a GLB plus its textures.");
+      setUploadError("Upload a GLB file or a ZIP containing a GLB/GLTF plus its textures.");
       return;
     }
 
@@ -1385,6 +1385,10 @@ function App() {
     (sum, interaction) => sum + interaction.variants.length,
     0
   );
+  const originalSceneUrl =
+    manifest.originalSceneUrl ??
+    optimizationJob?.sourceSceneUrl ??
+    (manifest.sceneUrl && manifest.sceneUrl !== "scene.optimized.glb" ? manifest.sceneUrl : "scene.glb");
 
   return (
     <main className="studio-shell">
@@ -1574,7 +1578,7 @@ function App() {
               <label className="file-drop">
                 <input
                   type="file"
-                  accept=".glb,.zip,model/gltf-binary,application/zip"
+                  accept=".glb,.zip,model/gltf-binary,model/gltf+json,application/zip"
                   disabled={!apiConnected || uploadState === "uploading"}
                   onChange={(event) => void uploadModel(event.target.files?.[0])}
                 />
@@ -1719,8 +1723,12 @@ function App() {
                   <button
                     type="button"
                     className="button secondary"
-                    disabled={!apiConnected || optimizeState === "optimizing" || (manifest.sceneUrl ?? "scene.glb") === "scene.glb"}
-                    onClick={() => void switchModelSource("scene.glb")}
+                    disabled={
+                      !apiConnected ||
+                      optimizeState === "optimizing" ||
+                      (manifest.sceneUrl ?? originalSceneUrl) === originalSceneUrl
+                    }
+                    onClick={() => void switchModelSource(originalSceneUrl)}
                   >
                     Original
                   </button>
