@@ -1021,6 +1021,20 @@ export class WalkthroughViewer {
     event.preventDefault();
   };
 
+  private handleWheel = (event: WheelEvent): void => {
+    if (!this.controls.enabled) {
+      return;
+    }
+    event.preventDefault();
+    const direction = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw) * -1);
+    const distance = THREE.MathUtils.clamp(Math.abs(event.deltaY) * 0.006, 0.15, 1.25);
+    direction.multiplyScalar(event.deltaY < 0 ? distance : -distance);
+    this.moveCameraBy(direction);
+    this.moveTarget = undefined;
+    this.moveMarker.visible = false;
+    this.applyYawPitch();
+  };
+
   private resize = (): void => {
     const width = Math.max(1, this.container.clientWidth);
     const height = Math.max(1, this.container.clientHeight);
@@ -1039,6 +1053,7 @@ export class WalkthroughViewer {
     this.renderer.domElement.addEventListener("pointermove", this.handlePointerMove);
     this.renderer.domElement.addEventListener("pointerup", this.handlePointerUp);
     this.renderer.domElement.addEventListener("contextmenu", this.handleContextMenu);
+    this.renderer.domElement.addEventListener("wheel", this.handleWheel, { passive: false });
   }
 
   private uninstallEvents(): void {
@@ -1049,6 +1064,7 @@ export class WalkthroughViewer {
     this.renderer.domElement.removeEventListener("pointermove", this.handlePointerMove);
     this.renderer.domElement.removeEventListener("pointerup", this.handlePointerUp);
     this.renderer.domElement.removeEventListener("contextmenu", this.handleContextMenu);
+    this.renderer.domElement.removeEventListener("wheel", this.handleWheel);
   }
 
   private emitProgress(progress: LoadingProgress): void {

@@ -4,39 +4,66 @@ export function createMoveMarker(): THREE.Group {
   const group = new THREE.Group();
   group.name = "move-marker";
 
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(0.18, 0.26, 40),
+  const base = new THREE.Mesh(
+    new THREE.CircleGeometry(0.16, 36),
     new THREE.MeshBasicMaterial({
-      color: "#0787ff",
+      color: "#075177",
+      transparent: true,
+      opacity: 0.82,
+      side: THREE.DoubleSide
+    })
+  );
+  base.name = "move-marker-base";
+  base.scale.set(1.15, 0.38, 1);
+  base.rotation.x = -Math.PI / 2;
+  group.add(base);
+
+  const baseHighlight = new THREE.Mesh(
+    new THREE.RingGeometry(0.12, 0.17, 36),
+    new THREE.MeshBasicMaterial({
+      color: "#2aa8ff",
+      transparent: true,
+      opacity: 0.68,
+      side: THREE.DoubleSide
+    })
+  );
+  baseHighlight.name = "move-marker-base-highlight";
+  baseHighlight.scale.set(1.12, 0.38, 1);
+  baseHighlight.rotation.x = -Math.PI / 2;
+  baseHighlight.position.y = 0.004;
+  group.add(baseHighlight);
+
+  const cone = new THREE.Mesh(
+    new THREE.ConeGeometry(0.16, 0.72, 32, 1, true),
+    new THREE.MeshStandardMaterial({
+      color: "#0c7fbe",
+      emissive: "#04395f",
+      emissiveIntensity: 0.28,
+      roughness: 0.36,
+      metalness: 0.04,
       transparent: true,
       opacity: 0.9,
       side: THREE.DoubleSide
     })
   );
-  ring.rotation.x = -Math.PI / 2;
-  group.add(ring);
-
-  const cone = new THREE.Mesh(
-    new THREE.ConeGeometry(0.23, 0.58, 3, 1),
-    new THREE.MeshStandardMaterial({
-      color: "#0787ff",
-      emissive: "#034f9f",
-      emissiveIntensity: 0.35,
-      roughness: 0.42,
-      metalness: 0.08
-    })
-  );
   cone.name = "move-marker-cone";
-  cone.position.y = 0.32;
-  cone.rotation.y = Math.PI / 3;
+  cone.position.y = 0.39;
+  cone.rotation.x = Math.PI;
   group.add(cone);
 
-  const cap = new THREE.Mesh(
-    new THREE.SphereGeometry(0.08, 18, 12),
-    new THREE.MeshBasicMaterial({ color: "#9ed7ff" })
+  const core = new THREE.Mesh(
+    new THREE.ConeGeometry(0.1, 0.62, 32, 1, true),
+    new THREE.MeshBasicMaterial({
+      color: "#8ed9ff",
+      transparent: true,
+      opacity: 0.28,
+      side: THREE.DoubleSide
+    })
   );
-  cap.position.y = 0.62;
-  group.add(cap);
+  core.name = "move-marker-cone-core";
+  core.position.y = 0.4;
+  core.rotation.x = Math.PI;
+  group.add(core);
 
   group.visible = false;
   return group;
