@@ -389,6 +389,28 @@ function createView(index: number): SceneView {
   };
 }
 
+function createTopViewFromBounds(
+  bounds: NonNullable<SceneManifest["navigation"]["bounds"]>,
+  index: number
+): SceneView {
+  const center: Vec3 = [
+    (bounds.min[0] + bounds.max[0]) / 2,
+    (bounds.min[1] + bounds.max[1]) / 2,
+    (bounds.min[2] + bounds.max[2]) / 2
+  ];
+  const width = Math.max(1, bounds.max[0] - bounds.min[0]);
+  const depth = Math.max(1, bounds.max[2] - bounds.min[2]);
+  const height = Math.max(bounds.max[1] + 4, Math.max(width, depth) * 1.45);
+  return {
+    id: index === 1 ? "top" : `top-${index}`,
+    label: index === 1 ? "Top" : `Top ${index}`,
+    kind: "top",
+    position: [center[0], Number(height.toFixed(3)), center[2] + 0.01],
+    target: [center[0], center[1], center[2]],
+    fov: 55
+  };
+}
+
 function createMaterialVariantInteraction(index: number, materialName: string): MaterialVariantInteraction {
   return {
     id: `finish-${index}`,
@@ -1975,6 +1997,46 @@ function App() {
     });
   };
 
+  const createOrUpdateTopView = () => {
+    updateManifest((current) => {
+      const bounds = current.navigation.bounds;
+      if (!bounds) {
+        window.setTimeout(() => setSelectedTab("controls"), 0);
+        return current;
+      }
+      const topView = createTopViewFromBounds(
+        bounds,
+        current.views.filter((view) => view.kind === "top").length + 1
+      );
+      const existingTop = current.views.find((view) => view.kind === "top");
+      if (existingTop) {
+        window.setTimeout(() => setSelectedViewId(existingTop.id), 0);
+        return {
+          ...current,
+          views: current.views.map((view) =>
+            view.id === existingTop.id
+              ? { ...topView, id: existingTop.id, label: existingTop.label || topView.label }
+              : view
+          )
+        };
+      }
+      let id = topView.id;
+      let suffix = 2;
+      const usedIds = new Set(current.views.map((view) => view.id));
+      while (usedIds.has(id)) {
+        id = `${topView.id}-${suffix}`;
+        suffix += 1;
+      }
+      const nextView = { ...topView, id };
+      window.setTimeout(() => setSelectedViewId(nextView.id), 0);
+      return {
+        ...current,
+        views: [...current.views, nextView]
+      };
+    });
+    setNotice("saved");
+  };
+
   const removeView = (viewId: string) => {
     updateManifest((current) => {
       const views = current.views.filter((view) => view.id !== viewId);
@@ -2800,9 +2862,19 @@ function App() {
             <div className="list-panel">
               <div className="list-heading">
                 <h2>Views</h2>
-                <button type="button" className="icon-action" title="Add view" onClick={addView}>
-                  <Plus size={17} aria-hidden="true" />
-                </button>
+                <div className="mini-actions">
+                  <button
+                    type="button"
+                    className="icon-action"
+                    title="Create top view from bounds"
+                    onClick={createOrUpdateTopView}
+                  >
+                    <Layers3 size={17} aria-hidden="true" />
+                  </button>
+                  <button type="button" className="icon-action" title="Add view" onClick={addView}>
+                    <Plus size={17} aria-hidden="true" />
+                  </button>
+                </div>
               </div>
               {manifest.views.map((view) => (
                 <button
