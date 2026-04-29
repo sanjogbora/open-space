@@ -42,6 +42,7 @@ export interface NavigationFailure {
   message: string;
   point?: [number, number, number];
   objectName?: string;
+  blockerName?: string;
   screen: {
     x: number;
     y: number;

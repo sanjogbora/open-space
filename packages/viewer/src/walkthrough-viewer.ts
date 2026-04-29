@@ -44,6 +44,17 @@ interface HotspotBinding {
   sprite: THREE.Sprite;
 }
 
+interface CollisionBlocker {
+  box: THREE.Box3;
+  name: string;
+  kind: "authored" | "named" | "inferred";
+}
+
+interface NavigationFailureDetail {
+  reason: NavigationFailureReason;
+  blockerName?: string;
+}
+
 export class WalkthroughViewer {
   private readonly container: HTMLElement;
   private readonly manifest: SceneManifest;
@@ -82,7 +93,8 @@ export class WalkthroughViewer {
   private floorMeshes: THREE.Object3D[] = [];
   private walkableMeshes: THREE.Object3D[] = [];
   private pickableMeshes: THREE.Object3D[] = [];
-  private collisionBoxes: THREE.Box3[] = [];
+  private collisionBlockers: CollisionBlocker[] = [];
+  private collisionDebugHelpers: THREE.Box3Helper[] = [];
   private navigationZoneMeshes: THREE.Mesh[] = [];
   private walkZoneMeshes: THREE.Mesh[] = [];
   private sceneRoot: THREE.Object3D | undefined;
@@ -157,6 +169,14 @@ export class WalkthroughViewer {
     this.destroyed = true;
     cancelAnimationFrame(this.frameId);
     this.managedTextures.forEach((item) => item.destroy?.());
+    this.collisionDebugHelpers.forEach((helper) => {
+      helper.geometry.dispose();
+      if (Array.isArray(helper.material)) {
+        helper.material.forEach((material) => material.dispose());
+      } else {
+        helper.material.dispose();
+      }
+    });
     this.navigationZoneMeshes.forEach((mesh) => {
       mesh.geometry.dispose();
       if (Array.isArray(mesh.material)) {
@@ -387,15 +407,16 @@ export class WalkthroughViewer {
       this.floorMeshes = fallbackFloors.length > 0 ? fallbackFloors : this.collectFloorMeshes(root);
       this.walkableMeshes = this.collectWalkableMeshes(root);
     }
-    this.collisionBoxes = [...this.collectCollisionBoxes(root), ...zones.blockBoxes];
+    this.collisionBlockers = [...this.collectCollisionBlockers(root), ...zones.blockers];
+    this.rebuildCollisionDebugHelpers();
   }
 
-  private createNavigationZones(): { walkMeshes: THREE.Mesh[]; blockBoxes: THREE.Box3[] } {
+  private createNavigationZones(): { walkMeshes: THREE.Mesh[]; blockers: CollisionBlocker[] } {
     const walkMeshes: THREE.Mesh[] = [];
-    const blockBoxes: THREE.Box3[] = [];
+    const blockers: CollisionBlocker[] = [];
     const zones = this.manifest.navigation.zones ?? [];
     if (zones.length === 0) {
-      return { walkMeshes, blockBoxes };
+      return { walkMeshes, blockers };
     }
 
     zones.forEach((zone) => {
@@ -412,11 +433,15 @@ export class WalkthroughViewer {
       }
       const box = new THREE.Box3().setFromObject(mesh);
       if (!box.isEmpty()) {
-        blockBoxes.push(box);
+        blockers.push({
+          box,
+          name: zone.label || zone.id,
+          kind: "authored"
+        });
       }
     });
 
-    return { walkMeshes, blockBoxes };
+    return { walkMeshes, blockers };
   }
 
   private createNavigationZoneMesh(zone: NavigationZone): THREE.Mesh {
@@ -458,6 +483,35 @@ export class WalkthroughViewer {
         material.needsUpdate = true;
       }
       mesh.renderOrder = this.debug ? 8 : 0;
+    });
+    this.collisionDebugHelpers.forEach((helper) => {
+      helper.visible = this.debug;
+    });
+  }
+
+  private rebuildCollisionDebugHelpers(): void {
+    this.collisionDebugHelpers.forEach((helper) => {
+      this.scene.remove(helper);
+      helper.geometry.dispose();
+      if (Array.isArray(helper.material)) {
+        helper.material.forEach((material) => material.dispose());
+      } else {
+        helper.material.dispose();
+      }
+    });
+    this.collisionDebugHelpers = this.collisionBlockers.slice(0, 220).map((blocker) => {
+      const color =
+        blocker.kind === "authored"
+          ? new THREE.Color("#ff4d4d")
+          : blocker.kind === "named"
+            ? new THREE.Color("#ff9f1c")
+            : new THREE.Color("#d14dff");
+      const helper = new THREE.Box3Helper(blocker.box, color);
+      helper.name = `collision_debug_${blocker.name}`;
+      helper.visible = this.debug;
+      helper.renderOrder = 9;
+      this.scene.add(helper);
+      return helper;
     });
   }
 
@@ -661,11 +715,11 @@ export class WalkthroughViewer {
     return [...meshes];
   }
 
-  private collectCollisionBoxes(root: THREE.Object3D): THREE.Box3[] {
+  private collectCollisionBlockers(root: THREE.Object3D): CollisionBlocker[] {
     const collisionNames = this.manifest.navigation.collisionMeshNames.map((name) => name.toLowerCase());
     const floorNames = this.manifest.navigation.floorMeshNames.map((name) => name.toLowerCase());
-    const boxes: THREE.Box3[] = [];
-    const inferredBoxes: { box: THREE.Box3; area: number }[] = [];
+    const blockers: CollisionBlocker[] = [];
+    const inferredBlockers: { blocker: CollisionBlocker; area: number }[] = [];
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) {
         return;
@@ -680,7 +734,11 @@ export class WalkthroughViewer {
       }
       const isCollisionMesh = collisionNames.some((collisionName) => name.includes(collisionName));
       if (isCollisionMesh) {
-        boxes.push(box);
+        blockers.push({
+          box,
+          name: node.name || node.parent?.name || "Named collision",
+          kind: "named"
+        });
         return;
       }
 
@@ -694,16 +752,23 @@ export class WalkthroughViewer {
         thinAxis <= Math.max(0.35, wideAxis * 0.18) &&
         size.x * size.z <= Math.max(8, wideAxis * 0.75);
       if (looksLikeWall) {
-        inferredBoxes.push({ box, area: wideAxis * height });
+        inferredBlockers.push({
+          blocker: {
+            box,
+            name: node.name || node.parent?.name || "Inferred wall",
+            kind: "inferred"
+          },
+          area: wideAxis * height
+        });
       }
     });
-    if (boxes.length > 0) {
-      return boxes;
+    if (blockers.length > 0) {
+      return blockers;
     }
-    return inferredBoxes
+    return inferredBlockers
       .sort((a, b) => b.area - a.area)
       .slice(0, 160)
-      .map((item) => item.box);
+      .map((item) => item.blocker);
   }
 
   private configureInteractions(): void {
@@ -1075,13 +1140,13 @@ export class WalkthroughViewer {
   }
 
   private canOccupyPosition(position: THREE.Vector3, origin?: THREE.Vector3): boolean {
-    return !this.navigationFailureReason(position, origin);
+    return !this.navigationFailureDetail(position, origin);
   }
 
-  private navigationFailureReason(
+  private navigationFailureDetail(
     position: THREE.Vector3,
     origin?: THREE.Vector3
-  ): NavigationFailureReason | undefined {
+  ): NavigationFailureDetail | undefined {
     const candidate = position.clone();
     if (this.minBounds && this.maxBounds) {
       if (
@@ -1090,28 +1155,32 @@ export class WalkthroughViewer {
         candidate.z < this.minBounds.z ||
         candidate.z > this.maxBounds.z
       ) {
-        return "outside-bounds";
+        return { reason: "outside-bounds" };
       }
       clampToBounds(candidate, this.minBounds, this.maxBounds);
     }
 
     const cameraSphere = new THREE.Sphere(candidate, this.collisionRadius);
     if (this.walkZoneMeshes.length > 0 && !this.isInsideWalkZone(candidate)) {
-      return "outside-walk-zone";
+      return { reason: "outside-walk-zone" };
     }
 
-    const blockedBoxes = this.collisionBoxes.filter((box) => box.intersectsSphere(cameraSphere));
-    if (blockedBoxes.length === 0) {
+    const blockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(cameraSphere));
+    if (blockedBlockers.length === 0) {
       return undefined;
     }
     if (!origin) {
-      return "blocked-collision";
+      const blockerName = blockedBlockers[0]?.name;
+      return blockerName
+        ? { reason: "blocked-collision", blockerName }
+        : { reason: "blocked-collision" };
     }
     const originSphere = new THREE.Sphere(origin, this.collisionRadius);
-    const originBlockedBoxes = this.collisionBoxes.filter((box) => box.intersectsSphere(originSphere));
-    return blockedBoxes.every((box) => originBlockedBoxes.includes(box))
-      ? undefined
-      : "blocked-collision";
+    const originBlockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(originSphere));
+    const newlyBlocked = blockedBlockers.find((blocker) => !originBlockedBlockers.includes(blocker));
+    return newlyBlocked
+      ? { reason: "blocked-collision", blockerName: newlyBlocked.name }
+      : undefined;
   }
 
   private isInsideWalkZone(position: THREE.Vector3): boolean {
@@ -1143,7 +1212,11 @@ export class WalkthroughViewer {
     return hits.find((hit) => this.isWalkableHit(hit));
   }
 
-  private navigationFailureMessage(reason: NavigationFailureReason, objectName?: string): string {
+  private navigationFailureMessage(
+    reason: NavigationFailureReason,
+    objectName?: string,
+    blockerName?: string
+  ): string {
     if (reason === "outside-bounds") {
       return "Move target is outside the navigation bounds.";
     }
@@ -1151,7 +1224,9 @@ export class WalkthroughViewer {
       return "Move target is outside the authored walk zone.";
     }
     if (reason === "blocked-collision") {
-      return "Move target is blocked by collision geometry near the route.";
+      return blockerName
+        ? `Move target is blocked by collision geometry: ${blockerName}.`
+        : "Move target is blocked by collision geometry near the route.";
     }
     return objectName
       ? `Clicked ${objectName}, but no walkable floor was found there.`
@@ -1162,13 +1237,15 @@ export class WalkthroughViewer {
     reason: NavigationFailureReason,
     event: PointerEvent,
     point?: THREE.Vector3,
-    objectName?: string
+    objectName?: string,
+    blockerName?: string
   ): void {
     this.options.onNavigationFailure?.({
       reason,
-      message: this.navigationFailureMessage(reason, objectName),
+      message: this.navigationFailureMessage(reason, objectName, blockerName),
       ...(point ? { point: [point.x, point.y, point.z] } : {}),
       ...(objectName ? { objectName } : {}),
+      ...(blockerName ? { blockerName } : {}),
       screen: {
         x: event.clientX,
         y: event.clientY
@@ -1271,9 +1348,15 @@ export class WalkthroughViewer {
       if (this.minBounds && this.maxBounds) {
         clampToBounds(nextTarget, this.minBounds, this.maxBounds);
       }
-      const failureReason = this.navigationFailureReason(nextTarget, this.camera.position);
-      if (failureReason) {
-        this.emitNavigationFailure(failureReason, event, floorHit.point);
+      const failureDetail = this.navigationFailureDetail(nextTarget, this.camera.position);
+      if (failureDetail) {
+        this.emitNavigationFailure(
+          failureDetail.reason,
+          event,
+          floorHit.point,
+          undefined,
+          failureDetail.blockerName
+        );
         return;
       }
       this.moveTarget = nextTarget;
