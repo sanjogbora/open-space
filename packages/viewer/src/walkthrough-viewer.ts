@@ -704,7 +704,6 @@ export class WalkthroughViewer {
       return;
     }
     const target = this.moveTarget.clone();
-    target.y = this.manifest.navigation.cameraHeight;
     const distance = this.camera.position.distanceTo(target);
     if (distance < 0.035) {
       this.camera.position.copy(target);
@@ -886,7 +885,7 @@ export class WalkthroughViewer {
     const floorHit = floorHits[0];
     if (floorHit) {
       const nextTarget = floorHit.point.clone();
-      nextTarget.y = this.manifest.navigation.cameraHeight;
+      nextTarget.y = floorHit.point.y + this.manifest.navigation.cameraHeight;
       if (this.minBounds && this.maxBounds) {
         clampToBounds(nextTarget, this.minBounds, this.maxBounds);
       }
