@@ -70,6 +70,14 @@ interface NavigationRepairDraft {
   point?: Vec3;
 }
 
+interface NavigationQaIssue {
+  id: string;
+  severity: "error" | "warning" | "info";
+  title: string;
+  detail: string;
+  action?: string;
+}
+
 interface MaterialsDocument {
   schemaVersion: "0.1";
   generator: string;
@@ -394,6 +402,210 @@ function pointMapStyle(
     left: `${((point[0] - bounds.min[0]) / width) * 100}%`,
     top: `${100 - ((point[2] - bounds.min[2]) / depth) * 100}%`
   };
+}
+
+function enabledNavigationZones(navigation: SceneManifest["navigation"], kind?: NavigationZone["kind"]) {
+  return (navigation.zones ?? []).filter((zone) => zone.enabled !== false && (!kind || zone.kind === kind));
+}
+
+function pointInNavigationBounds(
+  point: Vec3,
+  bounds: SceneManifest["navigation"]["bounds"] | undefined,
+  padding = 0
+): boolean {
+  if (!bounds) {
+    return true;
+  }
+  return (
+    point[0] >= bounds.min[0] - padding &&
+    point[0] <= bounds.max[0] + padding &&
+    point[1] >= bounds.min[1] - padding &&
+    point[1] <= bounds.max[1] + padding &&
+    point[2] >= bounds.min[2] - padding &&
+    point[2] <= bounds.max[2] + padding
+  );
+}
+
+function pointInNavigationZone(zone: NavigationZone, point: Vec3, padding = 0): boolean {
+  const rotation = -(zone.rotationY ?? 0);
+  const dx = point[0] - zone.center[0];
+  const dz = point[2] - zone.center[2];
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const localX = dx * cos - dz * sin;
+  const localZ = dx * sin + dz * cos;
+  return (
+    Math.abs(localX) <= zone.size[0] / 2 + padding &&
+    Math.abs(point[1] - zone.center[1]) <= zone.size[1] / 2 + padding &&
+    Math.abs(localZ) <= zone.size[2] / 2 + padding
+  );
+}
+
+function navigationZoneAabb(zone: NavigationZone) {
+  const halfX = zone.size[0] / 2;
+  const halfZ = zone.size[2] / 2;
+  const rotation = zone.rotationY ?? 0;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const localCorners: Array<[number, number]> = [
+    [-halfX, -halfZ],
+    [halfX, -halfZ],
+    [halfX, halfZ],
+    [-halfX, halfZ]
+  ];
+  const corners: Array<[number, number]> = localCorners.map(([x, z]) => [
+    zone.center[0] + x * cos - z * sin,
+    zone.center[2] + x * sin + z * cos
+  ]);
+  return {
+    minX: Math.min(...corners.map(([x]) => x)),
+    maxX: Math.max(...corners.map(([x]) => x)),
+    minZ: Math.min(...corners.map(([, z]) => z)),
+    maxZ: Math.max(...corners.map(([, z]) => z))
+  };
+}
+
+function navigationZonesOverlap(a: NavigationZone, b: NavigationZone, padding = 0.2): boolean {
+  const boxA = navigationZoneAabb(a);
+  const boxB = navigationZoneAabb(b);
+  return (
+    boxA.minX - padding <= boxB.maxX &&
+    boxA.maxX + padding >= boxB.minX &&
+    boxA.minZ - padding <= boxB.maxZ &&
+    boxA.maxZ + padding >= boxB.minZ
+  );
+}
+
+function countNavigationComponents(zones: readonly NavigationZone[]): number {
+  if (zones.length === 0) {
+    return 0;
+  }
+  const seen = new Set<string>();
+  let components = 0;
+  for (const zone of zones) {
+    if (seen.has(zone.id)) {
+      continue;
+    }
+    components += 1;
+    const queue = [zone];
+    seen.add(zone.id);
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const candidate of zones) {
+        if (!seen.has(candidate.id) && navigationZonesOverlap(current, candidate)) {
+          seen.add(candidate.id);
+          queue.push(candidate);
+        }
+      }
+    }
+  }
+  return components;
+}
+
+function navigationQaIssues(manifest: SceneManifest): NavigationQaIssue[] {
+  const issues: NavigationQaIssue[] = [];
+  const navigation = manifest.navigation;
+  const walkZones = enabledNavigationZones(navigation, "walk");
+  const passZones = enabledNavigationZones(navigation, "pass");
+  const blockZones = enabledNavigationZones(navigation, "block");
+  const routeZones = [...walkZones, ...passZones];
+
+  if (!navigation.bounds) {
+    issues.push({
+      id: "missing-bounds",
+      severity: "warning",
+      title: "Navigation bounds are not set",
+      detail: "Users can drift into empty exterior space unless bounds or boundary blocks constrain movement.",
+      action: "Use graph bounds, then add boundary block zones around the model."
+    });
+  }
+
+  if (walkZones.length === 0) {
+    issues.push({
+      id: "missing-walk-zones",
+      severity: "warning",
+      title: "No explicit walk zones",
+      detail: "Click-to-move will fall back to detected floor meshes, which can include roofs, counters, or exterior planes.",
+      action: "Add walk zones for the real floor areas users should be allowed to stand on."
+    });
+  }
+
+  if (walkZones.length > 1 && passZones.length === 0) {
+    issues.push({
+      id: "missing-pass-zones",
+      severity: "warning",
+      title: "Multiple walk zones without door passes",
+      detail: "Separate rooms may behave like separate islands, so clicking through a doorway can stop at the threshold.",
+      action: "Add pass zones at doorways/openings between room walk zones."
+    });
+  }
+
+  const componentCount = countNavigationComponents(routeZones);
+  if (componentCount > 1) {
+    issues.push({
+      id: "disconnected-route-zones",
+      severity: "warning",
+      title: "Walkable areas are disconnected",
+      detail: `${componentCount} separate navigation islands were detected across walk/pass zones.`,
+      action: "Add or resize pass zones until connected rooms touch through doorways."
+    });
+  }
+
+  passZones.forEach((zone) => {
+    const touchesWalkZone = walkZones.some((walkZone) => navigationZonesOverlap(zone, walkZone));
+    if (!touchesWalkZone) {
+      issues.push({
+        id: `orphan-pass-${zone.id}`,
+        severity: "warning",
+        title: `Pass zone is isolated: ${zone.label}`,
+        detail: "This doorway pass does not overlap any walk zone, so pathfinding cannot use it.",
+        action: "Move or resize the pass zone so it overlaps the room floor walk zones on both sides."
+      });
+    }
+  });
+
+  manifest.views
+    .filter((view) => view.kind === "walk")
+    .forEach((view) => {
+      if (!pointInNavigationBounds(view.position, navigation.bounds, 0.1)) {
+        issues.push({
+          id: `view-bounds-${view.id}`,
+          severity: "error",
+          title: `View starts outside bounds: ${view.label}`,
+          detail: `Position ${view.position.map((value) => value.toFixed(2)).join(", ")} is outside navigation bounds.`,
+          action: "Move the view inside the model or expand the navigation bounds."
+        });
+      }
+      if (blockZones.some((zone) => pointInNavigationZone(zone, view.position, 0.15))) {
+        issues.push({
+          id: `view-blocked-${view.id}`,
+          severity: "warning",
+          title: `View starts inside a block zone: ${view.label}`,
+          detail: "Users may start clipped into a boundary or wall blocker.",
+          action: "Move the view, reduce the block zone, or split the block around the doorway."
+        });
+      }
+      if (walkZones.length > 0 && !routeZones.some((zone) => pointInNavigationZone(zone, view.position, 0.25))) {
+        issues.push({
+          id: `view-walk-zone-${view.id}`,
+          severity: "warning",
+          title: `View is outside walkable zones: ${view.label}`,
+          detail: "The camera can load there, but click routing may not be able to continue into connected rooms.",
+          action: "Add a walk patch around this view or move the view into a walk zone."
+        });
+      }
+    });
+
+  if (issues.length === 0) {
+    issues.push({
+      id: "navigation-ready",
+      severity: "info",
+      title: "Navigation setup has no obvious zone issues",
+      detail: "Bounds, walk zones, pass zones, and starting views look coherent from the Studio-side checks."
+    });
+  }
+
+  return issues;
 }
 
 function isHotspot(interaction: SceneInteraction): interaction is HotspotInteraction {
@@ -1224,6 +1436,7 @@ function App() {
       }
     ];
   }, [bundleStats, manifest]);
+  const navigationIssues = useMemo(() => (manifest ? navigationQaIssues(manifest) : []), [manifest]);
   const hasBlockingPublishErrors = publishChecks.some((check) => check.id === "diagnostics" && !check.ready);
 
   const selectedHotspot = useMemo(
@@ -4620,6 +4833,17 @@ function App() {
                         </div>
                       </div>
                     )}
+                    <div className="navigation-qa-list" aria-label="Navigation QA">
+                      {navigationIssues.map((issue) => (
+                        <div key={issue.id} className={`navigation-qa-card ${issue.severity}`}>
+                          <div>
+                            <strong>{issue.title}</strong>
+                            <p>{issue.detail}</p>
+                            {issue.action && <small>{issue.action}</small>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                     <div className="field-grid">
                       <NumberField
                         label="Model Scale"

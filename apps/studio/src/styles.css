@@ -1100,6 +1100,57 @@ button.list-row {
   color: #17415d;
 }
 
+.navigation-qa-list {
+  display: grid;
+  gap: 8px;
+}
+
+.navigation-qa-card {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid #c7d5df;
+  border-radius: 8px;
+  color: #26343d;
+  background: #f8fbfd;
+}
+
+.navigation-qa-card.error {
+  color: #8f1f2a;
+  border-color: #f0b8c0;
+  background: #fff4f5;
+}
+
+.navigation-qa-card.warning {
+  color: #7a4e08;
+  border-color: #f0d099;
+  background: #fff8ed;
+}
+
+.navigation-qa-card.info {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.navigation-qa-card strong,
+.navigation-qa-card p,
+.navigation-qa-card small {
+  display: block;
+  margin: 0;
+  color: inherit;
+}
+
+.navigation-qa-card p,
+.navigation-qa-card small {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.navigation-qa-card small {
+  opacity: 0.82;
+}
+
 .repair-details {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
