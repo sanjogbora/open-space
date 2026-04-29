@@ -1409,6 +1409,73 @@ export class WalkthroughViewer {
     return hits.find((hit) => this.isWalkableHit(hit));
   }
 
+  private findWalkableHitNearObject(hit: THREE.Intersection): THREE.Intersection | undefined {
+    const horizontal = hit.point.clone().sub(this.camera.position);
+    horizontal.y = 0;
+    if (horizontal.lengthSq() < 0.001) {
+      horizontal.set(Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+    }
+    horizontal.normalize();
+    const sideways = new THREE.Vector3(-horizontal.z, 0, horizontal.x);
+    const probes = [
+      new THREE.Vector3(0, 0, 0),
+      horizontal.clone().multiplyScalar(0.35),
+      horizontal.clone().multiplyScalar(-0.25),
+      sideways.clone().multiplyScalar(0.25),
+      sideways.clone().multiplyScalar(-0.25)
+    ];
+    const direction = new THREE.Vector3(0, -1, 0);
+    const raycaster = new THREE.Raycaster(undefined, direction, 0, Math.max(4, this.cameraHeight + 3));
+    for (const offset of probes) {
+      const origin = hit.point.clone().add(offset);
+      origin.y = Math.max(hit.point.y + 0.75, this.camera.position.y + 0.25);
+      raycaster.set(origin, direction);
+      const floorHit = raycaster
+        .intersectObjects(this.walkableMeshes, true)
+        .find((candidate) => this.isWalkableHit(candidate));
+      if (floorHit) {
+        return floorHit;
+      }
+    }
+    return undefined;
+  }
+
+  private tryMoveToFloorHit(floorHit: THREE.Intersection, event: PointerEvent): boolean {
+    const nextTarget = floorHit.point.clone();
+    nextTarget.y = floorHit.point.y + this.cameraHeight;
+    if (this.minBounds && this.maxBounds) {
+      clampToBounds(nextTarget, this.minBounds, this.maxBounds);
+    }
+    const failureDetail = this.navigationFailureDetail(nextTarget, this.camera.position);
+    if (failureDetail) {
+      this.emitNavigationFailure(
+        failureDetail.reason,
+        event,
+        failureDetail.point ?? floorHit.point,
+        undefined,
+        failureDetail.blockerName
+      );
+      return true;
+    }
+    const routeFailureDetail = this.navigationRouteFailureDetail(nextTarget, this.camera.position);
+    if (routeFailureDetail) {
+      this.emitNavigationFailure(
+        routeFailureDetail.reason,
+        event,
+        routeFailureDetail.point ?? floorHit.point,
+        undefined,
+        routeFailureDetail.blockerName
+      );
+      return true;
+    }
+    this.moveTarget = nextTarget;
+    this.cameraTween = undefined;
+    this.moveMarker.visible = true;
+    this.moveMarker.position.copy(floorHit.point);
+    this.moveMarker.position.y += 0.035;
+    return true;
+  }
+
   private navigationFailureMessage(
     reason: NavigationFailureReason,
     objectName?: string,
@@ -1540,44 +1607,17 @@ export class WalkthroughViewer {
 
     const floorHit = this.findWalkableHit();
     if (floorHit) {
-      const nextTarget = floorHit.point.clone();
-      nextTarget.y = floorHit.point.y + this.cameraHeight;
-      if (this.minBounds && this.maxBounds) {
-        clampToBounds(nextTarget, this.minBounds, this.maxBounds);
-      }
-      const failureDetail = this.navigationFailureDetail(nextTarget, this.camera.position);
-      if (failureDetail) {
-        this.emitNavigationFailure(
-          failureDetail.reason,
-          event,
-          failureDetail.point ?? floorHit.point,
-          undefined,
-          failureDetail.blockerName
-        );
-        return;
-      }
-      const routeFailureDetail = this.navigationRouteFailureDetail(nextTarget, this.camera.position);
-      if (routeFailureDetail) {
-        this.emitNavigationFailure(
-          routeFailureDetail.reason,
-          event,
-          routeFailureDetail.point ?? floorHit.point,
-          undefined,
-          routeFailureDetail.blockerName
-        );
-        return;
-      }
-      this.moveTarget = nextTarget;
-      this.cameraTween = undefined;
-      this.moveMarker.visible = true;
-      this.moveMarker.position.copy(floorHit.point);
-      this.moveMarker.position.y += 0.035;
+      this.tryMoveToFloorHit(floorHit, event);
       return;
     }
 
     const objectHit = this.raycaster.intersectObjects(this.pickableMeshes, true)[0];
     if (objectHit && objectHit.object instanceof THREE.Mesh) {
       const objectName = objectHit.object.name || objectHit.object.parent?.name || "Object";
+      const nearbyFloorHit = this.findWalkableHitNearObject(objectHit);
+      if (nearbyFloorHit && this.tryMoveToFloorHit(nearbyFloorHit, event)) {
+        return;
+      }
       this.emitNavigationFailure("no-walkable-hit", event, objectHit.point, objectName);
       this.options.onObjectPick?.({
         objectName,
