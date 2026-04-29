@@ -465,6 +465,15 @@ function createRoom(index: number, view?: SceneView): RoomDefinition {
   };
 }
 
+function createRoomFromView(view: SceneView, index: number): RoomDefinition {
+  return {
+    id: `room-${view.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 72),
+    label: view.label,
+    viewId: view.id,
+    center: view.position
+  };
+}
+
 function createNavigationZone(
   index: number,
   kind: NavigationZone["kind"],
@@ -1999,6 +2008,44 @@ function App() {
     });
   };
 
+  const syncRoomsFromViews = () => {
+    updateManifest((current) => {
+      const existingRooms = current.rooms ?? [];
+      const existingByView = new Map(existingRooms.filter((room) => room.viewId).map((room) => [room.viewId, room]));
+      const usedRoomIds = new Set(existingRooms.map((room) => room.id));
+      const nextRooms = [...existingRooms];
+      current.views
+        .filter((view) => view.kind !== "top")
+        .forEach((view, index) => {
+          const existing = existingByView.get(view.id);
+          if (existing) {
+            const roomIndex = nextRooms.findIndex((room) => room.id === existing.id);
+            nextRooms[roomIndex] = {
+              ...existing,
+              label: existing.label || view.label,
+              center: existing.center ?? view.position
+            };
+            return;
+          }
+          const room = createRoomFromView(view, index + 1);
+          let roomId = room.id;
+          let suffix = 2;
+          while (usedRoomIds.has(roomId)) {
+            roomId = `${room.id}-${suffix}`;
+            suffix += 1;
+          }
+          usedRoomIds.add(roomId);
+          nextRooms.push({ ...room, id: roomId });
+        });
+      window.setTimeout(() => setSelectedRoomId(nextRooms[0]?.id ?? ""), 0);
+      return {
+        ...current,
+        rooms: nextRooms
+      };
+    });
+    setNotice("saved");
+  };
+
   const addHotspot = () => {
     updateManifest((current) => {
       const nextHotspot = createHotspot(hotspotInteractions.length + 1);
@@ -2846,9 +2893,14 @@ function App() {
             <div className="list-panel">
               <div className="list-heading">
                 <h2>Rooms</h2>
-                <button type="button" className="icon-action" title="Add room" onClick={addRoom}>
-                  <Plus size={17} aria-hidden="true" />
-                </button>
+                <div className="mini-actions">
+                  <button type="button" className="icon-action" title="Sync rooms from views" onClick={syncRoomsFromViews}>
+                    <MapPin size={17} aria-hidden="true" />
+                  </button>
+                  <button type="button" className="icon-action" title="Add room" onClick={addRoom}>
+                    <Plus size={17} aria-hidden="true" />
+                  </button>
+                </div>
               </div>
               {rooms.map((room) => (
                 <button
@@ -2930,8 +2982,26 @@ function App() {
                   </div>
                   ))(manifest.navigation.bounds)
                 ) : (
-                  <p className="quiet-note">Set navigation bounds in Controls to enable the room map.</p>
+                  <div className="publish-action-card">
+                    <div>
+                      <strong>Room mapping needs bounds</strong>
+                      <p className="quiet-note">
+                        Set navigation bounds in Controls to enable the draggable room map.
+                      </p>
+                    </div>
+                    <button type="button" className="button secondary" onClick={() => setSelectedTab("controls")}>
+                      <Wrench size={16} aria-hidden="true" />
+                      Controls
+                    </button>
+                  </div>
                 )}
+                <div className="publish-row">
+                  <span>Room setup</span>
+                  <button type="button" className="button secondary" onClick={syncRoomsFromViews}>
+                    <MapPin size={16} aria-hidden="true" />
+                    Sync from views
+                  </button>
+                </div>
                 <div className="field-grid">
                   <label>
                     <span>Room name</span>
