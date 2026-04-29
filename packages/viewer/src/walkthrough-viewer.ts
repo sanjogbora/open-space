@@ -106,6 +106,7 @@ export class WalkthroughViewer {
   private destroyed = false;
   private cameraTarget = new THREE.Vector3(0, 1.55, 0);
   private moveTarget: THREE.Vector3 | undefined;
+  private movePath: THREE.Vector3[] = [];
   private cameraTween: CameraTween | undefined;
   private pointerDown: { x: number; y: number; time: number } | undefined;
   private yaw = 0;
@@ -208,6 +209,7 @@ export class WalkthroughViewer {
       return;
     }
     this.moveTarget = undefined;
+    this.movePath = [];
     this.moveMarker.visible = false;
     this.cameraTween = {
       fromPosition: this.camera.position.clone(),
@@ -1233,6 +1235,7 @@ export class WalkthroughViewer {
       direction.normalize().multiplyScalar(this.controls.moveSpeed * delta);
       this.moveCameraBy(direction);
       this.moveTarget = undefined;
+      this.movePath = [];
       this.moveMarker.visible = false;
     }
 
@@ -1285,8 +1288,13 @@ export class WalkthroughViewer {
     const distance = this.camera.position.distanceTo(target);
     if (distance < 0.035) {
       this.camera.position.copy(target);
-      this.moveTarget = undefined;
-      this.moveMarker.visible = false;
+      const nextWaypoint = this.movePath.shift();
+      if (nextWaypoint) {
+        this.moveTarget = nextWaypoint;
+      } else {
+        this.moveTarget = undefined;
+        this.moveMarker.visible = false;
+      }
       return;
     }
     const nextPosition = this.camera.position.clone();
@@ -1298,6 +1306,7 @@ export class WalkthroughViewer {
       return;
     }
     this.moveTarget = undefined;
+    this.movePath = [];
     this.moveMarker.visible = false;
   }
 
@@ -1376,12 +1385,13 @@ export class WalkthroughViewer {
     }
 
     const cameraSphere = new THREE.Sphere(candidate, this.collisionRadius);
-    if (this.walkZoneMeshes.length > 0 && !this.isInsideWalkZone(candidate)) {
+    const insidePassZone = this.isInsidePassZone(candidate);
+    if (this.walkZoneMeshes.length > 0 && !this.isInsideWalkZone(candidate) && !insidePassZone) {
       return { reason: "outside-walk-zone", point: candidate.clone() };
     }
 
     const blockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(cameraSphere));
-    const effectiveBlockers = this.isInsidePassZone(candidate)
+    const effectiveBlockers = insidePassZone
       ? blockedBlockers.filter((blocker) => blocker.kind === "authored")
       : blockedBlockers;
     if (effectiveBlockers.length === 0) {
@@ -1422,6 +1432,40 @@ export class WalkthroughViewer {
       }
       previous = point;
     }
+    return undefined;
+  }
+
+  private findPassZoneRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
+    if (this.passZoneMeshes.length === 0) {
+      return undefined;
+    }
+
+    const candidates = this.passZoneMeshes
+      .map((mesh) => {
+        const point = new THREE.Vector3();
+        mesh.getWorldPosition(point);
+        point.y = target.y;
+        return {
+          point,
+          distance: origin.distanceTo(point) + point.distanceTo(target)
+        };
+      })
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 12);
+
+    for (const candidate of candidates) {
+      if (this.navigationFailureDetail(candidate.point, origin)) {
+        continue;
+      }
+      if (this.navigationRouteFailureDetail(candidate.point, origin)) {
+        continue;
+      }
+      if (this.navigationRouteFailureDetail(target, candidate.point)) {
+        continue;
+      }
+      return [candidate.point, target.clone()];
+    }
+
     return undefined;
   }
 
@@ -1510,6 +1554,17 @@ export class WalkthroughViewer {
     }
     const routeFailureDetail = this.navigationRouteFailureDetail(nextTarget, this.camera.position);
     if (routeFailureDetail) {
+      const passZoneRoute = this.findPassZoneRoute(nextTarget, this.camera.position);
+      if (passZoneRoute) {
+        const [firstWaypoint, ...remainingWaypoints] = passZoneRoute;
+        this.moveTarget = firstWaypoint;
+        this.movePath = remainingWaypoints;
+        this.cameraTween = undefined;
+        this.moveMarker.visible = true;
+        this.moveMarker.position.copy(floorHit.point);
+        this.moveMarker.position.y += 0.035;
+        return true;
+      }
       this.emitNavigationFailure(
         routeFailureDetail.reason,
         event,
@@ -1520,6 +1575,7 @@ export class WalkthroughViewer {
       return true;
     }
     this.moveTarget = nextTarget;
+    this.movePath = [];
     this.cameraTween = undefined;
     this.moveMarker.visible = true;
     this.moveMarker.position.copy(floorHit.point);
@@ -1760,6 +1816,7 @@ export class WalkthroughViewer {
     this.renderer.domElement.focus();
     this.cameraTween = undefined;
     this.moveTarget = undefined;
+    this.movePath = [];
     this.moveMarker.visible = false;
     const intent = -Math.sign(event.deltaY || 0);
     const impulse = THREE.MathUtils.clamp(Math.abs(event.deltaY) * 0.035, 0.45, 3.2);
