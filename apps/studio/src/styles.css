@@ -745,6 +745,49 @@ button.list-row {
   white-space: nowrap;
 }
 
+.collision-ignore-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #f0d0b8;
+  border-radius: 8px;
+  background: #fff8f3;
+}
+
+.collision-candidate-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.collision-candidate {
+  min-height: 52px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 9px 10px;
+  border: 1px solid #e0b89b;
+  border-radius: 7px;
+  color: #653716;
+  background: #ffffff;
+  text-align: left;
+}
+
+.collision-candidate span {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collision-candidate small {
+  overflow: hidden;
+  color: #8a6044;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .variant-editor-list {
   display: grid;
   gap: 10px;
@@ -1372,7 +1415,8 @@ code {
   .publish-action-card,
   .publish-version-actions,
   .optimization-action-controls,
-  .surface-candidate-list {
+  .surface-candidate-list,
+  .collision-candidate-list {
     display: grid;
     grid-template-columns: 1fr;
   }

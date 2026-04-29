@@ -717,6 +717,9 @@ export class WalkthroughViewer {
 
   private collectCollisionBlockers(root: THREE.Object3D): CollisionBlocker[] {
     const collisionNames = this.manifest.navigation.collisionMeshNames.map((name) => name.toLowerCase());
+    const ignoredCollisionNames = (this.manifest.navigation.ignoredCollisionMeshNames ?? []).map((name) =>
+      name.toLowerCase()
+    );
     const floorNames = this.manifest.navigation.floorMeshNames.map((name) => name.toLowerCase());
     const blockers: CollisionBlocker[] = [];
     const inferredBlockers: { blocker: CollisionBlocker; area: number }[] = [];
@@ -726,6 +729,10 @@ export class WalkthroughViewer {
       }
       const name = node.name.toLowerCase();
       if (floorNames.some((floorName) => name.includes(floorName))) {
+        return;
+      }
+      const collisionSearchName = `${node.name} ${node.parent?.name ?? ""} ${node.userData["name"] ?? ""}`.toLowerCase();
+      if (ignoredCollisionNames.some((ignoredName) => collisionSearchName.includes(ignoredName))) {
         return;
       }
       const box = new THREE.Box3().setFromObject(node);

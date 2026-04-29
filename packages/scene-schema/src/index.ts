@@ -88,6 +88,7 @@ export interface NavigationConfig {
   turnSpeed: number;
   floorMeshNames: readonly string[];
   collisionMeshNames: readonly string[];
+  ignoredCollisionMeshNames?: readonly string[];
   zones?: readonly NavigationZone[];
   bounds?: {
     min: Vec3;
@@ -272,6 +273,7 @@ export const defaultNavigationConfig: NavigationConfig = {
   turnSpeed: 1.5,
   floorMeshNames: ["floor", "ground", "navmesh", "walkable"],
   collisionMeshNames: ["wall", "glass", "door", "collision"],
+  ignoredCollisionMeshNames: [],
   zones: []
 };
 
@@ -359,6 +361,8 @@ export function isNavigationConfig(value: unknown): value is NavigationConfig {
     typeof value["turnSpeed"] === "number" &&
     isStringArray(value["floorMeshNames"]) &&
     isStringArray(value["collisionMeshNames"]) &&
+    (value["ignoredCollisionMeshNames"] === undefined ||
+      isStringArray(value["ignoredCollisionMeshNames"])) &&
     zonesValid &&
     boundsValid
   );

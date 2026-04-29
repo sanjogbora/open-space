@@ -781,6 +781,7 @@ async function resetManifestForUploadedModel(
         "column",
         "pillar"
       ],
+      ignoredCollisionMeshNames: manifest.navigation?.ignoredCollisionMeshNames ?? [],
       zones: importedNavigationZones(bounds, manifest.navigation?.zones),
       ...(navigationBounds ? { bounds: navigationBounds } : {})
     }

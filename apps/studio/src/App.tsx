@@ -954,6 +954,21 @@ function App() {
       .slice(0, 12);
   }, [sceneGraph]);
 
+  const collisionNameCandidates = useMemo(() => {
+    if (!sceneGraph || !manifest) {
+      return [];
+    }
+    const keywords = manifest.navigation.collisionMeshNames.map((keyword) => keyword.toLowerCase());
+    const ignored = new Set((manifest.navigation.ignoredCollisionMeshNames ?? []).map((name) => name.toLowerCase()));
+    return sceneGraph.nodes
+      .filter((node) => {
+        const name = `${node.name} ${node.meshName ?? ""}`.toLowerCase();
+        return keywords.some((keyword) => name.includes(keyword)) && !ignored.has(node.name.toLowerCase());
+      })
+      .sort((a, b) => b.triangleCount - a.triangleCount)
+      .slice(0, 16);
+  }, [sceneGraph, manifest]);
+
   const selectedVariantInteraction = useMemo(
     () => materialVariantInteractions.find((interaction) => interaction.id === selectedVariantInteractionId),
     [materialVariantInteractions, selectedVariantInteractionId]
@@ -1194,6 +1209,19 @@ function App() {
       ...navigation,
       zones: (navigation.zones ?? []).filter((zone) => zone.id !== zoneId)
     }));
+  };
+
+  const ignoreCollisionName = (name: string) => {
+    updateNavigation((navigation) => {
+      const names = navigation.ignoredCollisionMeshNames ?? [];
+      if (names.some((item) => item.toLowerCase() === name.toLowerCase())) {
+        return navigation;
+      }
+      return {
+        ...navigation,
+        ignoredCollisionMeshNames: [...names, name]
+      };
+    });
   };
 
   const moveNavigationZoneOnMap = (
@@ -3624,6 +3652,18 @@ function App() {
                           }
                         />
                       </label>
+                      <label>
+                        <span>Ignored Collision Names</span>
+                        <input
+                          value={keywordList(manifest.navigation.ignoredCollisionMeshNames)}
+                          onChange={(event) =>
+                            updateNavigation((navigation) => ({
+                              ...navigation,
+                              ignoredCollisionMeshNames: parseKeywordList(event.target.value)
+                            }))
+                          }
+                        />
+                      </label>
                     </div>
 
                     <div className="publish-row">
@@ -3664,6 +3704,29 @@ function App() {
                       </div>
                     ) : (
                       <p className="quiet-note">No navigation bounds are set. Use graph bounds after analysis.</p>
+                    )}
+
+                    {collisionNameCandidates.length > 0 && (
+                      <div className="collision-ignore-panel">
+                        <div className="surface-mapper-heading">
+                          <strong>Collision candidates</strong>
+                          <small>{collisionNameCandidates.length}</small>
+                        </div>
+                        <div className="collision-candidate-list">
+                          {collisionNameCandidates.map((node) => (
+                            <button
+                              key={node.id}
+                              type="button"
+                              className="collision-candidate"
+                              title={`Ignore ${node.name} for navigation collision`}
+                              onClick={() => ignoreCollisionName(node.name)}
+                            >
+                              <span>{node.name}</span>
+                              <small>{node.triangleCount} triangles</small>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     )}
 
                     <div className="publish-row">
