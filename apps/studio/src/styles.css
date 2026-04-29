@@ -886,6 +886,99 @@ button.list-row {
   pointer-events: none;
 }
 
+.room-map {
+  display: grid;
+  gap: 8px;
+}
+
+.room-map-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.room-map-heading strong {
+  color: #24313a;
+  font-size: 13px;
+}
+
+.room-map-heading small {
+  color: #667681;
+  font-size: 12px;
+}
+
+.room-map-surface {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  min-height: 220px;
+  border: 1px solid #d6dde2;
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(38, 50, 59, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 50, 59, 0.06) 1px, transparent 1px),
+    #f8fafb;
+  background-size: 36px 36px;
+}
+
+.room-map-view {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #667681;
+  box-shadow: 0 0 0 2px rgba(102, 118, 129, 0.24);
+  transform: translate(-50%, -50%);
+}
+
+.room-map-view.active {
+  background: #087fe7;
+  box-shadow: 0 0 0 3px rgba(8, 127, 231, 0.2);
+}
+
+.room-map-item {
+  position: absolute;
+  min-width: 34px;
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #087fe7;
+  border-radius: 999px;
+  color: #087fe7;
+  background: rgba(8, 127, 231, 0.16);
+  box-shadow: 0 10px 24px rgba(8, 127, 231, 0.14);
+  cursor: grab;
+  transform: translate(-50%, -50%);
+  touch-action: none;
+}
+
+.room-map-item.active {
+  color: #ffffff;
+  background: #087fe7;
+}
+
+.room-map-item:active {
+  cursor: grabbing;
+}
+
+.room-map-item span {
+  max-width: 110px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.86);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.room-map-item.active span {
+  color: #087fe7;
+}
+
 .optimization-grid,
 .recommendation-list {
   display: grid;

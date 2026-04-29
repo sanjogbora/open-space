@@ -239,6 +239,23 @@ function zoneMapStyle(
   };
 }
 
+function roomCenter(room: RoomDefinition, views: readonly SceneView[]): Vec3 {
+  const linkedView = views.find((view) => view.id === room.viewId);
+  return room.center ?? linkedView?.position ?? [0, 0, 0];
+}
+
+function pointMapStyle(
+  point: Vec3,
+  bounds: NonNullable<SceneManifest["navigation"]["bounds"]>
+) {
+  const width = Math.max(0.001, bounds.max[0] - bounds.min[0]);
+  const depth = Math.max(0.001, bounds.max[2] - bounds.min[2]);
+  return {
+    left: `${((point[0] - bounds.min[0]) / width) * 100}%`,
+    top: `${100 - ((point[2] - bounds.min[2]) / depth) * 100}%`
+  };
+}
+
 function isHotspot(interaction: SceneInteraction): interaction is HotspotInteraction {
   return interaction.kind === "hotspot";
 }
@@ -1139,6 +1156,42 @@ function App() {
       updateNavigationZone(zoneId, (zone) => ({
         ...zone,
         center: [Number(nextX.toFixed(3)), zone.center[1], Number(nextZ.toFixed(3))]
+      }));
+    };
+    applyPosition(clientX, clientY);
+    const handleMove = (event: PointerEvent) => applyPosition(event.clientX, event.clientY);
+    const handleUp = () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp, { once: true });
+  };
+
+  const moveRoomOnMap = (
+    roomId: string,
+    mapElement: HTMLElement,
+    clientX: number,
+    clientY: number
+  ) => {
+    const bounds = manifest?.navigation.bounds;
+    if (!bounds) {
+      return;
+    }
+    const applyPosition = (x: number, y: number) => {
+      const room = (manifest?.rooms ?? []).find((item) => item.id === roomId);
+      if (!room) {
+        return;
+      }
+      const currentCenter = roomCenter(room, manifest?.views ?? []);
+      const rect = mapElement.getBoundingClientRect();
+      const ratioX = clampNumber((x - rect.left) / Math.max(1, rect.width), 0, 1);
+      const ratioY = clampNumber((y - rect.top) / Math.max(1, rect.height), 0, 1);
+      const nextX = bounds.min[0] + ratioX * (bounds.max[0] - bounds.min[0]);
+      const nextZ = bounds.max[2] - ratioY * (bounds.max[2] - bounds.min[2]);
+      updateRoom(roomId, (current) => ({
+        ...current,
+        center: [Number(nextX.toFixed(3)), current.center?.[1] ?? currentCenter[1], Number(nextZ.toFixed(3))]
       }));
     };
     applyPosition(clientX, clientY);
@@ -2401,6 +2454,60 @@ function App() {
                     <Trash2 size={17} aria-hidden="true" />
                   </button>
                 </div>
+                {manifest.navigation.bounds ? (
+                  ((roomMapBounds) => (
+                  <div className="room-map">
+                    <div className="room-map-heading">
+                      <strong>Room map</strong>
+                      <small>Drag a room marker to set its center</small>
+                    </div>
+                    <div className="room-map-surface">
+                      {manifest.views.map((view) => (
+                        <button
+                          key={view.id}
+                          type="button"
+                          className={
+                            selectedRoom.viewId === view.id ? "room-map-view active" : "room-map-view"
+                          }
+                          style={pointMapStyle(view.position, roomMapBounds)}
+                          title={view.label}
+                          onClick={() =>
+                            updateRoom(selectedRoom.id, (room) => ({
+                              ...room,
+                              viewId: view.id,
+                              center: view.position
+                            }))
+                          }
+                        >
+                          <span className="sr-only">{view.label}</span>
+                        </button>
+                      ))}
+                      {rooms.map((room) => (
+                        <button
+                          key={room.id}
+                          type="button"
+                          className={selectedRoom.id === room.id ? "room-map-item active" : "room-map-item"}
+                          style={pointMapStyle(roomCenter(room, manifest.views), roomMapBounds)}
+                          title={room.label}
+                          onClick={() => setSelectedRoomId(room.id)}
+                          onPointerDown={(event) => {
+                            event.preventDefault();
+                            setSelectedRoomId(room.id);
+                            const mapElement = event.currentTarget.closest(".room-map-surface");
+                            if (mapElement instanceof HTMLElement) {
+                              moveRoomOnMap(room.id, mapElement, event.clientX, event.clientY);
+                            }
+                          }}
+                        >
+                          <span>{room.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  ))(manifest.navigation.bounds)
+                ) : (
+                  <p className="quiet-note">Set navigation bounds in Controls to enable the room map.</p>
+                )}
                 <div className="field-grid">
                   <label>
                     <span>Room name</span>
@@ -2431,10 +2538,22 @@ function App() {
                     <select
                       value={selectedRoom.viewId ?? ""}
                       onChange={(event) =>
-                        updateRoom(selectedRoom.id, (room) => ({
-                          ...room,
-                          viewId: event.target.value
-                        }))
+                        updateRoom(selectedRoom.id, (room) => {
+                          const viewId = event.target.value;
+                          const linkedView = manifest.views.find((view) => view.id === viewId);
+                          const nextRoom: RoomDefinition = { ...room };
+                          if (linkedView) {
+                            nextRoom.center = linkedView.position;
+                          }
+                          if (!viewId) {
+                            delete nextRoom.viewId;
+                            return nextRoom;
+                          }
+                          return {
+                            ...nextRoom,
+                            viewId
+                          };
+                        })
                       }
                     >
                       <option value="">Select view</option>
@@ -2446,6 +2565,28 @@ function App() {
                     </select>
                   </label>
                 </div>
+                {selectedRoom.viewId && (
+                  <div className="publish-row">
+                    <span>Camera link</span>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => {
+                        const linkedView = manifest.views.find((view) => view.id === selectedRoom.viewId);
+                        if (!linkedView) {
+                          return;
+                        }
+                        updateRoom(selectedRoom.id, (room) => ({
+                          ...room,
+                          center: linkedView.position
+                        }));
+                      }}
+                    >
+                      <MapPin size={16} aria-hidden="true" />
+                      Use linked view position
+                    </button>
+                  </div>
+                )}
                 <VectorEditor
                   label="Center"
                   value={selectedRoom.center ?? [0, 0, 0]}
