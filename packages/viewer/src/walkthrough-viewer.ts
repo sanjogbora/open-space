@@ -120,6 +120,7 @@ export class WalkthroughViewer {
   private sunTarget: THREE.Object3D | undefined;
   private environmentTexture: THREE.Texture | undefined;
   private skyTexture: THREE.Texture | undefined;
+  private groundTexture: THREE.Texture | undefined;
   private pmremGenerator: THREE.PMREMGenerator | undefined;
   private debug: boolean;
 
@@ -177,6 +178,7 @@ export class WalkthroughViewer {
     this.managedTextures.forEach((item) => item.destroy?.());
     this.materialLightMaps.forEach((texture) => texture.dispose());
     this.skyTexture?.dispose();
+    this.groundTexture?.dispose();
     this.collisionDebugHelpers.forEach((helper) => {
       helper.geometry.dispose();
       if (Array.isArray(helper.material)) {
@@ -554,13 +556,15 @@ export class WalkthroughViewer {
       return;
     }
 
+    const groundSize = (environment?.groundSize ?? 90) * this.manifestScale;
+    this.groundTexture = this.createGroundTexture(environment?.groundColor);
+    this.groundTexture.repeat.set(Math.max(1, groundSize / 8), Math.max(1, groundSize / 8));
+
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(
-        (environment?.groundSize ?? 90) * this.manifestScale,
-        (environment?.groundSize ?? 90) * this.manifestScale
-      ),
+      new THREE.PlaneGeometry(groundSize, groundSize),
       new THREE.MeshStandardMaterial({
-        color: environment?.groundColor ?? "#6f8f5a",
+        color: "#ffffff",
+        map: this.groundTexture,
         roughness: 0.95,
         metalness: 0
       })
@@ -570,6 +574,53 @@ export class WalkthroughViewer {
     ground.position.y = (environment?.groundY ?? -0.04) * this.manifestScale;
     ground.receiveShadow = true;
     this.scene.add(ground);
+  }
+
+  private createGroundTexture(baseColor = "#6f8f5a"): THREE.CanvasTexture {
+    const canvas = document.createElement("canvas");
+    canvas.width = 192;
+    canvas.height = 192;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    const base = new THREE.Color(baseColor);
+    context.fillStyle = base.getStyle();
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    for (let y = 0; y < canvas.height; y += 3) {
+      for (let x = 0; x < canvas.width; x += 3) {
+        const wave = Math.sin(x * 0.19 + y * 0.07) * 0.035 + Math.sin(x * 0.031 - y * 0.13) * 0.04;
+        const tone = base.clone().offsetHSL(0.015, 0.08, wave);
+        context.fillStyle = tone.getStyle();
+        context.globalAlpha = 0.45;
+        context.fillRect(x, y, 3, 3);
+      }
+    }
+
+    context.globalAlpha = 0.28;
+    for (let i = 0; i < 700; i += 1) {
+      const x = (i * 53) % canvas.width;
+      const y = (i * 97) % canvas.height;
+      const length = 4 + ((i * 7) % 13);
+      const tone = base.clone().offsetHSL(0.01, 0.16, i % 3 === 0 ? 0.12 : -0.08);
+      context.strokeStyle = tone.getStyle();
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(x, y);
+      context.lineTo(x + length, y + Math.sin(i) * 2);
+      context.stroke();
+    }
+    context.globalAlpha = 1;
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+    texture.needsUpdate = true;
+    return texture;
   }
 
   private addSkyBackdrop(): void {
