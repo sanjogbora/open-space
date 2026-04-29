@@ -684,9 +684,72 @@ function importedModelViews(bounds, cameraHeight) {
   ];
 }
 
-function importedNavigationZones(bounds, existingZones = []) {
-  if (Array.isArray(existingZones) && existingZones.length > 0) {
+function graphWalkZoneCandidates(graph, modelScale) {
+  const floorKeywords = [
+    "floor",
+    "ground",
+    "slab",
+    "tile",
+    "carpet",
+    "rug",
+    "deck",
+    "patio",
+    "balcony",
+    "terrace",
+    "porch"
+  ];
+  return (graph?.nodes ?? [])
+    .map((node) => {
+      if (!node.bounds) {
+        return undefined;
+      }
+      const searchName = `${node.name} ${node.meshName ?? ""}`.toLowerCase();
+      const keywordMatched = floorKeywords.some((keyword) => searchName.includes(keyword));
+      const scaledBounds = scaleBounds(node.bounds, modelScale);
+      if (!scaledBounds) {
+        return undefined;
+      }
+      const size = [
+        scaledBounds.max[0] - scaledBounds.min[0],
+        scaledBounds.max[1] - scaledBounds.min[1],
+        scaledBounds.max[2] - scaledBounds.min[2]
+      ];
+      const area = Math.abs(size[0] * size[2]);
+      const flatEnough = Math.abs(size[1]) <= Math.max(0.24, Math.min(Math.abs(size[0]), Math.abs(size[2])) * 0.18);
+      if (!keywordMatched || !flatEnough || area < 1) {
+        return undefined;
+      }
+      return {
+        id: `walk-${node.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 60),
+        label: node.name || "Walk surface",
+        kind: "walk",
+        center: [
+          (scaledBounds.min[0] + scaledBounds.max[0]) / 2,
+          scaledBounds.min[1] + 0.03,
+          (scaledBounds.min[2] + scaledBounds.max[2]) / 2
+        ],
+        size: [Math.max(0.8, Math.abs(size[0])), 0.08, Math.max(0.8, Math.abs(size[2]))],
+        rotationY: 0,
+        enabled: true,
+        area
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.area - a.area)
+    .slice(0, 12)
+    .map(({ area: _area, ...zone }) => zone);
+}
+
+function importedNavigationZones(bounds, existingZones = [], graph, modelScale = 1) {
+  const hasUserAuthoredZones =
+    Array.isArray(existingZones) &&
+    existingZones.some((zone) => !String(zone.id ?? "").startsWith("walk-main"));
+  if (hasUserAuthoredZones) {
     return existingZones;
+  }
+  const graphZones = graphWalkZoneCandidates(graph, modelScale);
+  if (graphZones.length > 0) {
+    return graphZones;
   }
   if (!bounds) {
     return [];
@@ -782,7 +845,7 @@ async function resetManifestForUploadedModel(
         "pillar"
       ],
       ignoredCollisionMeshNames: manifest.navigation?.ignoredCollisionMeshNames ?? [],
-      zones: importedNavigationZones(bounds, manifest.navigation?.zones),
+      zones: importedNavigationZones(bounds, manifest.navigation?.zones, graph, modelScale),
       ...(navigationBounds ? { bounds: navigationBounds } : {})
     }
   };
