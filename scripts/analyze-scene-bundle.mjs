@@ -588,6 +588,7 @@ function createDiagnostics(manifest, report, graphs) {
   );
   const floorMatches = keywordMatchCount(graph, manifest.navigation?.floorMeshNames ?? []);
   const collisionMatches = keywordMatchCount(graph, manifest.navigation?.collisionMeshNames ?? []);
+  const ceilingMatches = keywordMatchCount(graph, ["ceiling", "roof", "soffit", "false ceiling"]);
   const navigationZones = Array.isArray(manifest.navigation?.zones) ? manifest.navigation.zones : [];
   const hasWalkZones = navigationZones.some((zone) => zone.kind === "walk" && zone.enabled !== false);
   const hasBlockZones = navigationZones.some((zone) => zone.kind === "block" && zone.enabled !== false);
@@ -645,6 +646,16 @@ function createDiagnostics(manifest, report, graphs) {
       title: "No named collision meshes found",
       message: "Wall collision will be inferred from thin tall geometry and may miss cupboards, railings, or exterior boundaries.",
       action: "Add collision keywords for walls, windows, doors, partitions, columns, and boundary meshes, or add block zones in Controls."
+    });
+  }
+
+  if (ceilingMatches === 0) {
+    diagnostics.push({
+      severity: "info",
+      code: "no-named-ceiling-meshes",
+      title: "No named ceiling or roof meshes found",
+      message: "The model may be open at the top, or ceiling geometry may use generic object names.",
+      action: "Check the model in top/inside views. If ceilings exist but are invisible, enable double-sided materials or rename ceiling objects before import."
     });
   }
 
