@@ -854,6 +854,22 @@ button.list-row {
   white-space: nowrap;
 }
 
+.collision-candidate.pass-candidate {
+  border-color: #c7eadb;
+  color: #0e6242;
+  background: #f3fbf7;
+}
+
+.collision-candidate.pass-candidate small {
+  color: #487a65;
+}
+
+.collision-candidate.pass-candidate:hover,
+.collision-candidate.pass-candidate:focus-visible {
+  border-color: #118c5b;
+  outline: none;
+}
+
 .variant-editor-list {
   display: grid;
   gap: 10px;

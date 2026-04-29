@@ -247,6 +247,15 @@ interface VideoSurfaceCandidate {
   score: number;
 }
 
+interface DoorPassCandidate {
+  id: string;
+  name: string;
+  triangleCount: number;
+  center: Vec3;
+  size: Vec3;
+  score: number;
+}
+
 interface PublishHistoryDocument {
   schemaVersion: "0.1";
   projectId: string;
@@ -413,6 +422,30 @@ function videoSurfaceScore(name: string): number {
   }
   if (normalized.includes("glass") || normalized.includes("black")) {
     score += 1;
+  }
+  return score;
+}
+
+function doorPassScore(name: string): number {
+  const normalized = name.toLowerCase();
+  let score = 0;
+  if (normalized.includes("door")) {
+    score += 10;
+  }
+  if (normalized.includes("opening") || normalized.includes("portal")) {
+    score += 8;
+  }
+  if (normalized.includes("frame") || normalized.includes("threshold")) {
+    score += 5;
+  }
+  if (normalized.includes("entry") || normalized.includes("entrance")) {
+    score += 4;
+  }
+  if (normalized.includes("window")) {
+    score -= 6;
+  }
+  if (normalized.includes("handle") || normalized.includes("knob")) {
+    score -= 5;
   }
   return score;
 }
@@ -1192,6 +1225,54 @@ function App() {
       .slice(0, 16);
   }, [sceneGraph, manifest]);
 
+  const doorPassCandidates = useMemo((): DoorPassCandidate[] => {
+    if (!sceneGraph || !manifest) {
+      return [];
+    }
+    const modelScale = manifest.rendering?.modelScale ?? 1;
+    const cameraHeight = manifest.navigation.cameraHeight;
+    return sceneGraph.nodes
+      .map((node) => {
+        const score = doorPassScore(`${node.name} ${node.meshName ?? ""}`);
+        if (!node.bounds || score <= 0) {
+          return null;
+        }
+        const min: Vec3 = [
+          node.bounds.min[0] * modelScale,
+          node.bounds.min[1] * modelScale,
+          node.bounds.min[2] * modelScale
+        ];
+        const max: Vec3 = [
+          node.bounds.max[0] * modelScale,
+          node.bounds.max[1] * modelScale,
+          node.bounds.max[2] * modelScale
+        ];
+        const width = Math.max(0.1, max[0] - min[0]);
+        const depth = Math.max(0.1, max[2] - min[2]);
+        const center: Vec3 = [
+          Number(((min[0] + max[0]) / 2).toFixed(3)),
+          Number(Math.max(0.8, cameraHeight * 0.55).toFixed(3)),
+          Number(((min[2] + max[2]) / 2).toFixed(3))
+        ];
+        const size: Vec3 = [
+          Number(clampNumber(Math.max(0.85, width * 1.35), 0.85, 2.2).toFixed(3)),
+          Number(Math.max(1.8, cameraHeight + 0.65).toFixed(3)),
+          Number(clampNumber(Math.max(0.95, depth * 1.35), 0.95, 2.2).toFixed(3))
+        ];
+        return {
+          id: node.id,
+          name: node.name,
+          triangleCount: node.triangleCount,
+          center,
+          size,
+          score
+        };
+      })
+      .filter((candidate): candidate is DoorPassCandidate => Boolean(candidate))
+      .sort((a, b) => b.score - a.score || b.triangleCount - a.triangleCount)
+      .slice(0, 12);
+  }, [sceneGraph, manifest]);
+
   const selectedVariantInteraction = useMemo(
     () => materialVariantInteractions.find((interaction) => interaction.id === selectedVariantInteractionId),
     [materialVariantInteractions, selectedVariantInteractionId]
@@ -1447,6 +1528,34 @@ function App() {
         zones: [...zones, zone]
       };
     });
+  };
+
+  const addPassZoneFromCandidate = (candidate: DoorPassCandidate) => {
+    updateNavigation((navigation) => {
+      const zones = [...(navigation.zones ?? [])];
+      const id = `pass-${candidate.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 72);
+      let nextId = id;
+      let suffix = 2;
+      const usedIds = new Set(zones.map((zone) => zone.id));
+      while (usedIds.has(nextId)) {
+        nextId = `${id}-${suffix}`;
+        suffix += 1;
+      }
+      const zone: NavigationZone = {
+        id: nextId,
+        label: `Pass ${candidate.name}`.slice(0, 80),
+        kind: "pass",
+        center: candidate.center,
+        size: candidate.size,
+        rotationY: 0,
+        enabled: true
+      };
+      return {
+        ...navigation,
+        zones: [...zones, zone]
+      };
+    });
+    setNotice("saved");
   };
 
   const updateNavigationZone = (
@@ -4484,6 +4593,31 @@ function App() {
                             >
                               <span>{node.name}</span>
                               <small>{node.triangleCount} triangles</small>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {doorPassCandidates.length > 0 && (
+                      <div className="collision-ignore-panel">
+                        <div className="surface-mapper-heading">
+                          <strong>Door/pass candidates</strong>
+                          <small>{doorPassCandidates.length}</small>
+                        </div>
+                        <div className="collision-candidate-list">
+                          {doorPassCandidates.map((candidate) => (
+                            <button
+                              key={candidate.id}
+                              type="button"
+                              className="collision-candidate pass-candidate"
+                              title={`Create a pass zone at ${candidate.name}`}
+                              onClick={() => addPassZoneFromCandidate(candidate)}
+                            >
+                              <span>{candidate.name}</span>
+                              <small>
+                                {candidate.center.map((value) => value.toFixed(2)).join(", ")}
+                              </small>
                             </button>
                           ))}
                         </div>
