@@ -1048,19 +1048,95 @@ function graphWalkZoneCandidates(graph, modelScale) {
     .map(({ area: _area, ...zone }) => zone);
 }
 
-function importedNavigationZones(bounds, existingZones = [], graph, modelScale = 1) {
+function doorPassScore(name) {
+  const normalized = name.toLowerCase();
+  let score = 0;
+  if (normalized.includes("door")) {
+    score += 10;
+  }
+  if (normalized.includes("opening") || normalized.includes("portal")) {
+    score += 8;
+  }
+  if (normalized.includes("frame") || normalized.includes("threshold")) {
+    score += 5;
+  }
+  if (normalized.includes("entry") || normalized.includes("entrance")) {
+    score += 4;
+  }
+  if (normalized.includes("window")) {
+    score -= 6;
+  }
+  if (normalized.includes("handle") || normalized.includes("knob")) {
+    score -= 5;
+  }
+  return score;
+}
+
+function graphPassZoneCandidates(graph, modelScale, cameraHeight) {
+  return (graph?.nodes ?? [])
+    .map((node) => {
+      if (!node.bounds) {
+        return undefined;
+      }
+      const score = doorPassScore(`${node.name} ${node.meshName ?? ""}`);
+      if (score <= 0) {
+        return undefined;
+      }
+      const scaledBounds = scaleBounds(node.bounds, modelScale);
+      if (!scaledBounds) {
+        return undefined;
+      }
+      const size = [
+        Math.max(0.1, scaledBounds.max[0] - scaledBounds.min[0]),
+        Math.max(0.1, scaledBounds.max[1] - scaledBounds.min[1]),
+        Math.max(0.1, scaledBounds.max[2] - scaledBounds.min[2])
+      ];
+      const footprint = Math.max(size[0], size[2]);
+      if (footprint > 4 || size[1] > Math.max(4, cameraHeight * 2.2)) {
+        return undefined;
+      }
+      return {
+        id: `pass-${node.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 60),
+        label: node.name || "Pass zone",
+        kind: "pass",
+        center: [
+          (scaledBounds.min[0] + scaledBounds.max[0]) / 2,
+          Math.max(0.8, cameraHeight * 0.55),
+          (scaledBounds.min[2] + scaledBounds.max[2]) / 2
+        ],
+        size: [
+          Math.min(2.2, Math.max(0.85, size[0] * 1.35)),
+          Math.max(1.8, cameraHeight + 0.65),
+          Math.min(2.2, Math.max(0.95, size[2] * 1.35))
+        ],
+        rotationY: 0,
+        enabled: true,
+        score
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 16)
+    .map(({ score: _score, ...zone }) => zone);
+}
+
+function importedNavigationZones(bounds, existingZones = [], graph, modelScale = 1, cameraHeight = 1.65) {
   const hasUserAuthoredZones =
     Array.isArray(existingZones) &&
-    existingZones.some((zone) => !String(zone.id ?? "").startsWith("walk-main"));
+    existingZones.some((zone) => {
+      const id = String(zone.id ?? "");
+      return !id.startsWith("walk-main") && !id.startsWith("walk-") && !id.startsWith("pass-");
+    });
   if (hasUserAuthoredZones) {
     return existingZones;
   }
   const graphZones = graphWalkZoneCandidates(graph, modelScale);
+  const passZones = graphPassZoneCandidates(graph, modelScale, cameraHeight);
   if (graphZones.length > 0) {
-    return graphZones;
+    return [...graphZones, ...passZones];
   }
   if (!bounds) {
-    return [];
+    return passZones;
   }
   const width = Math.max(1.5, bounds.max[0] - bounds.min[0]);
   const depth = Math.max(1.5, bounds.max[2] - bounds.min[2]);
@@ -1077,7 +1153,8 @@ function importedNavigationZones(bounds, existingZones = [], graph, modelScale =
       size: [width, 0.08, depth],
       rotationY: 0,
       enabled: true
-    }
+    },
+    ...passZones
   ];
 }
 
@@ -1159,7 +1236,7 @@ async function resetManifestForUploadedModel(
         "pillar"
       ],
       ignoredCollisionMeshNames: manifest.navigation?.ignoredCollisionMeshNames ?? [],
-      zones: importedNavigationZones(bounds, manifest.navigation?.zones, graph, modelScale),
+      zones: importedNavigationZones(bounds, manifest.navigation?.zones, graph, modelScale, cameraHeight),
       ...(navigationBounds ? { bounds: navigationBounds } : {})
     }
   };
