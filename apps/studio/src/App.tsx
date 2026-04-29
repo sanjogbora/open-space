@@ -532,6 +532,8 @@ function App() {
   const [uploadError, setUploadError] = useState("");
   const [lightmapUploadState, setLightmapUploadState] = useState<UploadState>("idle");
   const [lightmapUploadError, setLightmapUploadError] = useState("");
+  const [mediaUploadState, setMediaUploadState] = useState<UploadState>("idle");
+  const [mediaUploadError, setMediaUploadError] = useState("");
   const [publishState, setPublishState] = useState<PublishState>("idle");
   const [publishError, setPublishError] = useState("");
   const [optimizeState, setOptimizeState] = useState<OptimizeState>("idle");
@@ -1752,6 +1754,63 @@ function App() {
     } catch (error) {
       setLightmapUploadState("error");
       setLightmapUploadError(error instanceof Error ? error.message : "Lightmap upload failed.");
+    }
+  };
+
+  const uploadVideoMedia = async (interactionId: string, file: File | undefined) => {
+    if (!file) {
+      return;
+    }
+    if (!apiConnected) {
+      setMediaUploadState("error");
+      setMediaUploadError("API is not connected.");
+      return;
+    }
+    if (!/\.(mp4|mov|webm)$/i.test(file.name)) {
+      setMediaUploadState("error");
+      setMediaUploadError("Upload an MP4, MOV, or WebM video.");
+      return;
+    }
+
+    setMediaUploadState("uploading");
+    setMediaUploadError("");
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/asset?kind=media`, {
+        method: "POST",
+        headers: {
+          "content-type": file.type || "application/octet-stream",
+          "x-file-name": file.name
+        },
+        body: file
+      });
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error ?? `Upload failed with ${response.status}.`);
+      }
+      const result = (await response.json()) as {
+        assetPath?: string;
+        stats?: BundleStats;
+        optimization?: OptimizationDocument;
+      };
+      if (!result.assetPath) {
+        throw new Error("Upload did not return an asset path.");
+      }
+      const assetPath = result.assetPath;
+      updateVideoTexture(interactionId, (interaction) => ({
+        ...interaction,
+        source: assetPath
+      }));
+      if (result.stats) {
+        setBundleStats(result.stats);
+      }
+      if (result.optimization) {
+        setOptimizationDoc(result.optimization);
+      }
+      setMediaUploadState("done");
+      setNotice("saved");
+    } catch (error) {
+      setMediaUploadState("error");
+      setMediaUploadError(error instanceof Error ? error.message : "Media upload failed.");
     }
   };
 
@@ -3160,6 +3219,21 @@ function App() {
                       }
                     />
                   </label>
+                  <label className="file-inline-control">
+                    <span>Upload Video</span>
+                    <input
+                      type="file"
+                      accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
+                      disabled={!apiConnected || mediaUploadState === "uploading"}
+                      onChange={(event) => void uploadVideoMedia(selectedVideoTexture.id, event.target.files?.[0])}
+                    />
+                    <strong>
+                      {mediaUploadState === "uploading" && "Uploading"}
+                      {mediaUploadState === "done" && "Uploaded"}
+                      {mediaUploadState === "error" && "Failed"}
+                      {mediaUploadState === "idle" && "Choose file"}
+                    </strong>
+                  </label>
                   <label>
                     <span>Target Mesh</span>
                     <select
@@ -3214,6 +3288,7 @@ function App() {
                     }
                   />
                 </div>
+                {mediaUploadError && <p className="error-note">{mediaUploadError}</p>}
 
                 <div className="toggle-grid">
                   {(["autoplay", "muted", "loop"] as const).map((field) => (

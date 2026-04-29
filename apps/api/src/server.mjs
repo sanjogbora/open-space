@@ -386,19 +386,28 @@ function validateModelSource(value) {
   }
 }
 
-function safeLightmapAssetPath(filename) {
+function safeProjectAssetPath(filename, kind = "lightmap") {
   const extension = path.extname(filename).toLowerCase();
-  if (![".avif", ".jpg", ".jpeg", ".ktx2", ".png", ".webp"].includes(extension)) {
-    throw badRequest("Lightmap assets must be PNG, JPEG, WebP, AVIF, or KTX2 images.");
+  const folder = kind === "media" ? "media" : "lightmaps";
+  const allowedExtensions =
+    kind === "media"
+      ? [".mp4", ".mov", ".webm"]
+      : [".avif", ".jpg", ".jpeg", ".ktx2", ".png", ".webp"];
+  if (!allowedExtensions.includes(extension)) {
+    throw badRequest(
+      kind === "media"
+        ? "Media assets must be MP4, MOV, or WebM videos."
+        : "Lightmap assets must be PNG, JPEG, WebP, AVIF, or KTX2 images."
+    );
   }
   const baseName = slug(path.basename(filename, extension));
-  return `lightmaps/${baseName}${extension}`;
+  return `${folder}/${baseName}${extension}`;
 }
 
 async function writeProjectAsset(projectId, assetPath, body) {
   const safePath = safeArchivePath(assetPath);
-  if (!safePath || !safePath.startsWith("lightmaps/")) {
-    throw badRequest("Asset path must be inside the lightmaps folder.");
+  if (!safePath || (!safePath.startsWith("lightmaps/") && !safePath.startsWith("media/"))) {
+    throw badRequest("Asset path must be inside the lightmaps or media folder.");
   }
   await Promise.all(
     targetDirs(projectId).map(async (target) => {
@@ -1052,10 +1061,11 @@ async function handleRequest(request, response) {
         throw badRequest("Uploaded asset is empty.");
       }
       const fileName = String(request.headers["x-file-name"] ?? "lightmap.webp");
+      const kind = url.searchParams.get("kind") === "media" ? "media" : "lightmap";
       const requestedPath = url.searchParams.get("path");
       const assetPath = await writeProjectAsset(
         assetProjectId,
-        requestedPath || safeLightmapAssetPath(fileName),
+        requestedPath || safeProjectAssetPath(fileName, kind),
         body
       );
       await runAnalyze(assetProjectId);
