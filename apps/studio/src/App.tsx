@@ -1520,6 +1520,64 @@ function App() {
     });
   };
 
+  const createBoundaryBlockZones = () => {
+    updateNavigation((navigation) => {
+      const bounds = navigation.bounds;
+      if (!bounds) {
+        return navigation;
+      }
+      const width = Math.max(1, bounds.max[0] - bounds.min[0]);
+      const depth = Math.max(1, bounds.max[2] - bounds.min[2]);
+      const height = Math.max(1.8, bounds.max[1] - bounds.min[1]);
+      const y = bounds.min[1] + height / 2;
+      const thickness = Math.max(0.35, Math.min(width, depth) * 0.035);
+      const existing = (navigation.zones ?? []).filter((zone) => !zone.id.startsWith("boundary-block-"));
+      const boundaryZones: NavigationZone[] = [
+        {
+          id: "boundary-block-north",
+          label: "Boundary North",
+          kind: "block",
+          center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.max[2] + thickness / 2],
+          size: [width + thickness * 2, height, thickness],
+          rotationY: 0,
+          enabled: true
+        },
+        {
+          id: "boundary-block-south",
+          label: "Boundary South",
+          kind: "block",
+          center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.min[2] - thickness / 2],
+          size: [width + thickness * 2, height, thickness],
+          rotationY: 0,
+          enabled: true
+        },
+        {
+          id: "boundary-block-east",
+          label: "Boundary East",
+          kind: "block",
+          center: [bounds.max[0] + thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
+          size: [thickness, height, depth + thickness * 2],
+          rotationY: 0,
+          enabled: true
+        },
+        {
+          id: "boundary-block-west",
+          label: "Boundary West",
+          kind: "block",
+          center: [bounds.min[0] - thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
+          size: [thickness, height, depth + thickness * 2],
+          rotationY: 0,
+          enabled: true
+        }
+      ];
+      return {
+        ...navigation,
+        zones: [...existing, ...boundaryZones]
+      };
+    });
+    setNotice("saved");
+  };
+
   const addNavigationRepairZone = (kind: "walk" | "pass") => {
     const point = navigationRepairDraft?.point;
     if (!point) {
@@ -4699,6 +4757,15 @@ function App() {
                         >
                           <Plus size={16} aria-hidden="true" />
                           Block
+                        </button>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          disabled={!manifest.navigation.bounds}
+                          onClick={createBoundaryBlockZones}
+                        >
+                          <Wrench size={16} aria-hidden="true" />
+                          Boundary
                         </button>
                         <button
                           type="button"
