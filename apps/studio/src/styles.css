@@ -932,6 +932,48 @@ button.list-row {
   border-top: 1px solid #e3e8eb;
 }
 
+.repair-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #b9d8f3;
+  border-radius: 8px;
+  background: #f0f8ff;
+}
+
+.repair-card strong {
+  color: #17415d;
+}
+
+.repair-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.repair-details div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.repair-details dt {
+  color: #60717c;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.repair-details dd {
+  min-width: 0;
+  margin: 0;
+  color: #24313a;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .compact-heading {
   margin-bottom: 0;
 }
@@ -1022,6 +1064,19 @@ button.list-row {
   background: rgba(8, 127, 231, 0.18);
   box-shadow: 0 8px 22px rgba(8, 127, 231, 0.12);
   touch-action: none;
+}
+
+.zone-map-repair-point {
+  position: absolute;
+  z-index: 3;
+  width: 16px;
+  height: 16px;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  background: #ffbf2f;
+  box-shadow: 0 0 0 3px rgba(255, 191, 47, 0.35), 0 8px 18px rgba(109, 73, 0, 0.24);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 .zone-map-item.block {

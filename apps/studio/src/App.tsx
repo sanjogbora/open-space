@@ -63,6 +63,12 @@ type RepairState = "idle" | "repairing" | "done" | "error";
 type HotspotIcon = NonNullable<HotspotInteraction["icon"]>;
 type MovementToggle = "enabled" | "keyboard" | "clickToMove" | "dragLook";
 
+interface NavigationRepairDraft {
+  reason: string;
+  blockerName: string;
+  point?: Vec3;
+}
+
 interface MaterialsDocument {
   schemaVersion: "0.1";
   generator: string;
@@ -209,12 +215,63 @@ interface PublishHistoryDocument {
 
 const viewerBaseUrl = "http://127.0.0.1:5173";
 const apiBaseUrl = "http://127.0.0.1:5175";
+const studioTabIds: readonly StudioTab[] = [
+  "overview",
+  "import",
+  "optimization",
+  "publish",
+  "views",
+  "rooms",
+  "interactions",
+  "materials",
+  "variants",
+  "objects",
+  "controls",
+  "environment",
+  "bundle"
+];
 const movementToggles: readonly { field: MovementToggle; label: string }[] = [
   { field: "enabled", label: "Movement" },
   { field: "keyboard", label: "WASD" },
   { field: "clickToMove", label: "Click to move" },
   { field: "dragLook", label: "Mouse drag look" }
 ];
+
+function initialProjectId(): string {
+  return new URLSearchParams(window.location.search).get("project") ?? "demo";
+}
+
+function initialStudioTab(): StudioTab {
+  const tab = new URLSearchParams(window.location.search).get("tab");
+  return studioTabIds.includes(tab as StudioTab) ? (tab as StudioTab) : "overview";
+}
+
+function parsePointParam(value: string | null): Vec3 | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parts = value.split(",").map((part) => Number(part.trim()));
+  if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) {
+    return undefined;
+  }
+  const [x, y, z] = parts as [number, number, number];
+  return [x, y, z];
+}
+
+function initialNavigationRepairDraft(): NavigationRepairDraft | null {
+  const params = new URLSearchParams(window.location.search);
+  const blockerName = params.get("blocker") ?? "";
+  const reason = params.get("reason") ?? "";
+  const point = parsePointParam(params.get("point"));
+  if (!blockerName && !reason && !point) {
+    return null;
+  }
+  return {
+    reason,
+    blockerName,
+    ...(point ? { point } : {})
+  };
+}
 
 function toNumber(value: string, fallback: number): number {
   const parsed = Number(value);
@@ -508,9 +565,9 @@ function textureCompressionLabel(stats: BundleStats | null): string {
 
 function App() {
   const [projectSummaries, setProjectSummaries] = useState<ProjectSummary[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState("demo");
+  const [activeProjectId, setActiveProjectId] = useState(initialProjectId);
   const [manifest, setManifest] = useState<SceneManifest | null>(null);
-  const [selectedTab, setSelectedTab] = useState<StudioTab>("overview");
+  const [selectedTab, setSelectedTab] = useState<StudioTab>(initialStudioTab);
   const [selectedViewId, setSelectedViewId] = useState("");
   const [selectedInteractionId, setSelectedInteractionId] = useState("");
   const [selectedVariantInteractionId, setSelectedVariantInteractionId] = useState("");
@@ -541,8 +598,21 @@ function App() {
   const [repairState, setRepairState] = useState<RepairState>("idle");
   const [repairError, setRepairError] = useState("");
   const [blockerNameDraft, setBlockerNameDraft] = useState("");
+  const [navigationRepairDraft, setNavigationRepairDraft] = useState<NavigationRepairDraft | null>(
+    initialNavigationRepairDraft
+  );
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
+
+  useEffect(() => {
+    if (!navigationRepairDraft) {
+      return;
+    }
+    setSelectedTab("controls");
+    if (navigationRepairDraft.blockerName) {
+      setBlockerNameDraft(navigationRepairDraft.blockerName);
+    }
+  }, [navigationRepairDraft]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1267,6 +1337,38 @@ function App() {
       return {
         ...navigation,
         zones: [...zones, createNavigationZone(nextIndex, kind, navigation.bounds)]
+      };
+    });
+  };
+
+  const addNavigationRepairZone = (kind: "walk" | "pass") => {
+    const point = navigationRepairDraft?.point;
+    if (!point) {
+      return;
+    }
+    updateNavigation((navigation) => {
+      const zones = [...(navigation.zones ?? [])];
+      const idSuffix = `${Date.now()}`.slice(-6);
+      const isWalk = kind === "walk";
+      const floorY = navigation.bounds ? navigation.bounds.min[1] + 0.03 : 0.03;
+      const zone: NavigationZone = {
+        id: `${kind}-repair-${idSuffix}`,
+        label: isWalk ? "Walk repair" : "Door pass repair",
+        kind,
+        center: [
+          Number(point[0].toFixed(3)),
+          isWalk ? Number(floorY.toFixed(3)) : Math.max(0.8, navigation.cameraHeight * 0.55),
+          Number(point[2].toFixed(3))
+        ],
+        size: isWalk
+          ? [2.2, 0.08, 2.2]
+          : [0.9, Math.max(1.8, navigation.cameraHeight + 0.6), 1.35],
+        rotationY: 0,
+        enabled: true
+      };
+      return {
+        ...navigation,
+        zones: [...zones, zone]
       };
     });
   };
@@ -3908,6 +4010,70 @@ function App() {
                       <Wrench size={18} aria-hidden="true" />
                       <h2>Navigation Repair</h2>
                     </div>
+                    {navigationRepairDraft && (
+                      <div className="repair-card">
+                        <div>
+                          <strong>Viewer navigation repair</strong>
+                          <p className="quiet-note">
+                            This came from the viewer block toast. Add a pass zone for a doorway/opening, add a walk
+                            patch when the floor is missing from the walkable area, or ignore a wrongly detected blocker.
+                          </p>
+                        </div>
+                        <dl className="repair-details">
+                          <div>
+                            <dt>Reason</dt>
+                            <dd>{navigationRepairDraft.reason || "Unknown"}</dd>
+                          </div>
+                          {navigationRepairDraft.blockerName && (
+                            <div>
+                              <dt>Blocker</dt>
+                              <dd>{navigationRepairDraft.blockerName}</dd>
+                            </div>
+                          )}
+                          {navigationRepairDraft.point && (
+                            <div>
+                              <dt>Point</dt>
+                              <dd>{navigationRepairDraft.point.map((value) => value.toFixed(2)).join(", ")}</dd>
+                            </div>
+                          )}
+                        </dl>
+                        <div className="inline-actions">
+                          <button
+                            type="button"
+                            className="button secondary"
+                            disabled={!navigationRepairDraft.point}
+                            onClick={() => addNavigationRepairZone("pass")}
+                          >
+                            <Plus size={16} aria-hidden="true" />
+                            Door Pass
+                          </button>
+                          <button
+                            type="button"
+                            className="button secondary"
+                            disabled={!navigationRepairDraft.point}
+                            onClick={() => addNavigationRepairZone("walk")}
+                          >
+                            <Plus size={16} aria-hidden="true" />
+                            Walk Patch
+                          </button>
+                          <button
+                            type="button"
+                            className="button secondary"
+                            disabled={!navigationRepairDraft.blockerName}
+                            onClick={() => ignoreCollisionName(navigationRepairDraft.blockerName)}
+                          >
+                            Ignore Blocker
+                          </button>
+                          <button
+                            type="button"
+                            className="button secondary"
+                            onClick={() => setNavigationRepairDraft(null)}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <div className="field-grid">
                       <NumberField
                         label="Model Scale"
@@ -4004,7 +4170,7 @@ function App() {
                       <div>
                         <strong>Ignore blocker from viewer</strong>
                         <p className="quiet-note">
-                          Paste the blocker name shown by Navigation blocked, then save and reopen the viewer.
+                          Paste the blocker name shown by Navigation blocked, or use Fix in Studio from the viewer.
                         </p>
                       </div>
                       <div className="inline-actions">
@@ -4093,6 +4259,13 @@ function App() {
                           <small>Drag a zone to move its center on X/Z</small>
                         </div>
                         <div className="zone-map-surface">
+                          {navigationRepairDraft?.point && (
+                            <span
+                              className="zone-map-repair-point"
+                              style={pointMapStyle(navigationRepairDraft.point, manifest.navigation.bounds!)}
+                              title="Viewer blocked point"
+                            />
+                          )}
                           {(manifest.navigation.zones ?? []).map((zone) => (
                             <button
                               key={zone.id}

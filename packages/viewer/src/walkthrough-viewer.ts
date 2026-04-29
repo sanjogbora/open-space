@@ -53,6 +53,7 @@ interface CollisionBlocker {
 interface NavigationFailureDetail {
   reason: NavigationFailureReason;
   blockerName?: string;
+  point?: THREE.Vector3;
 }
 
 export class WalkthroughViewer {
@@ -1269,14 +1270,14 @@ export class WalkthroughViewer {
         candidate.z < this.minBounds.z ||
         candidate.z > this.maxBounds.z
       ) {
-        return { reason: "outside-bounds" };
+        return { reason: "outside-bounds", point: candidate.clone() };
       }
       clampToBounds(candidate, this.minBounds, this.maxBounds);
     }
 
     const cameraSphere = new THREE.Sphere(candidate, this.collisionRadius);
     if (this.walkZoneMeshes.length > 0 && !this.isInsideWalkZone(candidate)) {
-      return { reason: "outside-walk-zone" };
+      return { reason: "outside-walk-zone", point: candidate.clone() };
     }
 
     const blockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(cameraSphere));
@@ -1289,14 +1290,14 @@ export class WalkthroughViewer {
     if (!origin) {
       const blockerName = effectiveBlockers[0]?.name;
       return blockerName
-        ? { reason: "blocked-collision", blockerName }
-        : { reason: "blocked-collision" };
+        ? { reason: "blocked-collision", blockerName, point: candidate.clone() }
+        : { reason: "blocked-collision", point: candidate.clone() };
     }
     const originSphere = new THREE.Sphere(origin, this.collisionRadius);
     const originBlockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(originSphere));
     const newlyBlocked = effectiveBlockers.find((blocker) => !originBlockedBlockers.includes(blocker));
     return newlyBlocked
-      ? { reason: "blocked-collision", blockerName: newlyBlocked.name }
+      ? { reason: "blocked-collision", blockerName: newlyBlocked.name, point: candidate.clone() }
       : undefined;
   }
 
@@ -1317,7 +1318,7 @@ export class WalkthroughViewer {
       point.y = target.y;
       const failure = this.navigationFailureDetail(point, previous);
       if (failure) {
-        return failure;
+        return { ...failure, point: failure.point ?? point.clone() };
       }
       previous = point;
     }
@@ -1500,7 +1501,7 @@ export class WalkthroughViewer {
         this.emitNavigationFailure(
           failureDetail.reason,
           event,
-          floorHit.point,
+          failureDetail.point ?? floorHit.point,
           undefined,
           failureDetail.blockerName
         );
@@ -1511,7 +1512,7 @@ export class WalkthroughViewer {
         this.emitNavigationFailure(
           routeFailureDetail.reason,
           event,
-          floorHit.point,
+          routeFailureDetail.point ?? floorHit.point,
           undefined,
           routeFailureDetail.blockerName
         );

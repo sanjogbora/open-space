@@ -88,6 +88,36 @@ function resolveManifestAssets(manifest: SceneManifest, manifestUrl: string): Sc
   };
 }
 
+function projectIdFromManifestUrl(manifestUrl: string): string | null {
+  const url = new URL(manifestUrl, window.location.href);
+  const match = url.pathname.match(/\/scenes\/([^/]+)\/scene\.manifest\.json$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+function studioRepairUrl(manifestUrl: string, failure: NavigationFailure): string | null {
+  const projectId = projectIdFromManifestUrl(manifestUrl);
+  if (!projectId) {
+    return null;
+  }
+  const url = new URL(window.location.href);
+  if (url.port === "5173") {
+    url.port = "5174";
+  }
+  url.pathname = "/";
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("project", projectId);
+  url.searchParams.set("tab", "controls");
+  url.searchParams.set("reason", failure.reason);
+  if (failure.blockerName) {
+    url.searchParams.set("blocker", failure.blockerName);
+  }
+  if (failure.point) {
+    url.searchParams.set("point", failure.point.map((value) => value.toFixed(3)).join(","));
+  }
+  return url.href;
+}
+
 function isMaterialVariantInteraction(
   interaction: SceneInteraction
 ): interaction is MaterialVariantInteraction {
@@ -164,6 +194,10 @@ function App() {
       maxZ: Math.max(...zs) + 1
     };
   }, [manifest]);
+  const navigationRepairUrl = useMemo(
+    () => (navigationFailure ? studioRepairUrl(manifestUrl, navigationFailure) : null),
+    [manifestUrl, navigationFailure]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -236,7 +270,7 @@ function App() {
         setNavigationFailure(failure);
         window.setTimeout(() => {
           setNavigationFailure((current) => (current === failure ? null : current));
-        }, 3000);
+        }, 10000);
       },
       onError: (error) => {
         console.error(error);
@@ -568,8 +602,20 @@ function App() {
         {screenshotState === "failed" && <div className="toast">Screenshot unavailable</div>}
         {navigationFailure && (
           <div className="navigation-toast" role="status">
-            <strong>Navigation blocked</strong>
-            <span>{navigationFailure.message}</span>
+            <div>
+              <strong>Navigation blocked</strong>
+              <span>{navigationFailure.message}</span>
+            </div>
+            <div className="navigation-toast-actions">
+              <button type="button" onClick={() => setDebugZones(true)}>
+                Show zones
+              </button>
+              {navigationRepairUrl && (
+                <a href={navigationRepairUrl} target="_blank" rel="noreferrer">
+                  Fix in Studio
+                </a>
+              )}
+            </div>
           </div>
         )}
       </section>
