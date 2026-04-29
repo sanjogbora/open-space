@@ -510,6 +510,7 @@ function App() {
   const [optimizeError, setOptimizeError] = useState("");
   const [repairState, setRepairState] = useState<RepairState>("idle");
   const [repairError, setRepairError] = useState("");
+  const [blockerNameDraft, setBlockerNameDraft] = useState("");
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
 
@@ -1220,16 +1221,21 @@ function App() {
   };
 
   const ignoreCollisionName = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return;
+    }
     updateNavigation((navigation) => {
       const names = navigation.ignoredCollisionMeshNames ?? [];
-      if (names.some((item) => item.toLowerCase() === name.toLowerCase())) {
+      if (names.some((item) => item.toLowerCase() === trimmed.toLowerCase())) {
         return navigation;
       }
       return {
         ...navigation,
-        ignoredCollisionMeshNames: [...names, name]
+        ignoredCollisionMeshNames: [...names, trimmed]
       };
     });
+    setBlockerNameDraft("");
   };
 
   const moveNavigationZoneOnMap = (
@@ -3737,6 +3743,31 @@ function App() {
                     ) : (
                       <p className="quiet-note">No navigation bounds are set. Use graph bounds after analysis.</p>
                     )}
+
+                    <div className="publish-action-card">
+                      <div>
+                        <strong>Ignore blocker from viewer</strong>
+                        <p className="quiet-note">
+                          Paste the blocker name shown by Navigation blocked, then save and reopen the viewer.
+                        </p>
+                      </div>
+                      <div className="inline-actions">
+                        <input
+                          className="compact-input"
+                          value={blockerNameDraft}
+                          placeholder="Wall_012 or DoorFrame"
+                          onChange={(event) => setBlockerNameDraft(event.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="button secondary"
+                          disabled={!blockerNameDraft.trim()}
+                          onClick={() => ignoreCollisionName(blockerNameDraft)}
+                        >
+                          Ignore
+                        </button>
+                      </div>
+                    </div>
 
                     {collisionNameCandidates.length > 0 && (
                       <div className="collision-ignore-panel">
