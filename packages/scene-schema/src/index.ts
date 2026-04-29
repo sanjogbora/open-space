@@ -113,6 +113,7 @@ export interface QualityProfile {
 
 export interface RenderingConfig {
   doubleSidedMaterials?: boolean;
+  modelScale?: number;
 }
 
 export interface EnvironmentConfig {
@@ -374,7 +375,13 @@ export function isRenderingConfig(value: unknown): value is RenderingConfig {
   if (!isRecord(value)) {
     return false;
   }
-  return value["doubleSidedMaterials"] === undefined || typeof value["doubleSidedMaterials"] === "boolean";
+  return (
+    (value["doubleSidedMaterials"] === undefined || typeof value["doubleSidedMaterials"] === "boolean") &&
+    (value["modelScale"] === undefined ||
+      (typeof value["modelScale"] === "number" &&
+        Number.isFinite(value["modelScale"]) &&
+        value["modelScale"] > 0))
+  );
 }
 
 export function isEnvironmentConfig(value: unknown): value is EnvironmentConfig {

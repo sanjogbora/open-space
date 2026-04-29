@@ -48,6 +48,9 @@ export class WalkthroughViewer {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly loader = new GLTFLoader();
   private readonly moveMarker = createMoveMarker();
+  private readonly modelScale: number;
+  private readonly manifestScale: number;
+  private readonly cameraHeight: number;
   private readonly hotspots: HotspotBinding[] = [];
   private readonly managedTextures: ManagedTexture[] = [];
   private readonly keys = new Set<string>();
@@ -91,6 +94,10 @@ export class WalkthroughViewer {
     this.manifest = options.manifest;
     this.options = options;
     this.quality = options.quality ?? "balanced";
+    const legacyScale = this.resolveLegacyCoordinateScale();
+    this.modelScale = this.manifest.rendering?.modelScale ?? legacyScale;
+    this.manifestScale = this.manifest.rendering?.modelScale ? 1 : legacyScale;
+    this.cameraHeight = this.manifest.navigation.cameraHeight * this.manifestScale;
 
     const selectedQuality = this.manifest.qualityProfiles.find((item) => item.id === this.quality);
     this.renderer = new THREE.WebGLRenderer({
@@ -144,9 +151,9 @@ export class WalkthroughViewer {
     this.moveMarker.visible = false;
     this.cameraTween = {
       fromPosition: this.camera.position.clone(),
-      toPosition: toVector3(view.position),
+      toPosition: this.toSceneVector(view.position, { preserveMeterY: true }),
       fromTarget: this.cameraTarget.clone(),
-      toTarget: toVector3(view.target),
+      toTarget: this.toSceneVector(view.target, { preserveMeterY: true }),
       elapsed: 0,
       duration: view.kind === "top" ? 1.1 : 0.85,
       view
@@ -225,6 +232,9 @@ export class WalkthroughViewer {
       });
       this.sceneRoot = gltf.scene;
       this.sceneRoot.name = "source-scene";
+      if (this.modelScale !== 1) {
+        this.sceneRoot.scale.multiplyScalar(this.modelScale);
+      }
       this.prepareLoadedScene(this.sceneRoot);
       this.scene.add(this.sceneRoot);
       this.sceneRoot.updateMatrixWorld(true);
@@ -342,7 +352,10 @@ export class WalkthroughViewer {
     }
 
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(environment?.groundSize ?? 90, environment?.groundSize ?? 90),
+      new THREE.PlaneGeometry(
+        (environment?.groundSize ?? 90) * this.manifestScale,
+        (environment?.groundSize ?? 90) * this.manifestScale
+      ),
       new THREE.MeshStandardMaterial({
         color: environment?.groundColor ?? "#6f8f5a",
         roughness: 0.95,
@@ -351,7 +364,7 @@ export class WalkthroughViewer {
     );
     ground.name = "environment_ground";
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = environment?.groundY ?? -0.04;
+    ground.position.y = (environment?.groundY ?? -0.04) * this.manifestScale;
     ground.receiveShadow = true;
     this.scene.add(ground);
   }
@@ -551,7 +564,7 @@ export class WalkthroughViewer {
 
   private addHotspot(interaction: HotspotInteraction): void {
     const sprite = createHotspotSprite(interaction.icon === "media" ? "play" : "i");
-    sprite.position.copy(toVector3(interaction.position));
+    sprite.position.copy(this.toSceneVector(interaction.position));
     sprite.userData["interactionId"] = interaction.id;
     this.scene.add(sprite);
     this.hotspots.push({ interaction, sprite });
@@ -559,7 +572,7 @@ export class WalkthroughViewer {
 
   private addLink(interaction: LinkInteraction): void {
     const sprite = createHotspotSprite("L");
-    sprite.position.copy(toVector3(interaction.position));
+    sprite.position.copy(this.toSceneVector(interaction.position));
     sprite.userData["interactionId"] = interaction.id;
     this.scene.add(sprite);
     this.hotspots.push({ interaction, sprite });
@@ -571,7 +584,7 @@ export class WalkthroughViewer {
       this.objectToggleStates.set(interaction.id, interaction.initiallyVisible);
     }
     const sprite = createHotspotSprite("O");
-    sprite.position.copy(toVector3(interaction.position));
+    sprite.position.copy(this.toSceneVector(interaction.position));
     sprite.userData["interactionId"] = interaction.id;
     this.scene.add(sprite);
     this.hotspots.push({ interaction, sprite });
@@ -629,11 +642,49 @@ export class WalkthroughViewer {
     return targets;
   }
 
+  private resolveLegacyCoordinateScale(): number {
+    if (this.manifest.rendering?.modelScale) {
+      return 1;
+    }
+
+    const bounds = this.manifest.navigation.bounds;
+    if (!bounds) {
+      return 1;
+    }
+
+    const width = Math.abs(bounds.max[0] - bounds.min[0]);
+    const height = Math.abs(bounds.max[1] - bounds.min[1]);
+    const depth = Math.abs(bounds.max[2] - bounds.min[2]);
+    const largestDimension = Math.max(width, height, depth);
+    if (largestDimension > 10_000) {
+      return 0.001;
+    }
+    if (largestDimension > 500) {
+      return 0.01;
+    }
+    return 1;
+  }
+
+  private toSceneVector(
+    value: readonly [number, number, number],
+    options: { preserveMeterY?: boolean } = {}
+  ): THREE.Vector3 {
+    const vector = toVector3(value);
+    if (this.manifestScale === 1) {
+      return vector;
+    }
+    return new THREE.Vector3(
+      vector.x * this.manifestScale,
+      options.preserveMeterY && Math.abs(vector.y) < 20 ? vector.y : vector.y * this.manifestScale,
+      vector.z * this.manifestScale
+    );
+  }
+
   private applyInitialCamera(): void {
     const firstView = this.manifest.views[0];
     if (firstView) {
-      this.camera.position.copy(toVector3(firstView.position));
-      this.cameraTarget.copy(toVector3(firstView.target));
+      this.camera.position.copy(this.toSceneVector(firstView.position, { preserveMeterY: true }));
+      this.cameraTarget.copy(this.toSceneVector(firstView.target, { preserveMeterY: true }));
       this.camera.fov = firstView.fov ?? 62;
       this.camera.updateProjectionMatrix();
     } else {
@@ -666,8 +717,11 @@ export class WalkthroughViewer {
     if (!bounds) {
       return;
     }
-    this.minBounds = toVector3(bounds.min);
-    this.maxBounds = toVector3(bounds.max);
+    this.minBounds = this.toSceneVector(bounds.min);
+    this.maxBounds = this.toSceneVector(bounds.max);
+    const size = this.maxBounds.clone().sub(this.minBounds);
+    this.camera.far = Math.max(250, size.length() * 4);
+    this.camera.updateProjectionMatrix();
   }
 
   private animate = (): void => {
@@ -950,7 +1004,7 @@ export class WalkthroughViewer {
     const floorHit = this.findWalkableHit();
     if (floorHit) {
       const nextTarget = floorHit.point.clone();
-      nextTarget.y = floorHit.point.y + this.manifest.navigation.cameraHeight;
+      nextTarget.y = floorHit.point.y + this.cameraHeight;
       if (this.minBounds && this.maxBounds) {
         clampToBounds(nextTarget, this.minBounds, this.maxBounds);
       }
@@ -1052,13 +1106,10 @@ export class WalkthroughViewer {
       return;
     }
     event.preventDefault();
-    const direction = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw) * -1);
-    const distance = THREE.MathUtils.clamp(Math.abs(event.deltaY) * 0.006, 0.15, 1.25);
-    direction.multiplyScalar(event.deltaY < 0 ? distance : -distance);
-    this.moveCameraBy(direction);
-    this.moveTarget = undefined;
-    this.moveMarker.visible = false;
-    this.applyYawPitch();
+    const delta = Math.sign(event.deltaY);
+    const step = THREE.MathUtils.clamp(Math.abs(event.deltaY) * 0.025, 1.5, 7);
+    this.camera.fov = THREE.MathUtils.clamp(this.camera.fov + delta * step, 34, 82);
+    this.camera.updateProjectionMatrix();
   };
 
   private resize = (): void => {

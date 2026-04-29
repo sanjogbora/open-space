@@ -574,6 +574,37 @@ function combineGraphBounds(graph) {
   );
 }
 
+function unitScaleForBounds(bounds) {
+  if (!bounds) {
+    return 1;
+  }
+  const width = Math.abs(bounds.max[0] - bounds.min[0]);
+  const height = Math.abs(bounds.max[1] - bounds.min[1]);
+  const depth = Math.abs(bounds.max[2] - bounds.min[2]);
+  const largestDimension = Math.max(width, height, depth);
+  if (largestDimension > 10_000) {
+    return 0.001;
+  }
+  if (largestDimension > 500) {
+    return 0.01;
+  }
+  return 1;
+}
+
+function scaleVec3(value, scale) {
+  return [value[0] * scale, value[1] * scale, value[2] * scale];
+}
+
+function scaleBounds(bounds, scale) {
+  if (!bounds || scale === 1) {
+    return bounds;
+  }
+  return {
+    min: scaleVec3(bounds.min, scale),
+    max: scaleVec3(bounds.max, scale)
+  };
+}
+
 function importedModelViews(bounds, cameraHeight) {
   if (!bounds) {
     return [
@@ -659,7 +690,9 @@ async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") 
     readJson(path.join(target, "scene.manifest.json")),
     readJson(path.join(target, "scene.graph.json"))
   ]);
-  const bounds = combineGraphBounds(graph);
+  const rawBounds = combineGraphBounds(graph);
+  const modelScale = unitScaleForBounds(rawBounds);
+  const bounds = scaleBounds(rawBounds, modelScale);
   const cameraHeight = manifest.navigation?.cameraHeight ?? 1.65;
   const margin = 0.75;
   const navigationBounds = bounds
@@ -679,15 +712,18 @@ async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") 
     originalSceneUrl: sceneUrl,
     rendering: {
       ...manifest.rendering,
-      doubleSidedMaterials: true
+      doubleSidedMaterials: true,
+      modelScale
     },
     environment: {
       ...manifest.environment,
       backgroundColor: manifest.environment?.backgroundColor ?? "#d8dde2",
       groundEnabled: manifest.environment?.groundEnabled ?? true,
       groundColor: manifest.environment?.groundColor ?? "#6f8f5a",
-      groundSize: manifest.environment?.groundSize ?? 90,
-      groundY: manifest.environment?.groundY ?? -0.04
+      groundSize:
+        manifest.environment?.groundSize ??
+        (bounds ? Math.max(30, (bounds.max[0] - bounds.min[0]) * 1.8, (bounds.max[2] - bounds.min[2]) * 1.8) : 90),
+      groundY: manifest.environment?.groundY ?? (bounds ? bounds.min[1] - 0.04 : -0.04)
     },
     views: importedModelViews(bounds, cameraHeight),
     interactions: [],
