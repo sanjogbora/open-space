@@ -106,6 +106,7 @@ export class WalkthroughViewer {
   private pointerDown: { x: number; y: number; time: number } | undefined;
   private yaw = 0;
   private pitch = 0;
+  private wheelVelocity = 0;
   private draggingLook = false;
   private lastPointer: { x: number; y: number } | undefined;
   private quality: ViewerQuality;
@@ -1056,7 +1057,12 @@ export class WalkthroughViewer {
     if (this.cameraTween) {
       return;
     }
-    if (!this.controls.enabled || !this.controls.keyboard) {
+    if (!this.controls.enabled) {
+      this.applyYawPitch();
+      return;
+    }
+    if (!this.controls.keyboard) {
+      this.updateWheelMovement(delta);
       this.applyYawPitch();
       return;
     }
@@ -1084,7 +1090,25 @@ export class WalkthroughViewer {
       this.moveMarker.visible = false;
     }
 
+    this.updateWheelMovement(delta);
     this.applyYawPitch();
+  }
+
+  private updateWheelMovement(delta: number): void {
+    if (!this.controls.enabled || Math.abs(this.wheelVelocity) < 0.01) {
+      this.wheelVelocity = 0;
+      return;
+    }
+    const forward = new THREE.Vector3();
+    this.camera.getWorldDirection(forward);
+    forward.y = 0;
+    if (forward.lengthSq() < 0.001) {
+      this.wheelVelocity = 0;
+      return;
+    }
+    forward.normalize().multiplyScalar(this.wheelVelocity * delta);
+    this.moveCameraBy(forward);
+    this.wheelVelocity *= Math.exp(-7 * delta);
   }
 
   private updateTweens(delta: number): void {
@@ -1503,10 +1527,13 @@ export class WalkthroughViewer {
       return;
     }
     event.preventDefault();
-    const delta = Math.sign(event.deltaY);
-    const step = THREE.MathUtils.clamp(Math.abs(event.deltaY) * 0.025, 1.5, 7);
-    this.camera.fov = THREE.MathUtils.clamp(this.camera.fov + delta * step, 34, 82);
-    this.camera.updateProjectionMatrix();
+    this.renderer.domElement.focus();
+    this.cameraTween = undefined;
+    this.moveTarget = undefined;
+    this.moveMarker.visible = false;
+    const intent = -Math.sign(event.deltaY || 0);
+    const impulse = THREE.MathUtils.clamp(Math.abs(event.deltaY) * 0.035, 0.45, 3.2);
+    this.wheelVelocity = THREE.MathUtils.clamp(this.wheelVelocity + intent * impulse, -5.5, 5.5);
   };
 
   private resize = (): void => {

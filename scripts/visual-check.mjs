@@ -127,6 +127,8 @@ async function runViewerControlsCheck(page) {
   await page.keyboard.down("KeyW");
   await page.waitForTimeout(650);
   await page.keyboard.up("KeyW");
+  await page.mouse.wheel(0, -650);
+  await page.waitForTimeout(500);
   await page.mouse.move(box.x + box.width * 0.48, box.y + box.height * 0.52);
   await page.mouse.down({ button: "left" });
   await page.mouse.move(box.x + box.width * 0.67, box.y + box.height * 0.45, { steps: 12 });
