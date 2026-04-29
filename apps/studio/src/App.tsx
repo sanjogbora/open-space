@@ -551,6 +551,22 @@ function createVideoTexture(index: number): VideoTextureInteraction {
   };
 }
 
+function withVideoSurfaceCandidate(
+  interaction: VideoTextureInteraction,
+  candidate: VideoSurfaceCandidate
+): VideoTextureInteraction {
+  const nextInteraction: VideoTextureInteraction = {
+    ...interaction,
+    targetMeshName: candidate.meshName
+  };
+  if (candidate.materialName) {
+    nextInteraction.targetMaterialName = candidate.materialName;
+  } else {
+    delete nextInteraction.targetMaterialName;
+  }
+  return nextInteraction;
+}
+
 function createRoom(index: number, view?: SceneView): RoomDefinition {
   return {
     id: `room-${index}`,
@@ -2370,7 +2386,18 @@ function App() {
 
   const addVideoTexture = () => {
     updateManifest((current) => {
-      const nextVideoTexture = createVideoTexture(videoTextureInteractions.length + 1);
+      const usedTargets = new Set(
+        videoTextureInteractions
+          .flatMap((interaction) => [interaction.targetMeshName, interaction.targetMaterialName])
+          .filter((value): value is string => Boolean(value))
+      );
+      const candidate =
+        videoSurfaceCandidates.find(
+          (item) => !usedTargets.has(item.meshName) && (!item.materialName || !usedTargets.has(item.materialName))
+        ) ?? videoSurfaceCandidates[0];
+      const nextVideoTexture = candidate
+        ? withVideoSurfaceCandidate(createVideoTexture(videoTextureInteractions.length + 1), candidate)
+        : createVideoTexture(videoTextureInteractions.length + 1);
       window.setTimeout(() => setSelectedInteractionId(nextVideoTexture.id), 0);
       return {
         ...current,
@@ -2400,16 +2427,7 @@ function App() {
       return;
     }
     updateVideoTexture(selectedVideoTexture.id, (interaction) => {
-      const nextInteraction: VideoTextureInteraction = {
-        ...interaction,
-        targetMeshName: candidate.meshName
-      };
-      if (candidate.materialName) {
-        nextInteraction.targetMaterialName = candidate.materialName;
-      } else {
-        delete nextInteraction.targetMaterialName;
-      }
-      return nextInteraction;
+      return withVideoSurfaceCandidate(interaction, candidate);
     });
   };
 
