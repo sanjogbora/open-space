@@ -1184,6 +1184,7 @@ function App() {
       }
     ];
   }, [bundleStats, manifest]);
+  const hasBlockingPublishErrors = publishChecks.some((check) => check.id === "diagnostics" && !check.ready);
 
   const selectedHotspot = useMemo(
     () => hotspotInteractions.find((interaction) => interaction.id === selectedInteractionId),
@@ -2997,7 +2998,7 @@ function App() {
                 <button
                   type="button"
                   className="button primary"
-                  disabled={publishState === "publishing"}
+                  disabled={publishState === "publishing" || hasBlockingPublishErrors}
                   onClick={() => void publishProject()}
                 >
                   <Globe2 size={16} aria-hidden="true" />
@@ -5112,8 +5113,17 @@ function DiagnosticList({
   if (diagnostics.length === 0) {
     return null;
   }
+  const errorCount = diagnostics.filter((diagnostic) => diagnostic.severity === "error").length;
+  const warningCount = diagnostics.filter((diagnostic) => diagnostic.severity === "warning").length;
+  const infoCount = diagnostics.filter((diagnostic) => diagnostic.severity === "info").length;
   return (
     <div className="diagnostic-list">
+      <div className={errorCount > 0 ? "diagnostic-summary blocking" : "diagnostic-summary"}>
+        <strong>{errorCount > 0 ? `${errorCount} blocking issue${errorCount === 1 ? "" : "s"}` : "No blocking issues"}</strong>
+        <span>
+          {warningCount} warning{warningCount === 1 ? "" : "s"} / {infoCount} info
+        </span>
+      </div>
       {diagnostics.map((diagnostic) => (
         <div key={diagnostic.code} className={`diagnostic-card ${diagnostic.severity}`}>
           <AlertTriangle size={17} aria-hidden="true" />

@@ -977,6 +977,30 @@ button.list-row {
   background: #fbfcfd;
 }
 
+.diagnostic-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 11px;
+  border: 1px solid #bfd8c8;
+  border-radius: 8px;
+  color: #146c43;
+  background: #eefaf2;
+  font-size: 13px;
+}
+
+.diagnostic-summary.blocking {
+  color: #8f1e2b;
+  border-color: #f0bdc5;
+  background: #fff1f3;
+}
+
+.diagnostic-summary span {
+  color: inherit;
+  white-space: nowrap;
+}
+
 .diagnostic-card.error {
   color: #8f1e2b;
   border-color: #f0bdc5;
