@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { access, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NodeIO } from "@gltf-transform/core";
@@ -34,6 +35,29 @@ async function exists(filePath) {
   } catch {
     return false;
   }
+}
+
+function commandExists(command, args = []) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { stdio: "ignore" });
+    child.on("error", () => resolve(false));
+    child.on("exit", (code) => resolve(code === 0));
+  });
+}
+
+async function textureEncoderStatusStep() {
+  const hasToktx =
+    process.platform === "win32"
+      ? await commandExists("where.exe", ["toktx"])
+      : await commandExists("which", ["toktx"]);
+  return {
+    id: "gpu-texture-compression",
+    label: "KTX2/Basis GPU texture compression",
+    status: "skipped",
+    note: hasToktx
+      ? "toktx is installed, but this local pass currently keeps WebP transfer compression active."
+      : "toktx was not found, so textures were compressed for transfer size with WebP only."
+  };
 }
 
 async function readJsonDefault(filePath, fallback) {
@@ -169,6 +193,7 @@ const sourceSceneUrl =
 const sourcePath = path.resolve(bundleDir, sourceSceneUrl);
 const outputPath = path.resolve(bundleDir, optimizedSceneUrl);
 const beforeInfo = await stat(sourcePath);
+const gpuTextureStep = await textureEncoderStatusStep();
 if (sourcePath.toLowerCase().endsWith(".glb")) {
   const sourceBytes = await readFile(sourcePath);
   const compactBytes = compactGlbJson(sourceBytes);
@@ -236,6 +261,7 @@ const job = {
       label: "Compress texture images to WebP",
       status: "completed"
     },
+    gpuTextureStep,
     {
       id: "mesh-compression",
       label: "Apply EXT_meshopt_compression",

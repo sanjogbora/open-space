@@ -1286,9 +1286,25 @@ button.list-row {
   background: #fbfcfd;
 }
 
-.job-step-row span {
+.job-step-main {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.job-step-main span {
   overflow: hidden;
   color: #24313a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-step-main small {
+  min-width: 0;
+  overflow: hidden;
+  color: #667681;
+  font-size: 12px;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1305,6 +1321,10 @@ button.list-row {
 
 .job-step-row.pending strong {
   color: #8a4d00;
+}
+
+.job-step-row.skipped strong {
+  color: #667681;
 }
 
 .job-history-list {

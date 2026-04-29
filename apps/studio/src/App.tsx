@@ -172,7 +172,8 @@ interface OptimizationJobDocument {
   steps: readonly {
     id: string;
     label: string;
-    status: "completed" | "pending" | "failed";
+    status: "completed" | "pending" | "failed" | "skipped";
+    note?: string;
   }[];
 }
 
@@ -2614,7 +2615,10 @@ function App() {
                     <div className="job-step-list">
                       {optimizationJob.steps.map((step) => (
                         <div key={step.id} className={`job-step-row ${step.status}`}>
-                          <span>{step.label}</span>
+                          <div className="job-step-main">
+                            <span>{step.label}</span>
+                            {step.note && <small>{step.note}</small>}
+                          </div>
                           <strong>{step.status}</strong>
                         </div>
                       ))}
