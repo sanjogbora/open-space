@@ -67,6 +67,7 @@ export class WalkthroughViewer {
   private readonly lightRig = new THREE.Group();
   private readonly renderer: THREE.WebGLRenderer;
   private readonly loader = new GLTFLoader();
+  private readonly textureLoader = new THREE.TextureLoader();
   private readonly moveMarker = createMoveMarker();
   private readonly modelScale: number;
   private readonly manifestScale: number;
@@ -76,6 +77,7 @@ export class WalkthroughViewer {
   private readonly keys = new Set<string>();
   private readonly collisionRadius = 0.28;
   private readonly materialOverrides = new Map<string, MaterialOverride>();
+  private readonly materialLightMaps: THREE.Texture[] = [];
   private readonly objectOverrides = new Map<string, ObjectOverride>();
   private readonly objectToggleStates = new Map<string, boolean>();
   private controls: SceneControlsDocument["movement"] = {
@@ -172,6 +174,7 @@ export class WalkthroughViewer {
     this.destroyed = true;
     cancelAnimationFrame(this.frameId);
     this.managedTextures.forEach((item) => item.destroy?.());
+    this.materialLightMaps.forEach((texture) => texture.dispose());
     this.skyTexture?.dispose();
     this.collisionDebugHelpers.forEach((helper) => {
       helper.geometry.dispose();
@@ -651,6 +654,37 @@ export class WalkthroughViewer {
       material.opacity = override.opacity;
       material.transparent = override.opacity < 1;
     }
+
+    if (override.lightMapUrl && "lightMap" in material) {
+      const lightMappedMaterial = material as THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+      const lightMapUrl = this.resolveMaterialAssetUrl(override.lightMapUrl);
+      const lightMap = this.textureLoader.load(lightMapUrl, () => {
+        material.needsUpdate = true;
+      });
+      lightMap.name = `${material.name || override.name}-lightmap`;
+      lightMap.colorSpace = THREE.SRGBColorSpace;
+      lightMap.flipY = false;
+      if ("channel" in lightMap && typeof override.lightMapUvSet === "number") {
+        lightMap.channel = Math.max(0, Math.floor(override.lightMapUvSet));
+      }
+      lightMappedMaterial.lightMap = lightMap;
+      lightMappedMaterial.lightMapIntensity = override.lightMapIntensity ?? 1;
+      this.materialLightMaps.push(lightMap);
+    }
+  }
+
+  private resolveMaterialAssetUrl(source: string): string {
+    if (
+      source.startsWith("generated://") ||
+      source.startsWith("data:") ||
+      source.startsWith("blob:") ||
+      source.startsWith("http://") ||
+      source.startsWith("https://") ||
+      source.startsWith("/")
+    ) {
+      return source;
+    }
+    return new URL(source, this.manifest.materialsUrl ?? window.location.href).href;
   }
 
   private prepareMaterial(material: THREE.Material, meshName: string): void {

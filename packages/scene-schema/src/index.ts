@@ -203,6 +203,9 @@ export interface MaterialOverride {
   roughness?: number;
   metalness?: number;
   opacity?: number;
+  lightMapUrl?: string;
+  lightMapIntensity?: number;
+  lightMapUvSet?: number;
 }
 
 export interface SceneMaterialsDocument {

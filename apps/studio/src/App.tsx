@@ -3276,6 +3276,55 @@ function App() {
                   />
                 </div>
 
+                <div className="field-grid">
+                  <label>
+                    <span>Lightmap URL</span>
+                    <input
+                      value={selectedMaterial.lightMapUrl ?? ""}
+                      placeholder="lightmaps/living-room.webp"
+                      onChange={(event) =>
+                        updateMaterial(selectedMaterial.id, (material) => {
+                          const nextUrl = event.target.value.trim();
+                          if (!nextUrl) {
+                            const { lightMapUrl, ...rest } = material;
+                            return rest;
+                          }
+                          return {
+                            ...material,
+                            lightMapUrl: nextUrl
+                          };
+                        })
+                      }
+                    />
+                  </label>
+                  <NumberField
+                    label="Lightmap Intensity"
+                    min={0}
+                    max={8}
+                    step={0.05}
+                    value={selectedMaterial.lightMapIntensity ?? 1}
+                    onChange={(value) =>
+                      updateMaterial(selectedMaterial.id, (material) => ({
+                        ...material,
+                        lightMapIntensity: value
+                      }))
+                    }
+                  />
+                  <NumberField
+                    label="Lightmap UV Set"
+                    min={0}
+                    max={3}
+                    step={1}
+                    value={selectedMaterial.lightMapUvSet ?? 1}
+                    onChange={(value) =>
+                      updateMaterial(selectedMaterial.id, (material) => ({
+                        ...material,
+                        lightMapUvSet: Math.max(0, Math.round(value))
+                      }))
+                    }
+                  />
+                </div>
+
                 <div className="object-detail">
                   <h3>Used By</h3>
                   <div className="chip-row">
