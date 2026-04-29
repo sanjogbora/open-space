@@ -706,6 +706,78 @@ button.list-row {
   gap: 12px;
 }
 
+.diagnostic-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.diagnostic-card {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid #d6dde2;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.diagnostic-card.error {
+  color: #8f1e2b;
+  border-color: #f0bdc5;
+  background: #fff1f3;
+}
+
+.diagnostic-card.warning {
+  color: #7b4c00;
+  border-color: #f3d0a1;
+  background: #fff7e8;
+}
+
+.diagnostic-card.info {
+  color: #095b88;
+  border-color: #b8dcf0;
+  background: #eef8ff;
+}
+
+.diagnostic-card strong {
+  display: block;
+  margin-bottom: 3px;
+  color: inherit;
+}
+
+.diagnostic-card p,
+.diagnostic-card small {
+  display: block;
+  color: inherit;
+  line-height: 1.4;
+}
+
+.diagnostic-card p {
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.diagnostic-card small {
+  opacity: 0.82;
+}
+
+.repair-panel {
+  display: grid;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e3e8eb;
+}
+
+.compact-heading {
+  margin-bottom: 0;
+}
+
+.bounds-editor {
+  display: grid;
+  gap: 10px;
+}
+
 .optimization-grid,
 .recommendation-list {
   display: grid;

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
   Box,
   Check,
   Copy,
@@ -17,6 +18,7 @@ import {
   Save,
   Settings2,
   Trash2,
+  Wrench,
   Video
 } from "lucide-react";
 import {
@@ -88,6 +90,13 @@ interface BundleStats {
   warnings: readonly {
     code: string;
     message: string;
+  }[];
+  diagnostics?: readonly {
+    severity: "error" | "warning" | "info";
+    code: string;
+    title: string;
+    message: string;
+    action?: string;
   }[];
 }
 
@@ -196,6 +205,17 @@ function updateVec3(value: Vec3, index: number, next: string): Vec3 {
   const draft = [...value] as [number, number, number];
   draft[index] = toNumber(next, value[index] ?? 0);
   return draft;
+}
+
+function parseKeywordList(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function keywordList(value: readonly string[] | undefined): string {
+  return (value ?? []).join(", ");
 }
 
 function isHotspot(interaction: SceneInteraction): interaction is HotspotInteraction {
@@ -952,6 +972,67 @@ function App() {
     }));
   };
 
+  const updateNavigation = (updater: (navigation: SceneManifest["navigation"]) => SceneManifest["navigation"]) => {
+    updateManifest((current) => ({
+      ...current,
+      navigation: updater(current.navigation)
+    }));
+  };
+
+  const updateRendering = (updater: (rendering: NonNullable<SceneManifest["rendering"]>) => NonNullable<SceneManifest["rendering"]>) => {
+    updateManifest((current) => ({
+      ...current,
+      rendering: updater(current.rendering ?? {})
+    }));
+  };
+
+  const applyBoundsFromGraph = () => {
+    if (!sceneGraph) {
+      return;
+    }
+    const nodeBounds = sceneGraph.nodes
+      .map((node) => node.bounds)
+      .filter((bounds): bounds is NonNullable<SceneGraphDocument["nodes"][number]["bounds"]> =>
+        Boolean(bounds)
+      );
+    const firstBounds = nodeBounds[0];
+    if (!firstBounds) {
+      return;
+    }
+    const bounds = nodeBounds.slice(1).reduce(
+      (current, next) => ({
+        min: [
+          Math.min(current.min[0], next.min[0]),
+          Math.min(current.min[1], next.min[1]),
+          Math.min(current.min[2], next.min[2])
+        ] as Vec3,
+        max: [
+          Math.max(current.max[0], next.max[0]),
+          Math.max(current.max[1], next.max[1]),
+          Math.max(current.max[2], next.max[2])
+        ] as Vec3
+      }),
+      { min: [...firstBounds.min] as Vec3, max: [...firstBounds.max] as Vec3 }
+    );
+    const scale = manifest?.rendering?.modelScale ?? 1;
+    const margin = 0.75;
+    updateNavigation((navigation) => ({
+      ...navigation,
+      bounds: {
+        min: [
+          bounds.min[0] * scale - margin,
+          Math.min(0.2, bounds.min[1] * scale - 0.1),
+          bounds.min[2] * scale - margin
+        ],
+        max: [
+          bounds.max[0] * scale + margin,
+          Math.max(bounds.max[1] * scale + 0.5, navigation.cameraHeight + 0.5),
+          bounds.max[2] * scale + margin
+        ]
+      }
+    }));
+  };
+
   const saveDraft = () => {
     if (!manifest) {
       return;
@@ -1652,6 +1733,7 @@ function App() {
                   />
                 </label>
               </div>
+              <DiagnosticList diagnostics={bundleStats?.diagnostics ?? []} />
             </div>
 
             <div className="panel metrics-panel">
@@ -1709,7 +1791,7 @@ function App() {
                   disabled={!apiConnected || uploadState === "uploading"}
                   onChange={(event) => void uploadModel(event.target.files?.[0])}
                 />
-                <span>Upload GLB</span>
+                <span>Upload GLB or ZIP</span>
                 <strong>
                   {uploadState === "uploading" && "Uploading"}
                   {uploadState === "done" && "Imported"}
@@ -1728,12 +1810,15 @@ function App() {
                 <h2>Imported Scene Stats</h2>
               </div>
               {bundleStats ? (
-                <div className="stat-grid">
-                  <Stat label="Model" value={formatBytes(bundleStats.modelBytes)} />
-                  <Stat label="Meshes" value={String(bundleStats.meshCount)} />
-                  <Stat label="Materials" value={String(bundleStats.materialCount)} />
-                  <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
-                </div>
+                <>
+                  <div className="stat-grid">
+                    <Stat label="Model" value={formatBytes(bundleStats.modelBytes)} />
+                    <Stat label="Meshes" value={String(bundleStats.meshCount)} />
+                    <Stat label="Materials" value={String(bundleStats.materialCount)} />
+                    <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
+                  </div>
+                  <DiagnosticList diagnostics={bundleStats.diagnostics ?? []} />
+                </>
               ) : (
                 <p className="quiet-note">Stats will appear after import.</p>
               )}
@@ -2994,6 +3079,19 @@ function App() {
 
                   <div className="field-grid">
                     <NumberField
+                      label="Camera Height"
+                      min={0.8}
+                      max={2.4}
+                      step={0.05}
+                      value={manifest.navigation.cameraHeight}
+                      onChange={(value) =>
+                        updateNavigation((navigation) => ({
+                          ...navigation,
+                          cameraHeight: value
+                        }))
+                      }
+                    />
+                    <NumberField
                       label="Move Speed"
                       min={0.5}
                       max={12}
@@ -3058,6 +3156,92 @@ function App() {
                         }))
                       }
                     />
+                  </div>
+
+                  <div className="repair-panel">
+                    <div className="panel-heading compact-heading">
+                      <Wrench size={18} aria-hidden="true" />
+                      <h2>Navigation Repair</h2>
+                    </div>
+                    <div className="field-grid">
+                      <NumberField
+                        label="Model Scale"
+                        min={0.0001}
+                        max={10}
+                        step={0.001}
+                        value={manifest.rendering?.modelScale ?? 1}
+                        onChange={(value) =>
+                          updateRendering((rendering) => ({
+                            ...rendering,
+                            modelScale: value
+                          }))
+                        }
+                      />
+                      <label>
+                        <span>Floor Keywords</span>
+                        <input
+                          value={keywordList(manifest.navigation.floorMeshNames)}
+                          onChange={(event) =>
+                            updateNavigation((navigation) => ({
+                              ...navigation,
+                              floorMeshNames: parseKeywordList(event.target.value)
+                            }))
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Collision Keywords</span>
+                        <input
+                          value={keywordList(manifest.navigation.collisionMeshNames)}
+                          onChange={(event) =>
+                            updateNavigation((navigation) => ({
+                              ...navigation,
+                              collisionMeshNames: parseKeywordList(event.target.value)
+                            }))
+                          }
+                        />
+                      </label>
+                    </div>
+
+                    <div className="publish-row">
+                      <span>Navigation bounds</span>
+                      <button type="button" className="button secondary" onClick={applyBoundsFromGraph}>
+                        <Wrench size={16} aria-hidden="true" />
+                        Use graph bounds
+                      </button>
+                    </div>
+                    {manifest.navigation.bounds ? (
+                      <div className="bounds-editor">
+                        <VectorEditor
+                          label="Bounds Min"
+                          value={manifest.navigation.bounds.min}
+                          onChange={(value) =>
+                            updateNavigation((navigation) => ({
+                              ...navigation,
+                              bounds: {
+                                min: value,
+                                max: navigation.bounds?.max ?? [5, 3, 5]
+                              }
+                            }))
+                          }
+                        />
+                        <VectorEditor
+                          label="Bounds Max"
+                          value={manifest.navigation.bounds.max}
+                          onChange={(value) =>
+                            updateNavigation((navigation) => ({
+                              ...navigation,
+                              bounds: {
+                                min: navigation.bounds?.min ?? [-5, 0, -5],
+                                max: value
+                              }
+                            }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <p className="quiet-note">No navigation bounds are set. Use graph bounds after analysis.</p>
+                    )}
                   </div>
                 </>
               ) : (
@@ -3280,6 +3464,30 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="stat-cell">
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function DiagnosticList({
+  diagnostics
+}: {
+  diagnostics: NonNullable<BundleStats["diagnostics"]>;
+}) {
+  if (diagnostics.length === 0) {
+    return null;
+  }
+  return (
+    <div className="diagnostic-list">
+      {diagnostics.map((diagnostic) => (
+        <div key={diagnostic.code} className={`diagnostic-card ${diagnostic.severity}`}>
+          <AlertTriangle size={17} aria-hidden="true" />
+          <div>
+            <strong>{diagnostic.title}</strong>
+            <p>{diagnostic.message}</p>
+            {diagnostic.action && <small>{diagnostic.action}</small>}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

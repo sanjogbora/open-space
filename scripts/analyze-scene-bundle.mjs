@@ -105,6 +105,40 @@ async function assetSize(reference) {
   }
 }
 
+function isLocalGltfUri(uri) {
+  return (
+    typeof uri === "string" &&
+    uri.trim().length > 0 &&
+    !uri.startsWith("data:") &&
+    !uri.startsWith("blob:") &&
+    !uri.startsWith("http://") &&
+    !uri.startsWith("https://")
+  );
+}
+
+async function resourceStatus(asset, kind, source, label) {
+  const fullPath = path.resolve(path.dirname(asset.path), source);
+  try {
+    await access(fullPath);
+    const info = await stat(fullPath);
+    return {
+      kind,
+      source,
+      label,
+      exists: true,
+      bytes: info.size
+    };
+  } catch {
+    return {
+      kind,
+      source,
+      label,
+      exists: false,
+      bytes: 0
+    };
+  }
+}
+
 function parseGlbJson(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const magic = view.getUint32(0, true);
@@ -124,7 +158,7 @@ function parseGlbJson(bytes) {
   return JSON.parse(new TextDecoder().decode(bytes.slice(20, 20 + jsonChunkLength)).trim());
 }
 
-function analyzeGltfDocument(document, format) {
+async function analyzeGltfDocument(document, format, asset) {
   const accessors = document.accessors ?? [];
   const meshes = document.meshes ?? [];
   let primitiveCount = 0;
@@ -148,6 +182,28 @@ function analyzeGltfDocument(document, format) {
     }
   }
 
+  const externalResourceRefs = [
+    ...(document.images ?? [])
+      .map((image, index) => ({
+        kind: "texture",
+        source: image.uri,
+        label: image.name || `Image ${index}`
+      }))
+      .filter((reference) => isLocalGltfUri(reference.source)),
+    ...(document.buffers ?? [])
+      .map((buffer, index) => ({
+        kind: "buffer",
+        source: buffer.uri,
+        label: buffer.name || `Buffer ${index}`
+      }))
+      .filter((reference) => isLocalGltfUri(reference.source))
+  ];
+  const externalResources = await Promise.all(
+    externalResourceRefs.map((reference) =>
+      resourceStatus(asset, reference.kind, reference.source, reference.label)
+    )
+  );
+
   return {
     format,
     version: document.asset?.version,
@@ -163,7 +219,10 @@ function analyzeGltfDocument(document, format) {
     vertexCount,
     triangleCount,
     extensionCount: document.extensionsUsed?.length ?? 0,
-    requiredExtensionCount: document.extensionsRequired?.length ?? 0
+    requiredExtensionCount: document.extensionsRequired?.length ?? 0,
+    externalResourceCount: externalResources.length,
+    missingExternalResourceCount: externalResources.filter((resource) => !resource.exists).length,
+    externalResources
   };
 }
 
@@ -429,11 +488,11 @@ async function modelStats(asset) {
   const extension = path.extname(asset.source).toLowerCase();
   if (extension === ".glb") {
     const bytes = await readFile(asset.path);
-    return analyzeGltfDocument(parseGlbJson(bytes), "glb");
+    return analyzeGltfDocument(parseGlbJson(bytes), "glb", asset);
   }
 
   if (extension === ".gltf") {
-    return analyzeGltfDocument(JSON.parse(await readFile(asset.path, "utf8")), "gltf");
+    return analyzeGltfDocument(JSON.parse(await readFile(asset.path, "utf8")), "gltf", asset);
   }
 
   return undefined;
@@ -475,7 +534,141 @@ async function modelMaterials(asset) {
   return undefined;
 }
 
-function summarize(manifest, assets, models) {
+function graphBounds(graph) {
+  const bounds = (graph?.nodes ?? []).map((node) => node.bounds).filter(Boolean);
+  if (bounds.length === 0) {
+    return undefined;
+  }
+  return bounds.reduce(
+    (current, next) => ({
+      min: [
+        Math.min(current.min[0], next.min[0]),
+        Math.min(current.min[1], next.min[1]),
+        Math.min(current.min[2], next.min[2])
+      ],
+      max: [
+        Math.max(current.max[0], next.max[0]),
+        Math.max(current.max[1], next.max[1]),
+        Math.max(current.max[2], next.max[2])
+      ]
+    }),
+    { min: [...bounds[0].min], max: [...bounds[0].max] }
+  );
+}
+
+function boundsSize(bounds) {
+  if (!bounds) {
+    return undefined;
+  }
+  return [
+    bounds.max[0] - bounds.min[0],
+    bounds.max[1] - bounds.min[1],
+    bounds.max[2] - bounds.min[2]
+  ];
+}
+
+function keywordMatchCount(graph, keywords) {
+  const normalized = keywords.map((keyword) => keyword.toLowerCase());
+  return (graph?.nodes ?? []).filter((node) => {
+    const name = `${node.name} ${node.meshName ?? ""}`.toLowerCase();
+    return normalized.some((keyword) => name.includes(keyword));
+  }).length;
+}
+
+function createDiagnostics(manifest, report, graphs) {
+  const diagnostics = [];
+  const graph = graphs[0];
+  const bounds = graphBounds(graph);
+  const size = boundsSize(bounds);
+  const largestDimension = size ? Math.max(...size.map(Math.abs)) : 0;
+  const modelScale = manifest.rendering?.modelScale ?? 1;
+  const missingExternalResources = report.models.reduce(
+    (sum, model) => sum + (model.missingExternalResourceCount ?? 0),
+    0
+  );
+  const floorMatches = keywordMatchCount(graph, manifest.navigation?.floorMeshNames ?? []);
+  const collisionMatches = keywordMatchCount(graph, manifest.navigation?.collisionMeshNames ?? []);
+
+  if (missingExternalResources > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "missing-model-resources",
+      title: "Missing model textures or buffers",
+      message: `${missingExternalResources} GLTF resource(s) referenced by the model are not present next to the scene file.`,
+      action: "Upload a ZIP containing the GLTF/GLB plus its texture and .bin folders, preserving relative paths."
+    });
+  }
+
+  if (!bounds) {
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-scene-bounds",
+      title: "Scene bounds unavailable",
+      message: "The analyzer could not derive object bounds, so imported camera views and navigation limits may be poor.",
+      action: "Check that the model contains mesh POSITION attributes, then re-run analysis."
+    });
+  } else if (largestDimension > 500 && modelScale === 1) {
+    diagnostics.push({
+      severity: "warning",
+      code: "large-coordinate-units",
+      title: "Large scene coordinates",
+      message: `The model spans about ${largestDimension.toFixed(1)} units. This often means the file was exported in centimeters or millimeters.`,
+      action: "Set rendering.modelScale to 0.01 or 0.001, then regenerate views."
+    });
+  } else if (modelScale !== 1) {
+    diagnostics.push({
+      severity: "info",
+      code: "model-scale-normalized",
+      title: "Model scale normalized",
+      message: `The viewer applies a ${modelScale} scale factor so navigation uses meter-like units.`,
+      action: "Keep this value unless the model appears too small or too large."
+    });
+  }
+
+  if (floorMatches === 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "no-named-floor-meshes",
+      title: "No named floor meshes found",
+      message: "Click-to-move will fall back to geometric floor detection, which can include tabletops, roofs, or large flat objects.",
+      action: "Add floor keywords that match your model object names, or create a dedicated navmesh object."
+    });
+  }
+
+  if (collisionMatches === 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "no-named-collision-meshes",
+      title: "No named collision meshes found",
+      message: "Wall collision will be inferred from thin tall geometry and may miss cupboards, railings, or exterior boundaries.",
+      action: "Add collision keywords for walls, windows, doors, partitions, columns, and boundary meshes."
+    });
+  }
+
+  if ((manifest.views?.length ?? 0) === 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "missing-views",
+      title: "No camera views",
+      message: "The viewer needs at least one starting view.",
+      action: "Create an entry view before publishing."
+    });
+  }
+
+  if (report.warnings.length === 0 && diagnostics.length === 0) {
+    diagnostics.push({
+      severity: "info",
+      code: "import-healthy",
+      title: "Import looks healthy",
+      message: "No blocking import, navigation, or bundle issues were detected.",
+      action: "Open the viewer and test click movement on the expected floor surfaces."
+    });
+  }
+
+  return diagnostics;
+}
+
+function summarize(manifest, assets, models, graphs) {
   const totalBytes = assets.reduce((sum, asset) => sum + asset.bytes, 0);
   const missingAssetCount = assets.filter((asset) => !asset.exists).length;
   const modelBytes = assets
@@ -538,7 +731,7 @@ function summarize(manifest, assets, models) {
     });
   }
 
-  return {
+  const report = {
     generatedAt: new Date().toISOString(),
     manifestPath,
     bundleDir,
@@ -555,6 +748,10 @@ function summarize(manifest, assets, models) {
     warnings,
     assets,
     models
+  };
+  return {
+    ...report,
+    diagnostics: createDiagnostics(manifest, report, graphs)
   };
 }
 
@@ -685,7 +882,7 @@ const assets = await Promise.all(collectAssetReferences(manifest).map(assetSize)
 const models = (await Promise.all(assets.map(modelStats))).filter(Boolean);
 const graphs = (await Promise.all(assets.map(modelGraph))).filter(Boolean);
 const materialDocs = (await Promise.all(assets.map(modelMaterials))).filter(Boolean);
-const report = summarize(manifest, assets, models);
+const report = summarize(manifest, assets, models, graphs);
 const optimizationReport = createOptimizationReport(report);
 
 if (writeStats) {
