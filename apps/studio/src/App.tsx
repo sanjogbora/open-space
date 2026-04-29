@@ -4088,6 +4088,19 @@ function App() {
                           }))
                         }
                       />
+                      <label className="toggle-row compact-toggle">
+                        <input
+                          type="checkbox"
+                          checked={manifest.rendering?.doubleSidedMaterials ?? false}
+                          onChange={(event) =>
+                            updateRendering((rendering) => ({
+                              ...rendering,
+                              doubleSidedMaterials: event.target.checked
+                            }))
+                          }
+                        />
+                        <span>Double-sided walls and ceilings</span>
+                      </label>
                       <label>
                         <span>Floor Keywords</span>
                         <input
