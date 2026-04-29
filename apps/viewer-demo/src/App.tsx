@@ -126,6 +126,9 @@ function App() {
   const [cameraPose, setCameraPose] = useState<ViewerCameraPose | null>(null);
   const [activeVariants, setActiveVariants] = useState<Record<string, string>>({});
   const [embedMode] = useState(() => new URLSearchParams(window.location.search).get("embed") === "1");
+  const [debugZones, setDebugZones] = useState(
+    () => new URLSearchParams(window.location.search).get("debug") === "nav"
+  );
 
   const views = useMemo(() => manifest?.views ?? [], [manifest]);
   const rooms = useMemo(() => manifest?.rooms ?? [], [manifest]);
@@ -207,6 +210,7 @@ function App() {
       container: viewportRef.current,
       manifest,
       quality,
+      debug: debugZones,
       onReady: () => {
         setReady(true);
         setProgress(1);
@@ -242,6 +246,10 @@ function App() {
   useEffect(() => {
     viewerRef.current?.setQuality(quality);
   }, [quality]);
+
+  useEffect(() => {
+    viewerRef.current?.setDebug(debugZones);
+  }, [debugZones]);
 
   useEffect(() => {
     if (!ready) {
@@ -373,6 +381,16 @@ function App() {
             <button type="button" className="icon-button" title="Share" onClick={() => void share()}>
               <Share2 size={18} aria-hidden="true" />
               <span className="sr-only">Share</span>
+            </button>
+            <button
+              type="button"
+              className={debugZones ? "icon-button active" : "icon-button"}
+              title="Navigation zones"
+              aria-pressed={debugZones}
+              onClick={() => setDebugZones((current) => !current)}
+            >
+              <Map size={18} aria-hidden="true" />
+              <span className="sr-only">Navigation zones</span>
             </button>
             {!embedMode && (
               <button type="button" className="icon-button" title="Copy embed" onClick={() => void copyEmbed()}>

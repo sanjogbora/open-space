@@ -135,6 +135,11 @@ button {
   outline-offset: 0;
 }
 
+.icon-button.active {
+  color: #ffffff;
+  background: rgba(7, 135, 255, 0.72);
+}
+
 .icon-button.compact {
   width: 30px;
   height: 30px;

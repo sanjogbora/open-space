@@ -377,6 +377,10 @@ function viewerUrl(projectId: string): string {
   return `${viewerBaseUrl}/?scene=${encodeURIComponent(projectScenePath(projectId))}`;
 }
 
+function navigationDebugViewerUrl(projectId: string): string {
+  return `${viewerUrl(projectId)}&debug=nav`;
+}
+
 function publishedViewerUrl(entry: PublishEntry): string {
   return `${viewerBaseUrl}/?scene=${encodeURIComponent(entry.scenePath)}`;
 }
@@ -3367,6 +3371,15 @@ function App() {
                     <div className="publish-row">
                       <span>Walk and block zones</span>
                       <div className="inline-actions">
+                        <a
+                          className="button secondary"
+                          href={navigationDebugViewerUrl(activeProjectId)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink size={16} aria-hidden="true" />
+                          Preview
+                        </a>
                         <button
                           type="button"
                           className="button secondary"

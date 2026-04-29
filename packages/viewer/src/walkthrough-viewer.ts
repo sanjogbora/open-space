@@ -97,12 +97,14 @@ export class WalkthroughViewer {
   private sunTarget: THREE.Object3D | undefined;
   private environmentTexture: THREE.Texture | undefined;
   private pmremGenerator: THREE.PMREMGenerator | undefined;
+  private debug: boolean;
 
   constructor(options: ViewerOptions) {
     this.container = options.container;
     this.manifest = options.manifest;
     this.options = options;
     this.quality = options.quality ?? "balanced";
+    this.debug = options.debug ?? false;
     const legacyScale = this.resolveLegacyCoordinateScale();
     this.modelScale = this.manifest.rendering?.modelScale ?? legacyScale;
     this.manifestScale = this.manifest.rendering?.modelScale ? 1 : legacyScale;
@@ -189,6 +191,11 @@ export class WalkthroughViewer {
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.shadowMap.enabled = selectedQuality?.shadows ?? true;
     this.resize();
+  }
+
+  setDebug(debug: boolean): void {
+    this.debug = debug;
+    this.updateNavigationZoneVisibility();
   }
 
   captureScreenshot(type = "image/png", quality = 0.92): string {
@@ -417,12 +424,13 @@ export class WalkthroughViewer {
     const material = new THREE.MeshBasicMaterial({
       color: zone.kind === "walk" ? "#1b8fff" : "#ff5f57",
       transparent: true,
-      opacity: 0,
+      opacity: this.debug ? (zone.kind === "walk" ? 0.22 : 0.34) : 0,
       depthWrite: false
     });
-    material.colorWrite = false;
+    material.colorWrite = this.debug;
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = `navigation_${zone.kind}_${zone.id}`;
+    mesh.renderOrder = this.debug ? 8 : 0;
     mesh.position.copy(center);
     mesh.rotation.y = zone.rotationY ?? 0;
     mesh.userData["navigationZoneKind"] = zone.kind;
@@ -432,6 +440,19 @@ export class WalkthroughViewer {
       Math.max(0.05, size.z) / 2
     );
     return mesh;
+  }
+
+  private updateNavigationZoneVisibility(): void {
+    this.navigationZoneMeshes.forEach((mesh) => {
+      const kind = mesh.userData["navigationZoneKind"];
+      const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+      if (material instanceof THREE.MeshBasicMaterial) {
+        material.opacity = this.debug ? (kind === "walk" ? 0.22 : 0.34) : 0;
+        material.colorWrite = this.debug;
+        material.needsUpdate = true;
+      }
+      mesh.renderOrder = this.debug ? 8 : 0;
+    });
   }
 
   private applyEnvironment(): void {
