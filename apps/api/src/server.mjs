@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { access, cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateRawSync } from "node:zlib";
@@ -29,6 +29,14 @@ const defaultControlsDocument = {
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8
   }
+};
+const idleOptimizationJob = {
+  schemaVersion: "0.1",
+  id: "",
+  status: "idle",
+  profile: "balanced",
+  applied: false,
+  steps: []
 };
 
 const jsonHeaders = {
@@ -720,6 +728,19 @@ async function setManifestSceneUrl(projectId, sceneUrl) {
   );
 }
 
+async function resetOptimizationState(projectId) {
+  await Promise.all(
+    targetDirs(projectId).flatMap((target) => [
+      rm(path.join(target, "scene.optimized.glb"), { force: true }),
+      writeFile(path.join(target, "optimization-job.json"), `${JSON.stringify(idleOptimizationJob, null, 2)}\n`),
+      writeFile(
+        path.join(target, "optimization-history.json"),
+        `${JSON.stringify({ schemaVersion: "0.1", jobs: [] }, null, 2)}\n`
+      )
+    ])
+  );
+}
+
 async function publishProject(projectId) {
   await runAnalyze(projectId);
   const publishedAt = new Date().toISOString();
@@ -835,6 +856,7 @@ async function handleRequest(request, response) {
         validateGlbBuffer(body);
         await writeProjectAllBinary(modelProjectId, "scene.glb", body);
       }
+      await resetOptimizationState(modelProjectId);
       await setManifestSceneUrl(modelProjectId, sceneUrl);
       await runAnalyze(modelProjectId);
       await resetManifestForUploadedModel(modelProjectId, sceneUrl);
