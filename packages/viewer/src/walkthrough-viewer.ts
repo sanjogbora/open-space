@@ -97,6 +97,7 @@ export class WalkthroughViewer {
   private collisionDebugHelpers: THREE.Box3Helper[] = [];
   private navigationZoneMeshes: THREE.Mesh[] = [];
   private walkZoneMeshes: THREE.Mesh[] = [];
+  private passZoneMeshes: THREE.Mesh[] = [];
   private sceneRoot: THREE.Object3D | undefined;
   private frameId = 0;
   private destroyed = false;
@@ -403,6 +404,7 @@ export class WalkthroughViewer {
   ): void {
     const zones = this.createNavigationZones();
     this.walkZoneMeshes = zones.walkMeshes;
+    this.passZoneMeshes = zones.passMeshes;
     if (zones.walkMeshes.length > 0) {
       this.floorMeshes = zones.walkMeshes;
       this.walkableMeshes = zones.walkMeshes;
@@ -414,12 +416,17 @@ export class WalkthroughViewer {
     this.rebuildCollisionDebugHelpers();
   }
 
-  private createNavigationZones(): { walkMeshes: THREE.Mesh[]; blockers: CollisionBlocker[] } {
+  private createNavigationZones(): {
+    walkMeshes: THREE.Mesh[];
+    passMeshes: THREE.Mesh[];
+    blockers: CollisionBlocker[];
+  } {
     const walkMeshes: THREE.Mesh[] = [];
+    const passMeshes: THREE.Mesh[] = [];
     const blockers: CollisionBlocker[] = [];
     const zones = this.manifest.navigation.zones ?? [];
     if (zones.length === 0) {
-      return { walkMeshes, blockers };
+      return { walkMeshes, passMeshes, blockers };
     }
 
     zones.forEach((zone) => {
@@ -434,6 +441,10 @@ export class WalkthroughViewer {
         walkMeshes.push(mesh);
         return;
       }
+      if (zone.kind === "pass") {
+        passMeshes.push(mesh);
+        return;
+      }
       const box = new THREE.Box3().setFromObject(mesh);
       if (!box.isEmpty()) {
         blockers.push({
@@ -444,7 +455,7 @@ export class WalkthroughViewer {
       }
     });
 
-    return { walkMeshes, blockers };
+    return { walkMeshes, passMeshes, blockers };
   }
 
   private createNavigationZoneMesh(zone: NavigationZone): THREE.Mesh {
@@ -456,9 +467,9 @@ export class WalkthroughViewer {
       Math.max(0.05, size.z)
     );
     const material = new THREE.MeshBasicMaterial({
-      color: zone.kind === "walk" ? "#1b8fff" : "#ff5f57",
+      color: zone.kind === "walk" ? "#1b8fff" : zone.kind === "pass" ? "#25c07b" : "#ff5f57",
       transparent: true,
-      opacity: this.debug ? (zone.kind === "walk" ? 0.22 : 0.34) : 0,
+      opacity: this.debug ? (zone.kind === "walk" ? 0.22 : zone.kind === "pass" ? 0.3 : 0.34) : 0,
       depthWrite: false
     });
     material.colorWrite = this.debug;
@@ -481,7 +492,7 @@ export class WalkthroughViewer {
       const kind = mesh.userData["navigationZoneKind"];
       const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
       if (material instanceof THREE.MeshBasicMaterial) {
-        material.opacity = this.debug ? (kind === "walk" ? 0.22 : 0.34) : 0;
+        material.opacity = this.debug ? (kind === "walk" ? 0.22 : kind === "pass" ? 0.3 : 0.34) : 0;
         material.colorWrite = this.debug;
         material.needsUpdate = true;
       }
@@ -1235,18 +1246,21 @@ export class WalkthroughViewer {
     }
 
     const blockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(cameraSphere));
-    if (blockedBlockers.length === 0) {
+    const effectiveBlockers = this.isInsidePassZone(candidate)
+      ? blockedBlockers.filter((blocker) => blocker.kind === "authored")
+      : blockedBlockers;
+    if (effectiveBlockers.length === 0) {
       return undefined;
     }
     if (!origin) {
-      const blockerName = blockedBlockers[0]?.name;
+      const blockerName = effectiveBlockers[0]?.name;
       return blockerName
         ? { reason: "blocked-collision", blockerName }
         : { reason: "blocked-collision" };
     }
     const originSphere = new THREE.Sphere(origin, this.collisionRadius);
     const originBlockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(originSphere));
-    const newlyBlocked = blockedBlockers.find((blocker) => !originBlockedBlockers.includes(blocker));
+    const newlyBlocked = effectiveBlockers.find((blocker) => !originBlockedBlockers.includes(blocker));
     return newlyBlocked
       ? { reason: "blocked-collision", blockerName: newlyBlocked.name }
       : undefined;
@@ -1277,17 +1291,23 @@ export class WalkthroughViewer {
   }
 
   private isInsideWalkZone(position: THREE.Vector3): boolean {
-    return this.walkZoneMeshes.some((mesh) => {
-      const halfSize = mesh.userData["navigationHalfSize"];
-      if (!(halfSize instanceof THREE.Vector3)) {
-        return false;
-      }
-      const local = mesh.worldToLocal(position.clone());
-      return (
-        Math.abs(local.x) <= halfSize.x + this.collisionRadius &&
-        Math.abs(local.z) <= halfSize.z + this.collisionRadius
-      );
-    });
+    return this.walkZoneMeshes.some((mesh) => this.isInsideNavigationZone(mesh, position));
+  }
+
+  private isInsidePassZone(position: THREE.Vector3): boolean {
+    return this.passZoneMeshes.some((mesh) => this.isInsideNavigationZone(mesh, position));
+  }
+
+  private isInsideNavigationZone(mesh: THREE.Mesh, position: THREE.Vector3): boolean {
+    const halfSize = mesh.userData["navigationHalfSize"];
+    if (!(halfSize instanceof THREE.Vector3)) {
+      return false;
+    }
+    const local = mesh.worldToLocal(position.clone());
+    return (
+      Math.abs(local.x) <= halfSize.x + this.collisionRadius &&
+      Math.abs(local.z) <= halfSize.z + this.collisionRadius
+    );
   }
 
   private isWalkableHit(hit: THREE.Intersection): boolean {

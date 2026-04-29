@@ -412,25 +412,30 @@ function createNavigationZone(
   kind: NavigationZone["kind"],
   bounds?: SceneManifest["navigation"]["bounds"]
 ): NavigationZone {
+  const isWalk = kind === "walk";
+  const isPass = kind === "pass";
   const center: Vec3 = bounds
     ? [
         (bounds.min[0] + bounds.max[0]) / 2,
-        kind === "walk" ? bounds.min[1] + 0.03 : (bounds.min[1] + bounds.max[1]) / 2,
+        isWalk ? bounds.min[1] + 0.03 : (bounds.min[1] + bounds.max[1]) / 2,
         (bounds.min[2] + bounds.max[2]) / 2
       ]
-    : [0, kind === "walk" ? 0.03 : 1.1, 0];
+    : [0, isWalk ? 0.03 : 1.1, 0];
   const size: Vec3 = bounds
     ? [
-        Math.max(1, (bounds.max[0] - bounds.min[0]) * (kind === "walk" ? 0.9 : 0.08)),
-        kind === "walk" ? 0.08 : Math.max(1, bounds.max[1] - bounds.min[1]),
-        Math.max(1, (bounds.max[2] - bounds.min[2]) * (kind === "walk" ? 0.9 : 0.45))
+        Math.max(isPass ? 0.65 : 1, (bounds.max[0] - bounds.min[0]) * (isWalk ? 0.9 : isPass ? 0.05 : 0.08)),
+        isWalk ? 0.08 : Math.max(1, (bounds.max[1] - bounds.min[1]) * (isPass ? 0.45 : 1)),
+        Math.max(isPass ? 0.9 : 1, (bounds.max[2] - bounds.min[2]) * (isWalk ? 0.9 : isPass ? 0.12 : 0.45))
       ]
-    : kind === "walk"
+    : isWalk
       ? [4, 0.08, 4]
-      : [0.25, 2.2, 3];
+      : isPass
+        ? [0.8, 2.2, 1.4]
+        : [0.25, 2.2, 3];
+  const labelPrefix = kind === "walk" ? "Walk" : kind === "pass" ? "Pass" : "Block";
   return {
     id: `${kind}-zone-${index}`,
-    label: `${kind === "walk" ? "Walk" : "Block"} Zone ${index}`,
+    label: `${labelPrefix} Zone ${index}`,
     kind,
     center,
     size,
@@ -3796,7 +3801,7 @@ function App() {
                     )}
 
                     <div className="publish-row">
-                      <span>Walk and block zones</span>
+                      <span>Navigation zones</span>
                       <div className="inline-actions">
                         <a
                           className="button secondary"
@@ -3822,6 +3827,14 @@ function App() {
                         >
                           <Plus size={16} aria-hidden="true" />
                           Block
+                        </button>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => addNavigationZone("pass")}
+                        >
+                          <Plus size={16} aria-hidden="true" />
+                          Pass
                         </button>
                       </div>
                     </div>
@@ -3887,6 +3900,7 @@ function App() {
                               >
                                 <option value="walk">Walk</option>
                                 <option value="block">Block</option>
+                                <option value="pass">Pass</option>
                               </select>
                             </label>
                             <label className="toggle-row compact-toggle">
@@ -3939,8 +3953,8 @@ function App() {
                       ))}
                       {(manifest.navigation.zones ?? []).length === 0 && (
                         <p className="quiet-note">
-                          No explicit zones yet. Add a walk zone to define clickable floor area, then add block zones for
-                          walls, windows, railings, or exterior boundaries that need hard collision.
+                          No explicit zones yet. Add a walk zone to define clickable floor area, block zones for hard
+                          boundaries, and pass zones for doors or openings.
                         </p>
                       )}
                     </div>

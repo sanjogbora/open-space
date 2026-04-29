@@ -96,7 +96,7 @@ export interface NavigationConfig {
   };
 }
 
-export type NavigationZoneKind = "walk" | "block";
+export type NavigationZoneKind = "walk" | "block" | "pass";
 
 export interface NavigationZone {
   id: string;
@@ -378,7 +378,7 @@ export function isNavigationZone(value: unknown): value is NavigationZone {
   return (
     typeof value["id"] === "string" &&
     typeof value["label"] === "string" &&
-    (value["kind"] === "walk" || value["kind"] === "block") &&
+    (value["kind"] === "walk" || value["kind"] === "block" || value["kind"] === "pass") &&
     isVec3(value["center"]) &&
     isVec3(value["size"]) &&
     (value["rotationY"] === undefined || typeof value["rotationY"] === "number") &&

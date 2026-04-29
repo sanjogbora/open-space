@@ -976,6 +976,12 @@ button.list-row {
   box-shadow: 0 8px 22px rgba(183, 67, 53, 0.12);
 }
 
+.zone-map-item.pass {
+  color: #118c5b;
+  background: rgba(17, 140, 91, 0.18);
+  box-shadow: 0 8px 22px rgba(17, 140, 91, 0.12);
+}
+
 .zone-map-item.disabled {
   opacity: 0.42;
 }
