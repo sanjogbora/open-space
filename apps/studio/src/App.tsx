@@ -28,6 +28,7 @@ import {
   type MaterialOverride,
   type MaterialVariant,
   type MaterialVariantInteraction,
+  type NavigationZone,
   type ObjectOverride,
   type ObjectToggleInteraction,
   type SceneControlsDocument,
@@ -325,6 +326,38 @@ function createRoom(index: number, view?: SceneView): RoomDefinition {
     id: `room-${index}`,
     label: view?.label ?? `Room ${index}`,
     ...(view ? { viewId: view.id, center: view.position } : {})
+  };
+}
+
+function createNavigationZone(
+  index: number,
+  kind: NavigationZone["kind"],
+  bounds?: SceneManifest["navigation"]["bounds"]
+): NavigationZone {
+  const center: Vec3 = bounds
+    ? [
+        (bounds.min[0] + bounds.max[0]) / 2,
+        kind === "walk" ? bounds.min[1] + 0.03 : (bounds.min[1] + bounds.max[1]) / 2,
+        (bounds.min[2] + bounds.max[2]) / 2
+      ]
+    : [0, kind === "walk" ? 0.03 : 1.1, 0];
+  const size: Vec3 = bounds
+    ? [
+        Math.max(1, (bounds.max[0] - bounds.min[0]) * (kind === "walk" ? 0.9 : 0.08)),
+        kind === "walk" ? 0.08 : Math.max(1, bounds.max[1] - bounds.min[1]),
+        Math.max(1, (bounds.max[2] - bounds.min[2]) * (kind === "walk" ? 0.9 : 0.45))
+      ]
+    : kind === "walk"
+      ? [4, 0.08, 4]
+      : [0.25, 2.2, 3];
+  return {
+    id: `${kind}-zone-${index}`,
+    label: `${kind === "walk" ? "Walk" : "Block"} Zone ${index}`,
+    kind,
+    center,
+    size,
+    rotationY: 0,
+    enabled: true
   };
 }
 
@@ -1033,6 +1066,34 @@ function App() {
           bounds.max[2] * scale + margin
         ]
       }
+    }));
+  };
+
+  const addNavigationZone = (kind: NavigationZone["kind"]) => {
+    updateNavigation((navigation) => {
+      const zones = [...(navigation.zones ?? [])];
+      const nextIndex = zones.length + 1;
+      return {
+        ...navigation,
+        zones: [...zones, createNavigationZone(nextIndex, kind, navigation.bounds)]
+      };
+    });
+  };
+
+  const updateNavigationZone = (
+    zoneId: string,
+    updater: (zone: NavigationZone) => NavigationZone
+  ) => {
+    updateNavigation((navigation) => ({
+      ...navigation,
+      zones: (navigation.zones ?? []).map((zone) => (zone.id === zoneId ? updater(zone) : zone))
+    }));
+  };
+
+  const removeNavigationZone = (zoneId: string) => {
+    updateNavigation((navigation) => ({
+      ...navigation,
+      zones: (navigation.zones ?? []).filter((zone) => zone.id !== zoneId)
     }));
   };
 
@@ -3302,6 +3363,114 @@ function App() {
                     ) : (
                       <p className="quiet-note">No navigation bounds are set. Use graph bounds after analysis.</p>
                     )}
+
+                    <div className="publish-row">
+                      <span>Walk and block zones</span>
+                      <div className="inline-actions">
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => addNavigationZone("walk")}
+                        >
+                          <Plus size={16} aria-hidden="true" />
+                          Walk
+                        </button>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => addNavigationZone("block")}
+                        >
+                          <Plus size={16} aria-hidden="true" />
+                          Block
+                        </button>
+                      </div>
+                    </div>
+                    <div className="zone-editor-list">
+                      {(manifest.navigation.zones ?? []).map((zone) => (
+                        <div key={zone.id} className="zone-editor-row">
+                          <div className="zone-editor-heading">
+                            <label>
+                              <span>Label</span>
+                              <input
+                                value={zone.label}
+                                onChange={(event) =>
+                                  updateNavigationZone(zone.id, (current) => ({
+                                    ...current,
+                                    label: event.target.value
+                                  }))
+                                }
+                              />
+                            </label>
+                            <label>
+                              <span>Kind</span>
+                              <select
+                                value={zone.kind}
+                                onChange={(event) =>
+                                  updateNavigationZone(zone.id, (current) => ({
+                                    ...current,
+                                    kind: event.target.value as NavigationZone["kind"]
+                                  }))
+                                }
+                              >
+                                <option value="walk">Walk</option>
+                                <option value="block">Block</option>
+                              </select>
+                            </label>
+                            <label className="toggle-row compact-toggle">
+                              <input
+                                type="checkbox"
+                                checked={zone.enabled !== false}
+                                onChange={(event) =>
+                                  updateNavigationZone(zone.id, (current) => ({
+                                    ...current,
+                                    enabled: event.target.checked
+                                  }))
+                                }
+                              />
+                              <span>Enabled</span>
+                            </label>
+                            <button
+                              type="button"
+                              className="icon-action danger"
+                              title="Delete zone"
+                              onClick={() => removeNavigationZone(zone.id)}
+                            >
+                              <Trash2 size={17} aria-hidden="true" />
+                            </button>
+                          </div>
+                          <VectorEditor
+                            label="Center"
+                            value={zone.center}
+                            onChange={(value) =>
+                              updateNavigationZone(zone.id, (current) => ({ ...current, center: value }))
+                            }
+                          />
+                          <VectorEditor
+                            label="Size"
+                            value={zone.size}
+                            onChange={(value) =>
+                              updateNavigationZone(zone.id, (current) => ({ ...current, size: value }))
+                            }
+                          />
+                          <NumberField
+                            label="Rotation Y"
+                            min={-3.14}
+                            max={3.14}
+                            step={0.01}
+                            value={zone.rotationY ?? 0}
+                            onChange={(value) =>
+                              updateNavigationZone(zone.id, (current) => ({ ...current, rotationY: value }))
+                            }
+                          />
+                        </div>
+                      ))}
+                      {(manifest.navigation.zones ?? []).length === 0 && (
+                        <p className="quiet-note">
+                          No explicit zones yet. Add a walk zone to define clickable floor area, then add block zones for
+                          walls, windows, railings, or exterior boundaries that need hard collision.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (

@@ -88,10 +88,23 @@ export interface NavigationConfig {
   turnSpeed: number;
   floorMeshNames: readonly string[];
   collisionMeshNames: readonly string[];
+  zones?: readonly NavigationZone[];
   bounds?: {
     min: Vec3;
     max: Vec3;
   };
+}
+
+export type NavigationZoneKind = "walk" | "block";
+
+export interface NavigationZone {
+  id: string;
+  label: string;
+  kind: NavigationZoneKind;
+  center: Vec3;
+  size: Vec3;
+  rotationY?: number;
+  enabled?: boolean;
 }
 
 export interface BrandingConfig {
@@ -258,7 +271,8 @@ export const defaultNavigationConfig: NavigationConfig = {
   moveSpeed: 3.8,
   turnSpeed: 1.5,
   floorMeshNames: ["floor", "ground", "navmesh", "walkable"],
-  collisionMeshNames: ["wall", "glass", "door", "collision"]
+  collisionMeshNames: ["wall", "glass", "door", "collision"],
+  zones: []
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -336,6 +350,8 @@ export function isNavigationConfig(value: unknown): value is NavigationConfig {
   const boundsValid =
     bounds === undefined ||
     (isRecord(bounds) && isVec3(bounds["min"]) && isVec3(bounds["max"]));
+  const zones = value["zones"];
+  const zonesValid = zones === undefined || (Array.isArray(zones) && zones.every(isNavigationZone));
 
   return (
     typeof value["cameraHeight"] === "number" &&
@@ -343,7 +359,23 @@ export function isNavigationConfig(value: unknown): value is NavigationConfig {
     typeof value["turnSpeed"] === "number" &&
     isStringArray(value["floorMeshNames"]) &&
     isStringArray(value["collisionMeshNames"]) &&
+    zonesValid &&
     boundsValid
+  );
+}
+
+export function isNavigationZone(value: unknown): value is NavigationZone {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    typeof value["id"] === "string" &&
+    typeof value["label"] === "string" &&
+    (value["kind"] === "walk" || value["kind"] === "block") &&
+    isVec3(value["center"]) &&
+    isVec3(value["size"]) &&
+    (value["rotationY"] === undefined || typeof value["rotationY"] === "number") &&
+    (value["enabled"] === undefined || typeof value["enabled"] === "boolean")
   );
 }
 

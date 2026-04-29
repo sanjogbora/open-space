@@ -7,6 +7,7 @@ import type {
   LinkInteraction,
   MaterialVariantInteraction,
   MaterialOverride,
+  NavigationZone,
   ObjectOverride,
   ObjectToggleInteraction,
   SceneControlsDocument,
@@ -76,6 +77,8 @@ export class WalkthroughViewer {
   private walkableMeshes: THREE.Object3D[] = [];
   private pickableMeshes: THREE.Object3D[] = [];
   private collisionBoxes: THREE.Box3[] = [];
+  private navigationZoneMeshes: THREE.Mesh[] = [];
+  private walkZoneMeshes: THREE.Mesh[] = [];
   private sceneRoot: THREE.Object3D | undefined;
   private frameId = 0;
   private destroyed = false;
@@ -146,6 +149,14 @@ export class WalkthroughViewer {
     this.destroyed = true;
     cancelAnimationFrame(this.frameId);
     this.managedTextures.forEach((item) => item.destroy?.());
+    this.navigationZoneMeshes.forEach((mesh) => {
+      mesh.geometry.dispose();
+      if (Array.isArray(mesh.material)) {
+        mesh.material.forEach((material) => material.dispose());
+      } else {
+        mesh.material.dispose();
+      }
+    });
     this.environmentTexture?.dispose();
     this.pmremGenerator?.dispose();
     this.uninstallEvents();
@@ -249,10 +260,8 @@ export class WalkthroughViewer {
       this.prepareLoadedScene(this.sceneRoot);
       this.scene.add(this.sceneRoot);
       this.sceneRoot.updateMatrixWorld(true);
-      this.floorMeshes = this.collectFloorMeshes(this.sceneRoot);
-      this.walkableMeshes = this.collectWalkableMeshes(this.sceneRoot);
       this.pickableMeshes = this.collectPickableMeshes(this.sceneRoot);
-      this.collisionBoxes = this.collectCollisionBoxes(this.sceneRoot);
+      this.configureNavigationSurfaces(this.sceneRoot);
       this.fitLightingToScene(this.sceneRoot);
       if (this.floorMeshes.length === 0) {
         this.installFallbackFloor();
@@ -334,10 +343,8 @@ export class WalkthroughViewer {
     this.sceneRoot = demo.root;
     this.scene.add(demo.root);
     demo.root.updateMatrixWorld(true);
-    this.floorMeshes = [demo.floor];
-    this.walkableMeshes = [demo.floor];
     this.pickableMeshes = this.collectPickableMeshes(demo.root);
-    this.collisionBoxes = this.collectCollisionBoxes(demo.root);
+    this.configureNavigationSurfaces(demo.root, [demo.floor]);
     this.fitLightingToScene(demo.root);
   }
 
@@ -352,6 +359,79 @@ export class WalkthroughViewer {
     this.scene.add(floor);
     this.floorMeshes = [floor];
     this.walkableMeshes = [floor];
+  }
+
+  private configureNavigationSurfaces(
+    root: THREE.Object3D,
+    fallbackFloors: THREE.Object3D[] = []
+  ): void {
+    const zones = this.createNavigationZones();
+    this.walkZoneMeshes = zones.walkMeshes;
+    if (zones.walkMeshes.length > 0) {
+      this.floorMeshes = zones.walkMeshes;
+      this.walkableMeshes = zones.walkMeshes;
+    } else {
+      this.floorMeshes = fallbackFloors.length > 0 ? fallbackFloors : this.collectFloorMeshes(root);
+      this.walkableMeshes = this.collectWalkableMeshes(root);
+    }
+    this.collisionBoxes = [...this.collectCollisionBoxes(root), ...zones.blockBoxes];
+  }
+
+  private createNavigationZones(): { walkMeshes: THREE.Mesh[]; blockBoxes: THREE.Box3[] } {
+    const walkMeshes: THREE.Mesh[] = [];
+    const blockBoxes: THREE.Box3[] = [];
+    const zones = this.manifest.navigation.zones ?? [];
+    if (zones.length === 0) {
+      return { walkMeshes, blockBoxes };
+    }
+
+    zones.forEach((zone) => {
+      if (zone.enabled === false) {
+        return;
+      }
+      const mesh = this.createNavigationZoneMesh(zone);
+      this.scene.add(mesh);
+      this.navigationZoneMeshes.push(mesh);
+      mesh.updateMatrixWorld(true);
+      if (zone.kind === "walk") {
+        walkMeshes.push(mesh);
+        return;
+      }
+      const box = new THREE.Box3().setFromObject(mesh);
+      if (!box.isEmpty()) {
+        blockBoxes.push(box);
+      }
+    });
+
+    return { walkMeshes, blockBoxes };
+  }
+
+  private createNavigationZoneMesh(zone: NavigationZone): THREE.Mesh {
+    const center = this.toSceneVector(zone.center);
+    const size = this.toSceneSize(zone.size);
+    const geometry = new THREE.BoxGeometry(
+      Math.max(0.05, size.x),
+      Math.max(0.04, size.y),
+      Math.max(0.05, size.z)
+    );
+    const material = new THREE.MeshBasicMaterial({
+      color: zone.kind === "walk" ? "#1b8fff" : "#ff5f57",
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    });
+    material.colorWrite = false;
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = `navigation_${zone.kind}_${zone.id}`;
+    mesh.position.copy(center);
+    mesh.rotation.y = zone.rotationY ?? 0;
+    mesh.userData["navigationZoneKind"] = zone.kind;
+    mesh.userData["navigationHalfSize"] = new THREE.Vector3(
+      Math.max(0.05, size.x) / 2,
+      Math.max(0.04, size.y) / 2,
+      Math.max(0.05, size.z) / 2
+    );
+    return mesh;
   }
 
   private applyEnvironment(): void {
@@ -737,6 +817,14 @@ export class WalkthroughViewer {
     );
   }
 
+  private toSceneSize(value: readonly [number, number, number]): THREE.Vector3 {
+    const vector = toVector3(value);
+    if (this.manifestScale === 1) {
+      return vector;
+    }
+    return vector.multiplyScalar(this.manifestScale);
+  }
+
   private applyInitialCamera(): void {
     const firstView = this.manifest.views[0];
     if (firstView) {
@@ -974,6 +1062,10 @@ export class WalkthroughViewer {
     }
 
     const cameraSphere = new THREE.Sphere(candidate, this.collisionRadius);
+    if (this.walkZoneMeshes.length > 0 && !this.isInsideWalkZone(candidate)) {
+      return false;
+    }
+
     const blockedBoxes = this.collisionBoxes.filter((box) => box.intersectsSphere(cameraSphere));
     if (blockedBoxes.length === 0) {
       return true;
@@ -984,6 +1076,20 @@ export class WalkthroughViewer {
     const originSphere = new THREE.Sphere(origin, this.collisionRadius);
     const originBlockedBoxes = this.collisionBoxes.filter((box) => box.intersectsSphere(originSphere));
     return blockedBoxes.every((box) => originBlockedBoxes.includes(box));
+  }
+
+  private isInsideWalkZone(position: THREE.Vector3): boolean {
+    return this.walkZoneMeshes.some((mesh) => {
+      const halfSize = mesh.userData["navigationHalfSize"];
+      if (!(halfSize instanceof THREE.Vector3)) {
+        return false;
+      }
+      const local = mesh.worldToLocal(position.clone());
+      return (
+        Math.abs(local.x) <= halfSize.x + this.collisionRadius &&
+        Math.abs(local.z) <= halfSize.z + this.collisionRadius
+      );
+    });
   }
 
   private isWalkableHit(hit: THREE.Intersection): boolean {

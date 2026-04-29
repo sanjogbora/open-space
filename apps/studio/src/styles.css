@@ -778,6 +778,34 @@ button.list-row {
   gap: 10px;
 }
 
+.inline-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.zone-editor-list {
+  display: grid;
+  gap: 12px;
+}
+
+.zone-editor-row {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e3e8eb;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.zone-editor-heading {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 120px 120px 38px;
+  align-items: end;
+  gap: 10px;
+}
+
 .optimization-grid,
 .recommendation-list {
   display: grid;
@@ -1091,12 +1119,14 @@ code {
 
   .field-grid,
   .variant-editor-row,
+  .zone-editor-heading,
   .toggle-grid,
   .vector-field {
     grid-template-columns: 1fr;
   }
 
-  .variant-editor-row .icon-action {
+  .variant-editor-row .icon-action,
+  .zone-editor-row .icon-action {
     width: 100%;
   }
 

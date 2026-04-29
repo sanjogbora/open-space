@@ -588,6 +588,9 @@ function createDiagnostics(manifest, report, graphs) {
   );
   const floorMatches = keywordMatchCount(graph, manifest.navigation?.floorMeshNames ?? []);
   const collisionMatches = keywordMatchCount(graph, manifest.navigation?.collisionMeshNames ?? []);
+  const navigationZones = Array.isArray(manifest.navigation?.zones) ? manifest.navigation.zones : [];
+  const hasWalkZones = navigationZones.some((zone) => zone.kind === "walk" && zone.enabled !== false);
+  const hasBlockZones = navigationZones.some((zone) => zone.kind === "block" && zone.enabled !== false);
 
   if (missingExternalResources > 0) {
     diagnostics.push({
@@ -625,23 +628,23 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
-  if (floorMatches === 0) {
+  if (floorMatches === 0 && !hasWalkZones) {
     diagnostics.push({
       severity: "warning",
       code: "no-named-floor-meshes",
       title: "No named floor meshes found",
       message: "Click-to-move will fall back to geometric floor detection, which can include tabletops, roofs, or large flat objects.",
-      action: "Add floor keywords that match your model object names, or create a dedicated navmesh object."
+      action: "Add floor keywords that match your model object names, create a dedicated navmesh object, or add a walk zone in Controls."
     });
   }
 
-  if (collisionMatches === 0) {
+  if (collisionMatches === 0 && !hasBlockZones) {
     diagnostics.push({
       severity: "warning",
       code: "no-named-collision-meshes",
       title: "No named collision meshes found",
       message: "Wall collision will be inferred from thin tall geometry and may miss cupboards, railings, or exterior boundaries.",
-      action: "Add collision keywords for walls, windows, doors, partitions, columns, and boundary meshes."
+      action: "Add collision keywords for walls, windows, doors, partitions, columns, and boundary meshes, or add block zones in Controls."
     });
   }
 

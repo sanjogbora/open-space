@@ -684,6 +684,32 @@ function importedModelViews(bounds, cameraHeight) {
   ];
 }
 
+function importedNavigationZones(bounds, existingZones = []) {
+  if (Array.isArray(existingZones) && existingZones.length > 0) {
+    return existingZones;
+  }
+  if (!bounds) {
+    return [];
+  }
+  const width = Math.max(1.5, bounds.max[0] - bounds.min[0]);
+  const depth = Math.max(1.5, bounds.max[2] - bounds.min[2]);
+  return [
+    {
+      id: "walk-main",
+      label: "Main walk zone",
+      kind: "walk",
+      center: [
+        (bounds.min[0] + bounds.max[0]) / 2,
+        bounds.min[1] + 0.03,
+        (bounds.min[2] + bounds.max[2]) / 2
+      ],
+      size: [width, 0.08, depth],
+      rotationY: 0,
+      enabled: true
+    }
+  ];
+}
+
 async function resetManifestForUploadedModel(
   projectId,
   sceneUrl = "scene.glb",
@@ -755,6 +781,7 @@ async function resetManifestForUploadedModel(
         "column",
         "pillar"
       ],
+      zones: importedNavigationZones(bounds, manifest.navigation?.zones),
       ...(navigationBounds ? { bounds: navigationBounds } : {})
     }
   };
