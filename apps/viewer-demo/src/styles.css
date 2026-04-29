@@ -264,6 +264,60 @@ button {
   outline: none;
 }
 
+.room-list {
+  position: absolute;
+  right: 16px;
+  top: 86px;
+  z-index: 4;
+  width: min(280px, calc(100vw - 32px));
+  max-height: min(52vh, 430px);
+  overflow: auto;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.room-row {
+  min-height: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  color: rgba(238, 243, 247, 0.88);
+  background: rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.room-row:hover,
+.room-row:focus-visible,
+.room-row.active {
+  color: #ffffff;
+  background: rgba(7, 135, 255, 0.72);
+  outline: none;
+}
+
+.room-row:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.room-row span,
+.room-row small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-row small {
+  color: rgba(238, 243, 247, 0.68);
+  font-size: 11px;
+}
+
 .hotspot-panel {
   position: absolute;
   right: 16px;

@@ -128,6 +128,7 @@ function App() {
   const [embedMode] = useState(() => new URLSearchParams(window.location.search).get("embed") === "1");
 
   const views = useMemo(() => manifest?.views ?? [], [manifest]);
+  const rooms = useMemo(() => manifest?.rooms ?? [], [manifest]);
   const materialVariantInteractions = useMemo(
     () => manifest?.interactions.filter(isMaterialVariantInteraction) ?? [],
     [manifest]
@@ -431,6 +432,26 @@ function App() {
                 </button>
               ))}
             </div>
+          </aside>
+        )}
+
+        {rooms.length > 0 && (
+          <aside className="room-list" aria-label="Rooms">
+            {rooms.map((room) => {
+              const view = views.find((item) => item.id === room.viewId);
+              return (
+                <button
+                  key={room.id}
+                  type="button"
+                  className={room.viewId && activeViewId === room.viewId ? "room-row active" : "room-row"}
+                  disabled={!view}
+                  onClick={() => view && activateView(view)}
+                >
+                  <span>{room.label}</span>
+                  {room.dimensions && <small>{room.dimensions}</small>}
+                </button>
+              );
+            })}
           </aside>
         )}
 

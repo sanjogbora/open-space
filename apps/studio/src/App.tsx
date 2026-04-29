@@ -34,6 +34,7 @@ import {
   type SceneManifest,
   type SceneView,
   type VideoTextureInteraction,
+  type RoomDefinition,
   type Vec3
 } from "@walkthrough/scene-schema";
 
@@ -43,6 +44,7 @@ type StudioTab =
   | "optimization"
   | "publish"
   | "views"
+  | "rooms"
   | "interactions"
   | "materials"
   | "variants"
@@ -294,6 +296,14 @@ function createVideoTexture(index: number): VideoTextureInteraction {
     muted: true,
     loop: true,
     triggerDistance: 8
+  };
+}
+
+function createRoom(index: number, view?: SceneView): RoomDefinition {
+  return {
+    id: `room-${index}`,
+    label: view?.label ?? `Room ${index}`,
+    ...(view ? { viewId: view.id, center: view.position } : {})
   };
 }
 
@@ -737,6 +747,13 @@ function App() {
     [manifest, selectedViewId]
   );
 
+  const rooms = useMemo(() => manifest?.rooms ?? [], [manifest]);
+  const [selectedRoomId, setSelectedRoomId] = useState("");
+  const selectedRoom = useMemo(
+    () => rooms.find((room) => room.id === selectedRoomId) ?? rooms[0],
+    [rooms, selectedRoomId]
+  );
+
   const hotspotInteractions = useMemo(
     () => manifest?.interactions.filter(isHotspot) ?? [],
     [manifest]
@@ -820,6 +837,13 @@ function App() {
     updateManifest((current) => ({
       ...current,
       views: current.views.map((view) => (view.id === viewId ? updater(view) : view))
+    }));
+  };
+
+  const updateRoom = (roomId: string, updater: (room: RoomDefinition) => RoomDefinition) => {
+    updateManifest((current) => ({
+      ...current,
+      rooms: (current.rooms ?? []).map((room) => (room.id === roomId ? updater(room) : room))
     }));
   };
 
@@ -1274,6 +1298,28 @@ function App() {
     });
   };
 
+  const addRoom = () => {
+    updateManifest((current) => {
+      const nextRoom = createRoom((current.rooms?.length ?? 0) + 1, current.views[0]);
+      window.setTimeout(() => setSelectedRoomId(nextRoom.id), 0);
+      return {
+        ...current,
+        rooms: [...(current.rooms ?? []), nextRoom]
+      };
+    });
+  };
+
+  const removeRoom = (roomId: string) => {
+    updateManifest((current) => {
+      const rooms = (current.rooms ?? []).filter((room) => room.id !== roomId);
+      window.setTimeout(() => setSelectedRoomId(rooms[0]?.id ?? ""), 0);
+      return {
+        ...current,
+        rooms
+      };
+    });
+  };
+
   const addHotspot = () => {
     updateManifest((current) => {
       const nextHotspot = createHotspot(hotspotInteractions.length + 1);
@@ -1556,6 +1602,7 @@ function App() {
             ["optimization", "Optimization"],
             ["publish", "Publish"],
             ["views", "Views"],
+            ["rooms", "Rooms"],
             ["interactions", "Interactions"],
             ["materials", "Materials"],
             ["variants", "Variants"],
@@ -2051,6 +2098,103 @@ function App() {
                   label="Target"
                   value={selectedView.target}
                   onChange={(next) => updateView(selectedView.id, (view) => ({ ...view, target: next }))}
+                />
+              </div>
+            )}
+          </section>
+        )}
+
+        {selectedTab === "rooms" && (
+          <section className="editor-layout">
+            <div className="list-panel">
+              <div className="list-heading">
+                <h2>Rooms</h2>
+                <button type="button" className="icon-action" title="Add room" onClick={addRoom}>
+                  <Plus size={17} aria-hidden="true" />
+                </button>
+              </div>
+              {rooms.map((room) => (
+                <button
+                  key={room.id}
+                  type="button"
+                  className={selectedRoom?.id === room.id ? "list-row active" : "list-row"}
+                  onClick={() => setSelectedRoomId(room.id)}
+                >
+                  <span>{room.label}</span>
+                  <small>{room.dimensions ?? room.viewId ?? "room"}</small>
+                </button>
+              ))}
+              {rooms.length === 0 && <p className="empty-list">No rooms mapped.</p>}
+            </div>
+
+            {selectedRoom && (
+              <div className="panel editor-panel">
+                <div className="panel-heading">
+                  <MapPin size={18} aria-hidden="true" />
+                  <h2>{selectedRoom.label}</h2>
+                  <button
+                    type="button"
+                    className="icon-action danger"
+                    title="Delete room"
+                    onClick={() => removeRoom(selectedRoom.id)}
+                  >
+                    <Trash2 size={17} aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="field-grid">
+                  <label>
+                    <span>Room name</span>
+                    <input
+                      value={selectedRoom.label}
+                      onChange={(event) =>
+                        updateRoom(selectedRoom.id, (room) => ({
+                          ...room,
+                          label: event.target.value
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Dimensions</span>
+                    <input
+                      value={selectedRoom.dimensions ?? ""}
+                      onChange={(event) =>
+                        updateRoom(selectedRoom.id, (room) => ({
+                          ...room,
+                          dimensions: event.target.value
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Linked view</span>
+                    <select
+                      value={selectedRoom.viewId ?? ""}
+                      onChange={(event) =>
+                        updateRoom(selectedRoom.id, (room) => ({
+                          ...room,
+                          viewId: event.target.value
+                        }))
+                      }
+                    >
+                      <option value="">Select view</option>
+                      {manifest.views.map((view) => (
+                        <option key={view.id} value={view.id}>
+                          {view.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <VectorEditor
+                  label="Center"
+                  value={selectedRoom.center ?? [0, 0, 0]}
+                  onChange={(next) =>
+                    updateRoom(selectedRoom.id, (room) => ({
+                      ...room,
+                      center: next
+                    }))
+                  }
                 />
               </div>
             )}

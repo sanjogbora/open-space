@@ -123,6 +123,14 @@ export interface EnvironmentConfig {
   groundY?: number;
 }
 
+export interface RoomDefinition {
+  id: string;
+  label: string;
+  viewId?: string;
+  dimensions?: string;
+  center?: Vec3;
+}
+
 export interface SceneManifest {
   schemaVersion: "0.1";
   sceneUrl?: string;
@@ -133,6 +141,7 @@ export interface SceneManifest {
   controlsUrl?: string;
   rendering?: RenderingConfig;
   environment?: EnvironmentConfig;
+  rooms?: readonly RoomDefinition[];
   views: readonly SceneView[];
   interactions: readonly SceneInteraction[];
   navigation: NavigationConfig;
@@ -381,6 +390,19 @@ export function isEnvironmentConfig(value: unknown): value is EnvironmentConfig 
   );
 }
 
+export function isRoomDefinition(value: unknown): value is RoomDefinition {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    typeof value["id"] === "string" &&
+    typeof value["label"] === "string" &&
+    (value["viewId"] === undefined || typeof value["viewId"] === "string") &&
+    (value["dimensions"] === undefined || typeof value["dimensions"] === "string") &&
+    (value["center"] === undefined || isVec3(value["center"]))
+  );
+}
+
 export function isSceneManifest(value: unknown): value is SceneManifest {
   if (!isRecord(value)) {
     return false;
@@ -396,6 +418,7 @@ export function isSceneManifest(value: unknown): value is SceneManifest {
     (value["controlsUrl"] === undefined || typeof value["controlsUrl"] === "string") &&
     (value["rendering"] === undefined || isRenderingConfig(value["rendering"])) &&
     (value["environment"] === undefined || isEnvironmentConfig(value["environment"])) &&
+    (value["rooms"] === undefined || (Array.isArray(value["rooms"]) && value["rooms"].every(isRoomDefinition))) &&
     Array.isArray(value["views"]) &&
     value["views"].every(isSceneView) &&
     Array.isArray(value["interactions"]) &&
