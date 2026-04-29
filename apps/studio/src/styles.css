@@ -806,6 +806,86 @@ button.list-row {
   gap: 10px;
 }
 
+.zone-map {
+  display: grid;
+  gap: 8px;
+}
+
+.zone-map-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.zone-map-heading strong {
+  color: #24313a;
+  font-size: 13px;
+}
+
+.zone-map-heading small {
+  color: #667681;
+  font-size: 12px;
+}
+
+.zone-map-surface {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  min-height: 220px;
+  border: 1px solid #d6dde2;
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(38, 50, 59, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 50, 59, 0.06) 1px, transparent 1px),
+    #f8fafb;
+  background-size: 36px 36px;
+}
+
+.zone-map-item {
+  position: absolute;
+  min-width: 22px;
+  min-height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  cursor: grab;
+  color: #087fe7;
+  background: rgba(8, 127, 231, 0.18);
+  box-shadow: 0 8px 22px rgba(8, 127, 231, 0.12);
+  touch-action: none;
+}
+
+.zone-map-item.block {
+  color: #b74335;
+  background: rgba(183, 67, 53, 0.18);
+  box-shadow: 0 8px 22px rgba(183, 67, 53, 0.12);
+}
+
+.zone-map-item.disabled {
+  opacity: 0.42;
+}
+
+.zone-map-item:active {
+  cursor: grabbing;
+}
+
+.zone-map-item span {
+  overflow: hidden;
+  max-width: 120px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: #182026;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .optimization-grid,
 .recommendation-list {
   display: grid;

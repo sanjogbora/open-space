@@ -203,6 +203,10 @@ function toNumber(value: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 function updateVec3(value: Vec3, index: number, next: string): Vec3 {
   const draft = [...value] as [number, number, number];
   draft[index] = toNumber(next, value[index] ?? 0);
@@ -218,6 +222,21 @@ function parseKeywordList(value: string): string[] {
 
 function keywordList(value: readonly string[] | undefined): string {
   return (value ?? []).join(", ");
+}
+
+function zoneMapStyle(
+  zone: NavigationZone,
+  bounds: NonNullable<SceneManifest["navigation"]["bounds"]>
+) {
+  const width = Math.max(0.001, bounds.max[0] - bounds.min[0]);
+  const depth = Math.max(0.001, bounds.max[2] - bounds.min[2]);
+  return {
+    left: `${((zone.center[0] - bounds.min[0]) / width) * 100}%`,
+    top: `${100 - ((zone.center[2] - bounds.min[2]) / depth) * 100}%`,
+    width: `${clampNumber((zone.size[0] / width) * 100, 2, 100)}%`,
+    height: `${clampNumber((zone.size[2] / depth) * 100, 2, 100)}%`,
+    transform: `translate(-50%, -50%) rotate(${zone.rotationY ?? 0}rad)`
+  };
 }
 
 function isHotspot(interaction: SceneInteraction): interaction is HotspotInteraction {
@@ -1099,6 +1118,37 @@ function App() {
       ...navigation,
       zones: (navigation.zones ?? []).filter((zone) => zone.id !== zoneId)
     }));
+  };
+
+  const moveNavigationZoneOnMap = (
+    zoneId: string,
+    mapElement: HTMLElement,
+    clientX: number,
+    clientY: number
+  ) => {
+    const bounds = manifest?.navigation.bounds;
+    if (!bounds) {
+      return;
+    }
+    const applyPosition = (x: number, y: number) => {
+      const rect = mapElement.getBoundingClientRect();
+      const ratioX = clampNumber((x - rect.left) / Math.max(1, rect.width), 0, 1);
+      const ratioY = clampNumber((y - rect.top) / Math.max(1, rect.height), 0, 1);
+      const nextX = bounds.min[0] + ratioX * (bounds.max[0] - bounds.min[0]);
+      const nextZ = bounds.max[2] - ratioY * (bounds.max[2] - bounds.min[2]);
+      updateNavigationZone(zoneId, (zone) => ({
+        ...zone,
+        center: [Number(nextX.toFixed(3)), zone.center[1], Number(nextZ.toFixed(3))]
+      }));
+    };
+    applyPosition(clientX, clientY);
+    const handleMove = (event: PointerEvent) => applyPosition(event.clientX, event.clientY);
+    const handleUp = () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp, { once: true });
   };
 
   const saveDraft = () => {
@@ -3398,6 +3448,39 @@ function App() {
                         </button>
                       </div>
                     </div>
+                    {manifest.navigation.bounds && (manifest.navigation.zones ?? []).length > 0 && (
+                      <div className="zone-map">
+                        <div className="zone-map-heading">
+                          <strong>Zone map</strong>
+                          <small>Drag a zone to move its center on X/Z</small>
+                        </div>
+                        <div className="zone-map-surface">
+                          {(manifest.navigation.zones ?? []).map((zone) => (
+                            <button
+                              key={zone.id}
+                              type="button"
+                              className={`zone-map-item ${zone.kind}${zone.enabled === false ? " disabled" : ""}`}
+                              style={zoneMapStyle(zone, manifest.navigation.bounds!)}
+                              title={`${zone.label} (${zone.kind})`}
+                              onPointerDown={(event) => {
+                                event.preventDefault();
+                                const mapElement = event.currentTarget.closest(".zone-map-surface");
+                                if (mapElement instanceof HTMLElement) {
+                                  moveNavigationZoneOnMap(
+                                    zone.id,
+                                    mapElement,
+                                    event.clientX,
+                                    event.clientY
+                                  );
+                                }
+                              }}
+                            >
+                              <span>{zone.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="zone-editor-list">
                       {(manifest.navigation.zones ?? []).map((zone) => (
                         <div key={zone.id} className="zone-editor-row">
