@@ -60,6 +60,7 @@ type UploadState = "idle" | "uploading" | "done" | "error";
 type PublishState = "idle" | "publishing" | "done" | "error";
 type OptimizeState = "idle" | "optimizing" | "done" | "error";
 type RepairState = "idle" | "repairing" | "done" | "error";
+type BakeState = "idle" | "baking" | "done" | "error";
 type HotspotIcon = NonNullable<HotspotInteraction["icon"]>;
 type MovementToggle = "enabled" | "keyboard" | "clickToMove" | "dragLook";
 
@@ -202,6 +203,22 @@ interface OptimizationJobDocument {
 interface OptimizationHistoryDocument {
   schemaVersion: "0.1";
   jobs: OptimizationJobDocument[];
+}
+
+interface LightmapBakeJobDocument {
+  schemaVersion: "0.1";
+  id: string;
+  status: "idle" | "running" | "completed" | "blocked" | "failed";
+  engine: string;
+  message?: string;
+  startedAt?: string;
+  completedAt?: string;
+  steps: readonly {
+    id: string;
+    label: string;
+    status: "completed" | "pending" | "failed" | "skipped";
+    note?: string;
+  }[];
 }
 
 interface ProjectSummary {
@@ -630,6 +647,7 @@ function App() {
   const [optimizationDoc, setOptimizationDoc] = useState<OptimizationDocument | null>(null);
   const [optimizationJob, setOptimizationJob] = useState<OptimizationJobDocument | null>(null);
   const [optimizationHistory, setOptimizationHistory] = useState<OptimizationHistoryDocument | null>(null);
+  const [lightmapBakeJob, setLightmapBakeJob] = useState<LightmapBakeJobDocument | null>(null);
   const [publishHistory, setPublishHistory] = useState<PublishHistoryDocument | null>(null);
   const [sceneGraph, setSceneGraph] = useState<SceneGraphDocument | null>(null);
   const [materialsDoc, setMaterialsDoc] = useState<MaterialsDocument | null>(null);
@@ -649,6 +667,8 @@ function App() {
   const [publishError, setPublishError] = useState("");
   const [optimizeState, setOptimizeState] = useState<OptimizeState>("idle");
   const [optimizeError, setOptimizeError] = useState("");
+  const [bakeState, setBakeState] = useState<BakeState>("idle");
+  const [bakeError, setBakeError] = useState("");
   const [repairState, setRepairState] = useState<RepairState>("idle");
   const [repairError, setRepairError] = useState("");
   const [blockerNameDraft, setBlockerNameDraft] = useState("");
@@ -695,6 +715,7 @@ function App() {
               optimization: OptimizationDocument;
               optimizationJob: OptimizationJobDocument;
               optimizationHistory: OptimizationHistoryDocument;
+              lightmapBakeJob: LightmapBakeJobDocument;
               publishHistory: PublishHistoryDocument;
             };
             if (!cancelled) {
@@ -709,6 +730,7 @@ function App() {
               setOptimizationDoc(project.optimization);
               setOptimizationJob(project.optimizationJob);
               setOptimizationHistory(project.optimizationHistory);
+              setLightmapBakeJob(project.lightmapBakeJob);
               setPublishHistory(project.publishHistory);
               setSelectedViewId(project.manifest.views[0]?.id ?? "");
               setSelectedInteractionId(
@@ -1753,6 +1775,39 @@ function App() {
     } catch (error) {
       setOptimizeState("error");
       setOptimizeError(error instanceof Error ? error.message : "Optimization failed.");
+    }
+  };
+
+  const bakeLightmaps = async () => {
+    if (!apiConnected) {
+      setBakeState("error");
+      setBakeError("API is not connected.");
+      return;
+    }
+
+    setBakeState("baking");
+    setBakeError("");
+    try {
+      if (manifest) {
+        await saveToApi();
+      }
+      const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/bake-lightmaps`, {
+        method: "POST"
+      });
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error ?? `Lightmap bake failed with ${response.status}.`);
+      }
+      const result = (await response.json()) as {
+        lightmapBakeJob: LightmapBakeJobDocument;
+      };
+      setLightmapBakeJob(result.lightmapBakeJob);
+      setBakeState(result.lightmapBakeJob.status === "blocked" ? "error" : "done");
+      setBakeError(result.lightmapBakeJob.status === "blocked" ? result.lightmapBakeJob.message ?? "" : "");
+      setNotice("saved");
+    } catch (error) {
+      setBakeState("error");
+      setBakeError(error instanceof Error ? error.message : "Lightmap bake failed.");
     }
   };
 
@@ -3657,6 +3712,45 @@ function App() {
                   <Palette size={18} aria-hidden="true" />
                   <h2>{selectedMaterial.name}</h2>
                 </div>
+
+                <div className="publish-action-card">
+                  <div>
+                    <strong>Automatic lightmap bake</strong>
+                    <p className="quiet-note">
+                      Uses Blender/Cycles when available. Manual uploaded lightmaps remain supported below.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    disabled={!apiConnected || bakeState === "baking"}
+                    onClick={() => void bakeLightmaps()}
+                  >
+                    <Activity size={16} aria-hidden="true" />
+                    {bakeState === "baking" ? "Baking" : "Bake"}
+                  </button>
+                </div>
+                {bakeError && <p className="error-note">{bakeError}</p>}
+                {lightmapBakeJob && lightmapBakeJob.status !== "idle" && (
+                  <div className="job-step-list">
+                    <div className={`job-step-row ${lightmapBakeJob.status === "blocked" ? "failed" : "completed"}`}>
+                      <div className="job-step-main">
+                        <span>{lightmapBakeJob.engine}</span>
+                        {lightmapBakeJob.message && <small>{lightmapBakeJob.message}</small>}
+                      </div>
+                      <strong>{lightmapBakeJob.status}</strong>
+                    </div>
+                    {lightmapBakeJob.steps.map((step) => (
+                      <div key={step.id} className={`job-step-row ${step.status}`}>
+                        <div className="job-step-main">
+                          <span>{step.label}</span>
+                          {step.note && <small>{step.note}</small>}
+                        </div>
+                        <strong>{step.status}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="field-grid">
                   <label>

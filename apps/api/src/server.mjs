@@ -164,6 +164,17 @@ async function optimizationHistory(projectId) {
   });
 }
 
+async function lightmapBakeJob(projectId) {
+  return readJsonDefault(path.join(targetDirs(projectId)[0], "lightmap-bake-job.json"), {
+    schemaVersion: "0.1",
+    id: "",
+    status: "idle",
+    engine: "blender-cycles",
+    message: "No lightmap bake job has run for this project.",
+    steps: []
+  });
+}
+
 async function fileExists(filePath) {
   try {
     await access(filePath);
@@ -482,6 +493,36 @@ function runOptimize(projectId = "demo", profile = "balanced", applyOptimized = 
   });
 }
 
+function runLightmapBake(projectId = "demo") {
+  return new Promise((resolve, reject) => {
+    const viewerTarget = `apps/viewer-demo/public/scenes/${projectId}`;
+    const studioTarget = `apps/studio/public/scenes/${projectId}`;
+    const command =
+      `node scripts/bake-lightmaps.mjs ${viewerTarget} && ` +
+      `node scripts/bake-lightmaps.mjs ${studioTarget}`;
+    const child = spawn(process.env.ComSpec ?? "cmd.exe", ["/c", command], {
+      cwd: repoRoot,
+      windowsHide: true
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+        return;
+      }
+      reject(new Error(stderr || stdout || `Lightmap bake exited with ${code}.`));
+    });
+  });
+}
+
 async function projectPayload(projectId = "demo") {
   const target = targetDirs(projectId)[0];
   const [
@@ -494,7 +535,8 @@ async function projectPayload(projectId = "demo") {
     optimization,
     publishHistoryDocument,
     optimizationJobDocument,
-    optimizationHistoryDocument
+    optimizationHistoryDocument,
+    lightmapBakeJobDocument
   ] =
     await Promise.all([
     readJson(path.join(target, "scene.manifest.json")),
@@ -506,7 +548,8 @@ async function projectPayload(projectId = "demo") {
     readJson(path.join(target, "optimization.json")),
     publishHistory(projectId),
     optimizationJob(projectId),
-    optimizationHistory(projectId)
+    optimizationHistory(projectId),
+    lightmapBakeJob(projectId)
   ]);
   return {
     id: projectId,
@@ -519,7 +562,8 @@ async function projectPayload(projectId = "demo") {
     optimization,
     publishHistory: publishHistoryDocument,
     optimizationJob: optimizationJobDocument,
-    optimizationHistory: optimizationHistoryDocument
+    optimizationHistory: optimizationHistoryDocument,
+    lightmapBakeJob: lightmapBakeJobDocument
   };
 }
 
@@ -1125,6 +1169,17 @@ async function handleRequest(request, response) {
         optimization: project.optimization,
         optimizationJob: project.optimizationJob,
         optimizationHistory: project.optimizationHistory
+      });
+      return;
+    }
+
+    const lightmapBakeProjectId = projectIdFromPathname(url.pathname, "/bake-lightmaps");
+    if (request.method === "POST" && lightmapBakeProjectId) {
+      await runLightmapBake(lightmapBakeProjectId);
+      const project = await projectPayload(lightmapBakeProjectId);
+      sendJson(response, 200, {
+        ok: true,
+        lightmapBakeJob: project.lightmapBakeJob
       });
       return;
     }
