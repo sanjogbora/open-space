@@ -57,6 +57,13 @@ interface NavigationFailureDetail {
   point?: THREE.Vector3;
 }
 
+interface RouteNode {
+  point: THREE.Vector3;
+  previous: number;
+  cost: number;
+  visited: boolean;
+}
+
 export class WalkthroughViewer {
   private readonly container: HTMLElement;
   private readonly manifest: SceneManifest;
@@ -1497,38 +1504,91 @@ export class WalkthroughViewer {
     return undefined;
   }
 
-  private findPassZoneRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
-    if (this.passZoneMeshes.length === 0) {
+  private findNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
+    const routeMeshes = [...this.passZoneMeshes, ...this.walkZoneMeshes].slice(0, 28);
+    if (routeMeshes.length === 0) {
       return undefined;
     }
 
-    const candidates = this.passZoneMeshes
-      .map((mesh) => {
+    const nodes: RouteNode[] = [
+      { point: origin.clone(), previous: -1, cost: 0, visited: false },
+      ...routeMeshes.map((mesh) => {
         const point = new THREE.Vector3();
         mesh.getWorldPosition(point);
         point.y = target.y;
         return {
           point,
-          distance: origin.distanceTo(point) + point.distanceTo(target)
+          previous: -1,
+          cost: Number.POSITIVE_INFINITY,
+          visited: false
         };
-      })
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, 12);
+      }),
+      { point: target.clone(), previous: -1, cost: Number.POSITIVE_INFINITY, visited: false }
+    ];
 
-    for (const candidate of candidates) {
-      if (this.navigationFailureDetail(candidate.point, origin)) {
-        continue;
+    for (let index = 1; index < nodes.length - 1; index += 1) {
+      const node = nodes[index];
+      if (node && this.navigationFailureDetail(node.point, origin)) {
+        node.visited = true;
       }
-      if (this.navigationRouteFailureDetail(candidate.point, origin)) {
-        continue;
-      }
-      if (this.navigationRouteFailureDetail(target, candidate.point)) {
-        continue;
-      }
-      return [candidate.point, target.clone()];
     }
 
-    return undefined;
+    const targetIndex = nodes.length - 1;
+    while (true) {
+      let currentIndex = -1;
+      let currentCost = Number.POSITIVE_INFINITY;
+      for (let index = 0; index < nodes.length; index += 1) {
+        const node = nodes[index];
+        if (node && !node.visited && node.cost < currentCost) {
+          currentIndex = index;
+          currentCost = node.cost;
+        }
+      }
+      if (currentIndex === -1 || currentIndex === targetIndex) {
+        break;
+      }
+
+      const current = nodes[currentIndex];
+      if (!current) {
+        break;
+      }
+      current.visited = true;
+      for (let index = 1; index < nodes.length; index += 1) {
+        const node = nodes[index];
+        if (!node || node.visited || index === currentIndex) {
+          continue;
+        }
+        if (this.navigationRouteFailureDetail(node.point, current.point)) {
+          continue;
+        }
+        const nextCost = current.cost + current.point.distanceTo(node.point);
+        if (nextCost < node.cost) {
+          node.cost = nextCost;
+          node.previous = currentIndex;
+        }
+      }
+    }
+
+    const targetNode = nodes[targetIndex];
+    if (!targetNode || !Number.isFinite(targetNode.cost)) {
+      return undefined;
+    }
+
+    const route: THREE.Vector3[] = [];
+    let index = targetIndex;
+    while (index > 0) {
+      const node = nodes[index];
+      if (!node) {
+        return undefined;
+      }
+      route.unshift(node.point.clone());
+      index = node.previous;
+      if (index < 0) {
+        return undefined;
+      }
+    }
+
+    return route;
   }
 
   private isInsideWalkZone(position: THREE.Vector3): boolean {
@@ -1616,9 +1676,9 @@ export class WalkthroughViewer {
     }
     const routeFailureDetail = this.navigationRouteFailureDetail(nextTarget, this.camera.position);
     if (routeFailureDetail) {
-      const passZoneRoute = this.findPassZoneRoute(nextTarget, this.camera.position);
-      if (passZoneRoute) {
-        const [firstWaypoint, ...remainingWaypoints] = passZoneRoute;
+      const navigationRoute = this.findNavigationRoute(nextTarget, this.camera.position);
+      if (navigationRoute) {
+        const [firstWaypoint, ...remainingWaypoints] = navigationRoute;
         this.moveTarget = firstWaypoint;
         this.movePath = remainingWaypoints;
         this.cameraTween = undefined;
