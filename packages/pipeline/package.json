@@ -1,0 +1,17 @@
+{
+  "name": "@walkthrough/pipeline",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@walkthrough/scene-schema": "workspace:*"
+  }
+}
+

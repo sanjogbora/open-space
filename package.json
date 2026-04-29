@@ -1,0 +1,19 @@
+{
+  "name": "walkthrough-studio",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "dev": "pnpm --filter @walkthrough/viewer-demo dev",
+    "dev:studio": "pnpm --filter @walkthrough/studio dev",
+    "dev:api": "pnpm --filter @walkthrough/api dev",
+    "build": "pnpm --filter @walkthrough/scene-schema build && pnpm --filter @walkthrough/pipeline build && pnpm --filter @walkthrough/viewer build && pnpm --filter @walkthrough/viewer-demo build && pnpm --filter @walkthrough/studio build && pnpm --filter @walkthrough/api build",
+    "typecheck": "pnpm --filter @walkthrough/scene-schema typecheck && pnpm --filter @walkthrough/pipeline typecheck && pnpm --filter @walkthrough/viewer typecheck && pnpm --filter @walkthrough/viewer-demo typecheck && pnpm --filter @walkthrough/studio typecheck && pnpm --filter @walkthrough/api typecheck",
+    "analyze:demo": "node scripts/analyze-scene-bundle.mjs apps/viewer-demo/public/scenes/demo --write && node scripts/analyze-scene-bundle.mjs apps/studio/public/scenes/demo --write",
+    "lint": "pnpm typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

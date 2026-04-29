@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "0.1",
+  "generatedAt": "2026-04-29T05:05:47.462Z",
+  "source": "scene.manifest.json",
+  "profiles": [
+    {
+      "id": "mobile",
+      "label": "Mobile",
+      "status": "pass",
+      "budgets": {
+        "maxTotalBytes": 83886080,
+        "maxModelBytes": 37748736,
+        "maxTriangles": 1500000,
+        "maxMaterials": 80,
+        "maxMeshes": 300
+      },
+      "metrics": {
+        "totalBytes": 34876,
+        "modelBytes": 34876,
+        "triangles": 240,
+        "materials": 9,
+        "meshes": 20
+      },
+      "warnings": []
+    },
+    {
+      "id": "balanced",
+      "label": "Balanced",
+      "status": "pass",
+      "budgets": {
+        "maxTotalBytes": 146800640,
+        "maxModelBytes": 67108864,
+        "maxTriangles": 4000000,
+        "maxMaterials": 160,
+        "maxMeshes": 700
+      },
+      "metrics": {
+        "totalBytes": 34876,
+        "modelBytes": 34876,
+        "triangles": 240,
+        "materials": 9,
+        "meshes": 20
+      },
+      "warnings": []
+    },
+    {
+      "id": "desktop",
+      "label": "Desktop",
+      "status": "pass",
+      "budgets": {
+        "maxTotalBytes": 272629760,
+        "maxModelBytes": 125829120,
+        "maxTriangles": 8000000,
+        "maxMaterials": 320,
+        "maxMeshes": 1400
+      },
+      "metrics": {
+        "totalBytes": 34876,
+        "modelBytes": 34876,
+        "triangles": 240,
+        "materials": 9,
+        "meshes": 20
+      },
+      "warnings": []
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "low",
+      "action": "No immediate optimization action needed for this demo scene.",
+      "reason": "The scene is currently within all early budgets."
+    }
+  ]
+}

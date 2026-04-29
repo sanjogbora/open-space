@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "0.1",
+  "generator": "Walkthrough Studio analyzer",
+  "source": "scene.optimized.glb",
+  "objects": [
+    {
+      "id": "node-0-floor-main",
+      "name": "floor_main",
+      "visible": true
+    },
+    {
+      "id": "node-1-ceiling",
+      "name": "ceiling",
+      "visible": true
+    },
+    {
+      "id": "node-2-wall-back",
+      "name": "wall_back",
+      "visible": true
+    },
+    {
+      "id": "node-3-wall-front-low",
+      "name": "wall_front_low",
+      "visible": true
+    },
+    {
+      "id": "node-4-wall-front-low-2",
+      "name": "wall_front_low_2",
+      "visible": true
+    },
+    {
+      "id": "node-5-wall-left",
+      "name": "wall_left",
+      "visible": true
+    },
+    {
+      "id": "node-6-wall-right",
+      "name": "wall_right",
+      "visible": true
+    },
+    {
+      "id": "node-7-divider-wall",
+      "name": "divider_wall",
+      "visible": true
+    },
+    {
+      "id": "node-8-sofa-base",
+      "name": "sofa_base",
+      "visible": true
+    },
+    {
+      "id": "node-9-sofa-back",
+      "name": "sofa_back",
+      "visible": true
+    },
+    {
+      "id": "node-10-sofa-left-arm",
+      "name": "sofa_left_arm",
+      "visible": true
+    },
+    {
+      "id": "node-11-sofa-right-arm",
+      "name": "sofa_right_arm",
+      "visible": true
+    },
+    {
+      "id": "node-12-coffee-table",
+      "name": "coffee_table",
+      "visible": true
+    },
+    {
+      "id": "node-13-kitchen-island",
+      "name": "kitchen_island",
+      "visible": true
+    },
+    {
+      "id": "node-14-dining-table",
+      "name": "dining_table",
+      "visible": true
+    },
+    {
+      "id": "node-15-bed-base",
+      "name": "bed_base",
+      "visible": true
+    },
+    {
+      "id": "node-16-bed-headboard",
+      "name": "bed_headboard",
+      "visible": true
+    },
+    {
+      "id": "node-17-tv-body",
+      "name": "tv_body",
+      "visible": true
+    },
+    {
+      "id": "node-18-tv-screen",
+      "name": "tv_screen",
+      "visible": true
+    },
+    {
+      "id": "node-19-living-room-rug",
+      "name": "living_room_rug",
+      "visible": true
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "0.1",
+  "id": "opt-20260429-055011574z",
+  "status": "completed",
+  "profile": "mobile",
+  "applied": true,
+  "startedAt": "2026-04-29T05:50:11.574Z",
+  "completedAt": "2026-04-29T05:50:11.574Z",
+  "sourceSceneUrl": "scene.glb",
+  "optimizedSceneUrl": "scene.optimized.glb",
+  "before": {
+    "modelBytes": 34876
+  },
+  "after": {
+    "modelBytes": 34876,
+    "savedBytes": 0,
+    "savedPercent": 0
+  },
+  "steps": [
+    {
+      "id": "validate-glb",
+      "label": "Validate GLB v2 container",
+      "status": "completed"
+    },
+    {
+      "id": "compact-json",
+      "label": "Compact GLB JSON chunk",
+      "status": "completed"
+    },
+    {
+      "id": "emit-artifact",
+      "label": "Write optimized scene artifact",
+      "status": "completed"
+    },
+    {
+      "id": "mesh-compression",
+      "label": "Meshopt/Draco geometry compression",
+      "status": "pending"
+    },
+    {
+      "id": "texture-compression",
+      "label": "KTX2/Basis texture compression",
+      "status": "pending"
+    }
+  ]
+}

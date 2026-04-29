@@ -1,0 +1,719 @@
+import { access, readFile, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+
+const args = process.argv.slice(2);
+const target = args.find((arg) => !arg.startsWith("--")) ?? "apps/viewer-demo/public/scenes/demo";
+const writeStats = args.includes("--write");
+const manifestPath = target.endsWith(".json")
+  ? path.resolve(target)
+  : path.resolve(target, "scene.manifest.json");
+const bundleDir = path.dirname(manifestPath);
+
+const defaultBudget = {
+  maxTotalBytes: 160 * 1024 * 1024,
+  maxModelBytes: 70 * 1024 * 1024,
+  maxVideoBytes: 45 * 1024 * 1024,
+  maxInteractionCount: 80,
+  maxMobileTriangles: 4_000_000,
+  maxMobileMaterials: 180
+};
+
+const optimizationProfiles = [
+  {
+    id: "mobile",
+    label: "Mobile",
+    budgets: {
+      maxTotalBytes: 80 * 1024 * 1024,
+      maxModelBytes: 36 * 1024 * 1024,
+      maxTriangles: 1_500_000,
+      maxMaterials: 80,
+      maxMeshes: 300
+    }
+  },
+  {
+    id: "balanced",
+    label: "Balanced",
+    budgets: {
+      maxTotalBytes: 140 * 1024 * 1024,
+      maxModelBytes: 64 * 1024 * 1024,
+      maxTriangles: 4_000_000,
+      maxMaterials: 160,
+      maxMeshes: 700
+    }
+  },
+  {
+    id: "desktop",
+    label: "Desktop",
+    budgets: {
+      maxTotalBytes: 260 * 1024 * 1024,
+      maxModelBytes: 120 * 1024 * 1024,
+      maxTriangles: 8_000_000,
+      maxMaterials: 320,
+      maxMeshes: 1400
+    }
+  }
+];
+
+function isExternalAsset(source) {
+  return (
+    source.startsWith("generated://") ||
+    source.startsWith("data:") ||
+    source.startsWith("blob:") ||
+    source.startsWith("http://") ||
+    source.startsWith("https://")
+  );
+}
+
+function collectAssetReferences(manifest) {
+  const assets = [];
+
+  if (manifest.sceneUrl && !isExternalAsset(manifest.sceneUrl)) {
+    assets.push({ kind: "model", source: manifest.sceneUrl, label: "Scene model" });
+  }
+
+  for (const interaction of manifest.interactions ?? []) {
+    if (interaction.kind === "video-texture" && interaction.source && !isExternalAsset(interaction.source)) {
+      assets.push({ kind: "video", source: interaction.source, label: interaction.label });
+    }
+  }
+
+  if (manifest.branding?.logoUrl && !isExternalAsset(manifest.branding.logoUrl)) {
+    assets.push({ kind: "image", source: manifest.branding.logoUrl, label: "Brand logo" });
+  }
+
+  return assets;
+}
+
+async function assetSize(reference) {
+  const fullPath = path.resolve(bundleDir, reference.source);
+  try {
+    await access(fullPath);
+    const info = await stat(fullPath);
+    return {
+      ...reference,
+      path: fullPath,
+      exists: true,
+      bytes: info.size
+    };
+  } catch {
+    return {
+      ...reference,
+      path: fullPath,
+      exists: false,
+      bytes: 0
+    };
+  }
+}
+
+function parseGlbJson(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const magic = view.getUint32(0, true);
+  const version = view.getUint32(4, true);
+
+  if (magic !== 0x46546c67 || version !== 2) {
+    throw new Error("Invalid GLB header.");
+  }
+
+  const jsonChunkLength = view.getUint32(12, true);
+  const jsonChunkType = view.getUint32(16, true);
+
+  if (jsonChunkType !== 0x4e4f534a) {
+    throw new Error("GLB JSON chunk is missing.");
+  }
+
+  return JSON.parse(new TextDecoder().decode(bytes.slice(20, 20 + jsonChunkLength)).trim());
+}
+
+function analyzeGltfDocument(document, format) {
+  const accessors = document.accessors ?? [];
+  const meshes = document.meshes ?? [];
+  let primitiveCount = 0;
+  let vertexCount = 0;
+  let triangleCount = 0;
+
+  for (const mesh of meshes) {
+    for (const primitive of mesh.primitives ?? []) {
+      primitiveCount += 1;
+      const positionAccessorIndex = primitive.attributes?.POSITION;
+      const positionAccessor =
+        typeof positionAccessorIndex === "number" ? accessors[positionAccessorIndex] : undefined;
+      const indexAccessor =
+        typeof primitive.indices === "number" ? accessors[primitive.indices] : undefined;
+      const vertices = positionAccessor?.count ?? 0;
+      vertexCount += vertices;
+
+      if (primitive.mode === undefined || primitive.mode === 4) {
+        triangleCount += Math.floor((indexAccessor?.count ?? vertices) / 3);
+      }
+    }
+  }
+
+  return {
+    format,
+    version: document.asset?.version,
+    generator: document.asset?.generator,
+    nodeCount: document.nodes?.length ?? 0,
+    meshCount: meshes.length,
+    primitiveCount,
+    materialCount: document.materials?.length ?? 0,
+    textureCount: document.textures?.length ?? 0,
+    imageCount: document.images?.length ?? 0,
+    bufferCount: document.buffers?.length ?? 0,
+    bufferBytes: (document.buffers ?? []).reduce((sum, buffer) => sum + (buffer.byteLength ?? 0), 0),
+    vertexCount,
+    triangleCount,
+    extensionCount: document.extensionsUsed?.length ?? 0,
+    requiredExtensionCount: document.extensionsRequired?.length ?? 0
+  };
+}
+
+function stableName(value, fallback) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function slug(value) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 72);
+}
+
+function materialId(index, name) {
+  return `mat-${index}-${slug(name) || "material"}`;
+}
+
+function factorToHex(factor) {
+  if (!Array.isArray(factor) || factor.length < 3) {
+    return undefined;
+  }
+  const channels = factor.slice(0, 3).map((channel) => {
+    const value = typeof channel === "number" ? channel : 1;
+    return Math.round(Math.min(1, Math.max(0, value)) * 255)
+      .toString(16)
+      .padStart(2, "0");
+  });
+  return `#${channels.join("")}`;
+}
+
+function nodeId(index, name) {
+  return `node-${index}-${slug(name) || "object"}`;
+}
+
+function accessorBounds(accessor) {
+  if (!accessor?.min || !accessor.max) {
+    return undefined;
+  }
+  return {
+    min: accessor.min,
+    max: accessor.max
+  };
+}
+
+function mergeBounds(current, next) {
+  if (!next) {
+    return current;
+  }
+  if (!current) {
+    return {
+      min: [...next.min],
+      max: [...next.max]
+    };
+  }
+  return {
+    min: [
+      Math.min(current.min[0], next.min[0]),
+      Math.min(current.min[1], next.min[1]),
+      Math.min(current.min[2], next.min[2])
+    ],
+    max: [
+      Math.max(current.max[0], next.max[0]),
+      Math.max(current.max[1], next.max[1]),
+      Math.max(current.max[2], next.max[2])
+    ]
+  };
+}
+
+function extractSceneGraph(document, source) {
+  const accessors = document.accessors ?? [];
+  const meshes = document.meshes ?? [];
+  const materialUsage = new Map();
+  const parentByChild = new Map();
+  const nodes = [];
+
+  for (const [nodeIndex, node] of (document.nodes ?? []).entries()) {
+    for (const childIndex of node.children ?? []) {
+      parentByChild.set(childIndex, nodeIndex);
+    }
+  }
+
+  for (const [sourceIndex, node] of (document.nodes ?? []).entries()) {
+    const name = stableName(node.name, `Object ${sourceIndex}`);
+    const mesh = typeof node.mesh === "number" ? meshes[node.mesh] : undefined;
+    const materialIds = new Set();
+    let vertexCount = 0;
+    let triangleCount = 0;
+    let bounds;
+
+    for (const primitive of mesh?.primitives ?? []) {
+      const positionAccessorIndex = primitive.attributes?.POSITION;
+      const positionAccessor =
+        typeof positionAccessorIndex === "number" ? accessors[positionAccessorIndex] : undefined;
+      const indexAccessor =
+        typeof primitive.indices === "number" ? accessors[primitive.indices] : undefined;
+      const vertices = positionAccessor?.count ?? 0;
+      const triangles =
+        primitive.mode === undefined || primitive.mode === 4
+          ? Math.floor((indexAccessor?.count ?? vertices) / 3)
+          : 0;
+      vertexCount += vertices;
+      triangleCount += triangles;
+      bounds = mergeBounds(bounds, accessorBounds(positionAccessor));
+
+      if (typeof primitive.material === "number") {
+        const materialName = stableName(
+          document.materials?.[primitive.material]?.name,
+          `Material ${primitive.material}`
+        );
+        const id = materialId(primitive.material, materialName);
+        materialIds.add(id);
+        const current = materialUsage.get(primitive.material) ?? {
+          id,
+          name: materialName,
+          meshCount: 0,
+          primitiveCount: 0,
+          triangleCount: 0
+        };
+        materialUsage.set(primitive.material, {
+          ...current,
+          meshCount: current.meshCount + 1,
+          primitiveCount: current.primitiveCount + 1,
+          triangleCount: current.triangleCount + triangles
+        });
+      }
+    }
+
+    const graphNode = {
+      id: nodeId(sourceIndex, name),
+      name,
+      sourceIndex,
+      materialIds: [...materialIds],
+      vertexCount,
+      triangleCount
+    };
+
+    const parentIndex = parentByChild.get(sourceIndex);
+    if (typeof parentIndex === "number") {
+      const parent = document.nodes?.[parentIndex];
+      graphNode.parentId = nodeId(parentIndex, stableName(parent?.name, `Object ${parentIndex}`));
+    }
+
+    if (typeof node.mesh === "number") {
+      graphNode.meshIndex = node.mesh;
+      graphNode.meshName = stableName(mesh?.name, `Mesh ${node.mesh}`);
+    }
+
+    if (bounds) {
+      graphNode.bounds = bounds;
+    }
+
+    nodes.push(graphNode);
+  }
+
+  return {
+    schemaVersion: "0.1",
+    generator: "Walkthrough Studio analyzer",
+    source,
+    nodes,
+    materials: [...materialUsage.values()]
+  };
+}
+
+function extractMaterialsDocument(document, source) {
+  return {
+    schemaVersion: "0.1",
+    generator: "Walkthrough Studio analyzer",
+    source,
+    materials: (document.materials ?? []).map((material, index) => {
+      const name = stableName(material.name, `Material ${index}`);
+      const result = {
+        id: materialId(index, name),
+        name
+      };
+      const baseColor = factorToHex(material.pbrMetallicRoughness?.baseColorFactor);
+      if (baseColor) {
+        result.baseColor = baseColor;
+      }
+      if (typeof material.pbrMetallicRoughness?.roughnessFactor === "number") {
+        result.roughness = material.pbrMetallicRoughness.roughnessFactor;
+      }
+      if (typeof material.pbrMetallicRoughness?.metallicFactor === "number") {
+        result.metalness = material.pbrMetallicRoughness.metallicFactor;
+      }
+      return result;
+    })
+  };
+}
+
+function extractObjectsDocument(graph, source) {
+  return {
+    schemaVersion: "0.1",
+    generator: "Walkthrough Studio analyzer",
+    source,
+    objects: graph.nodes.map((node) => ({
+      id: node.id,
+      name: node.name,
+      visible: true
+    }))
+  };
+}
+
+async function readJsonIfExists(filePath) {
+  try {
+    return JSON.parse(await readFile(filePath, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+function mergeMaterialEdits(generated, existing) {
+  if (!existing?.materials) {
+    return generated;
+  }
+  const existingByName = new Map(existing.materials.map((material) => [material.name, material]));
+  return {
+    ...generated,
+    materials: generated.materials.map((material) => {
+      const previous = existingByName.get(material.name);
+      if (!previous) {
+        return material;
+      }
+      return {
+        ...material,
+        ...(previous.baseColor ? { baseColor: previous.baseColor } : {}),
+        ...(typeof previous.roughness === "number" ? { roughness: previous.roughness } : {}),
+        ...(typeof previous.metalness === "number" ? { metalness: previous.metalness } : {}),
+        ...(typeof previous.opacity === "number" ? { opacity: previous.opacity } : {})
+      };
+    })
+  };
+}
+
+function mergeObjectEdits(generated, existing) {
+  if (!existing?.objects) {
+    return generated;
+  }
+  const existingByName = new Map(existing.objects.map((object) => [object.name, object]));
+  return {
+    ...generated,
+    objects: generated.objects.map((object) => {
+      const previous = existingByName.get(object.name);
+      if (!previous) {
+        return object;
+      }
+      return {
+        ...object,
+        visible: previous.visible,
+        ...(typeof previous.locked === "boolean" ? { locked: previous.locked } : {})
+      };
+    })
+  };
+}
+
+async function modelStats(asset) {
+  if (!asset.exists || asset.kind !== "model") {
+    return undefined;
+  }
+
+  const extension = path.extname(asset.source).toLowerCase();
+  if (extension === ".glb") {
+    const bytes = await readFile(asset.path);
+    return analyzeGltfDocument(parseGlbJson(bytes), "glb");
+  }
+
+  if (extension === ".gltf") {
+    return analyzeGltfDocument(JSON.parse(await readFile(asset.path, "utf8")), "gltf");
+  }
+
+  return undefined;
+}
+
+async function modelGraph(asset) {
+  if (!asset.exists || asset.kind !== "model") {
+    return undefined;
+  }
+
+  const extension = path.extname(asset.source).toLowerCase();
+  if (extension === ".glb") {
+    const bytes = await readFile(asset.path);
+    return extractSceneGraph(parseGlbJson(bytes), asset.source);
+  }
+
+  if (extension === ".gltf") {
+    return extractSceneGraph(JSON.parse(await readFile(asset.path, "utf8")), asset.source);
+  }
+
+  return undefined;
+}
+
+async function modelMaterials(asset) {
+  if (!asset.exists || asset.kind !== "model") {
+    return undefined;
+  }
+
+  const extension = path.extname(asset.source).toLowerCase();
+  if (extension === ".glb") {
+    const bytes = await readFile(asset.path);
+    return extractMaterialsDocument(parseGlbJson(bytes), asset.source);
+  }
+
+  if (extension === ".gltf") {
+    return extractMaterialsDocument(JSON.parse(await readFile(asset.path, "utf8")), asset.source);
+  }
+
+  return undefined;
+}
+
+function summarize(manifest, assets, models) {
+  const totalBytes = assets.reduce((sum, asset) => sum + asset.bytes, 0);
+  const missingAssetCount = assets.filter((asset) => !asset.exists).length;
+  const modelBytes = assets
+    .filter((asset) => /\.(glb|gltf)$/i.test(asset.source))
+    .reduce((sum, asset) => sum + asset.bytes, 0);
+  const videoBytes = assets
+    .filter((asset) => /\.(mp4|webm|mov)$/i.test(asset.source))
+    .reduce((sum, asset) => sum + asset.bytes, 0);
+  const warnings = [];
+  const triangleCount = models.reduce((sum, model) => sum + model.triangleCount, 0);
+  const meshCount = models.reduce((sum, model) => sum + model.meshCount, 0);
+  const materialCount = models.reduce((sum, model) => sum + model.materialCount, 0);
+
+  if (missingAssetCount > 0) {
+    warnings.push({
+      code: "missing-assets",
+      message: `${missingAssetCount} referenced asset(s) are missing.`
+    });
+  }
+
+  if (totalBytes > defaultBudget.maxTotalBytes) {
+    warnings.push({
+      code: "total-size-budget",
+      message: `Bundle size exceeds ${(defaultBudget.maxTotalBytes / 1024 / 1024).toFixed(0)} MB.`
+    });
+  }
+
+  if (modelBytes > defaultBudget.maxModelBytes) {
+    warnings.push({
+      code: "model-size-budget",
+      message: `Model assets exceed ${(defaultBudget.maxModelBytes / 1024 / 1024).toFixed(0)} MB.`
+    });
+  }
+
+  if (videoBytes > defaultBudget.maxVideoBytes) {
+    warnings.push({
+      code: "video-size-budget",
+      message: `Video assets exceed ${(defaultBudget.maxVideoBytes / 1024 / 1024).toFixed(0)} MB.`
+    });
+  }
+
+  if ((manifest.interactions?.length ?? 0) > defaultBudget.maxInteractionCount) {
+    warnings.push({
+      code: "interaction-count-budget",
+      message: `Interaction count exceeds ${defaultBudget.maxInteractionCount}.`
+    });
+  }
+
+  if (triangleCount > defaultBudget.maxMobileTriangles) {
+    warnings.push({
+      code: "mobile-triangle-budget",
+      message: `Triangle count exceeds mobile target of ${defaultBudget.maxMobileTriangles.toLocaleString()}.`
+    });
+  }
+
+  if (materialCount > defaultBudget.maxMobileMaterials) {
+    warnings.push({
+      code: "mobile-material-budget",
+      message: `Material count exceeds mobile target of ${defaultBudget.maxMobileMaterials}.`
+    });
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    manifestPath,
+    bundleDir,
+    viewCount: manifest.views?.length ?? 0,
+    interactionCount: manifest.interactions?.length ?? 0,
+    assetCount: assets.length,
+    missingAssetCount,
+    totalBytes,
+    modelBytes,
+    videoBytes,
+    triangleCount,
+    meshCount,
+    materialCount,
+    warnings,
+    assets,
+    models
+  };
+}
+
+function profileWarnings(report, profile) {
+  const warnings = [];
+  const { budgets } = profile;
+  if (report.totalBytes > budgets.maxTotalBytes) {
+    warnings.push({
+      code: "total-bytes",
+      message: `Bundle size is over the ${profile.label} budget.`
+    });
+  }
+  if (report.modelBytes > budgets.maxModelBytes) {
+    warnings.push({
+      code: "model-bytes",
+      message: `Model size is over the ${profile.label} budget.`
+    });
+  }
+  if (report.triangleCount > budgets.maxTriangles) {
+    warnings.push({
+      code: "triangles",
+      message: `Triangle count is over the ${profile.label} budget.`
+    });
+  }
+  if (report.materialCount > budgets.maxMaterials) {
+    warnings.push({
+      code: "materials",
+      message: `Material count is over the ${profile.label} budget.`
+    });
+  }
+  if (report.meshCount > budgets.maxMeshes) {
+    warnings.push({
+      code: "meshes",
+      message: `Mesh count is over the ${profile.label} budget.`
+    });
+  }
+  return warnings;
+}
+
+function recommendationList(report) {
+  const recommendations = [];
+
+  if (report.triangleCount > optimizationProfiles[0].budgets.maxTriangles) {
+    recommendations.push({
+      priority: "high",
+      action: "Run mesh simplification for mobile profile.",
+      reason: "Mobile triangle budget is exceeded."
+    });
+  }
+
+  if (report.meshCount > optimizationProfiles[0].budgets.maxMeshes) {
+    recommendations.push({
+      priority: "high",
+      action: "Merge static meshes that share materials.",
+      reason: "High mesh count increases draw calls."
+    });
+  }
+
+  if (report.materialCount > optimizationProfiles[0].budgets.maxMaterials) {
+    recommendations.push({
+      priority: "medium",
+      action: "Consolidate duplicate materials and atlas small repeated textures.",
+      reason: "Material count is a draw-call and memory pressure signal."
+    });
+  }
+
+  if (report.modelBytes > optimizationProfiles[0].budgets.maxModelBytes) {
+    recommendations.push({
+      priority: "medium",
+      action: "Apply Meshopt or Draco geometry compression.",
+      reason: "The model is larger than the mobile transfer budget."
+    });
+  }
+
+  if (report.totalBytes > optimizationProfiles[0].budgets.maxTotalBytes) {
+    recommendations.push({
+      priority: "medium",
+      action: "Move large media into lazy-loaded assets.",
+      reason: "Initial bundle size is above the mobile target."
+    });
+  }
+
+  if (report.warnings.length === 0 && recommendations.length === 0) {
+    recommendations.push({
+      priority: "low",
+      action: "No immediate optimization action needed for this demo scene.",
+      reason: "The scene is currently within all early budgets."
+    });
+  }
+
+  return recommendations;
+}
+
+function createOptimizationReport(report) {
+  const profiles = optimizationProfiles.map((profile) => {
+    const warnings = profileWarnings(report, profile);
+    return {
+      id: profile.id,
+      label: profile.label,
+      status: warnings.length === 0 ? "pass" : "warn",
+      budgets: profile.budgets,
+      metrics: {
+        totalBytes: report.totalBytes,
+        modelBytes: report.modelBytes,
+        triangles: report.triangleCount,
+        materials: report.materialCount,
+        meshes: report.meshCount
+      },
+      warnings
+    };
+  });
+
+  return {
+    schemaVersion: "0.1",
+    generatedAt: report.generatedAt,
+    source: path.basename(manifestPath),
+    profiles,
+    recommendations: recommendationList(report)
+  };
+}
+
+const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+if (manifest.schemaVersion !== "0.1") {
+  throw new Error(`Unsupported manifest schema: ${manifest.schemaVersion}`);
+}
+
+const assets = await Promise.all(collectAssetReferences(manifest).map(assetSize));
+const models = (await Promise.all(assets.map(modelStats))).filter(Boolean);
+const graphs = (await Promise.all(assets.map(modelGraph))).filter(Boolean);
+const materialDocs = (await Promise.all(assets.map(modelMaterials))).filter(Boolean);
+const report = summarize(manifest, assets, models);
+const optimizationReport = createOptimizationReport(report);
+
+if (writeStats) {
+  await writeFile(path.resolve(bundleDir, "stats.json"), `${JSON.stringify(report, null, 2)}\n`);
+  await writeFile(
+    path.resolve(bundleDir, "optimization.json"),
+    `${JSON.stringify(optimizationReport, null, 2)}\n`
+  );
+  if (graphs[0]) {
+    await writeFile(path.resolve(bundleDir, "scene.graph.json"), `${JSON.stringify(graphs[0], null, 2)}\n`);
+    const existingObjects = await readJsonIfExists(path.resolve(bundleDir, "objects.json"));
+    const objectsDocument = mergeObjectEdits(
+      extractObjectsDocument(graphs[0], graphs[0].source),
+      existingObjects
+    );
+    await writeFile(
+      path.resolve(bundleDir, "objects.json"),
+      `${JSON.stringify(objectsDocument, null, 2)}\n`
+    );
+  }
+  if (materialDocs[0]) {
+    const existingMaterials = await readJsonIfExists(path.resolve(bundleDir, "materials.json"));
+    const materialsDocument = mergeMaterialEdits(materialDocs[0], existingMaterials);
+    await writeFile(
+      path.resolve(bundleDir, "materials.json"),
+      `${JSON.stringify(materialsDocument, null, 2)}\n`
+    );
+  }
+}
+
+console.log(JSON.stringify(report, null, 2));

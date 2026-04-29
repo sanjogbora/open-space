@@ -1,0 +1,92 @@
+# Current Status
+
+## Navigation
+
+The viewer currently supports the core walkthrough navigation loop:
+
+- Click or tap a floor mesh to move.
+- A blue floor marker appears at the selected destination.
+- The camera eases toward the clicked point.
+- Predefined room/view buttons move the camera to saved views.
+- A floorplan/minimap overlay tracks camera position and can jump to saved views.
+- Movement is constrained by configured scene bounds.
+- Basic collision boxes are generated from configured collision mesh names.
+- Keyboard movement works with WASD/arrow keys.
+- Left-click drag, right-click drag, and touch drag look around.
+- Mobile tap and drag-look controls are present.
+- Movement behavior is now driven by `controls.json`.
+- Studio has a Controls tab for enabling/disabling WASD, click-to-move, drag-look, speed, sensitivity, and click threshold.
+- Viewer supports runtime material variant controls from the scene manifest.
+- Viewer supports hotspot, link, video texture, material variant, object-toggle, and object-pick interactions.
+- Viewer has share, copy-embed, fullscreen, and screenshot controls.
+- Viewer exposes camera pose for UI overlays and external integrations.
+- Studio can upload a replacement GLB through the local API and rerun bundle analysis.
+- Analyzer now generates `optimization.json` with mobile, balanced, and desktop budget profiles.
+- Optimizer now emits `scene.optimized.glb` and `optimization-job.json`.
+- Optimizer now keeps `optimization-history.json` for recent job history.
+- API can run optimization jobs and apply the optimized model to the manifest.
+- API and Studio can switch a project between original and optimized GLB sources.
+- Studio has an Optimization tab with profile warnings, recommendations, job trigger, and last-job results.
+- API lists projects and creates new projects by cloning the demo bundle.
+- Studio sidebar can switch between project bundles.
+- API publishes versioned static scene bundles.
+- Studio has a Publish tab with draft URL, published URLs, embed snippets, and version history.
+- Reimport analysis preserves material edits and object visibility by stable material/object names.
+- Viewer supports in-viewport object picking with object/material details.
+- Studio Interactions can create and edit hotspots, external scene links, and object toggles.
+
+Current limitations:
+
+- Collision is box-based, not a full navmesh/capsule controller.
+- No stair/level transition logic yet.
+- No editable floor-plan authoring UI yet.
+- No guided pathfinding around obstacles yet.
+- No in-editor navigation-zone painting yet.
+
+## Implemented Product Foundation
+
+- Viewer SDK with GLB loading.
+- Scene bundle manifest.
+- Embedded viewer mode and embed script.
+- Demo GLB scene.
+- Scene analyzer with size, mesh, material, vertex, and triangle stats.
+- Generated optimization budget report.
+- Generated `scene.graph.json`.
+- Generated `materials.json`.
+- Generated `objects.json`.
+- Generated `controls.json`.
+- Generated `optimization-job.json` after optimization jobs.
+- Generated `optimization-history.json` after optimization jobs.
+- Studio app with Overview, Views, Interactions, Materials, Objects, and Bundle sections.
+- Studio Publish tab for local static bundle publishing.
+- Studio Variants tab for editing material finish sets and color options.
+- Studio Interactions tab for hotspot, link, and object-toggle editing.
+- Local API for reading/writing the manifest, materials, objects, and controls documents.
+- Local API endpoint for replacing the demo GLB model and regenerating stats.
+- Local API endpoint for running and applying optimization jobs.
+- Hotspot, link, object-toggle, and video texture support.
+- Runtime material override loading.
+- Runtime material variant switching.
+- Runtime object inspection panel.
+- Visual smoke tests for desktop/mobile viewer and Studio.
+
+## Major Work Remaining
+
+- FBX/OBJ/DAE conversion pipeline.
+- SketchUp/Revit/3ds Max exporters.
+- Texture analysis and KTX2/Basis compression.
+- Meshopt/Draco compression jobs.
+- Mesh simplification.
+- Draw-call optimization and safe mesh merging.
+- Lightmap UV generation.
+- Blender/Cycles or custom bake orchestration.
+- Light editor and bake settings UI.
+- Material texture maps, normal maps, emissive maps, UV controls, and texture-backed variants.
+- Studio-linked in-viewport object editing and placement tools.
+- Robust reimport identity matching across renamed/restructured models.
+- Durable project/account backend.
+- Multi-project API and database persistence.
+- Cloud storage and production publish hosting.
+- CDN hosting and custom domains.
+- Analytics.
+- Collaboration and 3D meetings.

@@ -1,0 +1,235 @@
+{
+  "schemaVersion": "0.1",
+  "sceneUrl": "scene.optimized.glb",
+  "graphUrl": "scene.graph.json",
+  "materialsUrl": "materials.json",
+  "objectsUrl": "objects.json",
+  "controlsUrl": "controls.json",
+  "views": [
+    {
+      "id": "living",
+      "label": "Living",
+      "kind": "walk",
+      "position": [
+        -3.65,
+        1.65,
+        2.35
+      ],
+      "target": [
+        -2.35,
+        1.28,
+        -0.55
+      ],
+      "fov": 62
+    },
+    {
+      "id": "kitchen",
+      "label": "Kitchen",
+      "kind": "walk",
+      "position": [
+        0.75,
+        1.65,
+        3.45
+      ],
+      "target": [
+        2.6,
+        1.3,
+        1.3
+      ],
+      "fov": 62
+    },
+    {
+      "id": "dining",
+      "label": "Dining",
+      "kind": "walk",
+      "position": [
+        0.4,
+        1.65,
+        -0.55
+      ],
+      "target": [
+        3.05,
+        1.2,
+        -1.65
+      ],
+      "fov": 60
+    },
+    {
+      "id": "bedroom",
+      "label": "Bedroom",
+      "kind": "walk",
+      "position": [
+        1.7,
+        1.65,
+        3.2
+      ],
+      "target": [
+        4.1,
+        1.15,
+        3.2
+      ],
+      "fov": 64
+    },
+    {
+      "id": "top",
+      "label": "Top",
+      "kind": "top",
+      "position": [
+        0,
+        11,
+        0.01
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "fov": 48
+    }
+  ],
+  "interactions": [
+    {
+      "id": "living-hotspot",
+      "kind": "hotspot",
+      "label": "Living details",
+      "position": [
+        -2.35,
+        1.25,
+        0.2
+      ],
+      "title": "Living Room",
+      "body": "Open seating, media wall, and central floor path are configured as editable scene metadata.",
+      "icon": "info"
+    },
+    {
+      "id": "kitchen-hotspot",
+      "kind": "hotspot",
+      "label": "Kitchen finish",
+      "position": [
+        2.85,
+        1.35,
+        1.2
+      ],
+      "title": "Kitchen",
+      "body": "Cabinet, island, and counter surfaces are ready for material variant controls in the editor phase.",
+      "icon": "info"
+    },
+    {
+      "id": "project-link",
+      "kind": "link",
+      "label": "Project Website",
+      "position": [
+        2.6,
+        1.55,
+        -1.6
+      ],
+      "url": "https://example.com",
+      "openInNewTab": true
+    },
+    {
+      "id": "ceiling-toggle",
+      "kind": "object-toggle",
+      "label": "Toggle Ceiling",
+      "position": [
+        -1.2,
+        1.55,
+        1.65
+      ],
+      "targetObjectId": "node-1-ceiling",
+      "targetObjectName": "ceiling",
+      "initiallyVisible": true
+    },
+    {
+      "id": "tv-video",
+      "kind": "video-texture",
+      "label": "TV",
+      "source": "generated://showreel",
+      "targetMeshName": "tv_screen",
+      "autoplay": true,
+      "muted": true,
+      "loop": true
+    },
+    {
+      "id": "sofa-finish",
+      "kind": "material-variant",
+      "label": "Sofa Finish",
+      "targetMaterialName": "Sofa",
+      "variants": [
+        {
+          "id": "deep-teal",
+          "label": "Deep Teal",
+          "color": "#07333d"
+        },
+        {
+          "id": "warm-stone",
+          "label": "Warm Stone",
+          "color": "#8d8376"
+        },
+        {
+          "id": "clay",
+          "label": "Clay",
+          "color": "#8f3b2f"
+        }
+      ]
+    }
+  ],
+  "navigation": {
+    "cameraHeight": 1.65,
+    "moveSpeed": 3.8,
+    "turnSpeed": 1.5,
+    "floorMeshNames": [
+      "floor",
+      "ground",
+      "navmesh",
+      "walkable"
+    ],
+    "collisionMeshNames": [
+      "wall",
+      "glass",
+      "door",
+      "collision"
+    ],
+    "bounds": {
+      "min": [
+        -5.55,
+        0.2,
+        -4.05
+      ],
+      "max": [
+        5.55,
+        2.4,
+        4.05
+      ]
+    }
+  },
+  "branding": {
+    "title": "Walkthrough Studio",
+    "clientName": "Demo Residence",
+    "theme": "dark",
+    "accentColor": "#0787ff",
+    "showBranding": true
+  },
+  "qualityProfiles": [
+    {
+      "id": "mobile",
+      "label": "Mobile",
+      "maxPixelRatio": 1.25,
+      "shadows": false,
+      "antialias": false
+    },
+    {
+      "id": "balanced",
+      "label": "Balanced",
+      "maxPixelRatio": 1.5,
+      "shadows": true,
+      "antialias": true
+    },
+    {
+      "id": "desktop",
+      "label": "Desktop",
+      "maxPixelRatio": 2,
+      "shadows": true,
+      "antialias": true
+    }
+  ]
+}

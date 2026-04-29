@@ -1,0 +1,204 @@
+import { access, readFile, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+
+const args = process.argv.slice(2);
+const target = args.find((arg) => !arg.startsWith("--")) ?? "apps/viewer-demo/public/scenes/demo";
+const profileArg = args.find((arg) => arg.startsWith("--profile="));
+const profile = profileArg?.split("=")[1] ?? "balanced";
+const applyOptimized = args.includes("--apply");
+const manifestPath = target.endsWith(".json")
+  ? path.resolve(target)
+  : path.resolve(target, "scene.manifest.json");
+const bundleDir = path.dirname(manifestPath);
+const optimizedSceneUrl = "scene.optimized.glb";
+
+function isExternalAsset(source) {
+  return (
+    source.startsWith("generated://") ||
+    source.startsWith("data:") ||
+    source.startsWith("blob:") ||
+    source.startsWith("http://") ||
+    source.startsWith("https://")
+  );
+}
+
+async function exists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readJsonDefault(filePath, fallback) {
+  try {
+    return JSON.parse(await readFile(filePath, "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+
+function align4(buffer, fill = 0x20) {
+  const remainder = buffer.length % 4;
+  if (remainder === 0) {
+    return buffer;
+  }
+  return Buffer.concat([buffer, Buffer.alloc(4 - remainder, fill)]);
+}
+
+function readChunks(bytes) {
+  if (bytes.length < 20) {
+    throw new Error("GLB is too small.");
+  }
+  const magic = bytes.readUInt32LE(0);
+  const version = bytes.readUInt32LE(4);
+  if (magic !== 0x46546c67 || version !== 2) {
+    throw new Error("Only GLB v2 files are supported.");
+  }
+
+  const chunks = [];
+  let offset = 12;
+  while (offset + 8 <= bytes.length) {
+    const length = bytes.readUInt32LE(offset);
+    const type = bytes.readUInt32LE(offset + 4);
+    const start = offset + 8;
+    const end = start + length;
+    if (end > bytes.length) {
+      throw new Error("GLB chunk length is invalid.");
+    }
+    chunks.push({ type, data: bytes.subarray(start, end) });
+    offset = end;
+  }
+  return chunks;
+}
+
+function writeGlb(chunks) {
+  const chunkBuffers = chunks.map((chunk) => {
+    const header = Buffer.alloc(8);
+    header.writeUInt32LE(chunk.data.length, 0);
+    header.writeUInt32LE(chunk.type, 4);
+    return Buffer.concat([header, chunk.data]);
+  });
+  const totalLength = 12 + chunkBuffers.reduce((sum, chunk) => sum + chunk.length, 0);
+  const header = Buffer.alloc(12);
+  header.writeUInt32LE(0x46546c67, 0);
+  header.writeUInt32LE(2, 4);
+  header.writeUInt32LE(totalLength, 8);
+  return Buffer.concat([header, ...chunkBuffers]);
+}
+
+function optimizeGlb(bytes) {
+  const chunks = readChunks(bytes);
+  const jsonChunk = chunks.find((chunk) => chunk.type === 0x4e4f534a);
+  if (!jsonChunk) {
+    throw new Error("GLB JSON chunk is missing.");
+  }
+
+  const document = JSON.parse(new TextDecoder().decode(jsonChunk.data).trim());
+  const json = align4(Buffer.from(JSON.stringify(document), "utf8"), 0x20);
+  const optimizedChunks = chunks.map((chunk) =>
+    chunk === jsonChunk ? { ...chunk, data: json } : chunk
+  );
+  return writeGlb(optimizedChunks);
+}
+
+function percentChange(before, after) {
+  if (before <= 0) {
+    return 0;
+  }
+  return Number((((before - after) / before) * 100).toFixed(2));
+}
+
+const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+if (manifest.schemaVersion !== "0.1") {
+  throw new Error(`Unsupported manifest schema: ${manifest.schemaVersion}`);
+}
+
+const manifestSceneUrl = manifest.sceneUrl ?? "scene.glb";
+if (isExternalAsset(manifestSceneUrl)) {
+  throw new Error("External scene URLs cannot be optimized by the local pipeline.");
+}
+
+const fallbackSource = path.resolve(bundleDir, "scene.glb");
+const currentSource = path.resolve(bundleDir, manifestSceneUrl);
+const sourceSceneUrl =
+  manifestSceneUrl === optimizedSceneUrl && (await exists(fallbackSource))
+    ? "scene.glb"
+    : manifestSceneUrl;
+const sourcePath = path.resolve(bundleDir, sourceSceneUrl);
+const outputPath = path.resolve(bundleDir, optimizedSceneUrl);
+const beforeInfo = await stat(sourcePath);
+const sourceBytes = await readFile(sourcePath);
+const optimizedBytes = optimizeGlb(sourceBytes);
+await writeFile(outputPath, optimizedBytes);
+const afterInfo = await stat(outputPath);
+
+if (applyOptimized) {
+  const nextManifest = {
+    ...manifest,
+    sceneUrl: optimizedSceneUrl
+  };
+  await writeFile(manifestPath, `${JSON.stringify(nextManifest, null, 2)}\n`);
+}
+
+const timestamp = new Date().toISOString();
+const job = {
+  schemaVersion: "0.1",
+  id: `opt-${timestamp.replace(/[-:.]/g, "").replace("T", "-").replace("Z", "z")}`,
+  status: "completed",
+  profile,
+  applied: applyOptimized,
+  startedAt: timestamp,
+  completedAt: timestamp,
+  sourceSceneUrl,
+  optimizedSceneUrl,
+  before: {
+    modelBytes: beforeInfo.size
+  },
+  after: {
+    modelBytes: afterInfo.size,
+    savedBytes: Math.max(0, beforeInfo.size - afterInfo.size),
+    savedPercent: percentChange(beforeInfo.size, afterInfo.size)
+  },
+  steps: [
+    {
+      id: "validate-glb",
+      label: "Validate GLB v2 container",
+      status: "completed"
+    },
+    {
+      id: "compact-json",
+      label: "Compact GLB JSON chunk",
+      status: "completed"
+    },
+    {
+      id: "emit-artifact",
+      label: "Write optimized scene artifact",
+      status: "completed"
+    },
+    {
+      id: "mesh-compression",
+      label: "Meshopt/Draco geometry compression",
+      status: "pending"
+    },
+    {
+      id: "texture-compression",
+      label: "KTX2/Basis texture compression",
+      status: "pending"
+    }
+  ]
+};
+
+await writeFile(path.resolve(bundleDir, "optimization-job.json"), `${JSON.stringify(job, null, 2)}\n`);
+const historyPath = path.resolve(bundleDir, "optimization-history.json");
+const history = await readJsonDefault(historyPath, {
+  schemaVersion: "0.1",
+  jobs: []
+});
+const nextHistory = {
+  schemaVersion: "0.1",
+  jobs: [job, ...(history.jobs ?? []).filter((item) => item.id !== job.id)].slice(0, 20)
+};
+await writeFile(historyPath, `${JSON.stringify(nextHistory, null, 2)}\n`);
+console.log(JSON.stringify(job, null, 2));

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "0.1",
+  "generator": "Walkthrough Studio analyzer",
+  "source": "scene.optimized.glb",
+  "materials": [
+    {
+      "id": "mat-0-floor",
+      "name": "Floor",
+      "baseColor": "#948269",
+      "roughness": 0.62,
+      "metalness": 0
+    },
+    {
+      "id": "mat-1-wall",
+      "name": "Wall",
+      "baseColor": "#9e9c8f",
+      "roughness": 0.84,
+      "metalness": 0
+    },
+    {
+      "id": "mat-2-ceiling",
+      "name": "Ceiling",
+      "baseColor": "#bdb8a8",
+      "roughness": 0.9,
+      "metalness": 0
+    },
+    {
+      "id": "mat-3-sofa",
+      "name": "Sofa",
+      "baseColor": "#051f26",
+      "roughness": 0.78,
+      "metalness": 0
+    },
+    {
+      "id": "mat-4-wood",
+      "name": "Wood",
+      "baseColor": "#59402b",
+      "roughness": 0.7,
+      "metalness": 0
+    },
+    {
+      "id": "mat-5-counter",
+      "name": "Counter",
+      "baseColor": "#c2c2b3",
+      "roughness": 0.52,
+      "metalness": 0
+    },
+    {
+      "id": "mat-6-tvbody",
+      "name": "TVBody",
+      "baseColor": "#030405",
+      "roughness": 0.45,
+      "metalness": 0
+    },
+    {
+      "id": "mat-7-tvscreen",
+      "name": "TVScreen",
+      "baseColor": "#0580e6",
+      "roughness": 0.25,
+      "metalness": 0
+    },
+    {
+      "id": "mat-8-rug",
+      "name": "Rug",
+      "baseColor": "#8a241a",
+      "roughness": 0.8,
+      "metalness": 0
+    }
+  ]
+}

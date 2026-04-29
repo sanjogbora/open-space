@@ -1,0 +1,12 @@
+{
+  "name": "@walkthrough/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.mjs",
+    "build": "node --check src/server.mjs",
+    "typecheck": "node --check src/server.mjs"
+  }
+}
+
