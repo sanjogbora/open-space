@@ -33,6 +33,7 @@ import {
   type SceneInteraction,
   type SceneManifest,
   type SceneView,
+  type VideoTextureInteraction,
   type Vec3
 } from "@walkthrough/scene-schema";
 
@@ -213,6 +214,10 @@ function isObjectToggle(interaction: SceneInteraction): interaction is ObjectTog
   return interaction.kind === "object-toggle";
 }
 
+function isVideoTexture(interaction: SceneInteraction): interaction is VideoTextureInteraction {
+  return interaction.kind === "video-texture";
+}
+
 function createView(index: number): SceneView {
   return {
     id: `view-${index}`,
@@ -276,6 +281,19 @@ function createObjectToggle(index: number, object?: ObjectOverride): ObjectToggl
     position: [0, 1.25, 0],
     ...(object ? { targetObjectId: object.id, targetObjectName: object.name } : {}),
     initiallyVisible: true
+  };
+}
+
+function createVideoTexture(index: number): VideoTextureInteraction {
+  return {
+    id: `video-texture-${index}`,
+    kind: "video-texture",
+    label: `Video Surface ${index}`,
+    source: "",
+    autoplay: true,
+    muted: true,
+    loop: true,
+    triggerDistance: 8
   };
 }
 
@@ -734,6 +752,11 @@ function App() {
     [manifest]
   );
 
+  const videoTextureInteractions = useMemo(
+    () => manifest?.interactions.filter(isVideoTexture) ?? [],
+    [manifest]
+  );
+
   const materialVariantInteractions = useMemo(
     () => manifest?.interactions.filter(isMaterialVariantInteraction) ?? [],
     [manifest]
@@ -752,6 +775,11 @@ function App() {
   const selectedObjectToggle = useMemo(
     () => objectToggleInteractions.find((interaction) => interaction.id === selectedInteractionId),
     [objectToggleInteractions, selectedInteractionId]
+  );
+
+  const selectedVideoTexture = useMemo(
+    () => videoTextureInteractions.find((interaction) => interaction.id === selectedInteractionId),
+    [videoTextureInteractions, selectedInteractionId]
   );
 
   const selectedVariantInteraction = useMemo(
@@ -827,6 +855,18 @@ function App() {
       ...current,
       interactions: current.interactions.map((interaction) =>
         interaction.id === interactionId && isObjectToggle(interaction) ? updater(interaction) : interaction
+      )
+    }));
+  };
+
+  const updateVideoTexture = (
+    interactionId: string,
+    updater: (interaction: VideoTextureInteraction) => VideoTextureInteraction
+  ) => {
+    updateManifest((current) => ({
+      ...current,
+      interactions: current.interactions.map((interaction) =>
+        interaction.id === interactionId && isVideoTexture(interaction) ? updater(interaction) : interaction
       )
     }));
   };
@@ -1295,7 +1335,38 @@ function App() {
   const removeObjectToggle = (interactionId: string) => {
     updateManifest((current) => {
       const interactions = current.interactions.filter((interaction) => interaction.id !== interactionId);
-      const nextInteraction = interactions.find(isHotspot) ?? interactions.find(isLink) ?? interactions.find(isObjectToggle);
+      const nextInteraction =
+        interactions.find(isHotspot) ??
+        interactions.find(isLink) ??
+        interactions.find(isObjectToggle) ??
+        interactions.find(isVideoTexture);
+      window.setTimeout(() => setSelectedInteractionId(nextInteraction?.id ?? ""), 0);
+      return {
+        ...current,
+        interactions
+      };
+    });
+  };
+
+  const addVideoTexture = () => {
+    updateManifest((current) => {
+      const nextVideoTexture = createVideoTexture(videoTextureInteractions.length + 1);
+      window.setTimeout(() => setSelectedInteractionId(nextVideoTexture.id), 0);
+      return {
+        ...current,
+        interactions: [...current.interactions, nextVideoTexture]
+      };
+    });
+  };
+
+  const removeVideoTexture = (interactionId: string) => {
+    updateManifest((current) => {
+      const interactions = current.interactions.filter((interaction) => interaction.id !== interactionId);
+      const nextInteraction =
+        interactions.find(isHotspot) ??
+        interactions.find(isLink) ??
+        interactions.find(isObjectToggle) ??
+        interactions.find(isVideoTexture);
       window.setTimeout(() => setSelectedInteractionId(nextInteraction?.id ?? ""), 0);
       return {
         ...current,
@@ -2001,6 +2072,9 @@ function App() {
                   <button type="button" className="icon-action" title="Add object toggle" onClick={addObjectToggle}>
                     <Eye size={17} aria-hidden="true" />
                   </button>
+                  <button type="button" className="icon-action" title="Add video surface" onClick={addVideoTexture}>
+                    <Video size={17} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
               {hotspotInteractions.map((interaction) => (
@@ -2034,6 +2108,17 @@ function App() {
                 >
                   <span>{interaction.label}</span>
                   <small>object toggle</small>
+                </button>
+              ))}
+              {videoTextureInteractions.map((interaction) => (
+                <button
+                  key={interaction.id}
+                  type="button"
+                  className={selectedInteractionId === interaction.id ? "list-row active" : "list-row"}
+                  onClick={() => setSelectedInteractionId(interaction.id)}
+                >
+                  <span>{interaction.label}</span>
+                  <small>video surface</small>
                 </button>
               ))}
             </div>
@@ -2245,6 +2330,121 @@ function App() {
                     }))
                   }
                 />
+              </div>
+            )}
+
+            {selectedVideoTexture && (
+              <div className="panel editor-panel">
+                <div className="panel-heading">
+                  <Video size={18} aria-hidden="true" />
+                  <h2>{selectedVideoTexture.label}</h2>
+                  <button
+                    type="button"
+                    className="icon-action danger"
+                    title="Delete video surface"
+                    onClick={() => removeVideoTexture(selectedVideoTexture.id)}
+                  >
+                    <Trash2 size={17} aria-hidden="true" />
+                  </button>
+                </div>
+
+                <div className="field-grid">
+                  <label>
+                    <span>Label</span>
+                    <input
+                      value={selectedVideoTexture.label}
+                      onChange={(event) =>
+                        updateVideoTexture(selectedVideoTexture.id, (interaction) => ({
+                          ...interaction,
+                          label: event.target.value
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Video URL</span>
+                    <input
+                      value={selectedVideoTexture.source}
+                      onChange={(event) =>
+                        updateVideoTexture(selectedVideoTexture.id, (interaction) => ({
+                          ...interaction,
+                          source: event.target.value
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Target Mesh</span>
+                    <select
+                      value={selectedVideoTexture.targetMeshName ?? ""}
+                      onChange={(event) => {
+                        const targetMeshName = event.target.value;
+                        updateVideoTexture(selectedVideoTexture.id, (interaction) => {
+                          const { targetMeshName: _removed, ...rest } = interaction;
+                          return targetMeshName ? { ...rest, targetMeshName } : rest;
+                        });
+                      }}
+                    >
+                      <option value="">Auto / material target</option>
+                      {sceneGraph?.nodes.map((node) => (
+                        <option key={node.id} value={node.name}>
+                          {node.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Target Material</span>
+                    <select
+                      value={selectedVideoTexture.targetMaterialName ?? ""}
+                      onChange={(event) => {
+                        const targetMaterialName = event.target.value;
+                        updateVideoTexture(selectedVideoTexture.id, (interaction) => {
+                          const { targetMaterialName: _removed, ...rest } = interaction;
+                          return targetMaterialName ? { ...rest, targetMaterialName } : rest;
+                        });
+                      }}
+                    >
+                      <option value="">Auto / mesh target</option>
+                      {materialsDoc?.materials.map((material) => (
+                        <option key={material.id} value={material.name}>
+                          {material.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <NumberField
+                    label="Trigger Distance"
+                    min={0}
+                    max={50}
+                    step={0.5}
+                    value={selectedVideoTexture.triggerDistance ?? 8}
+                    onChange={(value) =>
+                      updateVideoTexture(selectedVideoTexture.id, (interaction) => ({
+                        ...interaction,
+                        triggerDistance: value
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="toggle-grid">
+                  {(["autoplay", "muted", "loop"] as const).map((field) => (
+                    <label key={field}>
+                      <input
+                        type="checkbox"
+                        checked={selectedVideoTexture[field] !== false}
+                        onChange={(event) =>
+                          updateVideoTexture(selectedVideoTexture.id, (interaction) => ({
+                            ...interaction,
+                            [field]: event.target.checked
+                          }))
+                        }
+                      />
+                      <span>{field}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
           </section>
