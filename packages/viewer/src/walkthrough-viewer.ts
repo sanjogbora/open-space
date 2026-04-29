@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import type {
@@ -45,6 +46,7 @@ export class WalkthroughViewer {
   private readonly clock = new THREE.Clock();
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
+  private readonly lightRig = new THREE.Group();
   private readonly renderer: THREE.WebGLRenderer;
   private readonly loader = new GLTFLoader();
   private readonly moveMarker = createMoveMarker();
@@ -88,6 +90,10 @@ export class WalkthroughViewer {
   private quality: ViewerQuality;
   private minBounds: THREE.Vector3 | undefined;
   private maxBounds: THREE.Vector3 | undefined;
+  private sunLight: THREE.DirectionalLight | undefined;
+  private sunTarget: THREE.Object3D | undefined;
+  private environmentTexture: THREE.Texture | undefined;
+  private pmremGenerator: THREE.PMREMGenerator | undefined;
 
   constructor(options: ViewerOptions) {
     this.container = options.container;
@@ -106,6 +112,8 @@ export class WalkthroughViewer {
       powerPreference: "high-performance"
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = selectedQuality?.shadows ?? true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setClearColor("#d8dde2", 1);
@@ -117,6 +125,7 @@ export class WalkthroughViewer {
 
     this.scene.name = "walkthrough-scene";
     this.applyEnvironment();
+    this.scene.add(this.lightRig);
     this.scene.add(this.moveMarker);
     this.applyBounds();
     this.installEvents();
@@ -137,6 +146,8 @@ export class WalkthroughViewer {
     this.destroyed = true;
     cancelAnimationFrame(this.frameId);
     this.managedTextures.forEach((item) => item.destroy?.());
+    this.environmentTexture?.dispose();
+    this.pmremGenerator?.dispose();
     this.uninstallEvents();
     this.renderer.dispose();
     this.renderer.domElement.remove();
@@ -242,6 +253,7 @@ export class WalkthroughViewer {
       this.walkableMeshes = this.collectWalkableMeshes(this.sceneRoot);
       this.pickableMeshes = this.collectPickableMeshes(this.sceneRoot);
       this.collisionBoxes = this.collectCollisionBoxes(this.sceneRoot);
+      this.fitLightingToScene(this.sceneRoot);
       if (this.floorMeshes.length === 0) {
         this.installFallbackFloor();
       }
@@ -326,6 +338,7 @@ export class WalkthroughViewer {
     this.walkableMeshes = [demo.floor];
     this.pickableMeshes = this.collectPickableMeshes(demo.root);
     this.collisionBoxes = this.collectCollisionBoxes(demo.root);
+    this.fitLightingToScene(demo.root);
   }
 
   private installFallbackFloor(): void {
@@ -346,6 +359,11 @@ export class WalkthroughViewer {
     const backgroundColor = environment?.backgroundColor ?? "#d8dde2";
     this.renderer.setClearColor(backgroundColor, 1);
     this.scene.background = new THREE.Color(backgroundColor);
+    const roomEnvironment = new RoomEnvironment();
+    this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+    this.environmentTexture = this.pmremGenerator.fromScene(roomEnvironment, 0.04).texture;
+    this.scene.environment = this.environmentTexture;
+    roomEnvironment.dispose();
 
     if (environment?.groundEnabled === false) {
       return;
@@ -382,6 +400,7 @@ export class WalkthroughViewer {
         if (Array.isArray(node.material)) {
           node.material.forEach((material) => {
             this.applyMaterialOverride(material);
+            this.prepareMaterial(material, name);
             if (forceDoubleSided || architecturalShell) {
               material.side = THREE.DoubleSide;
             }
@@ -389,6 +408,7 @@ export class WalkthroughViewer {
           });
         } else {
           this.applyMaterialOverride(node.material);
+          this.prepareMaterial(node.material, name);
           if (forceDoubleSided || architecturalShell) {
             node.material.side = THREE.DoubleSide;
           }
@@ -419,6 +439,43 @@ export class WalkthroughViewer {
     if (typeof override.opacity === "number") {
       material.opacity = override.opacity;
       material.transparent = override.opacity < 1;
+    }
+  }
+
+  private prepareMaterial(material: THREE.Material, meshName: string): void {
+    const materialName = material.name.toLowerCase();
+    const looksLikeGlass =
+      meshName.includes("glass") ||
+      materialName.includes("glass") ||
+      materialName.includes("transparent");
+    const looksLikeWindow = meshName.includes("window") || materialName.includes("window");
+
+    if ("envMapIntensity" in material && typeof material.envMapIntensity === "number") {
+      material.envMapIntensity = material.envMapIntensity || 1.15;
+    }
+
+    if ("roughness" in material && typeof material.roughness === "number") {
+      material.roughness = THREE.MathUtils.clamp(material.roughness, 0.04, 1);
+    }
+
+    if ("metalness" in material && typeof material.metalness === "number") {
+      material.metalness = THREE.MathUtils.clamp(material.metalness, 0, 1);
+    }
+
+    if (looksLikeGlass && "opacity" in material && typeof material.opacity === "number") {
+      material.transparent = true;
+      material.opacity = Math.min(material.opacity, 0.48);
+    } else if (
+      looksLikeWindow &&
+      material.transparent &&
+      "opacity" in material &&
+      typeof material.opacity === "number"
+    ) {
+      material.opacity = Math.min(material.opacity, 0.68);
+    }
+
+    if (material.transparent || ("opacity" in material && typeof material.opacity === "number" && material.opacity < 1)) {
+      material.depthWrite = false;
     }
   }
 
@@ -696,20 +753,51 @@ export class WalkthroughViewer {
   }
 
   private addLighting(): void {
-    const hemisphere = new THREE.HemisphereLight("#f7fbff", "#716550", 1.25);
-    this.scene.add(hemisphere);
+    if (this.lightRig.children.length > 0) {
+      return;
+    }
 
-    const sun = new THREE.DirectionalLight("#fff6e8", 2.5);
+    const hemisphere = new THREE.HemisphereLight("#f7fbff", "#716550", 0.9);
+    this.lightRig.add(hemisphere);
+
+    const sun = new THREE.DirectionalLight("#fff6e8", 2.2);
     sun.position.set(-3.5, 6.5, 3.2);
     sun.castShadow = true;
     sun.shadow.bias = -0.00005;
     sun.shadow.normalBias = 0.035;
     sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.left = -8;
-    sun.shadow.camera.right = 8;
-    sun.shadow.camera.top = 8;
-    sun.shadow.camera.bottom = -8;
-    this.scene.add(sun);
+    this.sunTarget = new THREE.Object3D();
+    sun.target = this.sunTarget;
+    this.sunLight = sun;
+    this.lightRig.add(sun);
+    this.lightRig.add(this.sunTarget);
+  }
+
+  private fitLightingToScene(root: THREE.Object3D): void {
+    if (!this.sunLight || !this.sunTarget) {
+      return;
+    }
+    const box = new THREE.Box3().setFromObject(root);
+    if (box.isEmpty()) {
+      return;
+    }
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const radius = Math.max(6, size.length() * 0.55);
+    this.sunLight.position.set(
+      center.x - radius * 0.45,
+      center.y + radius * 1.15,
+      center.z + radius * 0.55
+    );
+    this.sunTarget.position.copy(center);
+    const shadowCamera = this.sunLight.shadow.camera;
+    shadowCamera.left = -radius;
+    shadowCamera.right = radius;
+    shadowCamera.top = radius;
+    shadowCamera.bottom = -radius;
+    shadowCamera.near = 0.1;
+    shadowCamera.far = radius * 4;
+    shadowCamera.updateProjectionMatrix();
   }
 
   private applyBounds(): void {
