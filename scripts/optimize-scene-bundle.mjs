@@ -2,8 +2,9 @@ import { access, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS, EXTMeshoptCompression } from "@gltf-transform/extensions";
-import { dedup, meshopt, prune, reorder, resample, weld } from "@gltf-transform/functions";
+import { dedup, meshopt, prune, reorder, resample, textureCompress, weld } from "@gltf-transform/functions";
 import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
+import sharp from "sharp";
 
 const args = process.argv.slice(2);
 const target = args.find((arg) => !arg.startsWith("--")) ?? "apps/viewer-demo/public/scenes/demo";
@@ -110,6 +111,9 @@ function compactGlbJson(bytes) {
 async function optimizeGlb(sourcePath, outputPath, profile) {
   await Promise.all([MeshoptEncoder.ready, MeshoptDecoder.ready]);
   const level = profile === "mobile" ? "high" : "medium";
+  const textureLimit =
+    profile === "mobile" ? [1024, 1024] : profile === "desktop" ? [4096, 4096] : [2048, 2048];
+  const textureQuality = profile === "mobile" ? 72 : profile === "desktop" ? 86 : 80;
   const io = new NodeIO()
     .registerExtensions([...ALL_EXTENSIONS, EXTMeshoptCompression])
     .registerDependencies({
@@ -122,6 +126,14 @@ async function optimizeGlb(sourcePath, outputPath, profile) {
     prune(),
     weld({ overwrite: false }),
     resample(),
+    textureCompress({
+      encoder: sharp,
+      targetFormat: "webp",
+      resize: textureLimit,
+      quality: textureQuality,
+      effort: 4,
+      slots: /^(?!normalTexture).*$/i
+    }),
     reorder({ encoder: MeshoptEncoder, target: "size" }),
     meshopt({ encoder: MeshoptEncoder, level })
   );
@@ -220,6 +232,11 @@ const job = {
       status: "completed"
     },
     {
+      id: "texture-compression",
+      label: "Compress texture images to WebP",
+      status: "completed"
+    },
+    {
       id: "mesh-compression",
       label: "Apply EXT_meshopt_compression",
       status: "completed"
@@ -228,11 +245,6 @@ const job = {
       id: "emit-artifact",
       label: "Write optimized scene artifact",
       status: "completed"
-    },
-    {
-      id: "texture-compression",
-      label: "KTX2/Basis texture compression",
-      status: "pending"
     }
   ]
 };

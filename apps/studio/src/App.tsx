@@ -96,6 +96,7 @@ interface BundleStats {
     meshopt?: boolean;
     draco?: boolean;
     basisu?: boolean;
+    webp?: boolean;
   };
   warnings: readonly {
     code: string;
@@ -478,6 +479,26 @@ function formatBytes(bytes: number): string {
     return `${(bytes / 1024).toFixed(1)} KB`;
   }
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function geometryCompressionLabel(stats: BundleStats | null): string {
+  if (stats?.compression?.meshopt) {
+    return "Meshopt";
+  }
+  if (stats?.compression?.draco) {
+    return "Draco";
+  }
+  return "None";
+}
+
+function textureCompressionLabel(stats: BundleStats | null): string {
+  if (stats?.compression?.basisu) {
+    return "KTX2";
+  }
+  if (stats?.compression?.webp) {
+    return "WebP";
+  }
+  return "None";
 }
 
 function App() {
@@ -2165,17 +2186,8 @@ function App() {
                     <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
                     <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
                     <Stat label="Loose images" value={String(bundleStats.looseImageCount ?? 0)} />
-                    <Stat
-                      label="Compression"
-                      value={
-                        bundleStats.compression?.meshopt || bundleStats.compression?.draco
-                          ? bundleStats.compression.meshopt
-                            ? "Meshopt"
-                            : "Draco"
-                          : "None"
-                      }
-                    />
-                    <Stat label="KTX2" value={bundleStats.compression?.basisu ? "Yes" : "No"} />
+                    <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
+                    <Stat label="Texture compression" value={textureCompressionLabel(bundleStats)} />
                   </div>
                   <DiagnosticList diagnostics={bundleStats.diagnostics ?? []} />
                 </>
@@ -2243,17 +2255,8 @@ function App() {
                         <Stat label="Triangles" value={String(profile.metrics.triangles)} />
                         <Stat label="Meshes" value={String(profile.metrics.meshes)} />
                         <Stat label="Materials" value={String(profile.metrics.materials)} />
-                        <Stat
-                          label="Geometry compression"
-                          value={
-                            bundleStats?.compression?.meshopt || bundleStats?.compression?.draco
-                              ? bundleStats.compression.meshopt
-                                ? "Meshopt"
-                                : "Draco"
-                              : "None"
-                          }
-                        />
-                        <Stat label="Texture compression" value={bundleStats?.compression?.basisu ? "KTX2" : "None"} />
+                        <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
+                        <Stat label="Texture compression" value={textureCompressionLabel(bundleStats)} />
                       </div>
                       {profile.warnings.length > 0 ? (
                         <ul className="warning-list">
@@ -4106,17 +4109,8 @@ function App() {
                       <Stat label="Textures" value={String(bundleStats.textureCount ?? 0)} />
                       <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
                       <Stat label="Loose images" value={String(bundleStats.looseImageCount ?? 0)} />
-                      <Stat
-                        label="Geometry compression"
-                        value={
-                          bundleStats.compression?.meshopt || bundleStats.compression?.draco
-                            ? bundleStats.compression.meshopt
-                              ? "Meshopt"
-                              : "Draco"
-                            : "None"
-                        }
-                      />
-                      <Stat label="Texture compression" value={bundleStats.compression?.basisu ? "KTX2" : "None"} />
+                      <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
+                      <Stat label="Texture compression" value={textureCompressionLabel(bundleStats)} />
                       <Stat label="Assets" value={String(bundleStats.assetCount)} />
                     </div>
                     {bundleStats.warnings.length > 0 ? (

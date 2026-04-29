@@ -262,6 +262,9 @@ async function analyzeGltfDocument(document, format, asset) {
   const usesBasisu =
     extensionsUsed.includes("KHR_texture_basisu") ||
     (document.textures ?? []).some((texture) => Boolean(texture.extensions?.KHR_texture_basisu));
+  const usesWebp =
+    extensionsUsed.includes("EXT_texture_webp") ||
+    (document.textures ?? []).some((texture) => Boolean(texture.extensions?.EXT_texture_webp));
 
   return {
     format,
@@ -282,7 +285,8 @@ async function analyzeGltfDocument(document, format, asset) {
     compression: {
       meshopt: usesMeshopt,
       draco: usesDraco,
-      basisu: usesBasisu
+      basisu: usesBasisu,
+      webp: usesWebp
     },
     externalResourceCount: externalResources.length,
     missingExternalResourceCount: externalResources.filter((resource) => !resource.exists).length,
@@ -753,7 +757,7 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
-  if ((report.imageCount ?? 0) > 0 && !report.compression?.basisu) {
+  if ((report.imageCount ?? 0) > 0 && !report.compression?.basisu && !report.compression?.webp) {
     diagnostics.push({
       severity: "warning",
       code: "missing-texture-compression",
@@ -794,7 +798,8 @@ function summarize(manifest, assets, models, graphs, looseImages) {
   const compression = {
     meshopt: models.some((model) => model.compression?.meshopt),
     draco: models.some((model) => model.compression?.draco),
-    basisu: models.some((model) => model.compression?.basisu)
+    basisu: models.some((model) => model.compression?.basisu),
+    webp: models.some((model) => model.compression?.webp)
   };
 
   if (missingAssetCount > 0) {
@@ -958,8 +963,12 @@ function recommendationList(report) {
   if ((report.imageCount ?? 0) > 0 && !report.compression?.basisu) {
     recommendations.push({
       priority: "medium",
-      action: "Convert large textures to KTX2/Basis.",
-      reason: "The model has texture images but does not advertise KHR_texture_basisu."
+      action: report.compression?.webp
+        ? "Add KTX2/Basis texture compression for production delivery."
+        : "Convert large textures to WebP now, then KTX2/Basis for production delivery.",
+      reason: report.compression?.webp
+        ? "WebP reduces transfer size, but KTX2/Basis is still better for GPU memory."
+        : "The model has texture images but does not advertise WebP or KHR_texture_basisu."
     });
   }
 
