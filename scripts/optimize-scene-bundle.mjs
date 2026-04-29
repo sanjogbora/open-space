@@ -45,18 +45,32 @@ function commandExists(command, args = []) {
   });
 }
 
+async function resolveToktxCommand() {
+  const configuredPath = process.env.KTX_SOFTWARE_PATH || process.env.TOKTX_PATH;
+  if (configuredPath) {
+    const executable = configuredPath.toLowerCase().endsWith("toktx.exe") || configuredPath.toLowerCase().endsWith("toktx")
+      ? configuredPath
+      : path.join(configuredPath, process.platform === "win32" ? "toktx.exe" : "toktx");
+    if (await commandExists(executable, ["--version"])) {
+      return executable;
+    }
+    return undefined;
+  }
+  if (await commandExists("toktx", ["--version"])) {
+    return "toktx";
+  }
+  return undefined;
+}
+
 async function textureEncoderStatusStep() {
-  const hasToktx =
-    process.platform === "win32"
-      ? await commandExists("where.exe", ["toktx"])
-      : await commandExists("which", ["toktx"]);
+  const toktxCommand = await resolveToktxCommand();
   return {
     id: "gpu-texture-compression",
     label: "KTX2/Basis GPU texture compression",
-    status: "skipped",
-    note: hasToktx
-      ? "toktx is installed, but this local pass currently keeps WebP transfer compression active."
-      : "toktx was not found, so textures were compressed for transfer size with WebP only."
+    status: toktxCommand ? "pending" : "blocked",
+    note: toktxCommand
+      ? `toktx was found at ${toktxCommand}. KTX2 transcode wiring is ready for the next optimizer pass; this run kept WebP transfer compression active.`
+      : "toktx was not found. Install Khronos KTX-Software and set KTX_SOFTWARE_PATH or TOKTX_PATH to enable KTX2/Basis GPU texture output."
   };
 }
 
