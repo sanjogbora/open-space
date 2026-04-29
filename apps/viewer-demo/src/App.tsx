@@ -14,6 +14,7 @@ import {
   WalkthroughViewer,
   type ViewerCameraPose,
   type HotspotActivation,
+  type NavigationFailure,
   type ObjectPickActivation,
   type ViewerQuality
 } from "@walkthrough/viewer";
@@ -120,6 +121,7 @@ function App() {
   const [activeViewId, setActiveViewId] = useState("");
   const [activeHotspot, setActiveHotspot] = useState<HotspotActivation | null>(null);
   const [activeObject, setActiveObject] = useState<ObjectPickActivation | null>(null);
+  const [navigationFailure, setNavigationFailure] = useState<NavigationFailure | null>(null);
   const [quality, setQuality] = useState<ViewerQuality>("balanced");
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
   const [screenshotState, setScreenshotState] = useState<"idle" | "saved" | "failed">("idle");
@@ -224,10 +226,17 @@ function App() {
       onHotspot: (activation) => {
         setActiveHotspot(activation);
         setActiveObject(null);
+        setNavigationFailure(null);
       },
       onObjectPick: (activation) => {
         setActiveObject(activation);
         setActiveHotspot(null);
+      },
+      onNavigationFailure: (failure) => {
+        setNavigationFailure(failure);
+        window.setTimeout(() => {
+          setNavigationFailure((current) => (current === failure ? null : current));
+        }, 3000);
       },
       onError: (error) => {
         console.error(error);
@@ -276,6 +285,7 @@ function App() {
     setActiveViewId(view.id);
     setActiveHotspot(null);
     setActiveObject(null);
+    setNavigationFailure(null);
     viewerRef.current?.goToView(view.id);
   };
 
@@ -556,6 +566,12 @@ function App() {
         {shareState === "copied" && <div className="toast">Link copied</div>}
         {screenshotState === "saved" && <div className="toast">Screenshot saved</div>}
         {screenshotState === "failed" && <div className="toast">Screenshot unavailable</div>}
+        {navigationFailure && (
+          <div className="navigation-toast" role="status">
+            <strong>Navigation blocked</strong>
+            <span>{navigationFailure.message}</span>
+          </div>
+        )}
       </section>
     </main>
   );

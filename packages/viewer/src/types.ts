@@ -31,6 +31,23 @@ export interface ObjectPickActivation {
   };
 }
 
+export type NavigationFailureReason =
+  | "no-walkable-hit"
+  | "outside-bounds"
+  | "outside-walk-zone"
+  | "blocked-collision";
+
+export interface NavigationFailure {
+  reason: NavigationFailureReason;
+  message: string;
+  point?: [number, number, number];
+  objectName?: string;
+  screen: {
+    x: number;
+    y: number;
+  };
+}
+
 export interface ViewerCameraPose {
   position: [number, number, number];
   target: [number, number, number];
@@ -44,6 +61,7 @@ export interface ViewerEventMap {
   viewchange: SceneView;
   hotspot: HotspotActivation;
   objectpick: ObjectPickActivation;
+  navigationfailure: NavigationFailure;
   error: Error;
 }
 
@@ -57,5 +75,6 @@ export interface ViewerOptions {
   onViewChange?: (view: SceneView) => void;
   onHotspot?: (activation: HotspotActivation) => void;
   onObjectPick?: (activation: ObjectPickActivation) => void;
+  onNavigationFailure?: (failure: NavigationFailure) => void;
   onError?: (error: Error) => void;
 }

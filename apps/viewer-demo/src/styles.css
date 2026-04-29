@@ -519,6 +519,35 @@ button {
   text-align: center;
 }
 
+.navigation-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 82px;
+  z-index: 6;
+  width: min(420px, calc(100vw - 32px));
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 198, 115, 0.32);
+  border-radius: 8px;
+  color: #fff5e4;
+  background: rgba(37, 28, 18, 0.82);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+  transform: translateX(-50%);
+}
+
+.navigation-toast strong {
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.navigation-toast span {
+  color: rgba(255, 245, 228, 0.86);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

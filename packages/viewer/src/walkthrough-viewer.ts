@@ -20,7 +20,13 @@ import { createDemoScene } from "./demo-scene";
 import { createHotspotSprite } from "./hotspot-sprite";
 import { clampToBounds, dampVector, easeOutCubic, toVector3 } from "./math";
 import { createMoveMarker } from "./marker";
-import type { LoadingProgress, ViewerCameraPose, ViewerOptions, ViewerQuality } from "./types";
+import type {
+  LoadingProgress,
+  NavigationFailureReason,
+  ViewerCameraPose,
+  ViewerOptions,
+  ViewerQuality
+} from "./types";
 import { createManagedVideoTexture, type ManagedTexture } from "./video-textures";
 
 interface CameraTween {
@@ -1069,6 +1075,13 @@ export class WalkthroughViewer {
   }
 
   private canOccupyPosition(position: THREE.Vector3, origin?: THREE.Vector3): boolean {
+    return !this.navigationFailureReason(position, origin);
+  }
+
+  private navigationFailureReason(
+    position: THREE.Vector3,
+    origin?: THREE.Vector3
+  ): NavigationFailureReason | undefined {
     const candidate = position.clone();
     if (this.minBounds && this.maxBounds) {
       if (
@@ -1077,26 +1090,28 @@ export class WalkthroughViewer {
         candidate.z < this.minBounds.z ||
         candidate.z > this.maxBounds.z
       ) {
-        return false;
+        return "outside-bounds";
       }
       clampToBounds(candidate, this.minBounds, this.maxBounds);
     }
 
     const cameraSphere = new THREE.Sphere(candidate, this.collisionRadius);
     if (this.walkZoneMeshes.length > 0 && !this.isInsideWalkZone(candidate)) {
-      return false;
+      return "outside-walk-zone";
     }
 
     const blockedBoxes = this.collisionBoxes.filter((box) => box.intersectsSphere(cameraSphere));
     if (blockedBoxes.length === 0) {
-      return true;
+      return undefined;
     }
     if (!origin) {
-      return false;
+      return "blocked-collision";
     }
     const originSphere = new THREE.Sphere(origin, this.collisionRadius);
     const originBlockedBoxes = this.collisionBoxes.filter((box) => box.intersectsSphere(originSphere));
-    return blockedBoxes.every((box) => originBlockedBoxes.includes(box));
+    return blockedBoxes.every((box) => originBlockedBoxes.includes(box))
+      ? undefined
+      : "blocked-collision";
   }
 
   private isInsideWalkZone(position: THREE.Vector3): boolean {
@@ -1126,6 +1141,39 @@ export class WalkthroughViewer {
   private findWalkableHit(): THREE.Intersection | undefined {
     const hits = this.raycaster.intersectObjects(this.walkableMeshes, true);
     return hits.find((hit) => this.isWalkableHit(hit));
+  }
+
+  private navigationFailureMessage(reason: NavigationFailureReason, objectName?: string): string {
+    if (reason === "outside-bounds") {
+      return "Move target is outside the navigation bounds.";
+    }
+    if (reason === "outside-walk-zone") {
+      return "Move target is outside the authored walk zone.";
+    }
+    if (reason === "blocked-collision") {
+      return "Move target is blocked by collision geometry near the route.";
+    }
+    return objectName
+      ? `Clicked ${objectName}, but no walkable floor was found there.`
+      : "No walkable floor was found at the clicked point.";
+  }
+
+  private emitNavigationFailure(
+    reason: NavigationFailureReason,
+    event: PointerEvent,
+    point?: THREE.Vector3,
+    objectName?: string
+  ): void {
+    this.options.onNavigationFailure?.({
+      reason,
+      message: this.navigationFailureMessage(reason, objectName),
+      ...(point ? { point: [point.x, point.y, point.z] } : {}),
+      ...(objectName ? { objectName } : {}),
+      screen: {
+        x: event.clientX,
+        y: event.clientY
+      }
+    });
   }
 
   private setPointerFromEvent(event: PointerEvent): void {
@@ -1223,7 +1271,9 @@ export class WalkthroughViewer {
       if (this.minBounds && this.maxBounds) {
         clampToBounds(nextTarget, this.minBounds, this.maxBounds);
       }
-      if (!this.canOccupyPosition(nextTarget, this.camera.position)) {
+      const failureReason = this.navigationFailureReason(nextTarget, this.camera.position);
+      if (failureReason) {
+        this.emitNavigationFailure(failureReason, event, floorHit.point);
         return;
       }
       this.moveTarget = nextTarget;
@@ -1236,8 +1286,10 @@ export class WalkthroughViewer {
 
     const objectHit = this.raycaster.intersectObjects(this.pickableMeshes, true)[0];
     if (objectHit && objectHit.object instanceof THREE.Mesh) {
+      const objectName = objectHit.object.name || objectHit.object.parent?.name || "Object";
+      this.emitNavigationFailure("no-walkable-hit", event, objectHit.point, objectName);
       this.options.onObjectPick?.({
-        objectName: objectHit.object.name || objectHit.object.parent?.name || "Object",
+        objectName,
         materialNames: this.materialNames(objectHit.object.material),
         point: [objectHit.point.x, objectHit.point.y, objectHit.point.z],
         screen: {
@@ -1245,7 +1297,9 @@ export class WalkthroughViewer {
           y: event.clientY
         }
       });
+      return;
     }
+    this.emitNavigationFailure("no-walkable-hit", event);
   }
 
   private materialNames(material: THREE.Material | THREE.Material[]): string[] {
