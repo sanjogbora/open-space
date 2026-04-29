@@ -745,6 +745,13 @@ button.list-row {
   font-size: 12px;
 }
 
+.publish-version-row small {
+  display: block;
+  margin-top: 3px;
+  color: #33434d;
+  font-size: 12px;
+}
+
 .publish-version-actions {
   display: flex;
   flex-wrap: wrap;

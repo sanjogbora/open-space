@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { access, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateRawSync } from "node:zlib";
@@ -1197,6 +1197,30 @@ async function resetOptimizationState(projectId) {
   );
 }
 
+async function listPublishAssets(root, dir = root, files = []) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await listPublishAssets(root, fullPath, files);
+      continue;
+    }
+    if (!entry.isFile()) {
+      continue;
+    }
+    const info = await stat(fullPath);
+    const relativePath = path.relative(root, fullPath).replace(/\\/g, "/");
+    const extension = path.extname(entry.name).toLowerCase();
+    const immutable = [".glb", ".png", ".jpg", ".jpeg", ".webp", ".avif", ".ktx2", ".wasm", ".js", ".css"].includes(extension);
+    files.push({
+      path: relativePath,
+      bytes: info.size,
+      cacheControl: immutable ? "public, max-age=31536000, immutable" : "public, max-age=300, must-revalidate"
+    });
+  }
+  return files;
+}
+
 async function publishProject(projectId) {
   await runAnalyze(projectId);
   const publishedAt = new Date().toISOString();
@@ -1205,11 +1229,40 @@ async function publishProject(projectId) {
   const output = path.join(publishedRoot, projectId, version);
   await mkdir(path.dirname(output), { recursive: true });
   await cp(source, output, { recursive: true, force: true });
+  const assets = await listPublishAssets(output);
+  const totalBytes = assets.reduce((sum, asset) => sum + asset.bytes, 0);
+  const scenePath = `/published/${projectId}/${version}/scene.manifest.json`;
+  const deployment = {
+    schemaVersion: "0.1",
+    projectId,
+    version,
+    publishedAt,
+    scenePath,
+    cdnBasePath: `/published/${projectId}/${version}/`,
+    assetCount: assets.length,
+    totalBytes,
+    assets,
+    headers: [
+      {
+        source: "/**/*.{glb,png,jpg,jpeg,webp,avif,ktx2,wasm,js,css}",
+        headers: [{ key: "cache-control", value: "public, max-age=31536000, immutable" }]
+      },
+      {
+        source: "/**/*.{json,html}",
+        headers: [{ key: "cache-control", value: "public, max-age=300, must-revalidate" }]
+      }
+    ]
+  };
+  await writeFile(path.join(output, "deployment.json"), `${JSON.stringify(deployment, null, 2)}\n`);
 
   const entry = {
     version,
     publishedAt,
-    scenePath: `/published/${projectId}/${version}/scene.manifest.json`
+    scenePath,
+    deploymentPath: `/published/${projectId}/${version}/deployment.json`,
+    cdnBasePath: deployment.cdnBasePath,
+    assetCount: deployment.assetCount,
+    totalBytes: deployment.totalBytes
   };
   const history = await publishHistory(projectId);
   const nextHistory = {

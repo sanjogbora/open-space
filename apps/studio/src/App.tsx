@@ -236,6 +236,10 @@ interface PublishEntry {
   version: string;
   publishedAt: string;
   scenePath: string;
+  deploymentPath?: string;
+  cdnBasePath?: string;
+  assetCount?: number;
+  totalBytes?: number;
 }
 
 interface VideoSurfaceCandidate {
@@ -3039,6 +3043,11 @@ function App() {
                         <div>
                           <strong>{entry.version}</strong>
                           <span>{entry.publishedAt}</span>
+                          {typeof entry.assetCount === "number" && (
+                            <small>
+                              {entry.assetCount} assets / {formatBytes(entry.totalBytes ?? 0)}
+                            </small>
+                          )}
                         </div>
                         <div className="publish-version-actions">
                           <button
@@ -3058,7 +3067,18 @@ function App() {
                             <ExternalLink size={16} aria-hidden="true" />
                             Open
                           </a>
+                          {entry.deploymentPath && (
+                            <button
+                              type="button"
+                              className="button secondary"
+                              onClick={() => void copyText(entry.deploymentPath!)}
+                            >
+                              <Copy size={16} aria-hidden="true" />
+                              Manifest
+                            </button>
+                          )}
                         </div>
+                        {entry.cdnBasePath && <code>{entry.cdnBasePath}</code>}
                         <code>{publishedEmbedSnippet(entry, manifest.branding.clientName ?? manifest.branding.title)}</code>
                       </div>
                     ))}
