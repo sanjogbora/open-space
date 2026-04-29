@@ -67,6 +67,7 @@ export class WalkthroughViewer {
   };
 
   private floorMeshes: THREE.Object3D[] = [];
+  private walkableMeshes: THREE.Object3D[] = [];
   private pickableMeshes: THREE.Object3D[] = [];
   private collisionBoxes: THREE.Box3[] = [];
   private sceneRoot: THREE.Object3D | undefined;
@@ -226,6 +227,7 @@ export class WalkthroughViewer {
       this.scene.add(this.sceneRoot);
       this.sceneRoot.updateMatrixWorld(true);
       this.floorMeshes = this.collectFloorMeshes(this.sceneRoot);
+      this.walkableMeshes = this.collectWalkableMeshes(this.sceneRoot);
       this.pickableMeshes = this.collectPickableMeshes(this.sceneRoot);
       this.collisionBoxes = this.collectCollisionBoxes(this.sceneRoot);
       if (this.floorMeshes.length === 0) {
@@ -309,6 +311,7 @@ export class WalkthroughViewer {
     this.scene.add(demo.root);
     demo.root.updateMatrixWorld(true);
     this.floorMeshes = [demo.floor];
+    this.walkableMeshes = [demo.floor];
     this.pickableMeshes = this.collectPickableMeshes(demo.root);
     this.collisionBoxes = this.collectCollisionBoxes(demo.root);
   }
@@ -323,6 +326,7 @@ export class WalkthroughViewer {
     floor.receiveShadow = true;
     this.scene.add(floor);
     this.floorMeshes = [floor];
+    this.walkableMeshes = [floor];
   }
 
   private prepareLoadedScene(root: THREE.Object3D): void {
@@ -441,6 +445,16 @@ export class WalkthroughViewer {
       meshes.push(node);
     });
     return meshes;
+  }
+
+  private collectWalkableMeshes(root: THREE.Object3D): THREE.Object3D[] {
+    const meshes = new Set<THREE.Object3D>(this.floorMeshes);
+    root.traverse((node) => {
+      if (node instanceof THREE.Mesh) {
+        meshes.add(node);
+      }
+    });
+    return [...meshes];
   }
 
   private collectCollisionBoxes(root: THREE.Object3D): THREE.Box3[] {
@@ -713,7 +727,7 @@ export class WalkthroughViewer {
     }
     const nextPosition = this.camera.position.clone();
     dampVector(nextPosition, target, this.manifest.navigation.moveSpeed, delta);
-    if (this.canOccupyPosition(nextPosition)) {
+    if (this.canOccupyPosition(nextPosition, this.camera.position)) {
       this.camera.position.copy(nextPosition);
       this.clampCamera();
       return;
@@ -756,26 +770,26 @@ export class WalkthroughViewer {
 
   private moveCameraBy(delta: THREE.Vector3): void {
     const direct = this.camera.position.clone().add(delta);
-    if (this.canOccupyPosition(direct)) {
+    if (this.canOccupyPosition(direct, this.camera.position)) {
       this.camera.position.copy(direct);
       this.clampCamera();
       return;
     }
 
     const slideX = this.camera.position.clone().add(new THREE.Vector3(delta.x, 0, 0));
-    if (this.canOccupyPosition(slideX)) {
+    if (this.canOccupyPosition(slideX, this.camera.position)) {
       this.camera.position.copy(slideX);
       this.clampCamera();
     }
 
     const slideZ = this.camera.position.clone().add(new THREE.Vector3(0, 0, delta.z));
-    if (this.canOccupyPosition(slideZ)) {
+    if (this.canOccupyPosition(slideZ, this.camera.position)) {
       this.camera.position.copy(slideZ);
       this.clampCamera();
     }
   }
 
-  private canOccupyPosition(position: THREE.Vector3): boolean {
+  private canOccupyPosition(position: THREE.Vector3, origin?: THREE.Vector3): boolean {
     const candidate = position.clone();
     if (this.minBounds && this.maxBounds) {
       if (
@@ -790,7 +804,31 @@ export class WalkthroughViewer {
     }
 
     const cameraSphere = new THREE.Sphere(candidate, this.collisionRadius);
-    return !this.collisionBoxes.some((box) => box.intersectsSphere(cameraSphere));
+    const blockedBoxes = this.collisionBoxes.filter((box) => box.intersectsSphere(cameraSphere));
+    if (blockedBoxes.length === 0) {
+      return true;
+    }
+    if (!origin) {
+      return false;
+    }
+    const originSphere = new THREE.Sphere(origin, this.collisionRadius);
+    const originBlockedBoxes = this.collisionBoxes.filter((box) => box.intersectsSphere(originSphere));
+    return blockedBoxes.every((box) => originBlockedBoxes.includes(box));
+  }
+
+  private isWalkableHit(hit: THREE.Intersection): boolean {
+    if (!(hit.object instanceof THREE.Mesh) || !hit.face) {
+      return false;
+    }
+    const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+    const horizontalEnough = Math.abs(normal.y) >= 0.45;
+    const belowEye = hit.point.y <= this.camera.position.y + 0.25;
+    return horizontalEnough && belowEye;
+  }
+
+  private findWalkableHit(): THREE.Intersection | undefined {
+    const hits = this.raycaster.intersectObjects(this.walkableMeshes, true);
+    return hits.find((hit) => this.isWalkableHit(hit));
   }
 
   private setPointerFromEvent(event: PointerEvent): void {
@@ -881,8 +919,7 @@ export class WalkthroughViewer {
       }
     }
 
-    const floorHits = this.raycaster.intersectObjects(this.floorMeshes, true);
-    const floorHit = floorHits[0];
+    const floorHit = this.findWalkableHit();
     if (floorHit) {
       const nextTarget = floorHit.point.clone();
       nextTarget.y = floorHit.point.y + this.manifest.navigation.cameraHeight;
