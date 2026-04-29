@@ -668,7 +668,7 @@ export class WalkthroughViewer {
     }
     const direction = new THREE.Vector3();
     const forward = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw) * -1);
-    const right = new THREE.Vector3(forward.z, 0, -forward.x);
+    const right = new THREE.Vector3(-forward.z, 0, forward.x);
 
     if (this.keys.has("KeyW") || this.keys.has("ArrowUp")) {
       direction.add(forward);
@@ -926,7 +926,7 @@ export class WalkthroughViewer {
       if (this.minBounds && this.maxBounds) {
         clampToBounds(nextTarget, this.minBounds, this.maxBounds);
       }
-      if (!this.canOccupyPosition(nextTarget)) {
+      if (!this.canOccupyPosition(nextTarget, this.camera.position)) {
         return;
       }
       this.moveTarget = nextTarget;

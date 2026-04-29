@@ -16,26 +16,28 @@ export function createMoveMarker(): THREE.Group {
   ring.rotation.x = -Math.PI / 2;
   group.add(ring);
 
-  const shape = new THREE.Shape();
-  shape.moveTo(0, 0.32);
-  shape.lineTo(-0.24, -0.22);
-  shape.lineTo(0.24, -0.22);
-  shape.closePath();
-
-  const triangle = new THREE.Mesh(
-    new THREE.ShapeGeometry(shape),
-    new THREE.MeshBasicMaterial({
-      color: "#08a5ff",
-      transparent: true,
-      opacity: 0.92,
-      side: THREE.DoubleSide
+  const cone = new THREE.Mesh(
+    new THREE.ConeGeometry(0.23, 0.58, 3, 1),
+    new THREE.MeshStandardMaterial({
+      color: "#0787ff",
+      emissive: "#034f9f",
+      emissiveIntensity: 0.35,
+      roughness: 0.42,
+      metalness: 0.08
     })
   );
-  triangle.rotation.x = -Math.PI / 2;
-  triangle.position.y = 0.01;
-  group.add(triangle);
+  cone.name = "move-marker-cone";
+  cone.position.y = 0.32;
+  cone.rotation.y = Math.PI / 3;
+  group.add(cone);
+
+  const cap = new THREE.Mesh(
+    new THREE.SphereGeometry(0.08, 18, 12),
+    new THREE.MeshBasicMaterial({ color: "#9ed7ff" })
+  );
+  cap.position.y = 0.62;
+  group.add(cap);
 
   group.visible = false;
   return group;
 }
-
