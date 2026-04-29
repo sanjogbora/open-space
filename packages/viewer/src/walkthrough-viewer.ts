@@ -1252,6 +1252,30 @@ export class WalkthroughViewer {
       : undefined;
   }
 
+  private navigationRouteFailureDetail(
+    target: THREE.Vector3,
+    origin: THREE.Vector3
+  ): NavigationFailureDetail | undefined {
+    const route = target.clone().sub(origin);
+    route.y = 0;
+    const distance = route.length();
+    if (distance < 0.001) {
+      return undefined;
+    }
+    const steps = Math.max(2, Math.ceil(distance / Math.max(0.18, this.collisionRadius * 0.75)));
+    let previous = origin.clone();
+    for (let index = 1; index <= steps; index += 1) {
+      const point = origin.clone().lerp(target, index / steps);
+      point.y = target.y;
+      const failure = this.navigationFailureDetail(point, previous);
+      if (failure) {
+        return failure;
+      }
+      previous = point;
+    }
+    return undefined;
+  }
+
   private isInsideWalkZone(position: THREE.Vector3): boolean {
     return this.walkZoneMeshes.some((mesh) => {
       const halfSize = mesh.userData["navigationHalfSize"];
@@ -1425,6 +1449,17 @@ export class WalkthroughViewer {
           floorHit.point,
           undefined,
           failureDetail.blockerName
+        );
+        return;
+      }
+      const routeFailureDetail = this.navigationRouteFailureDetail(nextTarget, this.camera.position);
+      if (routeFailureDetail) {
+        this.emitNavigationFailure(
+          routeFailureDetail.reason,
+          event,
+          floorHit.point,
+          undefined,
+          routeFailureDetail.blockerName
         );
         return;
       }
