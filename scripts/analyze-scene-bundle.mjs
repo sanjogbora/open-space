@@ -210,10 +210,33 @@ async function analyzeGltfDocument(document, format, asset) {
   const accessors = document.accessors ?? [];
   const meshes = document.meshes ?? [];
   const extensionsUsed = document.extensionsUsed ?? [];
+  const extensionsRequired = document.extensionsRequired ?? [];
+  const supportedRequiredExtensions = new Set([
+    "KHR_draco_mesh_compression",
+    "KHR_lights_punctual",
+    "KHR_materials_clearcoat",
+    "KHR_materials_emissive_strength",
+    "KHR_materials_ior",
+    "KHR_materials_iridescence",
+    "KHR_materials_sheen",
+    "KHR_materials_specular",
+    "KHR_materials_transmission",
+    "KHR_materials_unlit",
+    "KHR_materials_variants",
+    "KHR_materials_volume",
+    "KHR_mesh_quantization",
+    "KHR_texture_basisu",
+    "KHR_texture_transform",
+    "EXT_meshopt_compression",
+    "EXT_texture_webp"
+  ]);
   let primitiveCount = 0;
   let vertexCount = 0;
   let triangleCount = 0;
   let usesDraco = extensionsUsed.includes("KHR_draco_mesh_compression");
+  let missingPositionPrimitiveCount = 0;
+  let missingNormalPrimitiveCount = 0;
+  let missingUvPrimitiveCount = 0;
 
   for (const mesh of meshes) {
     for (const primitive of mesh.primitives ?? []) {
@@ -222,6 +245,15 @@ async function analyzeGltfDocument(document, format, asset) {
       }
       primitiveCount += 1;
       const positionAccessorIndex = primitive.attributes?.POSITION;
+      if (typeof positionAccessorIndex !== "number") {
+        missingPositionPrimitiveCount += 1;
+      }
+      if (typeof primitive.attributes?.NORMAL !== "number") {
+        missingNormalPrimitiveCount += 1;
+      }
+      if (typeof primitive.attributes?.TEXCOORD_0 !== "number") {
+        missingUvPrimitiveCount += 1;
+      }
       const positionAccessor =
         typeof positionAccessorIndex === "number" ? accessors[positionAccessorIndex] : undefined;
       const indexAccessor =
@@ -282,6 +314,10 @@ async function analyzeGltfDocument(document, format, asset) {
     triangleCount,
     extensionCount: extensionsUsed.length,
     requiredExtensionCount: document.extensionsRequired?.length ?? 0,
+    unsupportedRequiredExtensions: extensionsRequired.filter((extension) => !supportedRequiredExtensions.has(extension)),
+    missingPositionPrimitiveCount,
+    missingNormalPrimitiveCount,
+    missingUvPrimitiveCount,
     compression: {
       meshopt: usesMeshopt,
       draco: usesDraco,
@@ -554,13 +590,42 @@ async function modelStats(asset) {
   }
 
   const extension = path.extname(asset.source).toLowerCase();
-  if (extension === ".glb") {
-    const bytes = await readFile(asset.path);
-    return analyzeGltfDocument(parseGlbJson(bytes), "glb", asset);
-  }
+  try {
+    if (extension === ".glb") {
+      const bytes = await readFile(asset.path);
+      return analyzeGltfDocument(parseGlbJson(bytes), "glb", asset);
+    }
 
-  if (extension === ".gltf") {
-    return analyzeGltfDocument(JSON.parse(await readFile(asset.path, "utf8")), "gltf", asset);
+    if (extension === ".gltf") {
+      return analyzeGltfDocument(JSON.parse(await readFile(asset.path, "utf8")), "gltf", asset);
+    }
+  } catch (error) {
+    return {
+      format: extension === ".gltf" ? "gltf" : "glb",
+      source: asset.source,
+      parseError: error instanceof Error ? error.message : "Model could not be parsed.",
+      nodeCount: 0,
+      meshCount: 0,
+      primitiveCount: 0,
+      materialCount: 0,
+      textureCount: 0,
+      imageCount: 0,
+      bufferCount: 0,
+      bufferBytes: 0,
+      vertexCount: 0,
+      triangleCount: 0,
+      extensionCount: 0,
+      requiredExtensionCount: 0,
+      externalResourceCount: 0,
+      missingExternalResourceCount: 0,
+      externalResources: [],
+      compression: {
+        meshopt: false,
+        draco: false,
+        basisu: false,
+        webp: false
+      }
+    };
   }
 
   return undefined;
@@ -572,13 +637,17 @@ async function modelGraph(asset) {
   }
 
   const extension = path.extname(asset.source).toLowerCase();
-  if (extension === ".glb") {
-    const bytes = await readFile(asset.path);
-    return extractSceneGraph(parseGlbJson(bytes), asset.source);
-  }
+  try {
+    if (extension === ".glb") {
+      const bytes = await readFile(asset.path);
+      return extractSceneGraph(parseGlbJson(bytes), asset.source);
+    }
 
-  if (extension === ".gltf") {
-    return extractSceneGraph(JSON.parse(await readFile(asset.path, "utf8")), asset.source);
+    if (extension === ".gltf") {
+      return extractSceneGraph(JSON.parse(await readFile(asset.path, "utf8")), asset.source);
+    }
+  } catch {
+    return undefined;
   }
 
   return undefined;
@@ -590,13 +659,17 @@ async function modelMaterials(asset) {
   }
 
   const extension = path.extname(asset.source).toLowerCase();
-  if (extension === ".glb") {
-    const bytes = await readFile(asset.path);
-    return extractMaterialsDocument(parseGlbJson(bytes), asset.source);
-  }
+  try {
+    if (extension === ".glb") {
+      const bytes = await readFile(asset.path);
+      return extractMaterialsDocument(parseGlbJson(bytes), asset.source);
+    }
 
-  if (extension === ".gltf") {
-    return extractMaterialsDocument(JSON.parse(await readFile(asset.path, "utf8")), asset.source);
+    if (extension === ".gltf") {
+      return extractMaterialsDocument(JSON.parse(await readFile(asset.path, "utf8")), asset.source);
+    }
+  } catch {
+    return undefined;
   }
 
   return undefined;
@@ -654,12 +727,78 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.missingExternalResourceCount ?? 0),
     0
   );
+  const parseFailures = report.models.filter((model) => model.parseError);
+  const unsupportedRequiredExtensions = [
+    ...new Set(report.models.flatMap((model) => model.unsupportedRequiredExtensions ?? []))
+  ];
+  const missingPositionPrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.missingPositionPrimitiveCount ?? 0),
+    0
+  );
+  const missingNormalPrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.missingNormalPrimitiveCount ?? 0),
+    0
+  );
+  const missingUvPrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.missingUvPrimitiveCount ?? 0),
+    0
+  );
   const floorMatches = keywordMatchCount(graph, manifest.navigation?.floorMeshNames ?? []);
   const collisionMatches = keywordMatchCount(graph, manifest.navigation?.collisionMeshNames ?? []);
   const ceilingMatches = keywordMatchCount(graph, ["ceiling", "roof", "soffit", "false ceiling"]);
   const navigationZones = Array.isArray(manifest.navigation?.zones) ? manifest.navigation.zones : [];
   const hasWalkZones = navigationZones.some((zone) => zone.kind === "walk" && zone.enabled !== false);
   const hasBlockZones = navigationZones.some((zone) => zone.kind === "block" && zone.enabled !== false);
+
+  if (parseFailures.length > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "malformed-model",
+      title: "Model could not be parsed",
+      message: parseFailures.map((model) => `${model.source ?? model.format}: ${model.parseError}`).join("; "),
+      action: "Re-export the file as glTF 2.0/GLB from Blender or your CAD/DCC tool, then upload the repaired ZIP/GLB."
+    });
+  }
+
+  if (unsupportedRequiredExtensions.length > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "unsupported-required-extensions",
+      title: "Unsupported required glTF extensions",
+      message: `The model requires ${unsupportedRequiredExtensions.join(", ")}.`,
+      action: "Re-export without those required extensions, or add loader support before publishing."
+    });
+  }
+
+  if (missingPositionPrimitiveCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "missing-position-attributes",
+      title: "Mesh primitives missing positions",
+      message: `${missingPositionPrimitiveCount} primitive(s) do not include POSITION attributes, so bounds/navigation can be wrong.`,
+      action: "Repair or re-export the model so every renderable mesh primitive has POSITION data."
+    });
+  }
+
+  if (missingNormalPrimitiveCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-normal-attributes",
+      title: "Mesh normals missing",
+      message: `${missingNormalPrimitiveCount} primitive(s) do not include NORMAL attributes, which can make lighting look poor.`,
+      action: "Recalculate normals in Blender before export."
+    });
+  }
+
+  if (missingUvPrimitiveCount > 0 && (report.imageCount ?? 0) > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-uv-attributes",
+      title: "Texture UVs missing",
+      message: `${missingUvPrimitiveCount} primitive(s) do not include TEXCOORD_0 attributes even though the model uses images.`,
+      action: "Unwrap UVs or bake textures into a GLB with valid TEXCOORD_0 attributes."
+    });
+  }
 
   if (missingExternalResources > 0) {
     diagnostics.push({
