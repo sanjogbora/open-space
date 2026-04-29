@@ -115,6 +115,28 @@ interface BundleStats {
     message: string;
     action?: string;
   }[];
+  assets?: readonly {
+    kind: string;
+    source: string;
+    label: string;
+    exists: boolean;
+    bytes?: number;
+  }[];
+  looseImages?: readonly {
+    source: string;
+    bytes: number;
+  }[];
+  models?: readonly {
+    format: string;
+    externalResourceCount?: number;
+    missingExternalResourceCount?: number;
+    externalResources?: readonly {
+      kind: string;
+      source: string;
+      exists: boolean;
+      bytes?: number;
+    }[];
+  }[];
 }
 
 interface OptimizationDocument {
@@ -2564,6 +2586,7 @@ function App() {
                     <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
                     <Stat label="Texture compression" value={textureCompressionLabel(bundleStats)} />
                   </div>
+                  <AssetHealth stats={bundleStats} />
                   <DiagnosticList diagnostics={bundleStats.diagnostics ?? []} />
                 </>
               ) : (
@@ -4826,6 +4849,59 @@ function DiagnosticList({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function AssetHealth({ stats }: { stats: BundleStats }) {
+  const missingAssets = (stats.assets ?? []).filter((asset) => !asset.exists);
+  const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
+  const missingResources = externalResources.filter((resource) => !resource.exists);
+  const looseImages = stats.looseImages ?? [];
+  const hasDetails =
+    missingAssets.length > 0 || missingResources.length > 0 || looseImages.length > 0 || externalResources.length > 0;
+
+  if (!hasDetails) {
+    return (
+      <div className="asset-health-card pass">
+        <strong>Asset links healthy</strong>
+        <p>No missing referenced assets or loose texture-folder images were detected.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="asset-health-card">
+      <strong>Asset health</strong>
+      {missingAssets.length > 0 && (
+        <div className="asset-health-section">
+          <span>Missing manifest assets</span>
+          {missingAssets.slice(0, 5).map((asset) => (
+            <code key={`${asset.kind}-${asset.source}`}>{asset.source}</code>
+          ))}
+        </div>
+      )}
+      {missingResources.length > 0 && (
+        <div className="asset-health-section">
+          <span>Missing GLTF resources</span>
+          {missingResources.slice(0, 5).map((resource) => (
+            <code key={`${resource.kind}-${resource.source}`}>{resource.source}</code>
+          ))}
+        </div>
+      )}
+      {looseImages.length > 0 && (
+        <div className="asset-health-section">
+          <span>Loose texture-folder images</span>
+          {looseImages.slice(0, 5).map((image) => (
+            <code key={image.source}>
+              {image.source} · {formatBytes(image.bytes)}
+            </code>
+          ))}
+        </div>
+      )}
+      {externalResources.length > 0 && missingResources.length === 0 && (
+        <p>All GLTF external resources referenced by the active model are present.</p>
+      )}
     </div>
   );
 }
