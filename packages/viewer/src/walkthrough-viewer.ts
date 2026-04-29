@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import type {
   HotspotInteraction,
@@ -68,6 +69,7 @@ export class WalkthroughViewer {
   private readonly lightRig = new THREE.Group();
   private readonly renderer: THREE.WebGLRenderer;
   private readonly loader = new GLTFLoader();
+  private readonly ktx2Loader = new KTX2Loader();
   private readonly textureLoader = new THREE.TextureLoader();
   private readonly moveMarker = createMoveMarker();
   private readonly modelScale: number;
@@ -153,6 +155,9 @@ export class WalkthroughViewer {
     this.renderer.domElement.className = "walkthrough-canvas";
     this.container.appendChild(this.renderer.domElement);
     this.loader.setMeshoptDecoder(MeshoptDecoder);
+    this.ktx2Loader.setTranscoderPath("/basis/");
+    this.ktx2Loader.detectSupport(this.renderer);
+    this.loader.setKTX2Loader(this.ktx2Loader);
 
     this.scene.name = "walkthrough-scene";
     this.applyEnvironment();
@@ -198,6 +203,7 @@ export class WalkthroughViewer {
     });
     this.environmentTexture?.dispose();
     this.pmremGenerator?.dispose();
+    this.ktx2Loader.dispose();
     this.uninstallEvents();
     this.renderer.dispose();
     this.renderer.domElement.remove();
