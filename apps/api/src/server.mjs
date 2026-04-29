@@ -185,6 +185,50 @@ async function fileExists(filePath) {
   }
 }
 
+function commandAvailable(command, args = ["--version"]) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { stdio: "ignore", windowsHide: true });
+    child.on("error", () => resolve(false));
+    child.on("exit", (code) => resolve(code === 0));
+  });
+}
+
+async function localToolStatus() {
+  const blenderCommand = process.env.BLENDER_PATH || "blender";
+  const configuredToktx = process.env.KTX_SOFTWARE_PATH || process.env.TOKTX_PATH;
+  const toktxCommand = configuredToktx
+    ? configuredToktx.toLowerCase().endsWith("toktx.exe") || configuredToktx.toLowerCase().endsWith("toktx")
+      ? configuredToktx
+      : path.join(configuredToktx, process.platform === "win32" ? "toktx.exe" : "toktx")
+    : "toktx";
+  const awsCommand = process.env.AWS_CLI_PATH || "aws";
+  const [blenderReady, toktxReady, awsReady] = await Promise.all([
+    commandAvailable(blenderCommand),
+    commandAvailable(toktxCommand),
+    commandAvailable(awsCommand, ["--version"])
+  ]);
+  return {
+    blender: {
+      ready: blenderReady,
+      command: blenderCommand,
+      purpose: "Cycles lightmap baking",
+      action: blenderReady ? "Ready" : "Install Blender or set BLENDER_PATH."
+    },
+    toktx: {
+      ready: toktxReady,
+      command: toktxCommand,
+      purpose: "KTX2/Basis GPU texture compression",
+      action: toktxReady ? "Ready" : "Install Khronos KTX-Software or set KTX_SOFTWARE_PATH/TOKTX_PATH."
+    },
+    aws: {
+      ready: awsReady,
+      command: awsCommand,
+      purpose: "S3/R2 deployment helper",
+      action: awsReady ? "Ready" : "Install AWS CLI or set AWS_CLI_PATH for bucket deployment."
+    }
+  };
+}
+
 function validateGlbBuffer(body) {
   if (body.length < 20) {
     throw badRequest("Uploaded model is too small to be a GLB.");
@@ -1366,6 +1410,11 @@ async function handleRequest(request, response) {
   try {
     if (request.method === "GET" && url.pathname === "/health") {
       sendJson(response, 200, { ok: true });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/tools") {
+      sendJson(response, 200, { tools: await localToolStatus() });
       return;
     }
 

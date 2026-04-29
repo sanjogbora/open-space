@@ -266,6 +266,18 @@ interface PublishHistoryDocument {
   versions: PublishEntry[];
 }
 
+interface ToolStatusDocument {
+  tools: Record<
+    string,
+    {
+      ready: boolean;
+      command: string;
+      purpose: string;
+      action: string;
+    }
+  >;
+}
+
 const viewerBaseUrl = "http://127.0.0.1:5173";
 const apiBaseUrl = "http://127.0.0.1:5175";
 const studioTabIds: readonly StudioTab[] = [
@@ -706,6 +718,7 @@ function App() {
   const [materialsDoc, setMaterialsDoc] = useState<MaterialsDocument | null>(null);
   const [objectsDoc, setObjectsDoc] = useState<ObjectsDocument | null>(null);
   const [controlsDoc, setControlsDoc] = useState<SceneControlsDocument | null>(null);
+  const [toolStatus, setToolStatus] = useState<ToolStatusDocument | null>(null);
   const [selectedMaterialId, setSelectedMaterialId] = useState("");
   const [selectedObjectId, setSelectedObjectId] = useState("");
   const [apiConnected, setApiConnected] = useState(false);
@@ -754,6 +767,21 @@ function App() {
             if (!cancelled) {
               setProjectSummaries(list.projects);
             }
+          }
+          const toolsResponse = await fetch(`${apiBaseUrl}/api/tools`);
+          if (toolsResponse.ok && !cancelled) {
+            setToolStatus((await toolsResponse.json()) as ToolStatusDocument);
+          } else if (!toolsResponse.ok && !cancelled) {
+            setToolStatus({
+              tools: {
+                api: {
+                  ready: false,
+                  command: "/api/tools",
+                  purpose: "Production tool readiness endpoint",
+                  action: "Restart the API dev server."
+                }
+              }
+            });
           }
 
           const apiResponse = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}`);
@@ -804,6 +832,18 @@ function App() {
           }
         } catch {
           setApiConnected(false);
+          if (!cancelled) {
+            setToolStatus({
+              tools: {
+                api: {
+                  ready: false,
+                  command: apiBaseUrl,
+                  purpose: "Production tool readiness endpoint",
+                  action: "Start the API dev server."
+                }
+              }
+            });
+          }
         }
 
         const stored = localStorage.getItem(draftKey(activeProjectId, "manifest"));
@@ -2736,41 +2776,69 @@ function App() {
               <DiagnosticList diagnostics={bundleStats?.diagnostics ?? []} />
             </div>
 
-            <div className="panel metrics-panel">
-              <div className="metric-row">
-                <MapPin size={18} aria-hidden="true" />
-                <span>Views</span>
-                <strong>{manifest.views.length}</strong>
+            <div className="side-stack">
+              <div className="panel metrics-panel">
+                <div className="metric-row">
+                  <MapPin size={18} aria-hidden="true" />
+                  <span>Views</span>
+                  <strong>{manifest.views.length}</strong>
+                </div>
+                <div className="metric-row">
+                  <Globe2 size={18} aria-hidden="true" />
+                  <span>Hotspots</span>
+                  <strong>{hotspotInteractions.length}</strong>
+                </div>
+                <div className="metric-row">
+                  <ExternalLink size={18} aria-hidden="true" />
+                  <span>Links</span>
+                  <strong>{linkInteractions.length}</strong>
+                </div>
+                <div className="metric-row">
+                  <Eye size={18} aria-hidden="true" />
+                  <span>Object Toggles</span>
+                  <strong>{objectToggleInteractions.length}</strong>
+                </div>
+                <div className="metric-row">
+                  <Video size={18} aria-hidden="true" />
+                  <span>Video Textures</span>
+                  <strong>{videoCount}</strong>
+                </div>
+                <div className="metric-row">
+                  <Palette size={18} aria-hidden="true" />
+                  <span>Variants</span>
+                  <strong>{variantCount}</strong>
+                </div>
+                <div className="metric-row">
+                  <Activity size={18} aria-hidden="true" />
+                  <span>Triangles</span>
+                  <strong>{bundleStats?.triangleCount ?? 0}</strong>
+                </div>
               </div>
-              <div className="metric-row">
-                <Globe2 size={18} aria-hidden="true" />
-                <span>Hotspots</span>
-                <strong>{hotspotInteractions.length}</strong>
-              </div>
-              <div className="metric-row">
-                <ExternalLink size={18} aria-hidden="true" />
-                <span>Links</span>
-                <strong>{linkInteractions.length}</strong>
-              </div>
-              <div className="metric-row">
-                <Eye size={18} aria-hidden="true" />
-                <span>Object Toggles</span>
-                <strong>{objectToggleInteractions.length}</strong>
-              </div>
-              <div className="metric-row">
-                <Video size={18} aria-hidden="true" />
-                <span>Video Textures</span>
-                <strong>{videoCount}</strong>
-              </div>
-              <div className="metric-row">
-                <Palette size={18} aria-hidden="true" />
-                <span>Variants</span>
-                <strong>{variantCount}</strong>
-              </div>
-              <div className="metric-row">
-                <Activity size={18} aria-hidden="true" />
-                <span>Triangles</span>
-                <strong>{bundleStats?.triangleCount ?? 0}</strong>
+
+              <div className="panel stats-panel">
+                <div className="panel-heading">
+                  <FileJson size={18} aria-hidden="true" />
+                  <h2>Production Tools</h2>
+                </div>
+                <div className="publish-readiness-list tool-readiness-list" aria-label="Production tool readiness">
+                  {toolStatus ? (
+                    Object.entries(toolStatus.tools).map(([id, tool]) => (
+                      <div
+                        key={id}
+                        className={tool.ready ? "readiness-row tool-row ready" : "readiness-row tool-row warn"}
+                      >
+                        <div>
+                          <span>{id}</span>
+                          <small>{tool.purpose}</small>
+                          <code>{tool.command}</code>
+                        </div>
+                        <strong>{tool.action}</strong>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="quiet-note">Checking local production tooling.</p>
+                  )}
+                </div>
               </div>
             </div>
           </section>

@@ -706,6 +706,45 @@ button.list-row {
   background: #fff8ed;
 }
 
+.tool-readiness-list {
+  margin-top: 2px;
+}
+
+.tool-row {
+  align-items: flex-start;
+}
+
+.tool-row div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.tool-row span {
+  text-transform: uppercase;
+}
+
+.tool-row small {
+  color: #52636f;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.tool-row code {
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #52636f;
+  font-size: 11px;
+}
+
+.tool-row strong {
+  max-width: 220px;
+  text-align: right;
+  line-height: 1.35;
+}
+
 .optimization-action-controls {
   min-width: 220px;
   display: flex;
