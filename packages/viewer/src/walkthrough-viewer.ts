@@ -1107,11 +1107,67 @@ export class WalkthroughViewer {
     const yTooFarAbove = this.camera.position.y > box.max.y + Math.max(12, size.y * 5);
     const cameraTooFar = cameraOffset > Math.max(40, radius * 7);
     const targetTooFar = targetOffset > Math.max(30, radius * 5);
-    if (firstView && !invalidCamera && !yTooFarBelow && !yTooFarAbove && !cameraTooFar && !targetTooFar) {
+    const navigationInvalid = Boolean(this.navigationFailureDetail(this.camera.position));
+    if (
+      firstView &&
+      !invalidCamera &&
+      !yTooFarBelow &&
+      !yTooFarAbove &&
+      !cameraTooFar &&
+      !targetTooFar &&
+      !navigationInvalid
+    ) {
       return;
     }
 
-    this.fitCameraToBox(box);
+    if (!this.fitCameraToNavigationSurface(box)) {
+      this.fitCameraToBox(box);
+    }
+  }
+
+  private fitCameraToNavigationSurface(sceneBox: THREE.Box3): boolean {
+    const surfaces = (this.walkZoneMeshes.length > 0 ? this.walkZoneMeshes : this.floorMeshes)
+      .map((mesh) => {
+        const box = new THREE.Box3().setFromObject(mesh);
+        const size = box.getSize(new THREE.Vector3());
+        return {
+          box,
+          size,
+          area: Math.abs(size.x * size.z)
+        };
+      })
+      .filter((surface) => !surface.box.isEmpty() && surface.area > 0.2)
+      .sort((a, b) => b.area - a.area);
+
+    const sceneCenter = sceneBox.getCenter(new THREE.Vector3());
+    for (const surface of surfaces) {
+      const center = surface.box.getCenter(new THREE.Vector3());
+      const offsets = [
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(surface.size.x * 0.25, 0, 0),
+        new THREE.Vector3(surface.size.x * -0.25, 0, 0),
+        new THREE.Vector3(0, 0, surface.size.z * 0.25),
+        new THREE.Vector3(0, 0, surface.size.z * -0.25)
+      ];
+
+      for (const offset of offsets) {
+        const position = center.clone().add(offset);
+        position.y = surface.box.max.y + this.cameraHeight;
+        if (this.navigationFailureDetail(position)) {
+          continue;
+        }
+        this.camera.position.copy(position);
+        this.cameraTarget.set(sceneCenter.x, position.y - 0.35, sceneCenter.z);
+        if (this.camera.position.distanceTo(this.cameraTarget) < 0.5) {
+          this.cameraTarget.z -= 1;
+        }
+        this.updateAnglesFromTarget();
+        this.camera.lookAt(this.cameraTarget);
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private fitCameraToBox(box: THREE.Box3): void {
