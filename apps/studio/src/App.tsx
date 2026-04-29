@@ -183,6 +183,15 @@ interface PublishEntry {
   scenePath: string;
 }
 
+interface VideoSurfaceCandidate {
+  id: string;
+  meshName: string;
+  materialName?: string;
+  triangleCount: number;
+  label: string;
+  score: number;
+}
+
 interface PublishHistoryDocument {
   schemaVersion: "0.1";
   projectId: string;
@@ -276,6 +285,30 @@ function isObjectToggle(interaction: SceneInteraction): interaction is ObjectTog
 
 function isVideoTexture(interaction: SceneInteraction): interaction is VideoTextureInteraction {
   return interaction.kind === "video-texture";
+}
+
+function videoSurfaceScore(name: string): number {
+  const normalized = name.toLowerCase();
+  let score = 0;
+  if (normalized.includes("screen")) {
+    score += 8;
+  }
+  if (normalized.includes("tv") || normalized.includes("television")) {
+    score += 8;
+  }
+  if (normalized.includes("display") || normalized.includes("monitor")) {
+    score += 6;
+  }
+  if (normalized.includes("video") || normalized.includes("media")) {
+    score += 5;
+  }
+  if (normalized.includes("rendertexture") || normalized.includes("emissive")) {
+    score += 4;
+  }
+  if (normalized.includes("glass") || normalized.includes("black")) {
+    score += 1;
+  }
+  return score;
 }
 
 function createView(index: number): SceneView {
@@ -894,6 +927,32 @@ function App() {
     () => videoTextureInteractions.find((interaction) => interaction.id === selectedInteractionId),
     [videoTextureInteractions, selectedInteractionId]
   );
+
+  const videoSurfaceCandidates = useMemo((): VideoSurfaceCandidate[] => {
+    if (!sceneGraph) {
+      return [];
+    }
+    const candidates = sceneGraph.nodes.map((node) => {
+      const materialNames = node.materialIds
+        .map((materialId) => sceneGraph.materials.find((material) => material.id === materialId)?.name)
+        .filter((name): name is string => Boolean(name));
+      const materialName = materialNames[0];
+      const searchName = `${node.name} ${node.meshName ?? ""} ${materialNames.join(" ")}`;
+      const score = videoSurfaceScore(searchName);
+      return {
+        id: node.id,
+        meshName: node.name,
+        ...(materialName ? { materialName } : {}),
+        triangleCount: node.triangleCount,
+        label: materialName ? `${node.name} / ${materialName}` : node.name,
+        score
+      };
+    });
+    const likely = candidates.filter((candidate) => candidate.score > 0);
+    return (likely.length > 0 ? likely : candidates)
+      .sort((a, b) => b.score - a.score || b.triangleCount - a.triangleCount)
+      .slice(0, 12);
+  }, [sceneGraph]);
 
   const selectedVariantInteraction = useMemo(
     () => materialVariantInteractions.find((interaction) => interaction.id === selectedVariantInteractionId),
@@ -1709,6 +1768,24 @@ function App() {
         ...current,
         interactions
       };
+    });
+  };
+
+  const applyVideoSurfaceCandidate = (candidate: VideoSurfaceCandidate) => {
+    if (!selectedVideoTexture) {
+      return;
+    }
+    updateVideoTexture(selectedVideoTexture.id, (interaction) => {
+      const nextInteraction: VideoTextureInteraction = {
+        ...interaction,
+        targetMeshName: candidate.meshName
+      };
+      if (candidate.materialName) {
+        nextInteraction.targetMaterialName = candidate.materialName;
+      } else {
+        delete nextInteraction.targetMaterialName;
+      }
+      return nextInteraction;
     });
   };
 
@@ -2892,6 +2969,36 @@ function App() {
                     <Trash2 size={17} aria-hidden="true" />
                   </button>
                 </div>
+
+                {videoSurfaceCandidates.length > 0 && (
+                  <div className="surface-mapper">
+                    <div className="surface-mapper-heading">
+                      <strong>Surface Mapper</strong>
+                      <small>{videoSurfaceCandidates.length}</small>
+                    </div>
+                    <div className="surface-candidate-list">
+                      {videoSurfaceCandidates.map((candidate) => {
+                        const isActive =
+                          selectedVideoTexture.targetMeshName === candidate.meshName ||
+                          selectedVideoTexture.targetMaterialName === candidate.materialName;
+                        return (
+                          <button
+                            key={candidate.id}
+                            type="button"
+                            className={isActive ? "surface-candidate active" : "surface-candidate"}
+                            onClick={() => applyVideoSurfaceCandidate(candidate)}
+                          >
+                            <span>{candidate.label}</span>
+                            <small>
+                              {candidate.triangleCount} triangles
+                              {candidate.score > 0 ? ` / score ${candidate.score}` : ""}
+                            </small>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div className="field-grid">
                   <label>
