@@ -811,6 +811,65 @@ function combineGraphBounds(graph) {
   );
 }
 
+function boundsSize(bounds) {
+  return [
+    Math.abs(bounds.max[0] - bounds.min[0]),
+    Math.abs(bounds.max[1] - bounds.min[1]),
+    Math.abs(bounds.max[2] - bounds.min[2])
+  ];
+}
+
+function boundsArea(bounds) {
+  const [width, _height, depth] = boundsSize(bounds);
+  return width * depth;
+}
+
+function likelyExteriorPlaneName(name) {
+  const normalized = String(name || "").toLowerCase();
+  return [
+    "terrain",
+    "landscape",
+    "grass",
+    "lawn",
+    "site",
+    "environment",
+    "background",
+    "plane",
+    "plot"
+  ].some((keyword) => normalized.includes(keyword));
+}
+
+function graphFocusBounds(graph) {
+  const rawBounds = graphFocusBounds(graph);
+  if (!rawBounds) {
+    return undefined;
+  }
+  const fullArea = Math.max(1, boundsArea(rawBounds));
+  const focusBounds = (graph.nodes ?? [])
+    .filter((node) => {
+      if (!node.bounds) {
+        return false;
+      }
+      const name = `${node.name} ${node.meshName ?? ""}`;
+      const [width, height, depth] = boundsSize(node.bounds);
+      const area = Math.max(0, width * depth);
+      const flat = height <= Math.max(0.08, Math.min(width, depth) * 0.04);
+      const hugeRelativePlane = flat && area > fullArea * 0.45;
+      if (likelyExteriorPlaneName(name) && (flat || area > fullArea * 0.25)) {
+        return false;
+      }
+      if (hugeRelativePlane && area > 25) {
+        return false;
+      }
+      return height > 0.15 || area < fullArea * 0.35;
+    })
+    .map((node) => node.bounds);
+  if (focusBounds.length === 0) {
+    return rawBounds;
+  }
+  return combineGraphBounds({ nodes: focusBounds.map((bounds, index) => ({ id: `focus-${index}`, bounds })) });
+}
+
 function unitScaleForBounds(bounds) {
   if (!bounds) {
     return 1;
@@ -1050,7 +1109,7 @@ function graphWalkZoneCandidates(graph, modelScale) {
     "terrace",
     "porch"
   ];
-  return (graph?.nodes ?? [])
+  const candidates = (graph?.nodes ?? [])
     .map((node) => {
       if (!node.bounds) {
         return undefined;
@@ -1083,13 +1142,26 @@ function graphWalkZoneCandidates(graph, modelScale) {
         size: [Math.max(0.8, Math.abs(size[0])), 0.08, Math.max(0.8, Math.abs(size[2]))],
         rotationY: 0,
         enabled: true,
-        area
+        area,
+        exterior: likelyExteriorPlaneName(searchName)
       };
     })
     .filter(Boolean)
-    .sort((a, b) => b.area - a.area)
+    .sort((a, b) => b.area - a.area);
+  const nonExteriorAreas = candidates.filter((candidate) => !candidate.exterior).map((candidate) => candidate.area);
+  const referenceArea =
+    nonExteriorAreas.length > 0
+      ? nonExteriorAreas[Math.floor(nonExteriorAreas.length / 2)]
+      : candidates[Math.floor(candidates.length / 2)]?.area;
+  return candidates
+    .filter((candidate) => {
+      if (!referenceArea || !candidate.exterior) {
+        return true;
+      }
+      return candidate.area <= Math.max(referenceArea * 6, 12);
+    })
     .slice(0, 12)
-    .map(({ area: _area, ...zone }) => zone);
+    .map(({ area: _area, exterior: _exterior, ...zone }) => zone);
 }
 
 function doorPassScore(name) {
