@@ -55,8 +55,8 @@
   - Package publish bundle.
 - Tools to evaluate:
   - Blender headless for import conversion, UV generation, and baking prototypes.
-  - gltf-transform for glTF optimization, texture resizing, Draco/Meshopt, KTX2.
-  - meshoptimizer for geometry compression and simplification.
+  - gltf-transform for glTF optimization, texture resizing, Draco/Meshopt, KTX2. Initial glTF Transform plus Meshopt compression is implemented.
+  - meshoptimizer for geometry compression and simplification. Initial `EXT_meshopt_compression` output is implemented.
   - Basis Universal/KTX2 for compressed textures.
   - Later: custom GPU bake service if Blender becomes a bottleneck.
 
@@ -234,4 +234,3 @@ Object identity is critical. The model update system should combine source-tool 
 - Use open optimization tools before custom GPU infrastructure.
 - Start with one cloud editor before adding desktop/offline packaging.
 - Require real-world test scenes before claiming automatic optimization parity.
-

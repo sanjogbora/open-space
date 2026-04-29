@@ -71,13 +71,17 @@ Current steps:
 
 - Validate the GLB v2 container.
 - Compact the GLB JSON chunk.
+- Deduplicate and prune unused resources with glTF Transform.
+- Weld vertices and resample animation data.
+- Reorder mesh data for transmission size.
+- Apply `EXT_meshopt_compression`.
 - Emit `scene.optimized.glb`.
 - Optionally update `scene.manifest.json` to use the optimized model.
 - Keep the latest job in `optimization-job.json`.
 - Keep the latest 20 jobs in `optimization-history.json`.
-- Leave Meshopt/Draco geometry compression and KTX2/Basis texture compression as pending job steps.
+- Leave KTX2/Basis texture compression as a pending job step.
 
-The demo scene is already tiny and compact, so the first optimization job may report `0` saved bytes. The important product path now exists: run job, generate artifact, apply artifact, refresh stats, and show the result in Studio.
+The demo scene now compresses from roughly 34 KB to roughly 15 KB with Meshopt enabled. On larger production scenes, the same job path will preserve the original `scene.glb`, generate `scene.optimized.glb`, apply the optimized artifact, refresh stats, and expose rollback in Studio.
 
 ## Initial Budgets
 
@@ -92,7 +96,7 @@ These are conservative early defaults. Later phases will add device-specific bud
 
 - Count estimated draw calls and texture dimensions.
 - Generate optimization recommendations.
-- Add gltf-transform or equivalent Meshopt/Draco compression jobs.
+- Add Draco as an alternative geometry compression option where useful.
 - Generate KTX2/Basis texture outputs.
 - Add Blender-headless bake job orchestration.
 - Emit publish-ready asset manifests.

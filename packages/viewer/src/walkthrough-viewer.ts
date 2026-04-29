@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import type {
   HotspotInteraction,
   LinkInteraction,
@@ -103,6 +104,7 @@ export class WalkthroughViewer {
     this.renderer.domElement.setAttribute("aria-label", "3D walkthrough viewport");
     this.renderer.domElement.className = "walkthrough-canvas";
     this.container.appendChild(this.renderer.domElement);
+    this.loader.setMeshoptDecoder(MeshoptDecoder);
 
     this.scene.name = "walkthrough-scene";
     this.scene.add(this.moveMarker);

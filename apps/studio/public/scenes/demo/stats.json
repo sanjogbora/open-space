@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-04-29T05:50:11.717Z",
+  "generatedAt": "2026-04-29T06:00:48.824Z",
   "manifestPath": "C:\\Users\\sanjo\\Documents\\New project\\apps\\studio\\public\\scenes\\demo\\scene.manifest.json",
   "bundleDir": "C:\\Users\\sanjo\\Documents\\New project\\apps\\studio\\public\\scenes\\demo",
   "viewCount": 5,
   "interactionCount": 6,
   "assetCount": 1,
   "missingAssetCount": 0,
-  "totalBytes": 34876,
-  "modelBytes": 34876,
+  "totalBytes": 15380,
+  "modelBytes": 15380,
   "videoBytes": 0,
   "triangleCount": 240,
   "meshCount": 20,
@@ -20,26 +20,26 @@
       "label": "Scene model",
       "path": "C:\\Users\\sanjo\\Documents\\New project\\apps\\studio\\public\\scenes\\demo\\scene.optimized.glb",
       "exists": true,
-      "bytes": 34876
+      "bytes": 15380
     }
   ],
   "models": [
     {
       "format": "glb",
       "version": "2.0",
-      "generator": "Walkthrough Studio demo generator",
+      "generator": "glTF-Transform v4.3.0",
       "nodeCount": 20,
       "meshCount": 20,
       "primitiveCount": 20,
       "materialCount": 9,
       "textureCount": 0,
       "imageCount": 0,
-      "bufferCount": 1,
-      "bufferBytes": 16800,
+      "bufferCount": 2,
+      "bufferBytes": 5416,
       "vertexCount": 480,
       "triangleCount": 240,
-      "extensionCount": 0,
-      "requiredExtensionCount": 0
+      "extensionCount": 2,
+      "requiredExtensionCount": 2
     }
   ]
 }

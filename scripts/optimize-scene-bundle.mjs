@@ -1,5 +1,9 @@
 import { access, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { NodeIO } from "@gltf-transform/core";
+import { ALL_EXTENSIONS, EXTMeshoptCompression } from "@gltf-transform/extensions";
+import { dedup, meshopt, prune, reorder, resample, weld } from "@gltf-transform/functions";
+import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 
 const args = process.argv.slice(2);
 const target = args.find((arg) => !arg.startsWith("--")) ?? "apps/viewer-demo/public/scenes/demo";
@@ -88,7 +92,7 @@ function writeGlb(chunks) {
   return Buffer.concat([header, ...chunkBuffers]);
 }
 
-function optimizeGlb(bytes) {
+function compactGlbJson(bytes) {
   const chunks = readChunks(bytes);
   const jsonChunk = chunks.find((chunk) => chunk.type === 0x4e4f534a);
   if (!jsonChunk) {
@@ -101,6 +105,27 @@ function optimizeGlb(bytes) {
     chunk === jsonChunk ? { ...chunk, data: json } : chunk
   );
   return writeGlb(optimizedChunks);
+}
+
+async function optimizeGlb(sourcePath, outputPath, profile) {
+  await Promise.all([MeshoptEncoder.ready, MeshoptDecoder.ready]);
+  const level = profile === "mobile" ? "high" : "medium";
+  const io = new NodeIO()
+    .registerExtensions([...ALL_EXTENSIONS, EXTMeshoptCompression])
+    .registerDependencies({
+      "meshopt.encoder": MeshoptEncoder,
+      "meshopt.decoder": MeshoptDecoder
+    });
+  const document = await io.read(sourcePath);
+  await document.transform(
+    dedup(),
+    prune(),
+    weld({ overwrite: false }),
+    resample(),
+    reorder({ encoder: MeshoptEncoder, target: "size" }),
+    meshopt({ encoder: MeshoptEncoder, level })
+  );
+  await io.write(outputPath, document);
 }
 
 function percentChange(before, after) {
@@ -130,8 +155,9 @@ const sourcePath = path.resolve(bundleDir, sourceSceneUrl);
 const outputPath = path.resolve(bundleDir, optimizedSceneUrl);
 const beforeInfo = await stat(sourcePath);
 const sourceBytes = await readFile(sourcePath);
-const optimizedBytes = optimizeGlb(sourceBytes);
-await writeFile(outputPath, optimizedBytes);
+const compactBytes = compactGlbJson(sourceBytes);
+await writeFile(outputPath, compactBytes);
+await optimizeGlb(sourcePath, outputPath, profile);
 const afterInfo = await stat(outputPath);
 
 if (applyOptimized) {
@@ -173,14 +199,29 @@ const job = {
       status: "completed"
     },
     {
-      id: "emit-artifact",
-      label: "Write optimized scene artifact",
+      id: "dedup-prune",
+      label: "Deduplicate and prune unused resources",
+      status: "completed"
+    },
+    {
+      id: "weld-resample",
+      label: "Weld vertices and resample animation data",
+      status: "completed"
+    },
+    {
+      id: "mesh-reorder",
+      label: "Reorder mesh data for transmission size",
       status: "completed"
     },
     {
       id: "mesh-compression",
-      label: "Meshopt/Draco geometry compression",
-      status: "pending"
+      label: "Apply EXT_meshopt_compression",
+      status: "completed"
+    },
+    {
+      id: "emit-artifact",
+      label: "Write optimized scene artifact",
+      status: "completed"
     },
     {
       id: "texture-compression",

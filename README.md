@@ -6,7 +6,7 @@ The goal is not to copy Shapespark branding or proprietary implementation. The g
 
 ## Current Phase
 
-Phase 1: viewer and studio foundations.
+Phase 2: viewer, studio, API, publishing, and first optimization pipeline are in place.
 
 ## Local Apps
 

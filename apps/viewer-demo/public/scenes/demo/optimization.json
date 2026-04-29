@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.1",
-  "generatedAt": "2026-04-29T05:50:11.673Z",
+  "generatedAt": "2026-04-29T06:00:48.783Z",
   "source": "scene.manifest.json",
   "profiles": [
     {
@@ -15,8 +15,8 @@
         "maxMeshes": 300
       },
       "metrics": {
-        "totalBytes": 34876,
-        "modelBytes": 34876,
+        "totalBytes": 15380,
+        "modelBytes": 15380,
         "triangles": 240,
         "materials": 9,
         "meshes": 20
@@ -35,8 +35,8 @@
         "maxMeshes": 700
       },
       "metrics": {
-        "totalBytes": 34876,
-        "modelBytes": 34876,
+        "totalBytes": 15380,
+        "modelBytes": 15380,
         "triangles": 240,
         "materials": 9,
         "meshes": 20
@@ -55,8 +55,8 @@
         "maxMeshes": 1400
       },
       "metrics": {
-        "totalBytes": 34876,
-        "modelBytes": 34876,
+        "totalBytes": 15380,
+        "modelBytes": 15380,
         "triangles": 240,
         "materials": 9,
         "meshes": 20
