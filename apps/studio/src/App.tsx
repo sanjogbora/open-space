@@ -58,6 +58,7 @@ type Notice = "saved" | "copied" | "reset" | null;
 type UploadState = "idle" | "uploading" | "done" | "error";
 type PublishState = "idle" | "publishing" | "done" | "error";
 type OptimizeState = "idle" | "optimizing" | "done" | "error";
+type RepairState = "idle" | "repairing" | "done" | "error";
 type HotspotIcon = NonNullable<HotspotInteraction["icon"]>;
 type MovementToggle = "enabled" | "keyboard" | "clickToMove" | "dragLook";
 
@@ -393,6 +394,8 @@ function App() {
   const [publishError, setPublishError] = useState("");
   const [optimizeState, setOptimizeState] = useState<OptimizeState>("idle");
   const [optimizeError, setOptimizeError] = useState("");
+  const [repairState, setRepairState] = useState<RepairState>("idle");
+  const [repairError, setRepairError] = useState("");
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
 
@@ -1295,6 +1298,45 @@ function App() {
     }
   };
 
+  const repairImport = async () => {
+    if (!apiConnected) {
+      setRepairState("error");
+      setRepairError("API is not connected.");
+      return;
+    }
+
+    setRepairState("repairing");
+    setRepairError("");
+    try {
+      if (manifest) {
+        await saveToApi();
+      }
+      const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/repair-import`, {
+        method: "POST"
+      });
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error ?? `Import repair failed with ${response.status}.`);
+      }
+      const result = (await response.json()) as {
+        manifest: SceneManifest;
+        controls: SceneControlsDocument;
+        stats: BundleStats;
+        optimization: OptimizationDocument;
+      };
+      setManifest(result.manifest);
+      setControlsDoc(result.controls);
+      setBundleStats(result.stats);
+      setOptimizationDoc(result.optimization);
+      setSelectedViewId(result.manifest.views[0]?.id ?? "");
+      setRepairState("done");
+      setNotice("saved");
+    } catch (error) {
+      setRepairState("error");
+      setRepairError(error instanceof Error ? error.message : "Import repair failed.");
+    }
+  };
+
   const uploadModel = async (file: File | undefined) => {
     if (!file) {
       return;
@@ -1802,6 +1844,24 @@ function App() {
 
               {uploadError && <p className="error-note">{uploadError}</p>}
               {!apiConnected && <p className="quiet-note">Start the local API before importing models.</p>}
+              <div className="publish-action-card">
+                <div>
+                  <strong>Auto repair import</strong>
+                  <p className="quiet-note">
+                    Re-detect model scale, regenerate default views, update navigation bounds, and refresh diagnostics.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="button secondary"
+                  disabled={!apiConnected || repairState === "repairing"}
+                  onClick={() => void repairImport()}
+                >
+                  <Wrench size={16} aria-hidden="true" />
+                  {repairState === "repairing" ? "Repairing" : "Repair"}
+                </button>
+              </div>
+              {repairError && <p className="error-note">{repairError}</p>}
             </div>
 
             <div className="panel stats-panel">

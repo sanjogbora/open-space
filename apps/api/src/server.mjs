@@ -684,7 +684,11 @@ function importedModelViews(bounds, cameraHeight) {
   ];
 }
 
-async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") {
+async function resetManifestForUploadedModel(
+  projectId,
+  sceneUrl = "scene.glb",
+  options = { resetInteractions: true, resetControls: true }
+) {
   const target = targetDirs(projectId)[0];
   const [manifest, graph] = await Promise.all([
     readJson(path.join(target, "scene.manifest.json")),
@@ -709,7 +713,7 @@ async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") 
   const nextManifest = {
     ...manifest,
     sceneUrl,
-    originalSceneUrl: sceneUrl,
+    originalSceneUrl: manifest.originalSceneUrl ?? sceneUrl,
     rendering: {
       ...manifest.rendering,
       doubleSidedMaterials: true,
@@ -726,7 +730,7 @@ async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") 
       groundY: manifest.environment?.groundY ?? (bounds ? bounds.min[1] - 0.04 : -0.04)
     },
     views: importedModelViews(bounds, cameraHeight),
-    interactions: [],
+    interactions: options.resetInteractions ? [] : manifest.interactions,
     navigation: {
       ...manifest.navigation,
       floorMeshNames: [
@@ -754,10 +758,11 @@ async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") 
       ...(navigationBounds ? { bounds: navigationBounds } : {})
     }
   };
-  await Promise.all([
-    writeProjectAll(projectId, "scene.manifest.json", nextManifest),
-    writeProjectAll(projectId, "controls.json", defaultControlsDocument)
-  ]);
+  const writes = [writeProjectAll(projectId, "scene.manifest.json", nextManifest)];
+  if (options.resetControls) {
+    writes.push(writeProjectAll(projectId, "controls.json", defaultControlsDocument));
+  }
+  await Promise.all(writes);
 }
 
 async function setManifestSceneUrl(projectId, sceneUrl) {
@@ -923,6 +928,26 @@ async function handleRequest(request, response) {
       await runAnalyze(analyzeProjectId);
       const project = await projectPayload(analyzeProjectId);
       sendJson(response, 200, { ok: true, stats: project.stats, optimization: project.optimization });
+      return;
+    }
+
+    const repairProjectId = projectIdFromPathname(url.pathname, "/repair-import");
+    if (request.method === "POST" && repairProjectId) {
+      await runAnalyze(repairProjectId);
+      const current = await projectPayload(repairProjectId);
+      await resetManifestForUploadedModel(repairProjectId, current.manifest.sceneUrl ?? "scene.glb", {
+        resetInteractions: false,
+        resetControls: false
+      });
+      await runAnalyze(repairProjectId);
+      const project = await projectPayload(repairProjectId);
+      sendJson(response, 200, {
+        ok: true,
+        manifest: project.manifest,
+        controls: project.controls,
+        stats: project.stats,
+        optimization: project.optimization
+      });
       return;
     }
 
