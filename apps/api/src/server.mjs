@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { access, cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { inflateRawSync } from "node:zlib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../..");
@@ -159,6 +160,122 @@ function validateGlbBuffer(body) {
   if (magic !== 0x46546c67 || version !== 2) {
     throw badRequest("Only binary GLB v2 uploads are supported in this milestone.");
   }
+}
+
+function isZipBuffer(body) {
+  return body.length >= 4 && body.readUInt32LE(0) === 0x04034b50;
+}
+
+function safeArchivePath(filename) {
+  const normalized = filename.replace(/\\/g, "/").replace(/^\/+/, "");
+  if (
+    !normalized ||
+    normalized.endsWith("/") ||
+    normalized.startsWith("__MACOSX/") ||
+    normalized.split("/").some((part) => part === "" || part === "." || part === "..") ||
+    /^[a-zA-Z]:/.test(normalized)
+  ) {
+    return undefined;
+  }
+  return normalized;
+}
+
+function findEndOfCentralDirectory(body) {
+  const minOffset = Math.max(0, body.length - 0xffff - 22);
+  for (let offset = body.length - 22; offset >= minOffset; offset -= 1) {
+    if (body.readUInt32LE(offset) === 0x06054b50) {
+      return offset;
+    }
+  }
+  throw badRequest("ZIP archive is missing its central directory.");
+}
+
+function extractZipEntries(body) {
+  const eocdOffset = findEndOfCentralDirectory(body);
+  const entryCount = body.readUInt16LE(eocdOffset + 10);
+  const centralDirectoryOffset = body.readUInt32LE(eocdOffset + 16);
+  const entries = [];
+  let offset = centralDirectoryOffset;
+
+  for (let index = 0; index < entryCount; index += 1) {
+    if (offset + 46 > body.length || body.readUInt32LE(offset) !== 0x02014b50) {
+      throw badRequest("ZIP central directory is invalid.");
+    }
+
+    const method = body.readUInt16LE(offset + 10);
+    const compressedSize = body.readUInt32LE(offset + 20);
+    const uncompressedSize = body.readUInt32LE(offset + 24);
+    const nameLength = body.readUInt16LE(offset + 28);
+    const extraLength = body.readUInt16LE(offset + 30);
+    const commentLength = body.readUInt16LE(offset + 32);
+    const localHeaderOffset = body.readUInt32LE(offset + 42);
+    const rawName = body.subarray(offset + 46, offset + 46 + nameLength).toString("utf8");
+    const filename = safeArchivePath(rawName);
+
+    if (filename) {
+      if (localHeaderOffset + 30 > body.length || body.readUInt32LE(localHeaderOffset) !== 0x04034b50) {
+        throw badRequest(`ZIP local header is invalid for ${filename}.`);
+      }
+      const localNameLength = body.readUInt16LE(localHeaderOffset + 26);
+      const localExtraLength = body.readUInt16LE(localHeaderOffset + 28);
+      const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
+      const dataEnd = dataStart + compressedSize;
+      if (dataEnd > body.length) {
+        throw badRequest(`ZIP entry is truncated: ${filename}.`);
+      }
+      const compressed = body.subarray(dataStart, dataEnd);
+      let data;
+      if (method === 0) {
+        data = Buffer.from(compressed);
+      } else if (method === 8) {
+        data = inflateRawSync(compressed);
+      } else {
+        throw badRequest(`Unsupported ZIP compression method ${method} for ${filename}.`);
+      }
+      if (data.length !== uncompressedSize) {
+        throw badRequest(`ZIP entry has an invalid size: ${filename}.`);
+      }
+      entries.push({ filename, data });
+    }
+
+    offset += 46 + nameLength + extraLength + commentLength;
+  }
+
+  return entries;
+}
+
+function archiveSceneUrl(entries) {
+  const glbEntries = entries
+    .map((entry) => entry.filename)
+    .filter((filename) => filename.toLowerCase().endsWith(".glb"))
+    .sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
+  return glbEntries[0];
+}
+
+async function writeProjectArchive(projectId, body) {
+  const entries = extractZipEntries(body);
+  const sceneUrl = archiveSceneUrl(entries);
+  if (!sceneUrl) {
+    throw badRequest("ZIP uploads must contain a GLB file.");
+  }
+  const sceneEntry = entries.find((entry) => entry.filename === sceneUrl);
+  validateGlbBuffer(sceneEntry.data);
+
+  await Promise.all(
+    targetDirs(projectId).flatMap((target) =>
+      entries.map(async (entry) => {
+        const outputPath = path.join(target, entry.filename);
+        const relative = path.relative(target, outputPath);
+        if (relative.startsWith("..") || path.isAbsolute(relative)) {
+          throw badRequest(`Unsafe ZIP path: ${entry.filename}.`);
+        }
+        await mkdir(path.dirname(outputPath), { recursive: true });
+        await writeFile(outputPath, entry.data);
+      })
+    )
+  );
+
+  return sceneUrl;
 }
 
 function validateManifest(value) {
@@ -365,6 +482,181 @@ async function createProject(name) {
   return projectPayload(projectId);
 }
 
+function combineGraphBounds(graph) {
+  const bounds = graph.nodes
+    .map((node) => node.bounds)
+    .filter(Boolean);
+  if (bounds.length === 0) {
+    return undefined;
+  }
+  return bounds.reduce(
+    (current, next) => ({
+      min: [
+        Math.min(current.min[0], next.min[0]),
+        Math.min(current.min[1], next.min[1]),
+        Math.min(current.min[2], next.min[2])
+      ],
+      max: [
+        Math.max(current.max[0], next.max[0]),
+        Math.max(current.max[1], next.max[1]),
+        Math.max(current.max[2], next.max[2])
+      ]
+    }),
+    {
+      min: [...bounds[0].min],
+      max: [...bounds[0].max]
+    }
+  );
+}
+
+function importedModelViews(bounds, cameraHeight) {
+  if (!bounds) {
+    return [
+      {
+        id: "view-1",
+        label: "View 1",
+        kind: "walk",
+        position: [0, cameraHeight, 3],
+        target: [0, cameraHeight - 0.25, 0],
+        fov: 62
+      },
+      {
+        id: "top",
+        label: "Top",
+        kind: "top",
+        position: [0, 12, 0.01],
+        target: [0, 0, 0],
+        fov: 48
+      }
+    ];
+  }
+
+  const center = [
+    (bounds.min[0] + bounds.max[0]) / 2,
+    (bounds.min[1] + bounds.max[1]) / 2,
+    (bounds.min[2] + bounds.max[2]) / 2
+  ];
+  const width = Math.max(2, bounds.max[0] - bounds.min[0]);
+  const depth = Math.max(2, bounds.max[2] - bounds.min[2]);
+  const insetX = width * 0.22;
+  const insetZ = depth * 0.22;
+  const eyeY = Math.max(cameraHeight, bounds.min[1] + cameraHeight);
+  const targetY = Math.max(bounds.min[1] + 1.2, eyeY - 0.3);
+  const topHeight = Math.max(10, Math.max(width, depth) * 1.5);
+
+  return [
+    {
+      id: "entry",
+      label: "Entry",
+      kind: "walk",
+      position: [center[0], eyeY, bounds.max[2] - insetZ],
+      target: [center[0], targetY, center[2]],
+      fov: 62
+    },
+    {
+      id: "center",
+      label: "Center",
+      kind: "walk",
+      position: [center[0], eyeY, center[2]],
+      target: [center[0], targetY, bounds.min[2] + insetZ],
+      fov: 62
+    },
+    {
+      id: "left",
+      label: "Left",
+      kind: "walk",
+      position: [bounds.min[0] + insetX, eyeY, center[2]],
+      target: [center[0], targetY, center[2]],
+      fov: 62
+    },
+    {
+      id: "right",
+      label: "Right",
+      kind: "walk",
+      position: [bounds.max[0] - insetX, eyeY, center[2]],
+      target: [center[0], targetY, center[2]],
+      fov: 62
+    },
+    {
+      id: "top",
+      label: "Top",
+      kind: "top",
+      position: [center[0], bounds.max[1] + topHeight, center[2] + 0.01],
+      target: [center[0], center[1], center[2]],
+      fov: 48
+    }
+  ];
+}
+
+async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") {
+  const target = targetDirs(projectId)[0];
+  const [manifest, graph] = await Promise.all([
+    readJson(path.join(target, "scene.manifest.json")),
+    readJson(path.join(target, "scene.graph.json"))
+  ]);
+  const bounds = combineGraphBounds(graph);
+  const cameraHeight = manifest.navigation?.cameraHeight ?? 1.65;
+  const margin = 0.75;
+  const navigationBounds = bounds
+    ? {
+        min: [bounds.min[0] - margin, Math.min(0.2, bounds.min[1] - 0.1), bounds.min[2] - margin],
+        max: [
+          bounds.max[0] + margin,
+          Math.max(bounds.max[1] + 0.5, bounds.min[1] + cameraHeight + 0.5),
+          bounds.max[2] + margin
+        ]
+      }
+    : manifest.navigation?.bounds;
+
+  const nextManifest = {
+    ...manifest,
+    sceneUrl,
+    views: importedModelViews(bounds, cameraHeight),
+    interactions: [],
+    navigation: {
+      ...manifest.navigation,
+      floorMeshNames: [
+        "floor",
+        "ground",
+        "navmesh",
+        "walkable",
+        "slab",
+        "carpet",
+        "rug",
+        "tile"
+      ],
+      collisionMeshNames: [
+        "wall",
+        "glass",
+        "door",
+        "collision",
+        "window",
+        "partition",
+        "rail",
+        "railing",
+        "column",
+        "pillar"
+      ],
+      ...(navigationBounds ? { bounds: navigationBounds } : {})
+    }
+  };
+  await writeProjectAll(projectId, "scene.manifest.json", nextManifest);
+}
+
+async function setManifestSceneUrl(projectId, sceneUrl) {
+  const manifests = await Promise.all(
+    targetDirs(projectId).map((target) => readJson(path.join(target, "scene.manifest.json")))
+  );
+  await Promise.all(
+    manifests.map((manifest, index) =>
+      writeFile(
+        path.join(targetDirs(projectId)[index], "scene.manifest.json"),
+        `${JSON.stringify({ ...manifest, sceneUrl }, null, 2)}\n`
+      )
+    )
+  );
+}
+
 async function publishProject(projectId) {
   await runAnalyze(projectId);
   const publishedAt = new Date().toISOString();
@@ -472,11 +764,25 @@ async function handleRequest(request, response) {
       if (body.length === 0) {
         throw badRequest("Uploaded model is empty.");
       }
-      validateGlbBuffer(body);
-      await writeProjectAllBinary(modelProjectId, "scene.glb", body);
+      const filename = String(request.headers["x-file-name"] ?? "").toLowerCase();
+      const sceneUrl = filename.endsWith(".zip") || isZipBuffer(body)
+        ? await writeProjectArchive(modelProjectId, body)
+        : "scene.glb";
+      if (sceneUrl === "scene.glb") {
+        validateGlbBuffer(body);
+        await writeProjectAllBinary(modelProjectId, "scene.glb", body);
+      }
+      await setManifestSceneUrl(modelProjectId, sceneUrl);
+      await runAnalyze(modelProjectId);
+      await resetManifestForUploadedModel(modelProjectId, sceneUrl);
       await runAnalyze(modelProjectId);
       const project = await projectPayload(modelProjectId);
-      sendJson(response, 200, { ok: true, stats: project.stats, optimization: project.optimization });
+      sendJson(response, 200, {
+        ok: true,
+        manifest: project.manifest,
+        stats: project.stats,
+        optimization: project.optimization
+      });
       return;
     }
 

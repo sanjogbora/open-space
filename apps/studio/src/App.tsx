@@ -1151,9 +1151,12 @@ function App() {
       setUploadError("API is not connected.");
       return;
     }
-    if (!file.name.toLowerCase().endsWith(".glb")) {
+    const lowerName = file.name.toLowerCase();
+    const isZip = lowerName.endsWith(".zip");
+    const isGlb = lowerName.endsWith(".glb");
+    if (!isGlb && !isZip) {
       setUploadState("error");
-      setUploadError("Only GLB uploads are supported in this milestone.");
+      setUploadError("Upload a GLB file or a ZIP containing a GLB plus its textures.");
       return;
     }
 
@@ -1163,7 +1166,7 @@ function App() {
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/model`, {
         method: "POST",
         headers: {
-          "content-type": "model/gltf-binary",
+          "content-type": isZip ? "application/zip" : "model/gltf-binary",
           "x-file-name": file.name
         },
         body: file
@@ -1173,9 +1176,16 @@ function App() {
         throw new Error(error.error ?? `Upload failed with ${response.status}.`);
       }
       const result = (await response.json()) as {
+        manifest?: SceneManifest;
         stats?: BundleStats;
         optimization?: OptimizationDocument;
       };
+      if (result.manifest) {
+        setManifest(result.manifest);
+        setSelectedViewId(result.manifest.views[0]?.id ?? "");
+        setSelectedInteractionId("");
+        setSelectedVariantInteractionId("");
+      }
       if (result.stats) {
         setBundleStats(result.stats);
       }
@@ -1560,7 +1570,7 @@ function App() {
               <label className="file-drop">
                 <input
                   type="file"
-                  accept=".glb,model/gltf-binary"
+                  accept=".glb,.zip,model/gltf-binary,application/zip"
                   disabled={!apiConnected || uploadState === "uploading"}
                   onChange={(event) => void uploadModel(event.target.files?.[0])}
                 />

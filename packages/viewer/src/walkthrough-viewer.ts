@@ -383,13 +383,41 @@ export class WalkthroughViewer {
   private collectFloorMeshes(root: THREE.Object3D): THREE.Object3D[] {
     const floorNames = this.manifest.navigation.floorMeshNames.map((name) => name.toLowerCase());
     const meshes: THREE.Object3D[] = [];
+    const fallbackCandidates: { mesh: THREE.Mesh; area: number }[] = [];
+    const rootBox = new THREE.Box3().setFromObject(root);
+    const sceneHeight = Math.max(0.001, rootBox.max.y - rootBox.min.y);
+    const lowBand = rootBox.min.y + Math.max(0.75, sceneHeight * 0.22);
+
     root.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) {
+        return;
+      }
       const name = node.name.toLowerCase();
       if (floorNames.some((floorName) => name.includes(floorName))) {
         meshes.push(node);
+        return;
+      }
+
+      const box = new THREE.Box3().setFromObject(node);
+      if (box.isEmpty()) {
+        return;
+      }
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const area = size.x * size.z;
+      const flatEnough = size.y <= Math.max(0.2, Math.min(size.x, size.z) * 0.16);
+      const lowEnough = center.y <= lowBand;
+      if (flatEnough && lowEnough && area > 0.75) {
+        fallbackCandidates.push({ mesh: node, area });
       }
     });
-    return meshes;
+    if (meshes.length > 0) {
+      return meshes;
+    }
+    return fallbackCandidates
+      .sort((a, b) => b.area - a.area)
+      .slice(0, 8)
+      .map((candidate) => candidate.mesh);
   }
 
   private collectPickableMeshes(root: THREE.Object3D): THREE.Object3D[] {
@@ -814,6 +842,25 @@ export class WalkthroughViewer {
       }
     }
 
+    const floorHits = this.raycaster.intersectObjects(this.floorMeshes, true);
+    const floorHit = floorHits[0];
+    if (floorHit) {
+      const nextTarget = floorHit.point.clone();
+      nextTarget.y = this.manifest.navigation.cameraHeight;
+      if (this.minBounds && this.maxBounds) {
+        clampToBounds(nextTarget, this.minBounds, this.maxBounds);
+      }
+      if (!this.canOccupyPosition(nextTarget)) {
+        return;
+      }
+      this.moveTarget = nextTarget;
+      this.cameraTween = undefined;
+      this.moveMarker.visible = true;
+      this.moveMarker.position.copy(floorHit.point);
+      this.moveMarker.position.y += 0.035;
+      return;
+    }
+
     const objectHit = this.raycaster.intersectObjects(this.pickableMeshes, true)[0];
     if (objectHit && objectHit.object instanceof THREE.Mesh) {
       this.options.onObjectPick?.({
@@ -825,27 +872,7 @@ export class WalkthroughViewer {
           y: event.clientY
         }
       });
-      return;
     }
-
-    const floorHits = this.raycaster.intersectObjects(this.floorMeshes, true);
-    const floorHit = floorHits[0];
-    if (!floorHit) {
-      return;
-    }
-    const nextTarget = floorHit.point.clone();
-    nextTarget.y = this.manifest.navigation.cameraHeight;
-    if (this.minBounds && this.maxBounds) {
-      clampToBounds(nextTarget, this.minBounds, this.maxBounds);
-    }
-    if (!this.canOccupyPosition(nextTarget)) {
-      return;
-    }
-    this.moveTarget = nextTarget;
-    this.cameraTween = undefined;
-    this.moveMarker.visible = true;
-    this.moveMarker.position.copy(floorHit.point);
-    this.moveMarker.position.y += 0.035;
   }
 
   private materialNames(material: THREE.Material | THREE.Material[]): string[] {
