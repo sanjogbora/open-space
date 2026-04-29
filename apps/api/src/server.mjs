@@ -798,7 +798,82 @@ function scaleBounds(bounds, scale) {
   };
 }
 
-function importedModelViews(bounds, cameraHeight) {
+function roomLabelFromName(name) {
+  const cleaned = String(name || "Room")
+    .replace(/[_-]+/g, " ")
+    .replace(/\b(mesh|object|floor|slab|tile|area|room)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || "Room";
+}
+
+function graphRoomCandidates(graph, modelScale, cameraHeight) {
+  const roomKeywords = [
+    "living",
+    "dining",
+    "kitchen",
+    "bedroom",
+    "bath",
+    "toilet",
+    "foyer",
+    "entry",
+    "lobby",
+    "balcony",
+    "terrace",
+    "family",
+    "study",
+    "office",
+    "pooja",
+    "utility",
+    "dry area",
+    "hall"
+  ];
+  const rejectKeywords = ["wall", "door", "window", "glass", "ceiling", "roof", "railing", "column", "pillar"];
+  return (graph?.nodes ?? [])
+    .map((node) => {
+      if (!node.bounds) {
+        return undefined;
+      }
+      const searchName = `${node.name} ${node.meshName ?? ""}`.toLowerCase();
+      if (rejectKeywords.some((keyword) => searchName.includes(keyword))) {
+        return undefined;
+      }
+      const score = roomKeywords.reduce((sum, keyword) => sum + (searchName.includes(keyword) ? 1 : 0), 0);
+      const scaledBounds = scaleBounds(node.bounds, modelScale);
+      if (!scaledBounds) {
+        return undefined;
+      }
+      const size = [
+        scaledBounds.max[0] - scaledBounds.min[0],
+        scaledBounds.max[1] - scaledBounds.min[1],
+        scaledBounds.max[2] - scaledBounds.min[2]
+      ];
+      const area = Math.abs(size[0] * size[2]);
+      const flatEnough = Math.abs(size[1]) <= Math.max(0.35, Math.min(Math.abs(size[0]), Math.abs(size[2])) * 0.22);
+      if ((score === 0 && !flatEnough) || area < 1.25) {
+        return undefined;
+      }
+      const center = [
+        (scaledBounds.min[0] + scaledBounds.max[0]) / 2,
+        scaledBounds.min[1] + cameraHeight,
+        (scaledBounds.min[2] + scaledBounds.max[2]) / 2
+      ];
+      return {
+        id: `auto-room-${node.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 64),
+        label: roomLabelFromName(node.name || node.meshName),
+        center,
+        target: [center[0], Math.max(scaledBounds.min[1] + 1.2, center[1] - 0.35), center[2] - Math.max(0.8, Math.abs(size[2]) * 0.3)],
+        dimensions: `${Math.abs(size[0]).toFixed(1)}x${Math.abs(size[2]).toFixed(1)}m`,
+        area,
+        score
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score || b.area - a.area)
+    .slice(0, 14);
+}
+
+function importedModelViews(bounds, cameraHeight, roomCandidates = []) {
   if (!bounds) {
     return [
       {
@@ -833,6 +908,29 @@ function importedModelViews(bounds, cameraHeight) {
   const targetY = Math.max(bounds.min[1] + 1.2, eyeY - 0.3);
   const topHeight = Math.max(10, Math.max(width, depth) * 1.5);
 
+  const topView = {
+    id: "top",
+    label: "Top",
+    kind: "top",
+    position: [center[0], bounds.max[1] + topHeight, center[2] + 0.01],
+    target: [center[0], center[1], center[2]],
+    fov: 48
+  };
+
+  if (roomCandidates.length >= 2) {
+    return [
+      ...roomCandidates.map((candidate, index) => ({
+        id: index === 0 ? "entry" : `room-view-${index + 1}`,
+        label: candidate.label,
+        kind: "walk",
+        position: candidate.center,
+        target: candidate.target,
+        fov: 62
+      })),
+      topView
+    ];
+  }
+
   return [
     {
       id: "entry",
@@ -866,15 +964,32 @@ function importedModelViews(bounds, cameraHeight) {
       target: [center[0], targetY, center[2]],
       fov: 62
     },
-    {
-      id: "top",
-      label: "Top",
-      kind: "top",
-      position: [center[0], bounds.max[1] + topHeight, center[2] + 0.01],
-      target: [center[0], center[1], center[2]],
-      fov: 48
-    }
+    topView
   ];
+}
+
+function importedRooms(views, roomCandidates, existingRooms = []) {
+  const hasCustomRooms =
+    Array.isArray(existingRooms) &&
+    existingRooms.some((room) => {
+      const id = String(room.id ?? "");
+      return id && !id.startsWith("room-") && !id.startsWith("auto-room-");
+    });
+  if (hasCustomRooms) {
+    return existingRooms;
+  }
+  return views
+    .filter((view) => view.kind !== "top")
+    .map((view, index) => {
+      const candidate = roomCandidates[index];
+      return {
+        id: candidate?.id ?? `room-${view.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 72),
+        label: view.label,
+        viewId: view.id,
+        center: view.position,
+        ...(candidate?.dimensions ? { dimensions: candidate.dimensions } : {})
+      };
+    });
 }
 
 function graphWalkZoneCandidates(graph, modelScale) {
@@ -980,6 +1095,8 @@ async function resetManifestForUploadedModel(
   const modelScale = unitScaleForBounds(rawBounds);
   const bounds = scaleBounds(rawBounds, modelScale);
   const cameraHeight = manifest.navigation?.cameraHeight ?? 1.65;
+  const roomCandidates = graphRoomCandidates(graph, modelScale, cameraHeight);
+  const views = importedModelViews(bounds, cameraHeight, roomCandidates);
   const margin = 0.75;
   const navigationBounds = bounds
     ? {
@@ -1014,7 +1131,8 @@ async function resetManifestForUploadedModel(
         (bounds ? Math.max(30, (bounds.max[0] - bounds.min[0]) * 1.8, (bounds.max[2] - bounds.min[2]) * 1.8) : 90),
       groundY: manifest.environment?.groundY ?? (bounds ? bounds.min[1] - 0.04 : -0.04)
     },
-    views: importedModelViews(bounds, cameraHeight),
+    views,
+    rooms: importedRooms(views, roomCandidates, manifest.rooms),
     interactions: options.resetInteractions ? [] : manifest.interactions,
     navigation: {
       ...manifest.navigation,
