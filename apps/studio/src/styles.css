@@ -393,6 +393,22 @@ textarea:focus {
   color: #087fe7;
 }
 
+.file-inline-control {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.file-inline-control input[type="file"] {
+  height: auto;
+  padding: 8px;
+}
+
+.file-inline-control strong {
+  color: #087fe7;
+  font-size: 12px;
+}
+
 .error-note {
   color: #b52d3a;
   font-size: 14px;

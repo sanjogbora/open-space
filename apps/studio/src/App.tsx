@@ -530,6 +530,8 @@ function App() {
   const [notice, setNotice] = useState<Notice>(null);
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadError, setUploadError] = useState("");
+  const [lightmapUploadState, setLightmapUploadState] = useState<UploadState>("idle");
+  const [lightmapUploadError, setLightmapUploadError] = useState("");
   const [publishState, setPublishState] = useState<PublishState>("idle");
   const [publishError, setPublishError] = useState("");
   const [optimizeState, setOptimizeState] = useState<OptimizeState>("idle");
@@ -1691,6 +1693,65 @@ function App() {
     } catch (error) {
       setUploadState("error");
       setUploadError(error instanceof Error ? error.message : "Upload failed.");
+    }
+  };
+
+  const uploadMaterialLightmap = async (materialId: string, file: File | undefined) => {
+    if (!file) {
+      return;
+    }
+    if (!apiConnected) {
+      setLightmapUploadState("error");
+      setLightmapUploadError("API is not connected.");
+      return;
+    }
+    if (!/\.(avif|jpe?g|ktx2|png|webp)$/i.test(file.name)) {
+      setLightmapUploadState("error");
+      setLightmapUploadError("Upload a PNG, JPEG, WebP, AVIF, or KTX2 lightmap.");
+      return;
+    }
+
+    setLightmapUploadState("uploading");
+    setLightmapUploadError("");
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/asset`, {
+        method: "POST",
+        headers: {
+          "content-type": file.type || "application/octet-stream",
+          "x-file-name": file.name
+        },
+        body: file
+      });
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error ?? `Upload failed with ${response.status}.`);
+      }
+      const result = (await response.json()) as {
+        assetPath?: string;
+        stats?: BundleStats;
+        optimization?: OptimizationDocument;
+      };
+      if (!result.assetPath) {
+        throw new Error("Upload did not return an asset path.");
+      }
+      const assetPath = result.assetPath;
+      updateMaterial(materialId, (material) => ({
+        ...material,
+        lightMapUrl: assetPath,
+        lightMapIntensity: material.lightMapIntensity ?? 1,
+        lightMapUvSet: material.lightMapUvSet ?? 1
+      }));
+      if (result.stats) {
+        setBundleStats(result.stats);
+      }
+      if (result.optimization) {
+        setOptimizationDoc(result.optimization);
+      }
+      setLightmapUploadState("done");
+      setNotice("saved");
+    } catch (error) {
+      setLightmapUploadState("error");
+      setLightmapUploadError(error instanceof Error ? error.message : "Lightmap upload failed.");
     }
   };
 
@@ -3297,6 +3358,21 @@ function App() {
                       }
                     />
                   </label>
+                  <label className="file-inline-control">
+                    <span>Upload Lightmap</span>
+                    <input
+                      type="file"
+                      accept=".avif,.jpg,.jpeg,.ktx2,.png,.webp,image/avif,image/jpeg,image/png,image/webp"
+                      disabled={!apiConnected || lightmapUploadState === "uploading"}
+                      onChange={(event) => void uploadMaterialLightmap(selectedMaterial.id, event.target.files?.[0])}
+                    />
+                    <strong>
+                      {lightmapUploadState === "uploading" && "Uploading"}
+                      {lightmapUploadState === "done" && "Uploaded"}
+                      {lightmapUploadState === "error" && "Failed"}
+                      {lightmapUploadState === "idle" && "Choose file"}
+                    </strong>
+                  </label>
                   <NumberField
                     label="Lightmap Intensity"
                     min={0}
@@ -3324,6 +3400,7 @@ function App() {
                     }
                   />
                 </div>
+                {lightmapUploadError && <p className="error-note">{lightmapUploadError}</p>}
 
                 <div className="object-detail">
                   <h3>Used By</h3>

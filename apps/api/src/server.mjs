@@ -386,6 +386,34 @@ function validateModelSource(value) {
   }
 }
 
+function safeLightmapAssetPath(filename) {
+  const extension = path.extname(filename).toLowerCase();
+  if (![".avif", ".jpg", ".jpeg", ".ktx2", ".png", ".webp"].includes(extension)) {
+    throw badRequest("Lightmap assets must be PNG, JPEG, WebP, AVIF, or KTX2 images.");
+  }
+  const baseName = slug(path.basename(filename, extension));
+  return `lightmaps/${baseName}${extension}`;
+}
+
+async function writeProjectAsset(projectId, assetPath, body) {
+  const safePath = safeArchivePath(assetPath);
+  if (!safePath || !safePath.startsWith("lightmaps/")) {
+    throw badRequest("Asset path must be inside the lightmaps folder.");
+  }
+  await Promise.all(
+    targetDirs(projectId).map(async (target) => {
+      const outputPath = path.join(target, safePath);
+      const relative = path.relative(target, outputPath);
+      if (relative.startsWith("..") || path.isAbsolute(relative)) {
+        throw badRequest(`Unsafe asset path: ${assetPath}.`);
+      }
+      await mkdir(path.dirname(outputPath), { recursive: true });
+      await writeFile(outputPath, body);
+    })
+  );
+  return safePath;
+}
+
 function runAnalyze(projectId = "demo") {
   return new Promise((resolve, reject) => {
     const viewerTarget = `apps/viewer-demo/public/scenes/${projectId}`;
@@ -1011,6 +1039,30 @@ async function handleRequest(request, response) {
         ok: true,
         manifest: project.manifest,
         controls: project.controls,
+        stats: project.stats,
+        optimization: project.optimization
+      });
+      return;
+    }
+
+    const assetProjectId = projectIdFromPathname(url.pathname, "/asset");
+    if (request.method === "POST" && assetProjectId) {
+      const body = await readRawBody(request);
+      if (body.length === 0) {
+        throw badRequest("Uploaded asset is empty.");
+      }
+      const fileName = String(request.headers["x-file-name"] ?? "lightmap.webp");
+      const requestedPath = url.searchParams.get("path");
+      const assetPath = await writeProjectAsset(
+        assetProjectId,
+        requestedPath || safeLightmapAssetPath(fileName),
+        body
+      );
+      await runAnalyze(assetProjectId);
+      const project = await projectPayload(assetProjectId);
+      sendJson(response, 200, {
+        ok: true,
+        assetPath,
         stats: project.stats,
         optimization: project.optimization
       });
