@@ -89,6 +89,13 @@ interface BundleStats {
   triangleCount: number;
   meshCount: number;
   materialCount: number;
+  textureCount?: number;
+  imageCount?: number;
+  compression?: {
+    meshopt?: boolean;
+    draco?: boolean;
+    basisu?: boolean;
+  };
   warnings: readonly {
     code: string;
     message: string;
@@ -2149,6 +2156,18 @@ function App() {
                     <Stat label="Meshes" value={String(bundleStats.meshCount)} />
                     <Stat label="Materials" value={String(bundleStats.materialCount)} />
                     <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
+                    <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
+                    <Stat
+                      label="Compression"
+                      value={
+                        bundleStats.compression?.meshopt || bundleStats.compression?.draco
+                          ? bundleStats.compression.meshopt
+                            ? "Meshopt"
+                            : "Draco"
+                          : "None"
+                      }
+                    />
+                    <Stat label="KTX2" value={bundleStats.compression?.basisu ? "Yes" : "No"} />
                   </div>
                   <DiagnosticList diagnostics={bundleStats.diagnostics ?? []} />
                 </>
@@ -2216,6 +2235,17 @@ function App() {
                         <Stat label="Triangles" value={String(profile.metrics.triangles)} />
                         <Stat label="Meshes" value={String(profile.metrics.meshes)} />
                         <Stat label="Materials" value={String(profile.metrics.materials)} />
+                        <Stat
+                          label="Geometry compression"
+                          value={
+                            bundleStats?.compression?.meshopt || bundleStats?.compression?.draco
+                              ? bundleStats.compression.meshopt
+                                ? "Meshopt"
+                                : "Draco"
+                              : "None"
+                          }
+                        />
+                        <Stat label="Texture compression" value={bundleStats?.compression?.basisu ? "KTX2" : "None"} />
                       </div>
                       {profile.warnings.length > 0 ? (
                         <ul className="warning-list">
@@ -4040,6 +4070,19 @@ function App() {
                       <Stat label="Meshes" value={String(bundleStats.meshCount)} />
                       <Stat label="Materials" value={String(bundleStats.materialCount)} />
                       <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
+                      <Stat label="Textures" value={String(bundleStats.textureCount ?? 0)} />
+                      <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
+                      <Stat
+                        label="Geometry compression"
+                        value={
+                          bundleStats.compression?.meshopt || bundleStats.compression?.draco
+                            ? bundleStats.compression.meshopt
+                              ? "Meshopt"
+                              : "Draco"
+                            : "None"
+                        }
+                      />
+                      <Stat label="Texture compression" value={bundleStats.compression?.basisu ? "KTX2" : "None"} />
                       <Stat label="Assets" value={String(bundleStats.assetCount)} />
                     </div>
                     {bundleStats.warnings.length > 0 ? (

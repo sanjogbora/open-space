@@ -161,12 +161,17 @@ function parseGlbJson(bytes) {
 async function analyzeGltfDocument(document, format, asset) {
   const accessors = document.accessors ?? [];
   const meshes = document.meshes ?? [];
+  const extensionsUsed = document.extensionsUsed ?? [];
   let primitiveCount = 0;
   let vertexCount = 0;
   let triangleCount = 0;
+  let usesDraco = extensionsUsed.includes("KHR_draco_mesh_compression");
 
   for (const mesh of meshes) {
     for (const primitive of mesh.primitives ?? []) {
+      if (primitive.extensions?.KHR_draco_mesh_compression) {
+        usesDraco = true;
+      }
       primitiveCount += 1;
       const positionAccessorIndex = primitive.attributes?.POSITION;
       const positionAccessor =
@@ -203,6 +208,12 @@ async function analyzeGltfDocument(document, format, asset) {
       resourceStatus(asset, reference.kind, reference.source, reference.label)
     )
   );
+  const usesMeshopt =
+    extensionsUsed.includes("EXT_meshopt_compression") ||
+    (document.bufferViews ?? []).some((view) => Boolean(view.extensions?.EXT_meshopt_compression));
+  const usesBasisu =
+    extensionsUsed.includes("KHR_texture_basisu") ||
+    (document.textures ?? []).some((texture) => Boolean(texture.extensions?.KHR_texture_basisu));
 
   return {
     format,
@@ -218,8 +229,13 @@ async function analyzeGltfDocument(document, format, asset) {
     bufferBytes: (document.buffers ?? []).reduce((sum, buffer) => sum + (buffer.byteLength ?? 0), 0),
     vertexCount,
     triangleCount,
-    extensionCount: document.extensionsUsed?.length ?? 0,
+    extensionCount: extensionsUsed.length,
     requiredExtensionCount: document.extensionsRequired?.length ?? 0,
+    compression: {
+      meshopt: usesMeshopt,
+      draco: usesDraco,
+      basisu: usesBasisu
+    },
     externalResourceCount: externalResources.length,
     missingExternalResourceCount: externalResources.filter((resource) => !resource.exists).length,
     externalResources
@@ -669,6 +685,26 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if (report.modelBytes > 10 * 1024 * 1024 && !report.compression?.meshopt && !report.compression?.draco) {
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-geometry-compression",
+      title: "Geometry compression missing",
+      message: "The scene model is large and does not advertise Meshopt or Draco compression.",
+      action: "Run optimization before publishing, then keep the optimized model active for web delivery."
+    });
+  }
+
+  if ((report.imageCount ?? 0) > 0 && !report.compression?.basisu) {
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-texture-compression",
+      title: "Texture compression missing",
+      message: "The model uses texture images but does not advertise KHR_texture_basisu/KTX2 textures.",
+      action: "Convert large textures to KTX2/Basis during the production optimization pass."
+    });
+  }
+
   if (report.warnings.length === 0 && diagnostics.length === 0) {
     diagnostics.push({
       severity: "info",
@@ -695,6 +731,13 @@ function summarize(manifest, assets, models, graphs) {
   const triangleCount = models.reduce((sum, model) => sum + model.triangleCount, 0);
   const meshCount = models.reduce((sum, model) => sum + model.meshCount, 0);
   const materialCount = models.reduce((sum, model) => sum + model.materialCount, 0);
+  const textureCount = models.reduce((sum, model) => sum + (model.textureCount ?? 0), 0);
+  const imageCount = models.reduce((sum, model) => sum + (model.imageCount ?? 0), 0);
+  const compression = {
+    meshopt: models.some((model) => model.compression?.meshopt),
+    draco: models.some((model) => model.compression?.draco),
+    basisu: models.some((model) => model.compression?.basisu)
+  };
 
   if (missingAssetCount > 0) {
     warnings.push({
@@ -759,6 +802,9 @@ function summarize(manifest, assets, models, graphs) {
     triangleCount,
     meshCount,
     materialCount,
+    textureCount,
+    imageCount,
+    compression,
     warnings,
     assets,
     models
@@ -807,6 +853,7 @@ function profileWarnings(report, profile) {
 
 function recommendationList(report) {
   const recommendations = [];
+  const hasGeometryCompression = Boolean(report.compression?.meshopt || report.compression?.draco);
 
   if (report.triangleCount > optimizationProfiles[0].budgets.maxTriangles) {
     recommendations.push({
@@ -832,11 +879,27 @@ function recommendationList(report) {
     });
   }
 
-  if (report.modelBytes > optimizationProfiles[0].budgets.maxModelBytes) {
+  if (report.modelBytes > optimizationProfiles[0].budgets.maxModelBytes && hasGeometryCompression) {
     recommendations.push({
       priority: "medium",
-      action: "Apply Meshopt or Draco geometry compression.",
-      reason: "The model is larger than the mobile transfer budget."
+      action: "Reduce model transfer size further.",
+      reason: "The model is already compressed but remains larger than the mobile transfer budget."
+    });
+  }
+
+  if (report.modelBytes > 10 * 1024 * 1024 && !hasGeometryCompression) {
+    recommendations.push({
+      priority: "medium",
+      action: "Enable geometry compression before publishing.",
+      reason: "The GLB does not advertise Meshopt or Draco compression."
+    });
+  }
+
+  if ((report.imageCount ?? 0) > 0 && !report.compression?.basisu) {
+    recommendations.push({
+      priority: "medium",
+      action: "Convert large textures to KTX2/Basis.",
+      reason: "The model has texture images but does not advertise KHR_texture_basisu."
     });
   }
 
