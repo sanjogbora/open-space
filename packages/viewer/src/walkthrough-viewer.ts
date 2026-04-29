@@ -61,7 +61,7 @@ export class WalkthroughViewer {
     keyboard: true,
     dragLook: true,
     moveSpeed: 3.8,
-    clickMoveSpeed: 1.9,
+    clickMoveSpeed: 1.2,
     lookSensitivityX: 0.004,
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8
@@ -109,6 +109,7 @@ export class WalkthroughViewer {
     this.loader.setMeshoptDecoder(MeshoptDecoder);
 
     this.scene.name = "walkthrough-scene";
+    this.applyEnvironment();
     this.scene.add(this.moveMarker);
     this.applyBounds();
     this.installEvents();
@@ -328,6 +329,31 @@ export class WalkthroughViewer {
     this.scene.add(floor);
     this.floorMeshes = [floor];
     this.walkableMeshes = [floor];
+  }
+
+  private applyEnvironment(): void {
+    const environment = this.manifest.environment;
+    const backgroundColor = environment?.backgroundColor ?? "#d8dde2";
+    this.renderer.setClearColor(backgroundColor, 1);
+    this.scene.background = new THREE.Color(backgroundColor);
+
+    if (environment?.groundEnabled === false) {
+      return;
+    }
+
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(environment?.groundSize ?? 90, environment?.groundSize ?? 90),
+      new THREE.MeshStandardMaterial({
+        color: environment?.groundColor ?? "#6f8f5a",
+        roughness: 0.95,
+        metalness: 0
+      })
+    );
+    ground.name = "environment_ground";
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = environment?.groundY ?? -0.04;
+    ground.receiveShadow = true;
+    this.scene.add(ground);
   }
 
   private prepareLoadedScene(root: THREE.Object3D): void {

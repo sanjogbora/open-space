@@ -47,6 +47,7 @@ type StudioTab =
   | "variants"
   | "objects"
   | "controls"
+  | "environment"
   | "bundle";
 type Notice = "saved" | "copied" | "reset" | null;
 type UploadState = "idle" | "uploading" | "done" | "error";
@@ -880,6 +881,13 @@ function App() {
     setControlsDoc((current) => (current ? updater(current) : current));
   };
 
+  const updateEnvironment = (updater: (environment: NonNullable<SceneManifest["environment"]>) => NonNullable<SceneManifest["environment"]>) => {
+    updateManifest((current) => ({
+      ...current,
+      environment: updater(current.environment ?? {})
+    }));
+  };
+
   const saveDraft = () => {
     if (!manifest) {
       return;
@@ -1482,6 +1490,7 @@ function App() {
             ["variants", "Variants"],
             ["objects", "Objects"],
             ["controls", "Controls"],
+            ["environment", "Environment"],
             ["bundle", "Bundle"]
           ].map(([id, label]) => (
             <button
@@ -2658,7 +2667,7 @@ function App() {
                       min={0.4}
                       max={6}
                       step={0.1}
-                      value={controlsDoc.movement.clickMoveSpeed ?? 1.9}
+                      value={controlsDoc.movement.clickMoveSpeed ?? 1.2}
                       onChange={(value) =>
                         updateControls((current) => ({
                           ...current,
@@ -2718,6 +2727,91 @@ function App() {
                 <h2>controls.json</h2>
               </div>
               <pre className="json-preview">{JSON.stringify(controlsDoc, null, 2)}</pre>
+            </div>
+          </section>
+        )}
+
+        {selectedTab === "environment" && (
+          <section className="content-grid">
+            <div className="panel">
+              <div className="panel-heading">
+                <Globe2 size={18} aria-hidden="true" />
+                <h2>Environment</h2>
+              </div>
+              <div className="toggle-grid">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={manifest.environment?.groundEnabled ?? true}
+                    onChange={(event) =>
+                      updateEnvironment((environment) => ({
+                        ...environment,
+                        groundEnabled: event.target.checked
+                      }))
+                    }
+                  />
+                  <span>Ground enclosure</span>
+                </label>
+              </div>
+              <div className="field-grid">
+                <label>
+                  <span>Background</span>
+                  <input
+                    value={manifest.environment?.backgroundColor ?? "#d8dde2"}
+                    onChange={(event) =>
+                      updateEnvironment((environment) => ({
+                        ...environment,
+                        backgroundColor: event.target.value
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Ground color</span>
+                  <input
+                    value={manifest.environment?.groundColor ?? "#6f8f5a"}
+                    onChange={(event) =>
+                      updateEnvironment((environment) => ({
+                        ...environment,
+                        groundColor: event.target.value
+                      }))
+                    }
+                  />
+                </label>
+                <NumberField
+                  label="Ground size"
+                  min={10}
+                  max={400}
+                  step={5}
+                  value={manifest.environment?.groundSize ?? 90}
+                  onChange={(value) =>
+                    updateEnvironment((environment) => ({
+                      ...environment,
+                      groundSize: value
+                    }))
+                  }
+                />
+                <NumberField
+                  label="Ground height"
+                  min={-20}
+                  max={20}
+                  step={0.05}
+                  value={manifest.environment?.groundY ?? -0.04}
+                  onChange={(value) =>
+                    updateEnvironment((environment) => ({
+                      ...environment,
+                      groundY: value
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="panel">
+              <div className="panel-heading">
+                <FileJson size={18} aria-hidden="true" />
+                <h2>environment</h2>
+              </div>
+              <pre className="json-preview">{JSON.stringify(manifest.environment ?? {}, null, 2)}</pre>
             </div>
           </section>
         )}

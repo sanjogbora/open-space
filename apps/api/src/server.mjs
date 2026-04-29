@@ -25,7 +25,7 @@ const defaultControlsDocument = {
     keyboard: true,
     dragLook: true,
     moveSpeed: 3.8,
-    clickMoveSpeed: 1.9,
+    clickMoveSpeed: 1.2,
     lookSensitivityX: 0.004,
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8
@@ -680,6 +680,14 @@ async function resetManifestForUploadedModel(projectId, sceneUrl = "scene.glb") 
     rendering: {
       ...manifest.rendering,
       doubleSidedMaterials: true
+    },
+    environment: {
+      ...manifest.environment,
+      backgroundColor: manifest.environment?.backgroundColor ?? "#d8dde2",
+      groundEnabled: manifest.environment?.groundEnabled ?? true,
+      groundColor: manifest.environment?.groundColor ?? "#6f8f5a",
+      groundSize: manifest.environment?.groundSize ?? 90,
+      groundY: manifest.environment?.groundY ?? -0.04
     },
     views: importedModelViews(bounds, cameraHeight),
     interactions: [],

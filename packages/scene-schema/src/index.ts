@@ -115,6 +115,14 @@ export interface RenderingConfig {
   doubleSidedMaterials?: boolean;
 }
 
+export interface EnvironmentConfig {
+  backgroundColor?: string;
+  groundEnabled?: boolean;
+  groundColor?: string;
+  groundSize?: number;
+  groundY?: number;
+}
+
 export interface SceneManifest {
   schemaVersion: "0.1";
   sceneUrl?: string;
@@ -124,6 +132,7 @@ export interface SceneManifest {
   objectsUrl?: string;
   controlsUrl?: string;
   rendering?: RenderingConfig;
+  environment?: EnvironmentConfig;
   views: readonly SceneView[];
   interactions: readonly SceneInteraction[];
   navigation: NavigationConfig;
@@ -359,6 +368,19 @@ export function isRenderingConfig(value: unknown): value is RenderingConfig {
   return value["doubleSidedMaterials"] === undefined || typeof value["doubleSidedMaterials"] === "boolean";
 }
 
+export function isEnvironmentConfig(value: unknown): value is EnvironmentConfig {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    (value["backgroundColor"] === undefined || typeof value["backgroundColor"] === "string") &&
+    (value["groundEnabled"] === undefined || typeof value["groundEnabled"] === "boolean") &&
+    (value["groundColor"] === undefined || typeof value["groundColor"] === "string") &&
+    (value["groundSize"] === undefined || typeof value["groundSize"] === "number") &&
+    (value["groundY"] === undefined || typeof value["groundY"] === "number")
+  );
+}
+
 export function isSceneManifest(value: unknown): value is SceneManifest {
   if (!isRecord(value)) {
     return false;
@@ -373,6 +395,7 @@ export function isSceneManifest(value: unknown): value is SceneManifest {
     (value["objectsUrl"] === undefined || typeof value["objectsUrl"] === "string") &&
     (value["controlsUrl"] === undefined || typeof value["controlsUrl"] === "string") &&
     (value["rendering"] === undefined || isRenderingConfig(value["rendering"])) &&
+    (value["environment"] === undefined || isEnvironmentConfig(value["environment"])) &&
     Array.isArray(value["views"]) &&
     value["views"].every(isSceneView) &&
     Array.isArray(value["interactions"]) &&

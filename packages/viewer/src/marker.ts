@@ -5,7 +5,7 @@ export function createMoveMarker(): THREE.Group {
   group.name = "move-marker";
 
   const base = new THREE.Mesh(
-    new THREE.CircleGeometry(0.16, 36),
+    new THREE.CircleGeometry(0.08, 36),
     new THREE.MeshBasicMaterial({
       color: "#075177",
       transparent: true,
@@ -19,7 +19,7 @@ export function createMoveMarker(): THREE.Group {
   group.add(base);
 
   const baseHighlight = new THREE.Mesh(
-    new THREE.RingGeometry(0.12, 0.17, 36),
+    new THREE.RingGeometry(0.06, 0.085, 36),
     new THREE.MeshBasicMaterial({
       color: "#2aa8ff",
       transparent: true,
@@ -34,7 +34,7 @@ export function createMoveMarker(): THREE.Group {
   group.add(baseHighlight);
 
   const cone = new THREE.Mesh(
-    new THREE.ConeGeometry(0.16, 0.72, 32, 1, true),
+    new THREE.ConeGeometry(0.08, 0.36, 32, 1, true),
     new THREE.MeshStandardMaterial({
       color: "#0c7fbe",
       emissive: "#04395f",
@@ -47,12 +47,12 @@ export function createMoveMarker(): THREE.Group {
     })
   );
   cone.name = "move-marker-cone";
-  cone.position.y = 0.39;
+  cone.position.y = 0.195;
   cone.rotation.x = Math.PI;
   group.add(cone);
 
   const core = new THREE.Mesh(
-    new THREE.ConeGeometry(0.1, 0.62, 32, 1, true),
+    new THREE.ConeGeometry(0.05, 0.31, 32, 1, true),
     new THREE.MeshBasicMaterial({
       color: "#8ed9ff",
       transparent: true,
@@ -61,7 +61,7 @@ export function createMoveMarker(): THREE.Group {
     })
   );
   core.name = "move-marker-cone-core";
-  core.position.y = 0.4;
+  core.position.y = 0.2;
   core.rotation.x = Math.PI;
   group.add(core);
 
