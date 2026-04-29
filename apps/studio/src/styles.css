@@ -427,6 +427,12 @@ textarea:focus {
   line-height: 1.45;
 }
 
+.success-note {
+  color: #146c43;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .metrics-panel {
   display: grid;
   align-content: start;

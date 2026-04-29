@@ -720,6 +720,7 @@ function App() {
   const [bakeError, setBakeError] = useState("");
   const [repairState, setRepairState] = useState<RepairState>("idle");
   const [repairError, setRepairError] = useState("");
+  const [repairSummary, setRepairSummary] = useState("");
   const [blockerNameDraft, setBlockerNameDraft] = useState("");
   const [navigationRepairDraft, setNavigationRepairDraft] = useState<NavigationRepairDraft | null>(
     initialNavigationRepairDraft
@@ -1980,6 +1981,7 @@ function App() {
 
     setRepairState("repairing");
     setRepairError("");
+    setRepairSummary("");
     try {
       if (manifest) {
         await saveToApi();
@@ -1996,12 +1998,18 @@ function App() {
         controls: SceneControlsDocument;
         stats: BundleStats;
         optimization: OptimizationDocument;
+        repairedExternalResources?: number;
       };
       setManifest(result.manifest);
       setControlsDoc(result.controls);
       setBundleStats(result.stats);
       setOptimizationDoc(result.optimization);
       setSelectedViewId(result.manifest.views[0]?.id ?? "");
+      setRepairSummary(
+        result.repairedExternalResources
+          ? `Copied ${result.repairedExternalResources} missing texture resource(s) into the expected model paths.`
+          : "Import diagnostics refreshed; no missing texture paths needed copying."
+      );
       setRepairState("done");
       setNotice("saved");
     } catch (error) {
@@ -2749,6 +2757,7 @@ function App() {
                 </button>
               </div>
               {repairError && <p className="error-note">{repairError}</p>}
+              {repairSummary && <p className="success-note">{repairSummary}</p>}
             </div>
 
             <div className="panel stats-panel">
