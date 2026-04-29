@@ -1,4 +1,4 @@
-import { access, readFile, stat, writeFile } from "node:fs/promises";
+import { access, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const args = process.argv.slice(2);
@@ -8,6 +8,7 @@ const manifestPath = target.endsWith(".json")
   ? path.resolve(target)
   : path.resolve(target, "scene.manifest.json");
 const bundleDir = path.dirname(manifestPath);
+const imageExtensions = new Set([".avif", ".basis", ".jpg", ".jpeg", ".ktx2", ".png", ".webp"]);
 
 const defaultBudget = {
   maxTotalBytes: 160 * 1024 * 1024,
@@ -137,6 +138,53 @@ async function resourceStatus(asset, kind, source, label) {
       bytes: 0
     };
   }
+}
+
+function normalizeBundlePath(source) {
+  return source.split(/[?#]/, 1)[0].replace(/\\/g, "/").replace(/^\.?\//, "").toLowerCase();
+}
+
+async function listBundleImageFiles(dir = bundleDir, files = []) {
+  let entries = [];
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return files;
+  }
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    const relativePath = normalizeBundlePath(path.relative(bundleDir, fullPath));
+    if (entry.isDirectory()) {
+      if (["dist", "node_modules", ".git"].includes(entry.name)) {
+        continue;
+      }
+      await listBundleImageFiles(fullPath, files);
+      continue;
+    }
+    if (entry.isFile() && imageExtensions.has(path.extname(entry.name).toLowerCase())) {
+      const info = await stat(fullPath);
+      files.push({
+        source: relativePath,
+        bytes: info.size
+      });
+    }
+  }
+
+  return files;
+}
+
+async function looseBundleImages(assets, models) {
+  const referenced = new Set(
+    [
+      ...assets.map((asset) => asset.source),
+      ...models.flatMap((model) => (model.externalResources ?? []).map((resource) => resource.source))
+    ]
+      .filter(Boolean)
+      .map(normalizeBundlePath)
+  );
+  const imageFiles = await listBundleImageFiles();
+  return imageFiles.filter((image) => !referenced.has(normalizeBundlePath(image.source)));
 }
 
 function parseGlbJson(bytes) {
@@ -619,6 +667,16 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if ((report.looseImageCount ?? 0) > 0) {
+    diagnostics.push({
+      severity: "info",
+      code: "loose-texture-files",
+      title: "Loose texture files detected",
+      message: `${report.looseImageCount} image file(s) exist in the scene folder but are not referenced by the active model.`,
+      action: "If these textures should appear in the model, export/upload the original GLTF with its referenced texture paths, or confirm the GLB already embeds the correct textures."
+    });
+  }
+
   if (!bounds) {
     diagnostics.push({
       severity: "warning",
@@ -718,7 +776,7 @@ function createDiagnostics(manifest, report, graphs) {
   return diagnostics;
 }
 
-function summarize(manifest, assets, models, graphs) {
+function summarize(manifest, assets, models, graphs, looseImages) {
   const totalBytes = assets.reduce((sum, asset) => sum + asset.bytes, 0);
   const missingAssetCount = assets.filter((asset) => !asset.exists).length;
   const modelBytes = assets
@@ -804,6 +862,8 @@ function summarize(manifest, assets, models, graphs) {
     materialCount,
     textureCount,
     imageCount,
+    looseImageCount: looseImages.length,
+    looseImages: looseImages.slice(0, 40),
     compression,
     warnings,
     assets,
@@ -959,7 +1019,8 @@ const assets = await Promise.all(collectAssetReferences(manifest).map(assetSize)
 const models = (await Promise.all(assets.map(modelStats))).filter(Boolean);
 const graphs = (await Promise.all(assets.map(modelGraph))).filter(Boolean);
 const materialDocs = (await Promise.all(assets.map(modelMaterials))).filter(Boolean);
-const report = summarize(manifest, assets, models, graphs);
+const looseImages = await looseBundleImages(assets, models);
+const report = summarize(manifest, assets, models, graphs, looseImages);
 const optimizationReport = createOptimizationReport(report);
 
 if (writeStats) {
