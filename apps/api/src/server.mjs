@@ -1031,6 +1031,15 @@ function graphRoomCandidates(graph, modelScale, cameraHeight) {
     "dry area",
     "hall"
   ];
+  const roomHints = [
+    { label: "Living", keywords: ["sofa", "couch", "tv", "television", "media", "lounge"], weight: 3 },
+    { label: "Dining", keywords: ["dining", "dinner", "chair", "table"], weight: 2 },
+    { label: "Kitchen", keywords: ["kitchen", "fridge", "refrigerator", "sink", "cooktop", "stove", "oven"], weight: 3 },
+    { label: "Bedroom", keywords: ["bed", "mattress", "wardrobe", "closet", "dresser"], weight: 3 },
+    { label: "Bath", keywords: ["bath", "toilet", "wc", "shower", "basin", "vanity"], weight: 3 },
+    { label: "Study", keywords: ["study", "office", "desk"], weight: 3 },
+    { label: "Utility", keywords: ["utility", "washer", "washing", "laundry"], weight: 3 }
+  ];
   const rejectKeywords = ["wall", "door", "window", "glass", "ceiling", "roof", "railing", "column", "pillar"];
   return (graph?.nodes ?? [])
     .map((node) => {
@@ -1041,7 +1050,18 @@ function graphRoomCandidates(graph, modelScale, cameraHeight) {
       if (rejectKeywords.some((keyword) => searchName.includes(keyword))) {
         return undefined;
       }
-      const score = roomKeywords.reduce((sum, keyword) => sum + (searchName.includes(keyword) ? 1 : 0), 0);
+      let score = roomKeywords.reduce((sum, keyword) => sum + (searchName.includes(keyword) ? 1 : 0), 0);
+      let semanticLabel;
+      for (const hint of roomHints) {
+        const matches = hint.keywords.filter((keyword) => searchName.includes(keyword)).length;
+        if (matches > 0) {
+          const hintScore = matches * hint.weight;
+          score += hintScore;
+          if (!semanticLabel || hintScore > semanticLabel.score) {
+            semanticLabel = { label: hint.label, score: hintScore };
+          }
+        }
+      }
       const scaledBounds = scaleBounds(node.bounds, modelScale);
       if (!scaledBounds) {
         return undefined;
@@ -1057,7 +1077,7 @@ function graphRoomCandidates(graph, modelScale, cameraHeight) {
       if (genericDominantPlane || (score === 0 && likelyExteriorPlaneName(searchName))) {
         return undefined;
       }
-      if ((score === 0 && !flatEnough) || area < 1.25) {
+      if ((score === 0 && !flatEnough) || area < (score > 0 ? 0.35 : 1.25)) {
         return undefined;
       }
       const center = [
@@ -1067,7 +1087,7 @@ function graphRoomCandidates(graph, modelScale, cameraHeight) {
       ];
       return {
         id: `auto-room-${node.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 64),
-        label: roomLabelFromName(node.name || node.meshName),
+        label: semanticLabel?.label ?? roomLabelFromName(node.name || node.meshName),
         center,
         target: [center[0], Math.max(scaledBounds.min[1] + 1.2, center[1] - 0.35), center[2] - Math.max(0.8, Math.abs(size[2]) * 0.3)],
         dimensions: `${Math.abs(size[0]).toFixed(1)}x${Math.abs(size[2]).toFixed(1)}m`,
