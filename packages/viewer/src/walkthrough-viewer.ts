@@ -142,6 +142,7 @@ export class WalkthroughViewer {
   private environmentTexture: THREE.Texture | undefined;
   private skyTexture: THREE.Texture | undefined;
   private groundTexture: THREE.Texture | undefined;
+  private enclosureTexture: THREE.Texture | undefined;
   private pmremGenerator: THREE.PMREMGenerator | undefined;
   private debug: boolean;
 
@@ -203,6 +204,7 @@ export class WalkthroughViewer {
     this.materialLightMaps.forEach((texture) => texture.dispose());
     this.skyTexture?.dispose();
     this.groundTexture?.dispose();
+    this.enclosureTexture?.dispose();
     this.collisionDebugHelpers.forEach((helper) => {
       helper.geometry.dispose();
       if (Array.isArray(helper.material)) {
@@ -613,6 +615,10 @@ export class WalkthroughViewer {
     ground.position.y = (environment?.groundY ?? -0.04) * this.manifestScale;
     ground.receiveShadow = true;
     this.scene.add(ground);
+
+    if (environment?.enclosureEnabled !== false) {
+      this.addLandscapeEnclosure();
+    }
   }
 
   private createGroundTexture(baseColor = "#6f8f5a"): THREE.CanvasTexture {
@@ -658,6 +664,77 @@ export class WalkthroughViewer {
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  private addLandscapeEnclosure(): void {
+    const environment = this.manifest.environment;
+    const radius = (environment?.enclosureRadius ?? (environment?.groundSize ?? 90) * 0.48) * this.manifestScale;
+    const height = (environment?.enclosureHeight ?? 14) * this.manifestScale;
+    const groundY = (environment?.groundY ?? -0.04) * this.manifestScale;
+    if (radius < 5 || height < 2) {
+      return;
+    }
+
+    this.enclosureTexture = this.createLandscapeTexture(environment?.enclosureColor ?? environment?.groundColor);
+    const enclosure = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius, radius, height, 96, 1, true),
+      new THREE.MeshBasicMaterial({
+        map: this.enclosureTexture,
+        side: THREE.BackSide,
+        transparent: true,
+        depthWrite: false,
+        fog: false
+      })
+    );
+    enclosure.name = "environment_landscape_enclosure";
+    enclosure.position.y = groundY + height / 2;
+    enclosure.renderOrder = -9;
+    this.scene.add(enclosure);
+  }
+
+  private createLandscapeTexture(baseColor = "#5f7f4b"): THREE.CanvasTexture {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 256;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    const sky = new THREE.Color(this.manifest.environment?.skyHorizonColor ?? "#f3f6f8");
+    const base = new THREE.Color(baseColor);
+    const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, sky.getStyle());
+    gradient.addColorStop(0.34, sky.clone().lerp(base, 0.18).getStyle());
+    gradient.addColorStop(1, base.clone().offsetHSL(0, 0.08, -0.18).getStyle());
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    for (let i = 0; i < 180; i += 1) {
+      const x = (i * 97) % canvas.width;
+      const width = 18 + ((i * 37) % 46);
+      const treeHeight = 42 + ((i * 53) % 96);
+      const y = canvas.height - treeHeight * 0.72;
+      const tone = base.clone().offsetHSL((i % 9) * 0.004, 0.12, i % 2 === 0 ? -0.1 : 0.05);
+      context.globalAlpha = 0.42;
+      context.fillStyle = tone.getStyle();
+      context.beginPath();
+      context.ellipse(x, y, width, treeHeight, 0, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    context.globalAlpha = 0.88;
+    context.fillStyle = base.clone().offsetHSL(0.01, 0.2, -0.22).getStyle();
+    context.fillRect(0, canvas.height * 0.76, canvas.width, canvas.height * 0.24);
+    context.globalAlpha = 1;
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.repeat.set(2, 1);
     texture.needsUpdate = true;
     return texture;
   }

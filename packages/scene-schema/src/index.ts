@@ -139,6 +139,10 @@ export interface EnvironmentConfig {
   groundColor?: string;
   groundSize?: number;
   groundY?: number;
+  enclosureEnabled?: boolean;
+  enclosureColor?: string;
+  enclosureHeight?: number;
+  enclosureRadius?: number;
 }
 
 export interface RoomDefinition {
@@ -438,7 +442,11 @@ export function isEnvironmentConfig(value: unknown): value is EnvironmentConfig 
     (value["groundEnabled"] === undefined || typeof value["groundEnabled"] === "boolean") &&
     (value["groundColor"] === undefined || typeof value["groundColor"] === "string") &&
     (value["groundSize"] === undefined || typeof value["groundSize"] === "number") &&
-    (value["groundY"] === undefined || typeof value["groundY"] === "number")
+    (value["groundY"] === undefined || typeof value["groundY"] === "number") &&
+    (value["enclosureEnabled"] === undefined || typeof value["enclosureEnabled"] === "boolean") &&
+    (value["enclosureColor"] === undefined || typeof value["enclosureColor"] === "string") &&
+    (value["enclosureHeight"] === undefined || typeof value["enclosureHeight"] === "number") &&
+    (value["enclosureRadius"] === undefined || typeof value["enclosureRadius"] === "number")
   );
 }
 

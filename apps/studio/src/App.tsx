@@ -5691,6 +5691,19 @@ function App() {
                   />
                   <span>Ground enclosure</span>
                 </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={manifest.environment?.enclosureEnabled ?? true}
+                    onChange={(event) =>
+                      updateEnvironment((environment) => ({
+                        ...environment,
+                        enclosureEnabled: event.target.checked
+                      }))
+                    }
+                  />
+                  <span>Landscape enclosure</span>
+                </label>
               </div>
               <div className="field-grid">
                 <label>
@@ -5741,6 +5754,18 @@ function App() {
                     }
                   />
                 </label>
+                <label>
+                  <span>Enclosure color</span>
+                  <input
+                    value={manifest.environment?.enclosureColor ?? "#5f7f4b"}
+                    onChange={(event) =>
+                      updateEnvironment((environment) => ({
+                        ...environment,
+                        enclosureColor: event.target.value
+                      }))
+                    }
+                  />
+                </label>
                 <NumberField
                   label="Ground size"
                   min={10}
@@ -5751,6 +5776,32 @@ function App() {
                     updateEnvironment((environment) => ({
                       ...environment,
                       groundSize: value
+                    }))
+                  }
+                />
+                <NumberField
+                  label="Enclosure radius"
+                  min={8}
+                  max={400}
+                  step={1}
+                  value={manifest.environment?.enclosureRadius ?? 44}
+                  onChange={(value) =>
+                    updateEnvironment((environment) => ({
+                      ...environment,
+                      enclosureRadius: value
+                    }))
+                  }
+                />
+                <NumberField
+                  label="Enclosure height"
+                  min={2}
+                  max={80}
+                  step={1}
+                  value={manifest.environment?.enclosureHeight ?? 14}
+                  onChange={(value) =>
+                    updateEnvironment((environment) => ({
+                      ...environment,
+                      enclosureHeight: value
                     }))
                   }
                 />

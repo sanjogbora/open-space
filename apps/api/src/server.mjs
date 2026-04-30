@@ -1588,7 +1588,13 @@ async function resetManifestForUploadedModel(
       groundEnabled: manifest.environment?.groundEnabled ?? true,
       groundColor: manifest.environment?.groundColor ?? "#6f8f5a",
       groundSize: generatedGroundSize ?? manifest.environment?.groundSize ?? 90,
-      groundY: generatedGroundY ?? manifest.environment?.groundY ?? -0.04
+      groundY: generatedGroundY ?? manifest.environment?.groundY ?? -0.04,
+      enclosureEnabled: manifest.environment?.enclosureEnabled ?? true,
+      enclosureColor: manifest.environment?.enclosureColor ?? manifest.environment?.groundColor ?? "#5f7f4b",
+      enclosureHeight: manifest.environment?.enclosureHeight ?? 14,
+      enclosureRadius:
+        manifest.environment?.enclosureRadius ??
+        Math.max(12, (generatedGroundSize ?? manifest.environment?.groundSize ?? 90) * 0.48)
     },
     views,
     rooms: importedRooms(views, roomCandidates, manifest.rooms),
