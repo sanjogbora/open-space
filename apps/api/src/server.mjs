@@ -1388,6 +1388,10 @@ async function resetManifestForUploadedModel(
   const roomCandidates = graphRoomCandidates(graph, modelScale, cameraHeight);
   const views = importedModelViews(bounds, cameraHeight, roomCandidates);
   const margin = 0.75;
+  const generatedGroundSize = bounds
+    ? Math.max(30, (bounds.max[0] - bounds.min[0]) * 1.8, (bounds.max[2] - bounds.min[2]) * 1.8)
+    : undefined;
+  const generatedGroundY = bounds ? bounds.min[1] - 0.04 : undefined;
   const navigationBounds = bounds
     ? {
         min: [bounds.min[0] - margin, Math.min(0.2, bounds.min[1] - 0.1), bounds.min[2] - margin],
@@ -1416,10 +1420,8 @@ async function resetManifestForUploadedModel(
       skyHorizonColor: manifest.environment?.skyHorizonColor ?? "#f3f6f8",
       groundEnabled: manifest.environment?.groundEnabled ?? true,
       groundColor: manifest.environment?.groundColor ?? "#6f8f5a",
-      groundSize:
-        manifest.environment?.groundSize ??
-        (bounds ? Math.max(30, (bounds.max[0] - bounds.min[0]) * 1.8, (bounds.max[2] - bounds.min[2]) * 1.8) : 90),
-      groundY: manifest.environment?.groundY ?? (bounds ? bounds.min[1] - 0.04 : -0.04)
+      groundSize: generatedGroundSize ?? manifest.environment?.groundSize ?? 90,
+      groundY: generatedGroundY ?? manifest.environment?.groundY ?? -0.04
     },
     views,
     rooms: importedRooms(views, roomCandidates, manifest.rooms),
