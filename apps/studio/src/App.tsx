@@ -1097,6 +1097,7 @@ function App() {
   const [optimizeError, setOptimizeError] = useState("");
   const [bakeState, setBakeState] = useState<BakeState>("idle");
   const [bakeError, setBakeError] = useState("");
+  const [bakeSettings, setBakeSettings] = useState({ resolution: 1024, samples: 96, margin: 16 });
   const [repairState, setRepairState] = useState<RepairState>("idle");
   const [repairError, setRepairError] = useState("");
   const [repairSummary, setRepairSummary] = useState("");
@@ -2486,7 +2487,11 @@ function App() {
         await saveToApi();
       }
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/bake-lightmaps`, {
-        method: "POST"
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify(bakeSettings)
       });
       if (!response.ok) {
         const error = (await response.json()) as { error?: string };
@@ -4594,6 +4599,47 @@ function App() {
                     <Activity size={16} aria-hidden="true" />
                     {bakeState === "baking" ? "Baking" : "Bake"}
                   </button>
+                </div>
+                <div className="field-grid">
+                  <NumberField
+                    label="Max lightmap px"
+                    min={256}
+                    max={4096}
+                    step={256}
+                    value={bakeSettings.resolution}
+                    onChange={(value) =>
+                      setBakeSettings((current) => ({
+                        ...current,
+                        resolution: Math.min(4096, Math.max(256, Math.round(value)))
+                      }))
+                    }
+                  />
+                  <NumberField
+                    label="Samples"
+                    min={16}
+                    max={1024}
+                    step={16}
+                    value={bakeSettings.samples}
+                    onChange={(value) =>
+                      setBakeSettings((current) => ({
+                        ...current,
+                        samples: Math.min(1024, Math.max(16, Math.round(value)))
+                      }))
+                    }
+                  />
+                  <NumberField
+                    label="Bake margin"
+                    min={2}
+                    max={96}
+                    step={1}
+                    value={bakeSettings.margin}
+                    onChange={(value) =>
+                      setBakeSettings((current) => ({
+                        ...current,
+                        margin: Math.min(96, Math.max(2, Math.round(value)))
+                      }))
+                    }
+                  />
                 </div>
                 {bakeError && <p className="error-note">{bakeError}</p>}
                 {lightmapBakeJob && lightmapBakeJob.status !== "idle" && (

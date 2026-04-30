@@ -712,13 +712,29 @@ function runOptimize(projectId = "demo", profile = "balanced", applyOptimized = 
   });
 }
 
-function runLightmapBake(projectId = "demo") {
+function lightmapBakeOptions(body = {}) {
+  const resolution = Math.min(4096, Math.max(256, Number(body.resolution ?? 1024)));
+  const samples = Math.min(1024, Math.max(16, Number(body.samples ?? 96)));
+  const margin = Math.min(96, Math.max(2, Number(body.margin ?? 16)));
+  return {
+    resolution: Math.round(resolution),
+    samples: Math.round(samples),
+    margin: Math.round(margin)
+  };
+}
+
+function runLightmapBake(projectId = "demo", options = {}) {
   return new Promise((resolve, reject) => {
     const viewerTarget = `apps/viewer-demo/public/scenes/${projectId}`;
     const studioTarget = `apps/studio/public/scenes/${projectId}`;
+    const bakeOptions = lightmapBakeOptions(options);
+    const bakeArgs =
+      ` --resolution=${bakeOptions.resolution}` +
+      ` --samples=${bakeOptions.samples}` +
+      ` --margin=${bakeOptions.margin}`;
     const command =
-      `node scripts/bake-lightmaps.mjs ${viewerTarget} && ` +
-      `node scripts/bake-lightmaps.mjs ${studioTarget}`;
+      `node scripts/bake-lightmaps.mjs ${viewerTarget}${bakeArgs} && ` +
+      `node scripts/bake-lightmaps.mjs ${studioTarget}${bakeArgs}`;
     const child = spawn(process.env.ComSpec ?? "cmd.exe", ["/c", command], {
       cwd: repoRoot,
       windowsHide: true
@@ -2088,7 +2104,8 @@ async function handleRequest(request, response) {
 
     const lightmapBakeProjectId = projectIdFromPathname(url.pathname, "/bake-lightmaps");
     if (request.method === "POST" && lightmapBakeProjectId) {
-      await runLightmapBake(lightmapBakeProjectId);
+      const body = await readBody(request);
+      await runLightmapBake(lightmapBakeProjectId, body);
       await runAnalyze(lightmapBakeProjectId);
       const project = await projectPayload(lightmapBakeProjectId);
       sendJson(response, 200, {
