@@ -265,6 +265,7 @@ interface PublishEntry {
   version: string;
   publishedAt: string;
   scenePath: string;
+  viewerUrl?: string;
   deploymentPath?: string;
   cdnBasePath?: string;
   assetCount?: number;
@@ -1002,6 +1003,9 @@ function navigationDebugViewerUrl(projectId: string): string {
 }
 
 function publishedViewerUrl(entry: PublishEntry): string {
+  if (entry.viewerUrl) {
+    return `${viewerBaseUrl}${entry.viewerUrl}`;
+  }
   return `${viewerBaseUrl}/?scene=${encodeURIComponent(entry.scenePath)}`;
 }
 
