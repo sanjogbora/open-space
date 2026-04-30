@@ -301,6 +301,8 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   let uv1PrimitiveCount = 0;
   let texturedMissingUvPrimitiveCount = 0;
   let missingPositionBoundsPrimitiveCount = 0;
+  let invalidPositionBoundsPrimitiveCount = 0;
+  let collapsedPositionBoundsPrimitiveCount = 0;
   let invalidAccessorReferenceCount = 0;
   let invalidTextureReferenceCount = 0;
   let undersizedBufferCount = 0;
@@ -357,6 +359,10 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
         typeof primitive.indices === "number" ? accessors[primitive.indices] : undefined;
       if (positionAccessor && (!Array.isArray(positionAccessor.min) || !Array.isArray(positionAccessor.max))) {
         missingPositionBoundsPrimitiveCount += 1;
+      } else if (positionAccessor && !validAccessorBounds(positionAccessor)) {
+        invalidPositionBoundsPrimitiveCount += 1;
+      } else if (positionAccessor && accessorBoundsVolume(positionAccessor) < 1e-12 && (positionAccessor.count ?? 0) > 3) {
+        collapsedPositionBoundsPrimitiveCount += 1;
       }
       const vertices = positionAccessor?.count ?? 0;
       vertexCount += vertices;
@@ -464,6 +470,8 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     uv1PrimitiveCount,
     texturedMissingUvPrimitiveCount,
     missingPositionBoundsPrimitiveCount,
+    invalidPositionBoundsPrimitiveCount,
+    collapsedPositionBoundsPrimitiveCount,
     invalidAccessorReferenceCount,
     invalidTextureReferenceCount,
     undersizedBufferCount,
@@ -573,6 +581,29 @@ function accessorBounds(accessor) {
     min: accessor.min,
     max: accessor.max
   };
+}
+
+function validAccessorBounds(accessor) {
+  if (!Array.isArray(accessor?.min) || !Array.isArray(accessor.max) || accessor.min.length < 3 || accessor.max.length < 3) {
+    return false;
+  }
+  return [0, 1, 2].every(
+    (index) =>
+      Number.isFinite(accessor.min[index]) &&
+      Number.isFinite(accessor.max[index]) &&
+      accessor.min[index] <= accessor.max[index]
+  );
+}
+
+function accessorBoundsVolume(accessor) {
+  if (!validAccessorBounds(accessor)) {
+    return 0;
+  }
+  return (
+    Math.abs(accessor.max[0] - accessor.min[0]) *
+    Math.abs(accessor.max[1] - accessor.min[1]) *
+    Math.abs(accessor.max[2] - accessor.min[2])
+  );
 }
 
 function mergeBounds(current, next) {
@@ -1288,6 +1319,14 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.missingPositionBoundsPrimitiveCount ?? 0),
     0
   );
+  const invalidPositionBoundsPrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidPositionBoundsPrimitiveCount ?? 0),
+    0
+  );
+  const collapsedPositionBoundsPrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.collapsedPositionBoundsPrimitiveCount ?? 0),
+    0
+  );
   const invalidAccessorReferenceCount = report.models.reduce(
     (sum, model) => sum + (model.invalidAccessorReferenceCount ?? 0),
     0
@@ -1411,6 +1450,26 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Position accessor bounds missing",
       message: `${missingPositionBoundsPrimitiveCount} primitive(s) have POSITION data without min/max bounds.`,
       action: "Re-export with accessor bounds, or run the optimizer/repair pass so framing, floor detection, and navigation can be generated reliably."
+    });
+  }
+
+  if (invalidPositionBoundsPrimitiveCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-position-bounds",
+      title: "Invalid mesh bounds",
+      message: `${invalidPositionBoundsPrimitiveCount} POSITION accessor bound(s) contain non-finite values or min values greater than max values.`,
+      action: "Repair or re-export the model; invalid bounds break framing, room detection, and navigation generation."
+    });
+  }
+
+  if (collapsedPositionBoundsPrimitiveCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "collapsed-position-bounds",
+      title: "Collapsed mesh bounds detected",
+      message: `${collapsedPositionBoundsPrimitiveCount} primitive(s) have near-zero POSITION bounds despite containing several vertices.`,
+      action: "Check whether those meshes are helper geometry or an export issue; collapsed bounds can hide objects from generated views and floor detection."
     });
   }
 
