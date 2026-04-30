@@ -1414,6 +1414,7 @@ button.list-row {
   position: absolute;
   width: 14px;
   height: 14px;
+  z-index: 2;
   border: 2px solid #ffffff;
   border-radius: 999px;
   background: #667681;
@@ -1426,8 +1427,39 @@ button.list-row {
   box-shadow: 0 0 0 3px rgba(8, 127, 231, 0.2);
 }
 
+.room-map-area {
+  position: absolute;
+  z-index: 1;
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0;
+  border: 1px solid rgba(8, 127, 231, 0.34);
+  border-radius: 4px;
+  color: #315466;
+  background: rgba(8, 127, 231, 0.08);
+  overflow: hidden;
+}
+
+.room-map-area span {
+  display: block;
+  max-width: 100%;
+  padding: 3px 5px;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-map-area.active {
+  border-color: #087fe7;
+  background: rgba(8, 127, 231, 0.18);
+}
+
 .room-map-item {
   position: absolute;
+  z-index: 3;
   min-width: 34px;
   min-height: 34px;
   display: grid;

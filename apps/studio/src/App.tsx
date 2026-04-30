@@ -438,6 +438,20 @@ function pointMapStyle(
   };
 }
 
+function roomBoundsMapStyle(
+  roomBounds: NonNullable<RoomDefinition["bounds"]>,
+  bounds: NonNullable<SceneManifest["navigation"]["bounds"]>
+) {
+  const width = Math.max(0.001, bounds.max[0] - bounds.min[0]);
+  const depth = Math.max(0.001, bounds.max[2] - bounds.min[2]);
+  return {
+    left: `${((roomBounds.min[0] - bounds.min[0]) / width) * 100}%`,
+    top: `${100 - ((roomBounds.max[2] - bounds.min[2]) / depth) * 100}%`,
+    width: `${clampNumber(((roomBounds.max[0] - roomBounds.min[0]) / width) * 100, 2, 100)}%`,
+    height: `${clampNumber(((roomBounds.max[2] - roomBounds.min[2]) / depth) * 100, 2, 100)}%`
+  };
+}
+
 function enabledNavigationZones(navigation: SceneManifest["navigation"], kind?: NavigationZone["kind"]) {
   return (navigation.zones ?? []).filter((zone) => zone.enabled !== false && (!kind || zone.kind === kind));
 }
@@ -3962,6 +3976,20 @@ function App() {
                       <small>Drag a room marker to set its center</small>
                     </div>
                     <div className="room-map-surface">
+                      {rooms
+                        .filter((room) => room.bounds)
+                        .map((room) => (
+                          <button
+                            key={`area-${room.id}`}
+                            type="button"
+                            className={selectedRoom.id === room.id ? "room-map-area active" : "room-map-area"}
+                            style={roomBoundsMapStyle(room.bounds!, roomMapBounds)}
+                            title={room.label}
+                            onClick={() => setSelectedRoomId(room.id)}
+                          >
+                            <span>{room.label}</span>
+                          </button>
+                        ))}
                       {manifest.views.map((view) => (
                         <button
                           key={view.id}

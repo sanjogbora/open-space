@@ -140,6 +140,20 @@ function sceneToMinimap(position: readonly [number, number, number], bounds: Min
   };
 }
 
+function boundsToMinimap(
+  roomBounds: NonNullable<NonNullable<SceneManifest["rooms"]>[number]["bounds"]>,
+  bounds: MinimapBounds
+) {
+  const width = Math.max(0.001, bounds.maxX - bounds.minX);
+  const depth = Math.max(0.001, bounds.maxZ - bounds.minZ);
+  return {
+    left: `${((roomBounds.min[0] - bounds.minX) / width) * 100}%`,
+    top: `${100 - ((roomBounds.max[2] - bounds.minZ) / depth) * 100}%`,
+    width: `${Math.max(2, ((roomBounds.max[0] - roomBounds.min[0]) / width) * 100)}%`,
+    height: `${Math.max(2, ((roomBounds.max[2] - roomBounds.min[2]) / depth) * 100)}%`
+  };
+}
+
 function App() {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<WalkthroughViewer | null>(null);
@@ -481,6 +495,24 @@ function App() {
               <strong>Floorplan</strong>
             </div>
             <div className="minimap-surface">
+              {rooms
+                .filter((room) => room.bounds)
+                .map((room) => {
+                  const view = views.find((item) => item.id === room.viewId);
+                  return (
+                    <button
+                      key={room.id}
+                      type="button"
+                      className={room.viewId && activeViewId === room.viewId ? "minimap-room active" : "minimap-room"}
+                      style={boundsToMinimap(room.bounds!, minimapBounds)}
+                      disabled={!view}
+                      title={room.label}
+                      onClick={() => view && activateView(view)}
+                    >
+                      <span>{room.label}</span>
+                    </button>
+                  );
+                })}
               <div
                 className="minimap-camera"
                 style={{

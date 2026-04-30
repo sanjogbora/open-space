@@ -151,6 +151,10 @@ export interface RoomDefinition {
   viewId?: string;
   dimensions?: string;
   center?: Vec3;
+  bounds?: {
+    min: Vec3;
+    max: Vec3;
+  };
 }
 
 export interface SceneManifest {
@@ -459,7 +463,9 @@ export function isRoomDefinition(value: unknown): value is RoomDefinition {
     typeof value["label"] === "string" &&
     (value["viewId"] === undefined || typeof value["viewId"] === "string") &&
     (value["dimensions"] === undefined || typeof value["dimensions"] === "string") &&
-    (value["center"] === undefined || isVec3(value["center"]))
+    (value["center"] === undefined || isVec3(value["center"])) &&
+    (value["bounds"] === undefined ||
+      (isRecord(value["bounds"]) && isVec3(value["bounds"]["min"]) && isVec3(value["bounds"]["max"])))
   );
 }
 

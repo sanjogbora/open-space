@@ -1056,6 +1056,7 @@ function graphRoomCandidates(graph, modelScale, cameraHeight) {
         center,
         target: [center[0], Math.max(scaledBounds.min[1] + 1.2, center[1] - 0.35), center[2] - Math.max(0.8, Math.abs(size[2]) * 0.3)],
         dimensions: `${Math.abs(size[0]).toFixed(1)}x${Math.abs(size[2]).toFixed(1)}m`,
+        bounds: scaledBounds,
         area,
         score
       };
@@ -1179,7 +1180,8 @@ function importedRooms(views, roomCandidates, existingRooms = []) {
         label: view.label,
         viewId: view.id,
         center: view.position,
-        ...(candidate?.dimensions ? { dimensions: candidate.dimensions } : {})
+        ...(candidate?.dimensions ? { dimensions: candidate.dimensions } : {}),
+        ...(candidate?.bounds ? { bounds: candidate.bounds } : {})
       };
     });
 }
@@ -1370,6 +1372,14 @@ function roomCandidatesFromWalkZones(walkZones, bounds, cameraHeight, existingCa
       const width = Math.max(0.8, Math.abs(zone.size?.[0] ?? 1));
       const depth = Math.max(0.8, Math.abs(zone.size?.[2] ?? 1));
       const center = [zone.center[0], zone.center[1] + cameraHeight, zone.center[2]];
+      const bounds = {
+        min: [zone.center[0] - width / 2, zone.center[1], zone.center[2] - depth / 2],
+        max: [
+          zone.center[0] + width / 2,
+          zone.center[1] + Math.max(0.08, Math.abs(zone.size?.[1] ?? 0.08)),
+          zone.center[2] + depth / 2
+        ]
+      };
       const targetOffset = Math.min(3.5, Math.max(1, Math.max(width, depth) * 0.28));
       const target = sceneCenter
         ? [
@@ -1392,6 +1402,7 @@ function roomCandidatesFromWalkZones(walkZones, bounds, cameraHeight, existingCa
         center,
         target,
         dimensions: `${width.toFixed(1)}x${depth.toFixed(1)}m`,
+        bounds,
         area: width * depth,
         score: 0
       };

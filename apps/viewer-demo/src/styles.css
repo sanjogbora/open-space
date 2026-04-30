@@ -244,10 +244,44 @@ button {
   position: absolute;
   width: 15px;
   height: 15px;
-  z-index: 2;
+  z-index: 3;
   clip-path: polygon(50% 0, 100% 100%, 50% 74%, 0 100%);
   background: #0787ff;
   box-shadow: 0 0 0 2px rgba(7, 135, 255, 0.24);
+}
+
+.minimap-room {
+  position: absolute;
+  z-index: 1;
+  min-width: 18px;
+  min-height: 18px;
+  padding: 0;
+  border: 1px solid rgba(7, 135, 255, 0.4);
+  border-radius: 3px;
+  background: rgba(7, 135, 255, 0.1);
+  color: rgba(238, 243, 247, 0.78);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.minimap-room span {
+  display: block;
+  max-width: 100%;
+  padding: 2px 4px;
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.minimap-room:hover,
+.minimap-room:focus-visible,
+.minimap-room.active {
+  border-color: rgba(255, 255, 255, 0.82);
+  background: rgba(7, 135, 255, 0.28);
+  outline: none;
 }
 
 .minimap-view {
@@ -255,6 +289,7 @@ button {
   width: 16px;
   height: 16px;
   padding: 0;
+  z-index: 2;
   border: 2px solid rgba(238, 243, 247, 0.72);
   border-radius: 50%;
   background: rgba(16, 20, 23, 0.76);
