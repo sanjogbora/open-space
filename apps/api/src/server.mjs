@@ -1249,12 +1249,86 @@ function graphPassZoneCandidates(graph, modelScale, cameraHeight) {
     .map(({ score: _score, ...zone }) => zone);
 }
 
+function navigationZoneBox(zone) {
+  const halfX = Math.abs(zone.size?.[0] ?? 0) / 2;
+  const halfZ = Math.abs(zone.size?.[2] ?? 0) / 2;
+  return {
+    minX: zone.center[0] - halfX,
+    maxX: zone.center[0] + halfX,
+    minZ: zone.center[2] - halfZ,
+    maxZ: zone.center[2] + halfZ
+  };
+}
+
+function rangeOverlap(minA, maxA, minB, maxB) {
+  return Math.max(0, Math.min(maxA, maxB) - Math.max(minA, minB));
+}
+
+function autoPassZonesBetweenWalkZones(walkZones, cameraHeight) {
+  const candidates = [];
+  for (let aIndex = 0; aIndex < walkZones.length; aIndex += 1) {
+    for (let bIndex = aIndex + 1; bIndex < walkZones.length; bIndex += 1) {
+      const zoneA = walkZones[aIndex];
+      const zoneB = walkZones[bIndex];
+      const boxA = navigationZoneBox(zoneA);
+      const boxB = navigationZoneBox(zoneB);
+      const zOverlap = rangeOverlap(boxA.minZ, boxA.maxZ, boxB.minZ, boxB.maxZ);
+      const xOverlap = rangeOverlap(boxA.minX, boxA.maxX, boxB.minX, boxB.maxX);
+      const xGap = boxA.maxX < boxB.minX ? boxB.minX - boxA.maxX : boxB.maxX < boxA.minX ? boxA.minX - boxB.maxX : 0;
+      const zGap = boxA.maxZ < boxB.minZ ? boxB.minZ - boxA.maxZ : boxB.maxZ < boxA.minZ ? boxA.minZ - boxB.maxZ : 0;
+
+      if (xGap > 0 && xGap <= 0.55 && zOverlap >= 0.65 && zOverlap <= 2.4) {
+        const left = boxA.maxX < boxB.minX ? boxA : boxB;
+        const right = left === boxA ? boxB : boxA;
+        candidates.push({
+          id: `pass-auto-${aIndex}-${bIndex}-x`,
+          label: "Auto doorway pass",
+          kind: "pass",
+          center: [
+            (left.maxX + right.minX) / 2,
+            Math.max(0.8, cameraHeight * 0.55),
+            (Math.max(boxA.minZ, boxB.minZ) + Math.min(boxA.maxZ, boxB.maxZ)) / 2
+          ],
+          size: [Math.max(0.9, xGap + 0.55), Math.max(1.8, cameraHeight + 0.65), Math.min(1.8, Math.max(0.9, zOverlap))],
+          rotationY: 0,
+          enabled: true,
+          score: 4 - xGap
+        });
+      }
+
+      if (zGap > 0 && zGap <= 0.55 && xOverlap >= 0.65 && xOverlap <= 2.4) {
+        const near = boxA.maxZ < boxB.minZ ? boxA : boxB;
+        const far = near === boxA ? boxB : boxA;
+        candidates.push({
+          id: `pass-auto-${aIndex}-${bIndex}-z`,
+          label: "Auto doorway pass",
+          kind: "pass",
+          center: [
+            (Math.max(boxA.minX, boxB.minX) + Math.min(boxA.maxX, boxB.maxX)) / 2,
+            Math.max(0.8, cameraHeight * 0.55),
+            (near.maxZ + far.minZ) / 2
+          ],
+          size: [Math.min(1.8, Math.max(0.9, xOverlap)), Math.max(1.8, cameraHeight + 0.65), Math.max(0.9, zGap + 0.55)],
+          rotationY: 0,
+          enabled: true,
+          score: 4 - zGap
+        });
+      }
+    }
+  }
+  return candidates
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12)
+    .map(({ score: _score, ...zone }) => zone);
+}
+
 function isGeneratedNavigationZone(zone) {
   const id = String(zone?.id ?? "");
   return (
     id === "walk-main" ||
     id.startsWith("walk-node-") ||
     id.startsWith("pass-node-") ||
+    id.startsWith("pass-auto-") ||
     id.startsWith("walk-Object") ||
     id.startsWith("pass-Object")
   );
@@ -1265,7 +1339,10 @@ function importedNavigationZones(bounds, existingZones = [], graph, modelScale =
     ? existingZones.filter((zone) => !isGeneratedNavigationZone(zone))
     : [];
   const graphZones = graphWalkZoneCandidates(graph, modelScale);
-  const passZones = graphPassZoneCandidates(graph, modelScale, cameraHeight);
+  const passZones = [
+    ...graphPassZoneCandidates(graph, modelScale, cameraHeight),
+    ...autoPassZonesBetweenWalkZones(graphZones, cameraHeight)
+  ];
   if (graphZones.length > 0) {
     return [...graphZones, ...passZones, ...preservedZones];
   }
