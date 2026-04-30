@@ -1,8 +1,9 @@
 import { spawn } from "node:child_process";
-import { access, readFile, stat, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { NodeIO } from "@gltf-transform/core";
-import { ALL_EXTENSIONS, EXTMeshoptCompression } from "@gltf-transform/extensions";
+import { ALL_EXTENSIONS, EXTMeshoptCompression, KHRTextureBasisu } from "@gltf-transform/extensions";
 import { dedup, meshopt, prune, reorder, resample, textureCompress, weld } from "@gltf-transform/functions";
 import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 import sharp from "sharp";
@@ -62,16 +63,24 @@ async function resolveToktxCommand() {
   return undefined;
 }
 
-async function textureEncoderStatusStep() {
-  const toktxCommand = await resolveToktxCommand();
-  return {
-    id: "gpu-texture-compression",
-    label: "KTX2/Basis GPU texture compression",
-    status: toktxCommand ? "skipped" : "blocked",
-    note: toktxCommand
-      ? `toktx was found at ${toktxCommand}. This optimizer pass still emits WebP transfer textures only; KTX2/Basis GPU texture output is not enabled yet.`
-      : "toktx was not found. Install Khronos KTX-Software and set KTX_SOFTWARE_PATH or TOKTX_PATH to enable KTX2/Basis GPU texture output."
-  };
+function spawnCapture(command, args) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", (error) => {
+      resolve({ ok: false, code: undefined, stdout, stderr: error.message });
+    });
+    child.on("exit", (code) => {
+      resolve({ ok: code === 0, code, stdout, stderr });
+    });
+  });
 }
 
 async function readJsonDefault(filePath, fallback) {
@@ -171,11 +180,15 @@ async function optimizeGlb(sourcePath, outputPath, profile) {
       quality: textureQuality,
       effort: 4,
       slots: /^(?!normalTexture).*$/i
-    }),
+    })
+  );
+  const gpuTextureStep = await applyKtxCompression(document, profile);
+  await document.transform(
     reorder({ encoder: MeshoptEncoder, target: "size" }),
     meshopt({ encoder: MeshoptEncoder, level })
   );
   await io.write(outputPath, document);
+  return gpuTextureStep;
 }
 
 function percentChange(before, after) {
@@ -183,6 +196,170 @@ function percentChange(before, after) {
     return 0;
   }
   return Number((((before - after) / before) * 100).toFixed(2));
+}
+
+function mimeExtension(mimeType) {
+  switch (mimeType) {
+    case "image/avif":
+      return ".avif";
+    case "image/jpeg":
+      return ".jpg";
+    case "image/png":
+      return ".png";
+    case "image/webp":
+      return ".webp";
+    default:
+      return "";
+  }
+}
+
+function ktxQualityForProfile(profile) {
+  if (profile === "mobile") {
+    return 96;
+  }
+  if (profile === "desktop") {
+    return 160;
+  }
+  return 128;
+}
+
+function textureUseSets(document) {
+  const normalTextures = new Set();
+  const alphaTextures = new Set();
+
+  for (const material of document.getRoot().listMaterials()) {
+    const normalTexture = material.getNormalTexture();
+    if (normalTexture) {
+      normalTextures.add(normalTexture);
+    }
+    if (material.getAlphaMode() === "BLEND" || material.getAlphaMode() === "MASK") {
+      const baseTexture = material.getBaseColorTexture();
+      if (baseTexture) {
+        alphaTextures.add(baseTexture);
+      }
+    }
+  }
+
+  return { normalTextures, alphaTextures };
+}
+
+async function encodeKtxTexture(toktxCommand, inputPath, outputPath, options) {
+  const commonArgs = ["--t2", "--genmipmap"];
+  const qlevel = String(options.qlevel);
+  const attempts = options.alpha
+    ? [
+        [...commonArgs, "--encode", "uastc", "--zcmp", "18", outputPath, inputPath],
+        [...commonArgs, "--uastc", "--zcmp", "18", outputPath, inputPath]
+      ]
+    : [
+        [...commonArgs, "--encode", "etc1s", "--clevel", "4", "--qlevel", qlevel, outputPath, inputPath],
+        [...commonArgs, "--bcmp", "--clevel", "4", "--qlevel", qlevel, outputPath, inputPath]
+      ];
+
+  let lastResult;
+  for (const args of attempts) {
+    await rm(outputPath, { force: true });
+    lastResult = await spawnCapture(toktxCommand, args);
+    if (lastResult.ok) {
+      return { ok: true, args };
+    }
+  }
+
+  return {
+    ok: false,
+    args: attempts.at(-1),
+    error: [lastResult?.stderr, lastResult?.stdout].filter(Boolean).join("\n").trim()
+  };
+}
+
+async function applyKtxCompression(document, profile) {
+  const toktxCommand = await resolveToktxCommand();
+  if (!toktxCommand) {
+    return {
+      id: "gpu-texture-compression",
+      label: "KTX2/Basis GPU texture compression",
+      status: "blocked",
+      convertedTextures: 0,
+      skippedTextures: 0,
+      note: "toktx was not found. Install Khronos KTX-Software and set KTX_SOFTWARE_PATH or TOKTX_PATH to enable KTX2/Basis GPU texture output."
+    };
+  }
+
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), "walkthrough-ktx-"));
+  const { normalTextures, alphaTextures } = textureUseSets(document);
+  const qlevel = ktxQualityForProfile(profile);
+  let convertedTextures = 0;
+  let skippedTextures = 0;
+  const failed = [];
+
+  try {
+    for (const [index, texture] of document.getRoot().listTextures().entries()) {
+      const image = texture.getImage();
+      const extension = mimeExtension(texture.getMimeType());
+      if (!image || !extension || normalTextures.has(texture)) {
+        skippedTextures += 1;
+        continue;
+      }
+
+      const inputPath = path.join(tmpDir, `texture-${index}${extension}`);
+      const outputPath = path.join(tmpDir, `texture-${index}.ktx2`);
+      await writeFile(inputPath, image);
+      const result = await encodeKtxTexture(toktxCommand, inputPath, outputPath, {
+        alpha: alphaTextures.has(texture),
+        qlevel
+      });
+      if (!result.ok) {
+        failed.push({
+          texture: texture.getName() || texture.getURI() || `Texture ${index + 1}`,
+          error: result.error || "toktx failed without diagnostic output."
+        });
+        continue;
+      }
+
+      texture
+        .setImage(await readFile(outputPath))
+        .setMimeType("image/ktx2")
+        .setURI("");
+      convertedTextures += 1;
+    }
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+
+  if (convertedTextures > 0) {
+    document.createExtension(KHRTextureBasisu).setRequired(true);
+  }
+
+  if (failed.length > 0 && convertedTextures === 0) {
+    return {
+      id: "gpu-texture-compression",
+      label: "KTX2/Basis GPU texture compression",
+      status: "failed",
+      convertedTextures,
+      skippedTextures,
+      failedTextures: failed.slice(0, 5),
+      note: `${failed.length} texture(s) failed KTX2 conversion; the optimized scene still uses WebP/PNG image textures.`
+    };
+  }
+
+  return {
+    id: "gpu-texture-compression",
+    label: "KTX2/Basis GPU texture compression",
+    status: convertedTextures > 0 ? "completed" : "skipped",
+    convertedTextures,
+    skippedTextures,
+    ...(failed.length > 0
+      ? {
+          failedTextures: failed.slice(0, 5),
+          note: `${convertedTextures} texture(s) converted; ${failed.length} texture(s) stayed as image textures after toktx failures.`
+        }
+      : {
+          note:
+            convertedTextures > 0
+              ? `${convertedTextures} texture(s) converted with toktx at ${toktxCommand}. Normal maps are kept as source images unless a dedicated normal-map profile is added.`
+              : "No eligible embedded color textures were found for KTX2 conversion."
+        })
+  };
 }
 
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
@@ -207,13 +384,12 @@ const sourceSceneUrl =
 const sourcePath = path.resolve(bundleDir, sourceSceneUrl);
 const outputPath = path.resolve(bundleDir, optimizedSceneUrl);
 const beforeInfo = await stat(sourcePath);
-const gpuTextureStep = await textureEncoderStatusStep();
 if (sourcePath.toLowerCase().endsWith(".glb")) {
   const sourceBytes = await readFile(sourcePath);
   const compactBytes = compactGlbJson(sourceBytes);
   await writeFile(outputPath, compactBytes);
 }
-await optimizeGlb(sourcePath, outputPath, profile);
+const gpuTextureStep = await optimizeGlb(sourcePath, outputPath, profile);
 const afterInfo = await stat(outputPath);
 
 if (applyOptimized) {

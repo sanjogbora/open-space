@@ -73,13 +73,16 @@ Current steps:
 - Compact the GLB JSON chunk.
 - Deduplicate and prune unused resources with glTF Transform.
 - Weld vertices and resample animation data.
+- Resize and convert eligible image textures to WebP transfer textures.
+- Convert eligible embedded color textures to KTX2/Basis when `toktx` is installed.
 - Reorder mesh data for transmission size.
 - Apply `EXT_meshopt_compression`.
 - Emit `scene.optimized.glb`.
 - Optionally update `scene.manifest.json` to use the optimized model.
 - Keep the latest job in `optimization-job.json`.
 - Keep the latest 20 jobs in `optimization-history.json`.
-- Leave KTX2/Basis texture compression as a pending job step.
+
+If Khronos KTX-Software is not installed, the KTX2 step is marked `blocked` and the optimizer still emits the WebP plus Meshopt artifact. Normal maps are currently kept as source images until a dedicated normal-map KTX profile is added.
 
 The demo scene now compresses from roughly 34 KB to roughly 15 KB with Meshopt enabled. On larger production scenes, the same job path will preserve the original `scene.glb`, generate `scene.optimized.glb`, apply the optimized artifact, refresh stats, and expose rollback in Studio.
 
@@ -97,6 +100,6 @@ These are conservative early defaults. Later phases will add device-specific bud
 - Count estimated draw calls and texture dimensions.
 - Generate optimization recommendations.
 - Add Draco as an alternative geometry compression option where useful.
-- Generate KTX2/Basis texture outputs.
+- Add a dedicated KTX2 normal-map profile and stronger texture quality controls.
 - Add Blender-headless bake job orchestration.
 - Emit publish-ready asset manifests.

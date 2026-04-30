@@ -1872,9 +1872,9 @@ function createDiagnostics(manifest, report, graphs) {
     diagnostics.push({
       severity: "warning",
       code: "missing-texture-compression",
-      title: "Texture compression missing",
-      message: "The model uses texture images but does not advertise KHR_texture_basisu/KTX2 textures.",
-      action: "Convert large textures to KTX2/Basis during the production optimization pass."
+      title: "Texture transfer compression missing",
+      message: "The model uses texture images but does not advertise WebP transfer textures or KHR_texture_basisu/KTX2 GPU textures.",
+      action: "Run optimization to create WebP transfer textures, then enable KTX2/Basis for production GPU-memory savings."
     });
   }
 
@@ -2102,7 +2102,7 @@ function recommendationList(report) {
         : "Convert large textures to WebP now, then KTX2/Basis for production delivery.",
       reason: report.compression?.webp
         ? "WebP reduces transfer size, but KTX2/Basis is still better for GPU memory."
-        : "The model has texture images but does not advertise WebP or KHR_texture_basisu."
+        : "The model has texture images but does not advertise WebP transfer textures or KHR_texture_basisu GPU textures."
     });
   }
 

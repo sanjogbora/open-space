@@ -25,6 +25,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Optimizer now emits `scene.optimized.glb` and `optimization-job.json`.
 - Optimizer now keeps `optimization-history.json` for recent job history.
 - Optimizer now runs glTF Transform cleanup plus `EXT_meshopt_compression`.
+- Optimizer now creates WebP transfer textures and can create KTX2/Basis textures when `toktx` is installed.
 - API can run optimization jobs and apply the optimized model to the manifest.
 - API and Studio can switch a project between original and optimized GLB sources.
 - Studio has an Optimization tab with profile warnings, recommendations, job trigger, and last-job results.
@@ -66,6 +67,7 @@ Current limitations:
 - Local API endpoint for replacing the demo GLB model and regenerating stats.
 - Local API endpoint for running and applying optimization jobs.
 - Viewer registers the Meshopt decoder so optimized GLBs load in-browser.
+- Viewer registers the KTX2 loader so `KHR_texture_basisu` optimized textures can load in-browser.
 - Hotspot, link, object-toggle, and video texture support.
 - Runtime material override loading.
 - Runtime material variant switching.
@@ -76,7 +78,7 @@ Current limitations:
 
 - FBX/OBJ/DAE conversion pipeline.
 - SketchUp/Revit/3ds Max exporters.
-- Texture analysis and KTX2/Basis compression.
+- Dedicated KTX2 normal-map profile and more texture quality controls.
 - Draco compression as an optional alternative to Meshopt.
 - Mesh simplification.
 - Draw-call optimization and safe mesh merging.
