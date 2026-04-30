@@ -219,6 +219,7 @@ function parseGlbJson(bytes) {
 async function analyzeGltfDocument(document, format, asset) {
   const accessors = document.accessors ?? [];
   const meshes = document.meshes ?? [];
+  const materials = document.materials ?? [];
   const extensionsUsed = document.extensionsUsed ?? [];
   const extensionsRequired = document.extensionsRequired ?? [];
   const supportedRequiredExtensions = new Set([
@@ -247,6 +248,16 @@ async function analyzeGltfDocument(document, format, asset) {
   let missingPositionPrimitiveCount = 0;
   let missingNormalPrimitiveCount = 0;
   let missingUvPrimitiveCount = 0;
+  let texturedMissingUvPrimitiveCount = 0;
+  let missingPositionBoundsPrimitiveCount = 0;
+  let invalidAccessorReferenceCount = 0;
+  let nonTrianglePrimitiveCount = 0;
+  let vertexColorPrimitiveCount = 0;
+  const texturedMaterialIndices = new Set(
+    materials
+      .map((material, index) => (materialUsesTexture(material) ? index : undefined))
+      .filter((index) => typeof index === "number")
+  );
 
   for (const mesh of meshes) {
     for (const primitive of mesh.primitives ?? []) {
@@ -255,6 +266,19 @@ async function analyzeGltfDocument(document, format, asset) {
       }
       primitiveCount += 1;
       const positionAccessorIndex = primitive.attributes?.POSITION;
+      const attributeIndices = Object.values(primitive.attributes ?? {});
+      for (const accessorIndex of [
+        ...attributeIndices,
+        ...(typeof primitive.indices === "number" ? [primitive.indices] : [])
+      ]) {
+        if (
+          typeof accessorIndex !== "number" ||
+          accessorIndex < 0 ||
+          accessorIndex >= accessors.length
+        ) {
+          invalidAccessorReferenceCount += 1;
+        }
+      }
       if (typeof positionAccessorIndex !== "number") {
         missingPositionPrimitiveCount += 1;
       }
@@ -263,16 +287,27 @@ async function analyzeGltfDocument(document, format, asset) {
       }
       if (typeof primitive.attributes?.TEXCOORD_0 !== "number") {
         missingUvPrimitiveCount += 1;
+        if (typeof primitive.material === "number" && texturedMaterialIndices.has(primitive.material)) {
+          texturedMissingUvPrimitiveCount += 1;
+        }
+      }
+      if (typeof primitive.attributes?.COLOR_0 === "number") {
+        vertexColorPrimitiveCount += 1;
       }
       const positionAccessor =
         typeof positionAccessorIndex === "number" ? accessors[positionAccessorIndex] : undefined;
       const indexAccessor =
         typeof primitive.indices === "number" ? accessors[primitive.indices] : undefined;
+      if (positionAccessor && (!Array.isArray(positionAccessor.min) || !Array.isArray(positionAccessor.max))) {
+        missingPositionBoundsPrimitiveCount += 1;
+      }
       const vertices = positionAccessor?.count ?? 0;
       vertexCount += vertices;
 
       if (primitive.mode === undefined || primitive.mode === 4) {
         triangleCount += Math.floor((indexAccessor?.count ?? vertices) / 3);
+      } else {
+        nonTrianglePrimitiveCount += 1;
       }
     }
   }
@@ -315,7 +350,7 @@ async function analyzeGltfDocument(document, format, asset) {
     nodeCount: document.nodes?.length ?? 0,
     meshCount: meshes.length,
     primitiveCount,
-    materialCount: document.materials?.length ?? 0,
+    materialCount: materials.length,
     textureCount: document.textures?.length ?? 0,
     imageCount: document.images?.length ?? 0,
     bufferCount: document.buffers?.length ?? 0,
@@ -328,6 +363,17 @@ async function analyzeGltfDocument(document, format, asset) {
     missingPositionPrimitiveCount,
     missingNormalPrimitiveCount,
     missingUvPrimitiveCount,
+    texturedMissingUvPrimitiveCount,
+    missingPositionBoundsPrimitiveCount,
+    invalidAccessorReferenceCount,
+    nonTrianglePrimitiveCount,
+    vertexColorPrimitiveCount,
+    transparentMaterialCount: materials.filter(materialIsTransparent).length,
+    doubleSidedMaterialCount: materials.filter((material) => material?.doubleSided === true).length,
+    unlitMaterialCount: materials.filter((material) => Boolean(material?.extensions?.KHR_materials_unlit)).length,
+    transmissionMaterialCount: materials.filter((material) =>
+      Boolean(material?.extensions?.KHR_materials_transmission || material?.extensions?.KHR_materials_volume)
+    ).length,
     compression: {
       meshopt: usesMeshopt,
       draco: usesDraco,
@@ -338,6 +384,34 @@ async function analyzeGltfDocument(document, format, asset) {
     missingExternalResourceCount: externalResources.filter((resource) => !resource.exists).length,
     externalResources
   };
+}
+
+function materialUsesTexture(material) {
+  if (!material || typeof material !== "object") {
+    return false;
+  }
+  const pbr = material.pbrMetallicRoughness ?? {};
+  return Boolean(
+    pbr.baseColorTexture ||
+      pbr.metallicRoughnessTexture ||
+      material.normalTexture ||
+      material.occlusionTexture ||
+      material.emissiveTexture ||
+      Object.values(material.extensions ?? {}).some((extension) =>
+        extension && typeof extension === "object" && Object.keys(extension).some((key) => key.endsWith("Texture"))
+      )
+  );
+}
+
+function materialIsTransparent(material) {
+  if (!material || typeof material !== "object") {
+    return false;
+  }
+  if (material.alphaMode === "BLEND" || material.alphaMode === "MASK") {
+    return true;
+  }
+  const baseColor = material.pbrMetallicRoughness?.baseColorFactor;
+  return Array.isArray(baseColor) && typeof baseColor[3] === "number" && baseColor[3] < 0.999;
 }
 
 function stableName(value, fallback) {
@@ -946,6 +1020,34 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.missingUvPrimitiveCount ?? 0),
     0
   );
+  const texturedMissingUvPrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.texturedMissingUvPrimitiveCount ?? 0),
+    0
+  );
+  const missingPositionBoundsPrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.missingPositionBoundsPrimitiveCount ?? 0),
+    0
+  );
+  const invalidAccessorReferenceCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidAccessorReferenceCount ?? 0),
+    0
+  );
+  const nonTrianglePrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.nonTrianglePrimitiveCount ?? 0),
+    0
+  );
+  const transparentMaterialCount = report.models.reduce(
+    (sum, model) => sum + (model.transparentMaterialCount ?? 0),
+    0
+  );
+  const transmissionMaterialCount = report.models.reduce(
+    (sum, model) => sum + (model.transmissionMaterialCount ?? 0),
+    0
+  );
+  const vertexColorPrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.vertexColorPrimitiveCount ?? 0),
+    0
+  );
   const floorMatches = keywordMatchCount(graph, manifest.navigation?.floorMeshNames ?? []);
   const collisionMatches = keywordMatchCount(graph, manifest.navigation?.collisionMeshNames ?? []);
   const ceilingMatches = keywordMatchCount(graph, ["ceiling", "roof", "soffit", "false ceiling"]);
@@ -983,6 +1085,26 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if (invalidAccessorReferenceCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-accessor-references",
+      title: "Invalid mesh accessor references",
+      message: `${invalidAccessorReferenceCount} primitive attribute/index reference(s) point outside the accessor list.`,
+      action: "Repair or re-export the GLB/GLTF; invalid accessors can make geometry disappear or render incorrectly."
+    });
+  }
+
+  if (missingPositionBoundsPrimitiveCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-position-bounds",
+      title: "Position accessor bounds missing",
+      message: `${missingPositionBoundsPrimitiveCount} primitive(s) have POSITION data without min/max bounds.`,
+      action: "Re-export with accessor bounds, or run the optimizer/repair pass so framing, floor detection, and navigation can be generated reliably."
+    });
+  }
+
   if (missingNormalPrimitiveCount > 0) {
     diagnostics.push({
       severity: "warning",
@@ -993,13 +1115,61 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
-  if (missingUvPrimitiveCount > 0 && (report.imageCount ?? 0) > 0) {
+  if (texturedMissingUvPrimitiveCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "textured-primitives-missing-uvs",
+      title: "Textured meshes missing UVs",
+      message: `${texturedMissingUvPrimitiveCount} textured primitive(s) do not include TEXCOORD_0 attributes.`,
+      action: "Unwrap UVs or rebake those textures; affected surfaces can appear flat, plain, or incorrectly colored."
+    });
+  } else if (missingUvPrimitiveCount > 0 && (report.imageCount ?? 0) > 0) {
     diagnostics.push({
       severity: "warning",
       code: "missing-uv-attributes",
       title: "Texture UVs missing",
       message: `${missingUvPrimitiveCount} primitive(s) do not include TEXCOORD_0 attributes even though the model uses images.`,
       action: "Unwrap UVs or bake textures into a GLB with valid TEXCOORD_0 attributes."
+    });
+  }
+
+  if (nonTrianglePrimitiveCount > 0) {
+    diagnostics.push({
+      severity: "info",
+      code: "non-triangle-primitives",
+      title: "Non-triangle primitive modes detected",
+      message: `${nonTrianglePrimitiveCount} primitive(s) use line, point, strip, or fan modes.`,
+      action: "Confirm these are intended; architectural walkthroughs should generally use triangle meshes for predictable optimization and collision."
+    });
+  }
+
+  if (transparentMaterialCount > 24) {
+    diagnostics.push({
+      severity: "warning",
+      code: "many-transparent-materials",
+      title: "Many transparent materials",
+      message: `${transparentMaterialCount} material(s) use alpha blending/masking or opacity below 1.`,
+      action: "Check glass/window materials in the viewer; heavy transparency can cause sorting artifacts and slower mobile rendering."
+    });
+  }
+
+  if (transmissionMaterialCount > 0) {
+    diagnostics.push({
+      severity: "info",
+      code: "transmission-materials",
+      title: "Physical glass/transmission materials detected",
+      message: `${transmissionMaterialCount} material(s) use transmission or volume extensions.`,
+      action: "Compare glass in the viewer after optimization; browser viewers may need simpler glass settings for stable performance."
+    });
+  }
+
+  if (vertexColorPrimitiveCount > 0) {
+    diagnostics.push({
+      severity: "info",
+      code: "vertex-colors-detected",
+      title: "Vertex colors detected",
+      message: `${vertexColorPrimitiveCount} primitive(s) include COLOR_0 vertex colors.`,
+      action: "If colors look different from the source tool, check whether vertex colors are intentionally mixed with material textures."
     });
   }
 
