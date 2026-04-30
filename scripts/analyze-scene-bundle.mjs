@@ -251,6 +251,8 @@ async function analyzeGltfDocument(document, format, asset) {
   let texturedMissingUvPrimitiveCount = 0;
   let missingPositionBoundsPrimitiveCount = 0;
   let invalidAccessorReferenceCount = 0;
+  let invalidTextureReferenceCount = 0;
+  let texturesMissingImageCount = 0;
   let nonTrianglePrimitiveCount = 0;
   let vertexColorPrimitiveCount = 0;
   const texturedMaterialIndices = new Set(
@@ -342,6 +344,27 @@ async function analyzeGltfDocument(document, format, asset) {
   const usesWebp =
     extensionsUsed.includes("EXT_texture_webp") ||
     (document.textures ?? []).some((texture) => Boolean(texture.extensions?.EXT_texture_webp));
+  for (const texture of document.textures ?? []) {
+    const imageRefs = [
+      texture?.source,
+      texture?.extensions?.KHR_texture_basisu?.source,
+      texture?.extensions?.EXT_texture_webp?.source
+    ].filter((source) => typeof source === "number");
+    if (imageRefs.length === 0) {
+      texturesMissingImageCount += 1;
+      continue;
+    }
+    invalidTextureReferenceCount += imageRefs.filter(
+      (source) => source < 0 || source >= (document.images?.length ?? 0)
+    ).length;
+  }
+  for (const material of materials) {
+    for (const textureIndex of materialTextureIndices(material)) {
+      if (textureIndex < 0 || textureIndex >= (document.textures?.length ?? 0)) {
+        invalidTextureReferenceCount += 1;
+      }
+    }
+  }
 
   return {
     format,
@@ -366,6 +389,8 @@ async function analyzeGltfDocument(document, format, asset) {
     texturedMissingUvPrimitiveCount,
     missingPositionBoundsPrimitiveCount,
     invalidAccessorReferenceCount,
+    invalidTextureReferenceCount,
+    texturesMissingImageCount,
     nonTrianglePrimitiveCount,
     vertexColorPrimitiveCount,
     transparentMaterialCount: materials.filter(materialIsTransparent).length,
@@ -401,6 +426,21 @@ function materialUsesTexture(material) {
         extension && typeof extension === "object" && Object.keys(extension).some((key) => key.endsWith("Texture"))
       )
   );
+}
+
+function materialTextureIndices(value, indices = []) {
+  if (!value || typeof value !== "object") {
+    return indices;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    if (key.endsWith("Texture") && child && typeof child === "object" && typeof child.index === "number") {
+      indices.push(child.index);
+    }
+    if (child && typeof child === "object") {
+      materialTextureIndices(child, indices);
+    }
+  }
+  return indices;
 }
 
 function materialIsTransparent(material) {
@@ -1032,6 +1072,14 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.invalidAccessorReferenceCount ?? 0),
     0
   );
+  const invalidTextureReferenceCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidTextureReferenceCount ?? 0),
+    0
+  );
+  const texturesMissingImageCount = report.models.reduce(
+    (sum, model) => sum + (model.texturesMissingImageCount ?? 0),
+    0
+  );
   const nonTrianglePrimitiveCount = report.models.reduce(
     (sum, model) => sum + (model.nonTrianglePrimitiveCount ?? 0),
     0
@@ -1092,6 +1140,26 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Invalid mesh accessor references",
       message: `${invalidAccessorReferenceCount} primitive attribute/index reference(s) point outside the accessor list.`,
       action: "Repair or re-export the GLB/GLTF; invalid accessors can make geometry disappear or render incorrectly."
+    });
+  }
+
+  if (invalidTextureReferenceCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-texture-references",
+      title: "Invalid texture references",
+      message: `${invalidTextureReferenceCount} texture/material reference(s) point outside the image or texture lists.`,
+      action: "Repair or re-export the GLB/GLTF; broken texture references can make surfaces render flat, green, black, or missing."
+    });
+  }
+
+  if (texturesMissingImageCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "textures-without-images",
+      title: "Textures without image sources",
+      message: `${texturesMissingImageCount} texture definition(s) do not point at an embedded or external image.`,
+      action: "Re-export with embedded textures or upload the original GLTF ZIP with all texture files."
     });
   }
 
