@@ -931,13 +931,11 @@ export class WalkthroughViewer {
         });
       }
     });
-    if (blockers.length > 0) {
-      return blockers;
-    }
-    return inferredBlockers
+    const inferred = inferredBlockers
       .sort((a, b) => b.area - a.area)
-      .slice(0, 160)
+      .slice(0, Math.max(0, 180 - blockers.length))
       .map((item) => item.blocker);
+    return [...blockers, ...inferred];
   }
 
   private configureInteractions(): void {
