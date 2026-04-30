@@ -3362,7 +3362,7 @@ function App() {
               <label className="file-drop">
                 <input
                   type="file"
-                  accept=".glb,.zip,model/gltf-binary,model/gltf+json,application/zip"
+                  accept=".glb,.gltf,.zip,model/gltf-binary,model/gltf+json,application/zip"
                   disabled={!apiConnected || uploadState === "uploading"}
                   onChange={(event) => void uploadModel(event.target.files?.[0])}
                 />

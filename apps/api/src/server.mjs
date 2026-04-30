@@ -400,22 +400,60 @@ function extractZipEntries(body) {
   return entries;
 }
 
+function archiveResourceExists(entriesByName, sceneUrl, uri) {
+  const cleanUri = stripUriQuery(uri);
+  const exact = path.posix.normalize(path.posix.join(path.posix.dirname(sceneUrl.replace(/\\/g, "/")), cleanUri));
+  if (entriesByName.has(exact.toLowerCase())) {
+    return true;
+  }
+  const basename = path.posix.basename(cleanUri).toLowerCase();
+  return [...entriesByName.keys()].some((filename) => path.posix.basename(filename) === basename);
+}
+
+function archiveSceneDocument(entry) {
+  try {
+    if (entry.filename.toLowerCase().endsWith(".glb")) {
+      return parseGlbJsonDocument(entry.data);
+    }
+    return JSON.parse(entry.data.toString("utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
 function archiveSceneUrl(entries) {
-  const sceneEntries = entries
-    .map((entry) => entry.filename)
-    .filter((filename) => {
-      const lower = filename.toLowerCase();
-      return lower.endsWith(".glb") || lower.endsWith(".gltf");
+  const entriesByName = new Map(entries.map((entry) => [entry.filename.toLowerCase(), entry]));
+  const sceneEntries = entries.filter((entry) => {
+    const lower = entry.filename.toLowerCase();
+    return lower.endsWith(".glb") || lower.endsWith(".gltf");
+  });
+  const ranked = sceneEntries
+    .map((entry) => {
+      const document = archiveSceneDocument(entry);
+      const resources = [
+        ...(document?.images ?? []).map((image) => image?.uri).filter(localGltfUri),
+        ...(document?.buffers ?? []).map((buffer) => buffer?.uri).filter(localGltfUri)
+      ];
+      const foundResources = resources.filter((uri) =>
+        archiveResourceExists(entriesByName, entry.filename, uri)
+      ).length;
+      const missingResources = Math.max(0, resources.length - foundResources);
+      const isGlb = entry.filename.toLowerCase().endsWith(".glb");
+      const hasEmbeddedPayload =
+        (document?.buffers ?? []).some((buffer) => typeof buffer?.byteLength === "number" && !buffer.uri) ||
+        (document?.images ?? []).some((image) => typeof image?.bufferView === "number");
+      return {
+        entry,
+        score:
+          foundResources * 8 -
+          missingResources * 12 +
+          (hasEmbeddedPayload ? 4 : 0) +
+          (isGlb ? 2 : 0) -
+          entry.filename.split("/").length
+      };
     })
-    .sort((a, b) => {
-      const aIsGlb = a.toLowerCase().endsWith(".glb");
-      const bIsGlb = b.toLowerCase().endsWith(".glb");
-      if (aIsGlb !== bIsGlb) {
-        return aIsGlb ? -1 : 1;
-      }
-      return a.split("/").length - b.split("/").length || a.localeCompare(b);
-    });
-  return sceneEntries[0];
+    .sort((a, b) => b.score - a.score || a.entry.filename.localeCompare(b.entry.filename));
+  return ranked[0]?.entry.filename;
 }
 
 async function writeProjectArchive(projectId, body) {
