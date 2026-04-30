@@ -1505,7 +1505,7 @@ export class WalkthroughViewer {
   }
 
   private findNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
-    const routeMeshes = [...this.passZoneMeshes, ...this.walkZoneMeshes].slice(0, 24);
+    const routeMeshes = this.navigationRouteMeshes(origin, target);
     if (routeMeshes.length === 0) {
       return undefined;
     }
@@ -1588,6 +1588,28 @@ export class WalkthroughViewer {
     return route;
   }
 
+  private navigationRouteMeshes(origin: THREE.Vector3, target: THREE.Vector3): THREE.Mesh[] {
+    const routeMeshes = [...this.passZoneMeshes, ...this.walkZoneMeshes];
+    if (routeMeshes.length <= 96) {
+      return routeMeshes;
+    }
+
+    const passMeshes = this.passZoneMeshes.slice(0, 48);
+    const included = new Set(passMeshes);
+    const remainingWalkMeshes = this.walkZoneMeshes
+      .filter((mesh) => !included.has(mesh))
+      .sort((a, b) => this.navigationMeshRouteScore(a, origin, target) - this.navigationMeshRouteScore(b, origin, target));
+    return [...passMeshes, ...remainingWalkMeshes].slice(0, 96);
+  }
+
+  private navigationMeshRouteScore(mesh: THREE.Mesh, origin: THREE.Vector3, target: THREE.Vector3): number {
+    const center = new THREE.Vector3();
+    mesh.getWorldPosition(center);
+    const originDistance = Math.hypot(center.x - origin.x, center.z - origin.z);
+    const targetDistance = Math.hypot(center.x - target.x, center.z - target.z);
+    return Math.min(originDistance, targetDistance) + distanceToSegment2D(center, origin, target) * 0.65;
+  }
+
   private navigationRoutePointsForMesh(mesh: THREE.Mesh, y: number): THREE.Vector3[] {
     const halfSize = mesh.userData["navigationHalfSize"];
     if (!(halfSize instanceof THREE.Vector3)) {
@@ -1596,20 +1618,25 @@ export class WalkthroughViewer {
       point.y = y;
       return [point];
     }
-    const x = Math.max(0, halfSize.x - this.collisionRadius * 1.2) * 0.55;
-    const z = Math.max(0, halfSize.z - this.collisionRadius * 1.2) * 0.55;
-    const localPoints = [
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(x, 0, 0),
-      new THREE.Vector3(-x, 0, 0),
-      new THREE.Vector3(0, 0, z),
-      new THREE.Vector3(0, 0, -z)
-    ];
+    const x = Math.max(0, halfSize.x - this.collisionRadius * 1.15) * 0.72;
+    const z = Math.max(0, halfSize.z - this.collisionRadius * 1.15) * 0.72;
+    const xs = x > 0.05 ? [-x, 0, x] : [0];
+    const zs = z > 0.05 ? [-z, 0, z] : [0];
+    const localPoints = xs.flatMap((localX) => zs.map((localZ) => new THREE.Vector3(localX, 0, localZ)));
+    const seen = new Set<string>();
     return localPoints
       .map((localPoint) => mesh.localToWorld(localPoint.clone()))
       .map((point) => {
         point.y = y;
         return point;
+      })
+      .filter((point) => {
+        const key = `${point.x.toFixed(2)}:${point.z.toFixed(2)}`;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
       });
   }
 
@@ -2002,6 +2029,23 @@ export class WalkthroughViewer {
   private emitProgress(progress: LoadingProgress): void {
     this.options.onProgress?.(progress);
   }
+}
+
+function distanceToSegment2D(point: THREE.Vector3, start: THREE.Vector3, end: THREE.Vector3): number {
+  const segmentX = end.x - start.x;
+  const segmentZ = end.z - start.z;
+  const segmentLengthSq = segmentX * segmentX + segmentZ * segmentZ;
+  if (segmentLengthSq < 0.0001) {
+    return Math.hypot(point.x - start.x, point.z - start.z);
+  }
+  const t = THREE.MathUtils.clamp(
+    ((point.x - start.x) * segmentX + (point.z - start.z) * segmentZ) / segmentLengthSq,
+    0,
+    1
+  );
+  const closestX = start.x + segmentX * t;
+  const closestZ = start.z + segmentZ * t;
+  return Math.hypot(point.x - closestX, point.z - closestZ);
 }
 
 export function createInteractionFilter(kind: SceneInteraction["kind"]) {
