@@ -485,7 +485,7 @@ export class WalkthroughViewer {
       mesh.updateMatrixWorld(true);
       if (zone.kind === "walk") {
         walkMeshes.push(mesh);
-        if (!isGeneratedViewerNavigationZoneId(zone.id)) {
+        if (!isGeneratedViewerNavigationZone(zone)) {
           hasAuthoredWalkZones = true;
         }
         return;
@@ -2116,6 +2116,49 @@ export class WalkthroughViewer {
     return undefined;
   }
 
+  private findWalkableHitBeyondPortalObject(
+    hit: THREE.Intersection,
+    objectName: string
+  ): THREE.Intersection | undefined {
+    if (!(hit.object instanceof THREE.Mesh) || !isPortalLikeObject(hit.object, objectName)) {
+      return undefined;
+    }
+
+    const direction = this.raycaster.ray.direction.clone().normalize();
+    if (Math.abs(direction.y) > 0.75) {
+      return undefined;
+    }
+
+    const baseDistance = Number.isFinite(hit.distance)
+      ? hit.distance
+      : this.camera.position.distanceTo(hit.point);
+    const raycaster = new THREE.Raycaster(
+      undefined,
+      new THREE.Vector3(0, -1, 0),
+      0,
+      Math.max(4.5, this.cameraHeight + 3.2)
+    );
+    const offsets = [0.45, 0.8, 1.25, 1.8, 2.5, 3.4, 4.6, 5.8];
+    for (const offset of offsets) {
+      const probe = this.camera.position.clone().addScaledVector(direction, baseDistance + offset);
+      const origin = probe.clone();
+      origin.y = Math.max(this.camera.position.y + 0.3, probe.y + this.cameraHeight + 1.2);
+      raycaster.set(origin, new THREE.Vector3(0, -1, 0));
+      const floorHit = raycaster
+        .intersectObjects(this.walkableMeshes, true)
+        .find((candidate) => this.isWalkableHit(candidate));
+      if (!floorHit) {
+        continue;
+      }
+      const target = floorHit.point.clone();
+      target.y = floorHit.point.y + this.cameraHeight;
+      if (!this.navigationFailureDetail(target, this.camera.position)) {
+        return floorHit;
+      }
+    }
+    return undefined;
+  }
+
   private tryMoveToFloorHit(floorHit: THREE.Intersection, event: PointerEvent): boolean {
     const nextTarget = floorHit.point.clone();
     nextTarget.y = floorHit.point.y + this.cameraHeight;
@@ -2309,6 +2352,10 @@ export class WalkthroughViewer {
       if (nearbyFloorHit && this.tryMoveToFloorHit(nearbyFloorHit, event)) {
         return;
       }
+      const portalFloorHit = this.findWalkableHitBeyondPortalObject(objectHit, objectName);
+      if (portalFloorHit && this.tryMoveToFloorHit(portalFloorHit, event)) {
+        return;
+      }
       this.emitNavigationFailure("no-walkable-hit", event, objectHit.point, objectName);
       this.options.onObjectPick?.({
         objectName,
@@ -2461,7 +2508,14 @@ function distanceToSegment2D(point: THREE.Vector3, start: THREE.Vector3, end: TH
   return Math.hypot(point.x - closestX, point.z - closestZ);
 }
 
-function isGeneratedViewerNavigationZoneId(id: string): boolean {
+function isGeneratedViewerNavigationZone(zone: NavigationZone): boolean {
+  if (zone.source === "generated") {
+    return true;
+  }
+  if (zone.source === "authored") {
+    return false;
+  }
+  const id = zone.id;
   return (
     id === "walk-main" ||
     id.startsWith("walk-node-") ||
@@ -2471,6 +2525,17 @@ function isGeneratedViewerNavigationZoneId(id: string): boolean {
     id.startsWith("pass-bridge-") ||
     id.startsWith("walk-Object") ||
     id.startsWith("pass-Object")
+  );
+}
+
+function isPortalLikeObject(mesh: THREE.Mesh, objectName: string): boolean {
+  const parentName = mesh.parent?.name ?? "";
+  const materialNames = (Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+    .map((material) => material.name)
+    .join(" ");
+  const descriptor = `${objectName} ${mesh.name} ${parentName} ${materialNames}`.toLowerCase();
+  return /\b(door|doorway|opening|entrance|entry|passage|corridor|balcony|terrace|patio|slider|sliding)\b/.test(
+    descriptor
   );
 }
 
