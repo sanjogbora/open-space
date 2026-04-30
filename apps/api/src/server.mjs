@@ -1518,6 +1518,15 @@ async function publishProject(projectId) {
   const publishedAt = new Date().toISOString();
   const version = publishedAt.replace(/[-:.]/g, "").replace("T", "-").replace("Z", "z");
   const source = targetDirs(projectId)[0];
+  const stats = await readJson(path.join(source, "stats.json"));
+  const blockingDiagnostics = (stats.diagnostics ?? []).filter((diagnostic) => diagnostic.severity === "error");
+  if ((stats.missingAssetCount ?? 0) > 0 || blockingDiagnostics.length > 0) {
+    const details = [
+      (stats.missingAssetCount ?? 0) > 0 ? `${stats.missingAssetCount} missing asset(s)` : undefined,
+      ...blockingDiagnostics.map((diagnostic) => diagnostic.title ?? diagnostic.code)
+    ].filter(Boolean);
+    throw badRequest(`Publish blocked: ${details.join("; ")}.`);
+  }
   const output = path.join(publishedRoot, projectId, version);
   await mkdir(path.dirname(output), { recursive: true });
   await cp(source, output, { recursive: true, force: true });
