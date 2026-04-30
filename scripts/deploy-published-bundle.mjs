@@ -33,15 +33,32 @@ function run(command, commandArgs) {
 }
 
 async function fileInfo(relativePath) {
-  const fullPath = path.join(sourceDir, relativePath);
+  const safePath = safeDeploymentAssetPath(relativePath);
+  const fullPath = path.join(sourceDir, safePath);
   try {
     await access(fullPath);
     const info = await stat(fullPath);
     const sha256 = createHash("sha256").update(await readFile(fullPath)).digest("hex");
-    return { path: relativePath, exists: true, bytes: info.size, sha256 };
+    return { path: safePath, exists: true, bytes: info.size, sha256 };
   } catch {
-    return { path: relativePath, exists: false, bytes: 0, sha256: "" };
+    return { path: safePath, exists: false, bytes: 0, sha256: "" };
   }
+}
+
+function safeDeploymentAssetPath(relativePath) {
+  const cleanPath = String(relativePath ?? "").replace(/\\/g, "/");
+  const normalized = path.posix.normalize(cleanPath);
+  if (
+    !cleanPath ||
+    path.isAbsolute(cleanPath) ||
+    /^[a-zA-Z]:/.test(cleanPath) ||
+    normalized === "." ||
+    normalized.startsWith("../") ||
+    normalized === ".."
+  ) {
+    throw new Error(`Unsafe deployment asset path: ${relativePath}`);
+  }
+  return normalized;
 }
 
 async function validateDeployment() {
@@ -50,6 +67,14 @@ async function validateDeployment() {
   }
   if (!deployment.projectId || !deployment.version || !Array.isArray(deployment.assets)) {
     throw new Error("Deployment manifest is missing projectId, version, or assets.");
+  }
+  const seen = new Set();
+  for (const asset of deployment.assets) {
+    const safePath = safeDeploymentAssetPath(asset.path);
+    if (seen.has(safePath)) {
+      throw new Error(`Duplicate deployment asset path: ${safePath}`);
+    }
+    seen.add(safePath);
   }
   const checks = await Promise.all(deployment.assets.map((asset) => fileInfo(asset.path)));
   const missing = checks.filter((check) => !check.exists);
@@ -144,10 +169,10 @@ async function deployToDirectory(outputRoot) {
     await writeDeployReport("directory", target, checks);
     return;
   }
-  await writeFile(path.join(sourceDir, "_headers"), headersFile(deployment));
-  await writeFile(path.join(sourceDir, "vercel.json"), `${JSON.stringify(vercelConfig(deployment), null, 2)}\n`);
   await mkdir(path.dirname(target), { recursive: true });
   await cp(sourceDir, target, { recursive: true, force: true });
+  await writeFile(path.join(target, "_headers"), headersFile(deployment));
+  await writeFile(path.join(target, "vercel.json"), `${JSON.stringify(vercelConfig(deployment), null, 2)}\n`);
   await writeDeployReport("directory", target, checks, target);
 }
 
