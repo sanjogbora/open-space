@@ -2116,6 +2116,7 @@ async function removePublishOnlyTemporaryFiles(root) {
     rm(path.join(root, "source"), { recursive: true, force: true }),
     rm(path.join(root, ".lightmap-bake.py"), { force: true }),
     rm(path.join(root, ".lightmap-bake-config.json"), { force: true }),
+    rm(path.join(root, ".lightmap-bake-status.json"), { force: true }),
     rm(path.join(root, "optimization-job.json"), { force: true }),
     rm(path.join(root, "optimization-history.json"), { force: true }),
     rm(path.join(root, "lightmap-bake-job.json"), { force: true }),

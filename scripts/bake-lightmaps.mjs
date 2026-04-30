@@ -61,6 +61,14 @@ async function writeJob(job) {
   await writeFile(path.join(bundleDir, "lightmap-bake-job.json"), `${JSON.stringify(job, null, 2)}\n`);
 }
 
+async function readJsonIfExists(filePath, fallback) {
+  try {
+    return JSON.parse(await readFile(filePath, "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+
 function runBlender(scriptPath, configPath) {
   return new Promise((resolve, reject) => {
     const child = spawn(
@@ -105,6 +113,7 @@ source_path = config["sourcePath"]
 output_glb = config["outputGlb"]
 lightmap_dir = config["lightmapDir"]
 report_path = config["reportPath"]
+status_path = config["statusPath"]
 resolution = int(config["resolution"])
 samples = int(config["samples"])
 margin = int(config["margin"])
@@ -114,6 +123,10 @@ max_materials = int(config.get("maxMaterials", 160))
 def clean_name(value):
     value = re.sub(r"[^A-Za-z0-9_.-]+", "-", value or "material").strip("-")
     return (value or "material")[:72]
+
+def write_stage(stage):
+    with open(status_path, "w", encoding="utf8") as handle:
+        json.dump({"stage": stage}, handle, indent=2)
 
 def clamp_power_of_two(value, minimum, maximum):
     value = max(minimum, min(maximum, int(value)))
@@ -141,6 +154,7 @@ def lightmap_size_for_area(area):
     return resolution
 
 os.makedirs(lightmap_dir, exist_ok=True)
+write_stage("import")
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete()
 bpy.ops.import_scene.gltf(filepath=source_path)
@@ -157,6 +171,7 @@ for obj in meshes:
         material.use_nodes = True
         slot.material = material
 
+write_stage("unwrap-uv2")
 for obj in meshes:
     bpy.ops.object.select_all(action="DESELECT")
     bpy.context.view_layer.objects.active = obj
@@ -177,6 +192,7 @@ for obj in meshes:
     bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.035, area_weight=0.2)
     bpy.ops.object.mode_set(mode="OBJECT")
 
+write_stage("setup-bake")
 if not any(obj.type == "LIGHT" for obj in bpy.context.scene.objects):
     light_data = bpy.data.lights.new("Walkthrough Bake Area", type="AREA")
     light_data.energy = 450
@@ -226,6 +242,7 @@ for material in materials:
         "resolution": material_resolution
     })
 
+write_stage("bake-cycles")
 bpy.ops.object.select_all(action="DESELECT")
 for obj in meshes:
     obj.select_set(True)
@@ -235,6 +252,7 @@ if bake_mode == "combined":
 else:
     bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"}, margin=margin, use_clear=True)
 
+write_stage("assign-lightmaps")
 for entry in lightmaps:
     image = bpy.data.images[entry["imageName"]]
     image.filepath_raw = entry["outputPath"]
@@ -248,6 +266,7 @@ with open(report_path, "w", encoding="utf8") as handle:
         "materialCount": len(materials),
         "lightmaps": [{"materialName": item["materialName"], "url": item["relativeUrl"], "resolution": item["resolution"]} for item in lightmaps]
     }, handle, indent=2)
+write_stage("completed")
 `;
 
 const timestamp = new Date().toISOString();
@@ -310,10 +329,12 @@ await writeJob(startedJob);
 
 const scriptPath = path.join(bundleDir, ".lightmap-bake.py");
 const configPath = path.join(bundleDir, ".lightmap-bake-config.json");
+const statusPath = path.join(bundleDir, ".lightmap-bake-status.json");
 const reportPath = path.join(bundleDir, "lightmaps", "lightmap-report.json");
 const outputGlb = path.join(bundleDir, outputSceneUrl);
 await Promise.all([
   rm(outputGlb, { force: true }),
+  rm(statusPath, { force: true }),
   rm(path.join(bundleDir, "lightmaps"), { recursive: true, force: true })
 ]);
 await mkdir(path.dirname(reportPath), { recursive: true });
@@ -326,6 +347,7 @@ await writeFile(
       outputGlb,
       lightmapDir: path.join(bundleDir, "lightmaps"),
       reportPath,
+      statusPath,
       resolution,
       samples,
       margin,
@@ -336,6 +358,33 @@ await writeFile(
     2
   )}\n`
 );
+
+function failureStepsForStage(stageName) {
+  const stage = typeof stageName === "string" ? stageName : "import";
+  const unwrapCompleted = ["setup-bake", "bake-cycles", "assign-lightmaps", "completed"].includes(stage);
+  const bakeCompleted = ["assign-lightmaps", "completed"].includes(stage);
+  const assignCompleted = stage === "completed";
+  return [
+    step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
+    step(
+      "unwrap-uv2",
+      "Create secondary lightmap UVs",
+      unwrapCompleted ? "completed" : "failed",
+      unwrapCompleted ? "Generated Lightmap UVs before the failure." : "Failed while importing or generating UVs."
+    ),
+    step(
+      "bake-cycles",
+      "Bake indirect lighting and shadows",
+      bakeCompleted ? "completed" : unwrapCompleted ? "failed" : "pending",
+      bakeCompleted ? "Cycles bake completed before the failure." : undefined
+    ),
+    step(
+      "assign-lightmaps",
+      "Assign generated lightmaps to materials",
+      assignCompleted ? "completed" : bakeCompleted ? "failed" : "pending"
+    )
+  ];
+}
 
 try {
   await runBlender(scriptPath, configPath);
@@ -410,17 +459,14 @@ try {
   console.log(JSON.stringify(job, null, 2));
 } catch (error) {
   const completedAt = new Date().toISOString();
+  const status = await readJsonIfExists(statusPath, { stage: "import" });
   const job = {
     ...startedJob,
     status: "failed",
     completedAt,
     message: error instanceof Error ? error.message : "Lightmap bake failed.",
-    steps: [
-      step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
-      step("unwrap-uv2", "Create secondary lightmap UVs", "failed"),
-      step("bake-cycles", "Bake indirect lighting and shadows", "pending"),
-      step("assign-lightmaps", "Assign generated lightmaps to materials", "pending")
-    ]
+    failedStage: status.stage,
+    steps: failureStepsForStage(status.stage)
   };
   await writeJob(job);
   console.log(JSON.stringify(job, null, 2));
