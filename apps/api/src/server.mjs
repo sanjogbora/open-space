@@ -1263,7 +1263,64 @@ function graphWalkZoneCandidates(graph, modelScale) {
     .map(({ area: _area, exterior: _exterior, generic: _generic, ...zone }) => zone);
 }
 
-function zoneRoomLabel(zone, index) {
+function roomLabelFromZoneContents(zone, graph, modelScale) {
+  if (!zone || !graph) {
+    return undefined;
+  }
+  const roomHints = [
+    { label: "Living", keywords: ["sofa", "couch", "tv", "television", "media", "lounge"], weight: 3 },
+    { label: "Dining", keywords: ["dining", "dinner", "chair", "table"], weight: 2 },
+    { label: "Kitchen", keywords: ["kitchen", "fridge", "refrigerator", "sink", "cooktop", "stove", "oven"], weight: 3 },
+    { label: "Bedroom", keywords: ["bed", "mattress", "wardrobe", "closet", "dresser"], weight: 3 },
+    { label: "Bath", keywords: ["bath", "toilet", "wc", "shower", "basin", "vanity"], weight: 3 },
+    { label: "Balcony", keywords: ["balcony", "terrace", "patio", "deck"], weight: 3 },
+    { label: "Entry", keywords: ["entry", "entrance", "foyer", "lobby"], weight: 3 },
+    { label: "Study", keywords: ["study", "office", "desk"], weight: 3 },
+    { label: "Utility", keywords: ["utility", "washer", "washing", "laundry", "dry area"], weight: 3 }
+  ];
+  const rejectKeywords = ["wall", "door", "window", "glass", "ceiling", "roof", "floor", "slab", "tile", "ground"];
+  const box = navigationZoneBox(zone);
+  const scores = new Map();
+  for (const node of graph.nodes ?? []) {
+    if (!node.bounds) {
+      continue;
+    }
+    const scaledBounds = scaleBounds(node.bounds, modelScale);
+    if (!scaledBounds) {
+      continue;
+    }
+    const center = [
+      (scaledBounds.min[0] + scaledBounds.max[0]) / 2,
+      (scaledBounds.min[1] + scaledBounds.max[1]) / 2,
+      (scaledBounds.min[2] + scaledBounds.max[2]) / 2
+    ];
+    if (
+      center[0] < box.minX - 0.65 ||
+      center[0] > box.maxX + 0.65 ||
+      center[2] < box.minZ - 0.65 ||
+      center[2] > box.maxZ + 0.65
+    ) {
+      continue;
+    }
+    const searchName = `${node.name} ${node.meshName ?? ""}`.toLowerCase();
+    if (rejectKeywords.some((keyword) => searchName.includes(keyword))) {
+      continue;
+    }
+    for (const hint of roomHints) {
+      const matches = hint.keywords.filter((keyword) => searchName.includes(keyword)).length;
+      if (matches > 0) {
+        scores.set(hint.label, (scores.get(hint.label) ?? 0) + matches * hint.weight);
+      }
+    }
+  }
+  const best = [...scores.entries()].sort((a, b) => b[1] - a[1])[0];
+  return best && best[1] >= 3 ? best[0] : undefined;
+}
+
+function zoneRoomLabel(zone, index, semanticLabel) {
+  if (semanticLabel) {
+    return semanticLabel;
+  }
   const label = roomLabelFromName(zone?.label ?? "");
   const genericLabel =
     !label ||
@@ -1271,7 +1328,7 @@ function zoneRoomLabel(zone, index) {
   return genericLabel ? `Area ${index + 1}` : label;
 }
 
-function roomCandidatesFromWalkZones(walkZones, bounds, cameraHeight, existingCandidates = []) {
+function roomCandidatesFromWalkZones(walkZones, bounds, cameraHeight, existingCandidates = [], graph, modelScale = 1) {
   const existingCenters = existingCandidates
     .map((candidate) => candidate.center)
     .filter((center) => Array.isArray(center) && center.length >= 3);
@@ -1323,7 +1380,11 @@ function roomCandidatesFromWalkZones(walkZones, bounds, cameraHeight, existingCa
           ];
       return {
         id: `auto-room-zone-${zone.id ?? index}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 64),
-        label: zoneRoomLabel(zone, existingCandidates.length + index),
+        label: zoneRoomLabel(
+          zone,
+          existingCandidates.length + index,
+          roomLabelFromZoneContents(zone, graph, modelScale)
+        ),
         center,
         target,
         dimensions: `${width.toFixed(1)}x${depth.toFixed(1)}m`,
@@ -1777,7 +1838,7 @@ async function resetManifestForUploadedModel(
       ? roomCandidates
       : [
           ...roomCandidates,
-          ...roomCandidatesFromWalkZones(walkZoneCandidates, bounds, cameraHeight, roomCandidates)
+          ...roomCandidatesFromWalkZones(walkZoneCandidates, bounds, cameraHeight, roomCandidates, graph, modelScale)
         ].slice(0, 10);
   const views = importedModelViews(bounds, cameraHeight, effectiveRoomCandidates);
   const margin = 0.75;
