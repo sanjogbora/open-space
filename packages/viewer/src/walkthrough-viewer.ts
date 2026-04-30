@@ -1649,8 +1649,7 @@ export class WalkthroughViewer {
     const steps = Math.max(2, Math.ceil(distance / Math.max(0.18, this.collisionRadius * 0.75)));
     let previous = origin.clone();
     for (let index = 1; index <= steps; index += 1) {
-      const point = origin.clone().lerp(target, index / steps);
-      point.y = target.y;
+      const point = this.navigationProbePosition(origin.clone().lerp(target, index / steps));
       const failure = this.navigationFailureDetail(point, previous);
       if (failure) {
         return { ...failure, point: failure.point ?? point.clone() };
@@ -1674,7 +1673,7 @@ export class WalkthroughViewer {
       { point: origin.clone(), previous: -1, cost: 0, visited: false },
       ...routeMeshes.flatMap((mesh) =>
         this.navigationRoutePointsForMesh(mesh, target.y).map((point) => ({
-          point,
+          point: this.navigationProbePosition(point),
           previous: -1,
           cost: Number.POSITIVE_INFINITY,
           visited: false
@@ -1779,7 +1778,8 @@ export class WalkthroughViewer {
     maxZ = minZ + (rows - 1) * step;
 
     const keyFor = (x: number, z: number) => `${x}:${z}`;
-    const pointFor = (x: number, z: number) => new THREE.Vector3(minX + x * step, target.y, minZ + z * step);
+    const pointFor = (x: number, z: number) =>
+      this.navigationProbePosition(new THREE.Vector3(minX + x * step, target.y, minZ + z * step));
     const passableCache = new Map<string, boolean>();
     const isPassable = (x: number, z: number): boolean => {
       if (x < 0 || z < 0 || x >= columns || z >= rows) {
@@ -1798,7 +1798,8 @@ export class WalkthroughViewer {
     const nearestPassableCell = (point: THREE.Vector3): { x: number; z: number } | undefined => {
       const baseX = THREE.MathUtils.clamp(Math.round((point.x - minX) / step), 0, columns - 1);
       const baseZ = THREE.MathUtils.clamp(Math.round((point.z - minZ) / step), 0, rows - 1);
-      for (let radius = 0; radius <= 5; radius += 1) {
+      const maxSearchRadius = this.generatedWalkZonesOnly ? 9 : 6;
+      for (let radius = 0; radius <= maxSearchRadius; radius += 1) {
         for (let dz = -radius; dz <= radius; dz += 1) {
           for (let dx = -radius; dx <= radius; dx += 1) {
             if (Math.max(Math.abs(dx), Math.abs(dz)) !== radius) {
