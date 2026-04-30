@@ -1601,7 +1601,7 @@ async function publishProject(projectId) {
     version,
     publishedAt,
     scenePath,
-    deploymentPath: `/published/${projectId}/${version}/deployment.json`,
+    deploymentPath: `apps/viewer-demo/public/published/${projectId}/${version}/deployment.json`,
     cdnBasePath: deployment.cdnBasePath,
     assetCount: deployment.assetCount,
     totalBytes: deployment.totalBytes
