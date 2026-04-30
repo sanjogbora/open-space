@@ -112,6 +112,7 @@ export class WalkthroughViewer {
   };
 
   private floorMeshes: THREE.Object3D[] = [];
+  private geometryFloorMeshes: THREE.Object3D[] = [];
   private walkableMeshes: THREE.Object3D[] = [];
   private pickableMeshes: THREE.Object3D[] = [];
   private collisionBlockers: CollisionBlocker[] = [];
@@ -119,6 +120,7 @@ export class WalkthroughViewer {
   private navigationZoneMeshes: THREE.Mesh[] = [];
   private walkZoneMeshes: THREE.Mesh[] = [];
   private passZoneMeshes: THREE.Mesh[] = [];
+  private generatedWalkZonesOnly = false;
   private sceneRoot: THREE.Object3D | undefined;
   private frameId = 0;
   private destroyed = false;
@@ -437,11 +439,17 @@ export class WalkthroughViewer {
     const zones = this.createNavigationZones();
     this.walkZoneMeshes = zones.walkMeshes;
     this.passZoneMeshes = zones.passMeshes;
+    this.generatedWalkZonesOnly = zones.hasWalkZones && !zones.hasAuthoredWalkZones;
+    this.geometryFloorMeshes = fallbackFloors.length > 0 ? fallbackFloors : this.collectFloorMeshes(root);
     if (zones.walkMeshes.length > 0) {
-      this.floorMeshes = zones.walkMeshes;
-      this.walkableMeshes = zones.walkMeshes;
+      this.floorMeshes = this.generatedWalkZonesOnly && this.geometryFloorMeshes.length > 0
+        ? this.geometryFloorMeshes
+        : zones.walkMeshes;
+      this.walkableMeshes = this.generatedWalkZonesOnly && this.geometryFloorMeshes.length > 0
+        ? [...this.geometryFloorMeshes, ...zones.walkMeshes]
+        : zones.walkMeshes;
     } else {
-      this.floorMeshes = fallbackFloors.length > 0 ? fallbackFloors : this.collectFloorMeshes(root);
+      this.floorMeshes = this.geometryFloorMeshes;
       this.walkableMeshes = this.collectWalkableMeshes(root);
     }
     this.collisionBlockers = [...this.collectCollisionBlockers(root), ...zones.blockers];
@@ -452,13 +460,16 @@ export class WalkthroughViewer {
     walkMeshes: THREE.Mesh[];
     passMeshes: THREE.Mesh[];
     blockers: CollisionBlocker[];
+    hasWalkZones: boolean;
+    hasAuthoredWalkZones: boolean;
   } {
     const walkMeshes: THREE.Mesh[] = [];
     const passMeshes: THREE.Mesh[] = [];
     const blockers: CollisionBlocker[] = [];
+    let hasAuthoredWalkZones = false;
     const zones = this.manifest.navigation.zones ?? [];
     if (zones.length === 0) {
-      return { walkMeshes, passMeshes, blockers };
+      return { walkMeshes, passMeshes, blockers, hasWalkZones: false, hasAuthoredWalkZones: false };
     }
 
     zones.forEach((zone) => {
@@ -471,6 +482,9 @@ export class WalkthroughViewer {
       mesh.updateMatrixWorld(true);
       if (zone.kind === "walk") {
         walkMeshes.push(mesh);
+        if (!isGeneratedViewerNavigationZoneId(zone.id)) {
+          hasAuthoredWalkZones = true;
+        }
         return;
       }
       if (zone.kind === "pass") {
@@ -487,7 +501,7 @@ export class WalkthroughViewer {
       }
     });
 
-    return { walkMeshes, passMeshes, blockers };
+    return { walkMeshes, passMeshes, blockers, hasWalkZones: walkMeshes.length > 0, hasAuthoredWalkZones };
   }
 
   private createNavigationZoneMesh(zone: NavigationZone): THREE.Mesh {
@@ -510,6 +524,7 @@ export class WalkthroughViewer {
     mesh.renderOrder = this.debug ? 8 : 0;
     mesh.position.copy(center);
     mesh.rotation.y = zone.rotationY ?? 0;
+    mesh.userData["navigationZoneId"] = zone.id;
     mesh.userData["navigationZoneKind"] = zone.kind;
     mesh.userData["navigationHalfSize"] = new THREE.Vector3(
       Math.max(0.05, size.x) / 2,
@@ -1462,7 +1477,13 @@ export class WalkthroughViewer {
 
     const cameraSphere = new THREE.Sphere(candidate, this.collisionRadius);
     const insidePassZone = this.isInsidePassZone(candidate);
-    if (this.walkZoneMeshes.length > 0 && !this.isInsideWalkZone(candidate) && !insidePassZone) {
+    const onGeneratedImportFloor = this.generatedWalkZonesOnly && this.canStandOnGeometryFloor(candidate);
+    if (
+      this.walkZoneMeshes.length > 0 &&
+      !this.isInsideWalkZone(candidate) &&
+      !insidePassZone &&
+      !onGeneratedImportFloor
+    ) {
       return { reason: "outside-walk-zone", point: candidate.clone() };
     }
 
@@ -1863,6 +1884,29 @@ export class WalkthroughViewer {
     );
   }
 
+  private canStandOnGeometryFloor(position: THREE.Vector3): boolean {
+    if (this.geometryFloorMeshes.length === 0) {
+      return false;
+    }
+    const raycaster = new THREE.Raycaster(
+      new THREE.Vector3(position.x, position.y + 0.35, position.z),
+      new THREE.Vector3(0, -1, 0),
+      0,
+      Math.max(1.2, this.cameraHeight + 1.2)
+    );
+    const hit = raycaster.intersectObjects(this.geometryFloorMeshes, true).find((candidate) => {
+      if (!(candidate.object instanceof THREE.Mesh) || !candidate.face) {
+        return false;
+      }
+      const normal = candidate.face.normal.clone().transformDirection(candidate.object.matrixWorld);
+      const horizontalEnough = Math.abs(normal.y) >= 0.45;
+      const expectedFloorY = position.y - this.cameraHeight;
+      const closeToCameraFloor = Math.abs(candidate.point.y - expectedFloorY) <= Math.max(0.45, this.cameraHeight * 0.35);
+      return horizontalEnough && closeToCameraFloor;
+    });
+    return Boolean(hit);
+  }
+
   private isWalkableHit(hit: THREE.Intersection): boolean {
     if (!(hit.object instanceof THREE.Mesh) || !hit.face) {
       return false;
@@ -2250,6 +2294,18 @@ function distanceToSegment2D(point: THREE.Vector3, start: THREE.Vector3, end: TH
   const closestX = start.x + segmentX * t;
   const closestZ = start.z + segmentZ * t;
   return Math.hypot(point.x - closestX, point.z - closestZ);
+}
+
+function isGeneratedViewerNavigationZoneId(id: string): boolean {
+  return (
+    id === "walk-main" ||
+    id.startsWith("walk-node-") ||
+    id.startsWith("walk-auto-view-") ||
+    id.startsWith("pass-node-") ||
+    id.startsWith("pass-auto-") ||
+    id.startsWith("walk-Object") ||
+    id.startsWith("pass-Object")
+  );
 }
 
 export function createInteractionFilter(kind: SceneInteraction["kind"]) {
