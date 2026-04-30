@@ -1006,6 +1006,9 @@ export class WalkthroughViewer {
       if (ignoredCollisionNames.some((ignoredName) => collisionSearchName.includes(ignoredName))) {
         return;
       }
+      if (isPortalLikeObject(node, collisionSearchName) && !isExplicitPortalCollision(collisionSearchName)) {
+        return;
+      }
       const box = new THREE.Box3().setFromObject(node);
       if (box.isEmpty()) {
         return;
@@ -2534,9 +2537,13 @@ function isPortalLikeObject(mesh: THREE.Mesh, objectName: string): boolean {
     .map((material) => material.name)
     .join(" ");
   const descriptor = `${objectName} ${mesh.name} ${parentName} ${materialNames}`.toLowerCase();
-  return /\b(door|doorway|opening|entrance|entry|passage|corridor|balcony|terrace|patio|slider|sliding)\b/.test(
+  return /(^|[^a-z])(door|doorway|opening|entrance|entry|passage|corridor|balcony|terrace|patio|slider|sliding)([^a-z]|$)/.test(
     descriptor
   );
+}
+
+function isExplicitPortalCollision(name: string): boolean {
+  return /(^|[^a-z])(collision|collider|blocker|blocking|occluder)([^a-z]|$)/.test(name.toLowerCase());
 }
 
 export function createInteractionFilter(kind: SceneInteraction["kind"]) {

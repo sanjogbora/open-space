@@ -1718,7 +1718,7 @@ function createDiagnostics(manifest, report, graphs) {
       code: "no-named-collision-meshes",
       title: "No named collision meshes found",
       message: "Wall collision will be inferred from thin tall geometry and may miss cupboards, railings, or exterior boundaries.",
-      action: "Add collision keywords for walls, windows, doors, partitions, columns, and boundary meshes, or add block zones in Controls."
+      action: "Add collision keywords for walls, windows, partitions, columns, and boundary meshes, or add block zones in Controls."
     });
   }
 

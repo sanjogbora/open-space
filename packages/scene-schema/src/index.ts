@@ -288,7 +288,7 @@ export const defaultNavigationConfig: NavigationConfig = {
   moveSpeed: 3.8,
   turnSpeed: 1.5,
   floorMeshNames: ["floor", "ground", "navmesh", "walkable"],
-  collisionMeshNames: ["wall", "glass", "door", "collision"],
+  collisionMeshNames: ["wall", "glass", "window", "partition", "column", "pillar", "collision", "collider", "blocker"],
   ignoredCollisionMeshNames: [],
   zones: []
 };

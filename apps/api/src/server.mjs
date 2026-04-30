@@ -1994,8 +1994,9 @@ async function resetManifestForUploadedModel(
       collisionMeshNames: [
         "wall",
         "glass",
-        "door",
         "collision",
+        "collider",
+        "blocker",
         "window",
         "partition",
         "rail",
