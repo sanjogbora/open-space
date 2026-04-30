@@ -19,7 +19,7 @@ import type {
 } from "@walkthrough/scene-schema";
 import { createDemoScene } from "./demo-scene";
 import { createHotspotSprite } from "./hotspot-sprite";
-import { clampToBounds, dampVector, easeOutCubic, toVector3 } from "./math";
+import { clampToBounds, damp, easeOutCubic, toVector3 } from "./math";
 import { createMoveMarker } from "./marker";
 import type {
   LoadingProgress,
@@ -127,6 +127,7 @@ export class WalkthroughViewer {
   private cameraTarget = new THREE.Vector3(0, 1.55, 0);
   private moveTarget: THREE.Vector3 | undefined;
   private movePath: THREE.Vector3[] = [];
+  private clickMoveVelocity = 0;
   private cameraTween: CameraTween | undefined;
   private pointerDown: { x: number; y: number; time: number } | undefined;
   private yaw = 0;
@@ -1472,6 +1473,7 @@ export class WalkthroughViewer {
     const distance = this.camera.position.distanceTo(target);
     if (distance < 0.035) {
       this.camera.position.copy(target);
+      this.clickMoveVelocity = 0;
       const nextWaypoint = this.movePath.shift();
       if (nextWaypoint) {
         this.moveTarget = nextWaypoint;
@@ -1482,8 +1484,20 @@ export class WalkthroughViewer {
       return;
     }
     const nextPosition = this.camera.position.clone();
-    const clickMoveSpeed = this.controls.clickMoveSpeed ?? 1.9;
-    dampVector(nextPosition, target, clickMoveSpeed, delta);
+    const flatDelta = target.clone().sub(this.camera.position);
+    flatDelta.y = 0;
+    const flatDistance = flatDelta.length();
+    const clickMoveSpeed = this.controls.clickMoveSpeed ?? 1.2;
+    if (flatDistance > 0.001) {
+      const desiredSpeed = THREE.MathUtils.clamp(flatDistance * 1.1, 0.18, clickMoveSpeed);
+      const acceleration = flatDistance < 0.85 ? 4.5 : 2.8;
+      this.clickMoveVelocity = damp(this.clickMoveVelocity, desiredSpeed, acceleration, delta);
+      const step = Math.min(flatDistance, this.clickMoveVelocity * delta);
+      flatDelta.normalize().multiplyScalar(step);
+      nextPosition.x += flatDelta.x;
+      nextPosition.z += flatDelta.z;
+    }
+    nextPosition.y = damp(nextPosition.y, target.y, 5.5, delta);
     if (this.canOccupyPosition(nextPosition, this.camera.position)) {
       this.camera.position.copy(nextPosition);
       this.snapCameraToFloor();
@@ -1492,6 +1506,7 @@ export class WalkthroughViewer {
     }
     this.moveTarget = undefined;
     this.movePath = [];
+    this.clickMoveVelocity = 0;
     this.moveMarker.visible = false;
   }
 
@@ -2107,6 +2122,7 @@ export class WalkthroughViewer {
         const [firstWaypoint, ...remainingWaypoints] = navigationRoute;
         this.moveTarget = firstWaypoint;
         this.movePath = remainingWaypoints;
+        this.clickMoveVelocity = 0;
         this.cameraTween = undefined;
         this.moveMarker.visible = true;
         this.moveMarker.position.copy(floorHit.point);
@@ -2122,6 +2138,7 @@ export class WalkthroughViewer {
     }
     this.moveTarget = nextTarget;
     this.movePath = [];
+    this.clickMoveVelocity = 0;
     this.cameraTween = undefined;
     this.moveMarker.visible = true;
     this.moveMarker.position.copy(floorHit.point);
