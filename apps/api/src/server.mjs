@@ -1739,6 +1739,55 @@ function autoBridgePassZones(routeZones, cameraHeight) {
   return bridges;
 }
 
+function autoBoundaryBlockZones(bounds, cameraHeight) {
+  if (!bounds) {
+    return [];
+  }
+  const width = Math.max(1, bounds.max[0] - bounds.min[0]);
+  const depth = Math.max(1, bounds.max[2] - bounds.min[2]);
+  const height = Math.max(1.8, bounds.max[1] - bounds.min[1], cameraHeight + 0.7);
+  const y = bounds.min[1] + height / 2;
+  const thickness = Math.max(0.35, Math.min(width, depth) * 0.035);
+  return [
+    {
+      id: "boundary-block-north",
+      label: "Boundary North",
+      kind: "block",
+      center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.max[2] + thickness / 2],
+      size: [width + thickness * 2, height, thickness],
+      rotationY: 0,
+      enabled: true
+    },
+    {
+      id: "boundary-block-south",
+      label: "Boundary South",
+      kind: "block",
+      center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.min[2] - thickness / 2],
+      size: [width + thickness * 2, height, thickness],
+      rotationY: 0,
+      enabled: true
+    },
+    {
+      id: "boundary-block-east",
+      label: "Boundary East",
+      kind: "block",
+      center: [bounds.max[0] + thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
+      size: [thickness, height, depth + thickness * 2],
+      rotationY: 0,
+      enabled: true
+    },
+    {
+      id: "boundary-block-west",
+      label: "Boundary West",
+      kind: "block",
+      center: [bounds.min[0] - thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
+      size: [thickness, height, depth + thickness * 2],
+      rotationY: 0,
+      enabled: true
+    }
+  ];
+}
+
 function autoWalkZonesForViews(views, existingRouteZones, bounds, cameraHeight) {
   if (!Array.isArray(views) || !bounds) {
     return [];
@@ -1771,6 +1820,7 @@ function isGeneratedNavigationZone(zone) {
     id.startsWith("pass-auto-") ||
     id.startsWith("pass-bridge-") ||
     id.startsWith("walk-auto-view-") ||
+    id.startsWith("boundary-block-") ||
     id.startsWith("walk-Object") ||
     id.startsWith("pass-Object")
   );
@@ -1787,8 +1837,9 @@ function importedNavigationZones(bounds, existingZones = [], graph, modelScale =
   ];
   const viewZones = autoWalkZonesForViews(views, [...graphZones, ...passZones, ...preservedZones], bounds, cameraHeight);
   const bridgeZones = autoBridgePassZones([...graphZones, ...passZones, ...viewZones], cameraHeight);
+  const boundaryZones = autoBoundaryBlockZones(bounds, cameraHeight);
   if (graphZones.length > 0) {
-    return [...graphZones, ...passZones, ...viewZones, ...bridgeZones, ...preservedZones];
+    return [...graphZones, ...passZones, ...viewZones, ...bridgeZones, ...boundaryZones, ...preservedZones];
   }
   if (!bounds) {
     return [...passZones, ...bridgeZones, ...preservedZones];
@@ -1812,6 +1863,7 @@ function importedNavigationZones(bounds, existingZones = [], graph, modelScale =
     ...passZones,
     ...viewZones,
     ...bridgeZones,
+    ...boundaryZones,
     ...preservedZones
   ];
 }
