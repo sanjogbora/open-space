@@ -1940,11 +1940,9 @@ export class WalkthroughViewer {
         return true;
       }
       this.emitNavigationFailure(
-        routeFailureDetail.reason,
+        "route-not-found",
         event,
-        routeFailureDetail.point ?? floorHit.point,
-        undefined,
-        routeFailureDetail.blockerName
+        floorHit.point
       );
       return true;
     }
@@ -1967,6 +1965,9 @@ export class WalkthroughViewer {
     }
     if (reason === "outside-walk-zone") {
       return "Move target is outside the authored walk zone.";
+    }
+    if (reason === "route-not-found") {
+      return "No connected walk/pass route reaches the clicked floor point.";
     }
     if (reason === "blocked-collision") {
       return blockerName
