@@ -1357,6 +1357,109 @@ function autoPassZonesBetweenWalkZones(walkZones, cameraHeight) {
     .map(({ score: _score, ...zone }) => zone);
 }
 
+function navigationZonesOverlap(a, b, padding = 0.2) {
+  const boxA = navigationZoneBox(a);
+  const boxB = navigationZoneBox(b);
+  return (
+    boxA.minX - padding <= boxB.maxX &&
+    boxA.maxX + padding >= boxB.minX &&
+    boxA.minZ - padding <= boxB.maxZ &&
+    boxA.maxZ + padding >= boxB.minZ
+  );
+}
+
+function navigationComponents(zones) {
+  if (zones.length === 0) {
+    return [];
+  }
+  const seen = new Set();
+  const components = [];
+  for (const zone of zones) {
+    if (seen.has(zone.id)) {
+      continue;
+    }
+    const component = [];
+    const queue = [zone];
+    seen.add(zone.id);
+    while (queue.length > 0) {
+      const current = queue.shift();
+      component.push(current);
+      for (const candidate of zones) {
+        if (!seen.has(candidate.id) && navigationZonesOverlap(current, candidate)) {
+          seen.add(candidate.id);
+          queue.push(candidate);
+        }
+      }
+    }
+    components.push(component);
+  }
+  return components;
+}
+
+function zoneCenterDistance(a, b) {
+  return Math.hypot(a.center[0] - b.center[0], a.center[2] - b.center[2]);
+}
+
+function nearestNavigationComponentBridge(connectedZones, component) {
+  let nearest;
+  connectedZones.forEach((from) => {
+    component.forEach((to) => {
+      const distance = zoneCenterDistance(from, to);
+      if (!nearest || distance < nearest.distance) {
+        nearest = { from, to, distance };
+      }
+    });
+  });
+  return nearest;
+}
+
+function createBridgePassZone(from, to, index, cameraHeight) {
+  const boxA = navigationZoneBox(from);
+  const boxB = navigationZoneBox(to);
+  const xGap = boxA.maxX < boxB.minX ? boxB.minX - boxA.maxX : boxB.maxX < boxA.minX ? boxA.minX - boxB.maxX : 0;
+  const zGap = boxA.maxZ < boxB.minZ ? boxB.minZ - boxA.maxZ : boxB.maxZ < boxA.minZ ? boxA.minZ - boxB.maxZ : 0;
+  const xOverlap = rangeOverlap(boxA.minX, boxA.maxX, boxB.minX, boxB.maxX);
+  const zOverlap = rangeOverlap(boxA.minZ, boxA.maxZ, boxB.minZ, boxB.maxZ);
+  const horizontalSize = Math.min(3.2, Math.max(1, xGap + 0.85));
+  const depthSize = Math.min(3.2, Math.max(1, zGap + 0.85));
+  const overlapWidth = Math.min(2.4, Math.max(1, xOverlap || 1.2));
+  const overlapDepth = Math.min(2.4, Math.max(1, zOverlap || 1.2));
+  return {
+    id: `pass-bridge-${index}`,
+    label: `Bridge pass ${index}`,
+    kind: "pass",
+    center: [
+      Number(((from.center[0] + to.center[0]) / 2).toFixed(3)),
+      Number(Math.max(0.8, cameraHeight * 0.55).toFixed(3)),
+      Number(((from.center[2] + to.center[2]) / 2).toFixed(3))
+    ],
+    size:
+      xGap >= zGap
+        ? [horizontalSize, Math.max(1.8, cameraHeight + 0.65), overlapDepth]
+        : [overlapWidth, Math.max(1.8, cameraHeight + 0.65), depthSize],
+    rotationY: 0,
+    enabled: true
+  };
+}
+
+function autoBridgePassZones(routeZones, cameraHeight) {
+  const components = navigationComponents(routeZones);
+  if (components.length <= 1) {
+    return [];
+  }
+  const bridges = [];
+  const connectedComponents = [components[0] ?? []];
+  components.slice(1).forEach((component, index) => {
+    const nearest = nearestNavigationComponentBridge(connectedComponents.flat(), component);
+    if (!nearest || nearest.distance > 3.2) {
+      return;
+    }
+    bridges.push(createBridgePassZone(nearest.from, nearest.to, index + 1, cameraHeight));
+    connectedComponents.push(component);
+  });
+  return bridges;
+}
+
 function autoWalkZonesForViews(views, existingRouteZones, bounds, cameraHeight) {
   if (!Array.isArray(views) || !bounds) {
     return [];
@@ -1387,6 +1490,7 @@ function isGeneratedNavigationZone(zone) {
     id.startsWith("walk-node-") ||
     id.startsWith("pass-node-") ||
     id.startsWith("pass-auto-") ||
+    id.startsWith("pass-bridge-") ||
     id.startsWith("walk-auto-view-") ||
     id.startsWith("walk-Object") ||
     id.startsWith("pass-Object")
@@ -1403,11 +1507,12 @@ function importedNavigationZones(bounds, existingZones = [], graph, modelScale =
     ...autoPassZonesBetweenWalkZones(graphZones, cameraHeight)
   ];
   const viewZones = autoWalkZonesForViews(views, [...graphZones, ...passZones, ...preservedZones], bounds, cameraHeight);
+  const bridgeZones = autoBridgePassZones([...graphZones, ...passZones, ...viewZones], cameraHeight);
   if (graphZones.length > 0) {
-    return [...graphZones, ...passZones, ...viewZones, ...preservedZones];
+    return [...graphZones, ...passZones, ...viewZones, ...bridgeZones, ...preservedZones];
   }
   if (!bounds) {
-    return [...passZones, ...preservedZones];
+    return [...passZones, ...bridgeZones, ...preservedZones];
   }
   const width = Math.max(1.5, bounds.max[0] - bounds.min[0]);
   const depth = Math.max(1.5, bounds.max[2] - bounds.min[2]);
@@ -1427,6 +1532,7 @@ function importedNavigationZones(bounds, existingZones = [], graph, modelScale =
     },
     ...passZones,
     ...viewZones,
+    ...bridgeZones,
     ...preservedZones
   ];
 }

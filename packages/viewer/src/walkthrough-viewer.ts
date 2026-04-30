@@ -2323,6 +2323,7 @@ function isGeneratedViewerNavigationZoneId(id: string): boolean {
     id.startsWith("walk-auto-view-") ||
     id.startsWith("pass-node-") ||
     id.startsWith("pass-auto-") ||
+    id.startsWith("pass-bridge-") ||
     id.startsWith("walk-Object") ||
     id.startsWith("pass-Object")
   );
