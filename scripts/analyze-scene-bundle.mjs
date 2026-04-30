@@ -1055,6 +1055,147 @@ function keywordMatchCount(graph, keywords) {
   }).length;
 }
 
+function enabledNavigationZones(navigation, kind) {
+  return (navigation?.zones ?? []).filter((zone) => {
+    if (zone.enabled === false) {
+      return false;
+    }
+    if (kind && zone.kind !== kind) {
+      return false;
+    }
+    return Array.isArray(zone.center) && Array.isArray(zone.size) && zone.center.length >= 3 && zone.size.length >= 3;
+  });
+}
+
+function pointInNavigationBounds(point, bounds, padding = 0) {
+  if (!bounds) {
+    return true;
+  }
+  return (
+    point[0] >= bounds.min[0] - padding &&
+    point[0] <= bounds.max[0] + padding &&
+    point[1] >= bounds.min[1] - padding &&
+    point[1] <= bounds.max[1] + padding &&
+    point[2] >= bounds.min[2] - padding &&
+    point[2] <= bounds.max[2] + padding
+  );
+}
+
+function pointInNavigationZone(zone, point, padding = 0) {
+  const rotation = -(zone.rotationY ?? 0);
+  const dx = point[0] - zone.center[0];
+  const dz = point[2] - zone.center[2];
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const localX = dx * cos - dz * sin;
+  const localZ = dx * sin + dz * cos;
+  return (
+    Math.abs(localX) <= zone.size[0] / 2 + padding &&
+    Math.abs(point[1] - zone.center[1]) <= zone.size[1] / 2 + padding &&
+    Math.abs(localZ) <= zone.size[2] / 2 + padding
+  );
+}
+
+function navigationZoneAabb(zone) {
+  const halfX = zone.size[0] / 2;
+  const halfZ = zone.size[2] / 2;
+  const rotation = zone.rotationY ?? 0;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const localCorners = [
+    [-halfX, -halfZ],
+    [halfX, -halfZ],
+    [halfX, halfZ],
+    [-halfX, halfZ]
+  ];
+  const corners = localCorners.map(([x, z]) => [
+    zone.center[0] + x * cos - z * sin,
+    zone.center[2] + x * sin + z * cos
+  ]);
+  return {
+    minX: Math.min(...corners.map(([x]) => x)),
+    maxX: Math.max(...corners.map(([x]) => x)),
+    minZ: Math.min(...corners.map(([, z]) => z)),
+    maxZ: Math.max(...corners.map(([, z]) => z))
+  };
+}
+
+function navigationZonesOverlap(a, b, padding = 0.2) {
+  const boxA = navigationZoneAabb(a);
+  const boxB = navigationZoneAabb(b);
+  return (
+    boxA.minX - padding <= boxB.maxX &&
+    boxA.maxX + padding >= boxB.minX &&
+    boxA.minZ - padding <= boxB.maxZ &&
+    boxA.maxZ + padding >= boxB.minZ
+  );
+}
+
+function navigationComponents(zones) {
+  if (zones.length === 0) {
+    return [];
+  }
+  const seen = new Set();
+  const components = [];
+  for (const zone of zones) {
+    if (seen.has(zone.id)) {
+      continue;
+    }
+    const component = [];
+    const queue = [zone];
+    seen.add(zone.id);
+    while (queue.length > 0) {
+      const current = queue.shift();
+      component.push(current);
+      for (const candidate of zones) {
+        if (!seen.has(candidate.id) && navigationZonesOverlap(current, candidate)) {
+          seen.add(candidate.id);
+          queue.push(candidate);
+        }
+      }
+    }
+    components.push(component);
+  }
+  return components;
+}
+
+function navigationTopology(manifest) {
+  const navigation = manifest.navigation ?? {};
+  const walkZones = enabledNavigationZones(navigation, "walk");
+  const passZones = enabledNavigationZones(navigation, "pass");
+  const blockZones = enabledNavigationZones(navigation, "block");
+  const routeZones = [...walkZones, ...passZones];
+  const routeComponents = navigationComponents(routeZones);
+  const orphanPassZones = passZones.filter(
+    (zone) => !walkZones.some((walkZone) => navigationZonesOverlap(zone, walkZone))
+  );
+  const walkViews = (manifest.views ?? []).filter(
+    (view) => view.kind === "walk" && Array.isArray(view.position) && view.position.length >= 3
+  );
+  const outOfBoundsWalkViews = walkViews.filter(
+    (view) => !pointInNavigationBounds(view.position, navigation.bounds, 0.1)
+  );
+  const blockedWalkViews = walkViews.filter((view) =>
+    blockZones.some((zone) => pointInNavigationZone(zone, view.position, 0.15))
+  );
+  const uncoveredWalkViews = walkZones.length > 0
+    ? walkViews.filter((view) => !routeZones.some((zone) => pointInNavigationZone(zone, view.position, 0.25)))
+    : [];
+
+  return {
+    walkZones,
+    passZones,
+    blockZones,
+    routeZones,
+    routeComponents,
+    orphanPassZones,
+    walkViews,
+    outOfBoundsWalkViews,
+    blockedWalkViews,
+    uncoveredWalkViews
+  };
+}
+
 function createDiagnostics(manifest, report, graphs) {
   const diagnostics = [];
   const graph = graphs[0];
@@ -1126,6 +1267,7 @@ function createDiagnostics(manifest, report, graphs) {
   const navigationZones = Array.isArray(manifest.navigation?.zones) ? manifest.navigation.zones : [];
   const hasWalkZones = navigationZones.some((zone) => zone.kind === "walk" && zone.enabled !== false);
   const hasBlockZones = navigationZones.some((zone) => zone.kind === "block" && zone.enabled !== false);
+  const topology = navigationTopology(manifest);
   const textureImages = [
     ...report.looseImages,
     ...report.models.flatMap((model) => model.externalResources ?? []).filter((resource) => resource.kind === "texture")
@@ -1396,6 +1538,76 @@ function createDiagnostics(manifest, report, graphs) {
       title: "No named ceiling or roof meshes found",
       message: "The model may be open at the top, or ceiling geometry may use generic object names.",
       action: "Check the model in top/inside views. If ceilings exist but are invisible, enable double-sided materials or rename ceiling objects before import."
+    });
+  }
+
+  if (topology.walkZones.length === 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-walk-zones",
+      title: "No explicit walk zones",
+      message: "Click-to-move will fall back to detected floor meshes, which can include roofs, counters, terrain, or tabletops.",
+      action: "Add walk zones for the real floor areas users should be allowed to stand on."
+    });
+  }
+
+  if (topology.walkZones.length > 1 && topology.passZones.length === 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-pass-zones",
+      title: "Multiple walk zones without door passes",
+      message: "Separate rooms may behave like separate islands, so clicking through a doorway can stop at the threshold.",
+      action: "Add pass zones at doorways/openings between room walk zones."
+    });
+  }
+
+  if (topology.routeComponents.length > 1) {
+    diagnostics.push({
+      severity: "warning",
+      code: "disconnected-navigation-zones",
+      title: "Walkable areas are disconnected",
+      message: `${topology.routeComponents.length} separate navigation islands were detected across walk/pass zones.`,
+      action: "Add or resize pass zones until connected rooms touch through doorways."
+    });
+  }
+
+  if (topology.orphanPassZones.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "orphan-pass-zones",
+      title: "Door pass zones do not touch walk zones",
+      message: `${topology.orphanPassZones.length} pass zone(s) do not overlap a walk zone, so pathfinding cannot use them.`,
+      action: "Move or resize each pass zone so it overlaps the floor walk zones on both sides of the opening."
+    });
+  }
+
+  if (topology.outOfBoundsWalkViews.length > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "walk-views-outside-navigation-bounds",
+      title: "Walk views start outside navigation bounds",
+      message: `${topology.outOfBoundsWalkViews.length} walk view(s) start outside the configured movement bounds.`,
+      action: "Move those views inside the model or expand the navigation bounds."
+    });
+  }
+
+  if (topology.blockedWalkViews.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "walk-views-inside-block-zones",
+      title: "Walk views start inside block zones",
+      message: `${topology.blockedWalkViews.length} walk view(s) start inside a wall/boundary blocker.`,
+      action: "Move those views, reduce the block zones, or split blockers around doorways."
+    });
+  }
+
+  if (topology.uncoveredWalkViews.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "walk-views-outside-walk-zones",
+      title: "Walk views are outside walkable zones",
+      message: `${topology.uncoveredWalkViews.length} walk view(s) can load there, but click routing may not continue from that position.`,
+      action: "Add a walk patch around each view or move the view into an existing walk zone."
     });
   }
 
@@ -1809,6 +2021,31 @@ function createPublishReadiness(manifest, report, optimizationReport) {
         "Navigation bounds are missing",
         "Users may be able to move into empty exterior space without bounds.",
         "Use graph bounds and add boundary block zones before client delivery."
+      )
+    );
+  }
+
+  const publishWarningDiagnostics = new Set([
+    "missing-walk-zones",
+    "disconnected-navigation-zones",
+    "missing-pass-zones",
+    "orphan-pass-zones",
+    "walk-views-inside-block-zones",
+    "walk-views-outside-walk-zones"
+  ]);
+  for (const diagnostic of diagnostics) {
+    if (!publishWarningDiagnostics.has(diagnostic.code)) {
+      continue;
+    }
+    if (warnings.some((warning) => warning.code === `diagnostic-${diagnostic.code}`)) {
+      continue;
+    }
+    warnings.push(
+      publishReadinessIssue(
+        `diagnostic-${diagnostic.code}`,
+        diagnostic.title,
+        diagnostic.message,
+        diagnostic.action
       )
     );
   }
