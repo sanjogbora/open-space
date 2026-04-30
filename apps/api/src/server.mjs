@@ -716,10 +716,13 @@ function lightmapBakeOptions(body = {}) {
   const resolution = Math.min(4096, Math.max(256, Number(body.resolution ?? 1024)));
   const samples = Math.min(1024, Math.max(16, Number(body.samples ?? 96)));
   const margin = Math.min(96, Math.max(2, Number(body.margin ?? 16)));
+  const requestedMode = String(body.mode ?? "lighting").toLowerCase();
+  const mode = ["lighting", "combined"].includes(requestedMode) ? requestedMode : "lighting";
   return {
     resolution: Math.round(resolution),
     samples: Math.round(samples),
-    margin: Math.round(margin)
+    margin: Math.round(margin),
+    mode
   };
 }
 
@@ -731,7 +734,8 @@ function runLightmapBake(projectId = "demo", options = {}) {
     const bakeArgs =
       ` --resolution=${bakeOptions.resolution}` +
       ` --samples=${bakeOptions.samples}` +
-      ` --margin=${bakeOptions.margin}`;
+      ` --margin=${bakeOptions.margin}` +
+      ` --mode=${bakeOptions.mode}`;
     const command =
       `node scripts/bake-lightmaps.mjs ${viewerTarget}${bakeArgs} && ` +
       `node scripts/bake-lightmaps.mjs ${studioTarget}${bakeArgs}`;

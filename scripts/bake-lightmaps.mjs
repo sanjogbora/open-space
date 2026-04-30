@@ -7,11 +7,14 @@ const target = args.find((arg) => !arg.startsWith("--")) ?? "apps/viewer-demo/pu
 const resolutionArg = args.find((arg) => arg.startsWith("--resolution="));
 const samplesArg = args.find((arg) => arg.startsWith("--samples="));
 const marginArg = args.find((arg) => arg.startsWith("--margin="));
+const modeArg = args.find((arg) => arg.startsWith("--mode="));
 const bundleDir = path.resolve(target);
 const blenderCommand = process.env.BLENDER_PATH || "blender";
 const resolution = Number(resolutionArg?.split("=")[1] ?? process.env.LIGHTMAP_RESOLUTION ?? 1024);
 const samples = Number(samplesArg?.split("=")[1] ?? process.env.LIGHTMAP_SAMPLES ?? 96);
 const margin = Number(marginArg?.split("=")[1] ?? process.env.LIGHTMAP_MARGIN ?? 16);
+const requestedBakeMode = String(modeArg?.split("=")[1] ?? process.env.LIGHTMAP_BAKE_MODE ?? "lighting").toLowerCase();
+const bakeMode = ["lighting", "combined"].includes(requestedBakeMode) ? requestedBakeMode : "lighting";
 const outputSceneUrl = "scene.lightmapped.glb";
 
 function jobId(timestamp) {
@@ -96,6 +99,7 @@ report_path = config["reportPath"]
 resolution = int(config["resolution"])
 samples = int(config["samples"])
 margin = int(config["margin"])
+bake_mode = config.get("bakeMode", "lighting")
 
 def clean_name(value):
     value = re.sub(r"[^A-Za-z0-9_.-]+", "-", value or "material").strip("-")
@@ -147,6 +151,14 @@ for obj in meshes:
     bpy.ops.object.select_all(action="DESELECT")
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
+    if len(obj.data.uv_layers) == 0:
+        base_uv = obj.data.uv_layers.new(name="UVMap")
+        obj.data.uv_layers.active = base_uv
+        obj.data.uv_layers.active_render = base_uv
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.015, area_weight=0.2)
+        bpy.ops.object.mode_set(mode="OBJECT")
     uv = obj.data.uv_layers.get("Lightmap") or obj.data.uv_layers.new(name="Lightmap")
     obj.data.uv_layers.active = uv
     obj.data.uv_layers.active_render = uv
@@ -205,7 +217,10 @@ bpy.ops.object.select_all(action="DESELECT")
 for obj in meshes:
     obj.select_set(True)
 bpy.context.view_layer.objects.active = meshes[0]
-bpy.ops.object.bake(type="COMBINED", margin=margin, use_clear=True)
+if bake_mode == "combined":
+    bpy.ops.object.bake(type="COMBINED", margin=margin, use_clear=True)
+else:
+    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"DIRECT", "INDIRECT"}, margin=margin, use_clear=True)
 
 for entry in lightmaps:
     image = bpy.data.images[entry["imageName"]]
@@ -242,6 +257,7 @@ if (!hasBlender) {
     startedAt: timestamp,
     completedAt: timestamp,
     engine: "blender-cycles",
+    bakeMode,
     message: "Blender was not found. Install Blender or set BLENDER_PATH before running automatic lightmap baking.",
     steps: [
       step("detect-blender", "Detect Blender renderer", "failed", "blender --version failed"),
@@ -271,6 +287,7 @@ const startedJob = {
   startedAt: timestamp,
   engine: "blender-cycles",
   message: `Baking ${sceneUrl} with Blender.`,
+  bakeMode,
   steps: [
     step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
     ...initialSteps.slice(1)
@@ -298,7 +315,8 @@ await writeFile(
       reportPath,
       resolution,
       samples,
-      margin
+      margin,
+      bakeMode
     },
     null,
     2
@@ -365,10 +383,11 @@ try {
     resolution,
     samples,
     margin,
+    bakeMode,
     steps: [
       step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
       step("unwrap-uv2", "Create secondary lightmap UVs", "completed", "Generated Lightmap UVs with Blender smart projection."),
-      step("bake-cycles", "Bake indirect lighting and shadows", "completed", `${samples} Cycles samples with automatic 256-${resolution}px lightmaps.`),
+      step("bake-cycles", "Bake indirect lighting and shadows", "completed", `${samples} Cycles samples with automatic 256-${resolution}px ${bakeMode} lightmaps.`),
       step("assign-lightmaps", "Assign generated lightmaps to materials", "completed", "Updated materials.json and scene manifest.")
     ]
   };

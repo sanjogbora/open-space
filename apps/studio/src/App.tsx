@@ -241,6 +241,7 @@ interface LightmapBakeJobDocument {
   id: string;
   status: "idle" | "running" | "completed" | "blocked" | "failed";
   engine: string;
+  bakeMode?: "lighting" | "combined";
   message?: string;
   startedAt?: string;
   completedAt?: string;
@@ -1103,7 +1104,12 @@ function App() {
   const [optimizeError, setOptimizeError] = useState("");
   const [bakeState, setBakeState] = useState<BakeState>("idle");
   const [bakeError, setBakeError] = useState("");
-  const [bakeSettings, setBakeSettings] = useState({ resolution: 1024, samples: 96, margin: 16 });
+  const [bakeSettings, setBakeSettings] = useState({
+    resolution: 1024,
+    samples: 96,
+    margin: 16,
+    mode: "lighting" as "lighting" | "combined"
+  });
   const [repairState, setRepairState] = useState<RepairState>("idle");
   const [repairError, setRepairError] = useState("");
   const [repairSummary, setRepairSummary] = useState("");
@@ -4648,6 +4654,21 @@ function App() {
                       }))
                     }
                   />
+                  <label className="field">
+                    <span>Bake pass</span>
+                    <select
+                      value={bakeSettings.mode}
+                      onChange={(event) =>
+                        setBakeSettings((current) => ({
+                          ...current,
+                          mode: event.target.value === "combined" ? "combined" : "lighting"
+                        }))
+                      }
+                    >
+                      <option value="lighting">Lighting</option>
+                      <option value="combined">Combined</option>
+                    </select>
+                  </label>
                 </div>
                 {bakeError && <p className="error-note">{bakeError}</p>}
                 {lightmapBakeJob && lightmapBakeJob.status !== "idle" && (
@@ -4656,6 +4677,7 @@ function App() {
                       <div className="job-step-main">
                         <span>{lightmapBakeJob.engine}</span>
                         {lightmapBakeJob.message && <small>{lightmapBakeJob.message}</small>}
+                        {lightmapBakeJob.bakeMode && <small>{lightmapBakeJob.bakeMode} bake</small>}
                       </div>
                       <strong>{lightmapBakeJob.status}</strong>
                     </div>
