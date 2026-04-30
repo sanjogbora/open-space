@@ -50,6 +50,7 @@ Current checks:
 - GLB/glTF node count.
 - GLB/glTF mesh and primitive count.
 - GLB/glTF material, texture, and image count.
+- Embedded GLB image dimensions, MIME support, and image buffer validity.
 - GLB/glTF vertex and triangle count.
 - Object graph with stable node IDs, material IDs, bounds, and per-object triangle counts.
 - Material override document with base color, roughness, metalness, and opacity.

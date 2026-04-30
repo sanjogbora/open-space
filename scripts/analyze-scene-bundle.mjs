@@ -10,6 +10,14 @@ const manifestPath = target.endsWith(".json")
   : path.resolve(target, "scene.manifest.json");
 const bundleDir = path.dirname(manifestPath);
 const imageExtensions = new Set([".avif", ".basis", ".jpg", ".jpeg", ".ktx2", ".png", ".webp"]);
+const supportedImageMimeTypes = new Set([
+  "image/avif",
+  "image/basis",
+  "image/jpeg",
+  "image/ktx2",
+  "image/png",
+  "image/webp"
+]);
 
 const defaultBudget = {
   maxTotalBytes: 160 * 1024 * 1024,
@@ -196,6 +204,24 @@ async function imageMetadata(filePath) {
   }
 }
 
+async function imageMetadataFromBuffer(buffer, mimeType) {
+  if (mimeType === "image/ktx2" || mimeType === "image/basis") {
+    return undefined;
+  }
+  try {
+    const metadata = await sharp(buffer).metadata();
+    if (typeof metadata.width !== "number" || typeof metadata.height !== "number") {
+      return undefined;
+    }
+    return {
+      width: metadata.width,
+      height: metadata.height
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 function stripLocalResourceUri(source) {
   const clean = String(source).split(/[?#]/, 1)[0].replace(/\\/g, "/");
   try {
@@ -301,6 +327,7 @@ function parseGlb(bytes) {
   let offset = 12;
   let document;
   let binBytes = 0;
+  let binData;
   while (offset + 8 <= Math.min(totalLength, bytes.byteLength)) {
     const chunkLength = view.getUint32(offset, true);
     const chunkType = view.getUint32(offset + 4, true);
@@ -313,6 +340,7 @@ function parseGlb(bytes) {
       document = JSON.parse(new TextDecoder().decode(bytes.slice(chunkStart, chunkEnd)).trim());
     } else if (chunkType === 0x004e4942) {
       binBytes += chunkLength;
+      binData = bytes.slice(chunkStart, chunkEnd);
     }
     offset = chunkEnd + (chunkLength % 4 === 0 ? 0 : 4 - (chunkLength % 4));
   }
@@ -320,11 +348,82 @@ function parseGlb(bytes) {
   if (!document) {
     throw new Error("GLB JSON chunk is missing.");
   }
-  return { document, binBytes };
+  return { document, binBytes, binData };
 }
 
 function parseGlbJson(bytes) {
   return parseGlb(bytes).document;
+}
+
+function mimeTypeFromUri(uri) {
+  if (typeof uri !== "string") {
+    return undefined;
+  }
+  const extension = path.extname(stripLocalResourceUri(uri)).toLowerCase();
+  switch (extension) {
+    case ".avif":
+      return "image/avif";
+    case ".basis":
+      return "image/basis";
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".ktx2":
+      return "image/ktx2";
+    case ".png":
+      return "image/png";
+    case ".webp":
+      return "image/webp";
+    default:
+      return undefined;
+  }
+}
+
+function decodeDataImageUri(uri) {
+  if (typeof uri !== "string" || !uri.startsWith("data:")) {
+    return undefined;
+  }
+  const match = uri.match(/^data:([^;,]+)?(;base64)?,(.*)$/s);
+  if (!match) {
+    return { error: "Invalid data URI." };
+  }
+  const mimeType = match[1] || undefined;
+  const encoded = match[3] ?? "";
+  try {
+    const bytes = match[2] === ";base64"
+      ? Buffer.from(encoded, "base64")
+      : Buffer.from(decodeURIComponent(encoded), "utf8");
+    return { bytes, mimeType };
+  } catch {
+    return { error: "Data URI could not be decoded." };
+  }
+}
+
+function embeddedImagePayload(image, document, metadata) {
+  if (typeof image?.bufferView === "number") {
+    const view = document.bufferViews?.[image.bufferView];
+    if (!view || typeof view.byteLength !== "number") {
+      return { error: "Image bufferView is missing or invalid." };
+    }
+    if (typeof view.buffer === "number" && view.buffer !== 0) {
+      return { error: "Image bufferView points at an external buffer that must be inspected separately." };
+    }
+    if (!metadata.glbBinData) {
+      return { error: "Embedded image bufferView exists, but no GLB BIN chunk is available." };
+    }
+    const start = view.byteOffset ?? 0;
+    const end = start + view.byteLength;
+    if (start < 0 || end > metadata.glbBinData.length) {
+      return { error: "Image bufferView extends past the GLB BIN chunk." };
+    }
+    return { bytes: metadata.glbBinData.slice(start, end), mimeType: image.mimeType };
+  }
+
+  if (typeof image?.uri === "string" && image.uri.startsWith("data:")) {
+    return decodeDataImageUri(image.uri);
+  }
+
+  return undefined;
 }
 
 async function analyzeGltfDocument(document, format, asset, metadata = {}) {
@@ -368,8 +467,11 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   let invalidTextureReferenceCount = 0;
   let undersizedBufferCount = 0;
   let texturesMissingImageCount = 0;
+  let invalidImageReferenceCount = 0;
+  let unsupportedImageMimeCount = 0;
   let nonTrianglePrimitiveCount = 0;
   let vertexColorPrimitiveCount = 0;
+  const embeddedImages = [];
   const texturedMaterialIndices = new Set(
     materials
       .map((material, index) => (materialUsesTexture(material) ? index : undefined))
@@ -507,6 +609,31 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       }
     }
   }
+  for (const [index, image] of (document.images ?? []).entries()) {
+    const label = image.name || `Image ${index}`;
+    const mimeType = image.mimeType ?? mimeTypeFromUri(image.uri);
+    if (mimeType && !supportedImageMimeTypes.has(mimeType)) {
+      unsupportedImageMimeCount += 1;
+    }
+
+    const payload = embeddedImagePayload(image, document, metadata);
+    if (!payload) {
+      continue;
+    }
+    if (payload.error || !payload.bytes) {
+      invalidImageReferenceCount += 1;
+      continue;
+    }
+    const resolvedMimeType = payload.mimeType ?? mimeType;
+    const metadataImage = await imageMetadataFromBuffer(payload.bytes, resolvedMimeType);
+    embeddedImages.push({
+      source: image.uri?.startsWith("data:") ? `data:${label}` : `bufferView:${image.bufferView}`,
+      label,
+      bytes: payload.bytes.byteLength,
+      ...(resolvedMimeType ? { mimeType: resolvedMimeType } : {}),
+      ...(metadataImage ? { width: metadataImage.width, height: metadataImage.height } : {})
+    });
+  }
 
   return {
     format,
@@ -537,6 +664,9 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     invalidTextureReferenceCount,
     undersizedBufferCount,
     texturesMissingImageCount,
+    invalidImageReferenceCount,
+    unsupportedImageMimeCount,
+    embeddedImageCount: embeddedImages.length,
     nonTrianglePrimitiveCount,
     vertexColorPrimitiveCount,
     transparentMaterialCount: materials.filter(materialIsTransparent).length,
@@ -553,7 +683,8 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     },
     externalResourceCount: externalResources.length,
     missingExternalResourceCount: externalResources.filter((resource) => !resource.exists).length,
-    externalResources
+    externalResources,
+    embeddedImages
   };
 }
 
@@ -991,7 +1122,10 @@ async function modelStats(asset) {
     if (extension === ".glb") {
       const bytes = await readFile(asset.path);
       const parsed = parseGlb(bytes);
-      return analyzeGltfDocument(parsed.document, "glb", asset, { glbBinBytes: parsed.binBytes });
+      return analyzeGltfDocument(parsed.document, "glb", asset, {
+        glbBinBytes: parsed.binBytes,
+        glbBinData: parsed.binData
+      });
     }
 
     if (extension === ".gltf") {
@@ -1399,6 +1533,14 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.invalidTextureReferenceCount ?? 0),
     0
   );
+  const invalidImageReferenceCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidImageReferenceCount ?? 0),
+    0
+  );
+  const unsupportedImageMimeCount = report.models.reduce(
+    (sum, model) => sum + (model.unsupportedImageMimeCount ?? 0),
+    0
+  );
   const undersizedBufferCount = report.models.reduce(
     (sum, model) => sum + (model.undersizedBufferCount ?? 0),
     0
@@ -1484,6 +1626,26 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Invalid texture references",
       message: `${invalidTextureReferenceCount} texture/material reference(s) point outside the image or texture lists.`,
       action: "Repair or re-export the GLB/GLTF; broken texture references can make surfaces render flat, green, black, or missing."
+    });
+  }
+
+  if (invalidImageReferenceCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-image-buffer-references",
+      title: "Invalid embedded image data",
+      message: `${invalidImageReferenceCount} embedded image reference(s) point at missing or incomplete GLB image buffer data.`,
+      action: "Re-export the GLB with embedded textures, or upload the original GLTF ZIP with valid image files."
+    });
+  }
+
+  if (unsupportedImageMimeCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "unsupported-image-mime-types",
+      title: "Unsupported image formats detected",
+      message: `${unsupportedImageMimeCount} image definition(s) use a MIME type outside PNG, JPEG, WebP, AVIF, Basis, or KTX2.`,
+      action: "Convert those textures to a web-supported format before publishing."
     });
   }
 
@@ -1913,6 +2075,7 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
   ).length;
   const textureImages = [
     ...looseImages,
+    ...models.flatMap((model) => model.embeddedImages ?? []),
     ...models.flatMap((model) => model.externalResources ?? []).filter((resource) => resource.kind === "texture")
   ].filter((image) => typeof image.width === "number" && typeof image.height === "number");
   const relocatedTextureCandidates = missingResourceRelocationCandidates(models, looseImages);
@@ -1998,6 +2161,7 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     secondaryUvLightmapMaterialCount,
     maxTextureDimension,
     oversizedTextureCount,
+    embeddedImageCount: models.reduce((sum, model) => sum + (model.embeddedImageCount ?? 0), 0),
     looseImageCount: looseImages.length,
     looseImages: looseImages.slice(0, 40),
     relocatedTextureCandidateCount: relocatedTextureCandidates.length,

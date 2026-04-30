@@ -36,6 +36,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Reimport analysis preserves material edits and object visibility by stable material/object names.
 - Viewer supports in-viewport object picking with object/material details.
 - Studio Interactions can create and edit hotspots, external scene links, and object toggles.
+- Analyzer inspects embedded GLB image payloads for dimensions, invalid buffer references, and unsupported MIME types.
 
 Current limitations:
 
@@ -57,6 +58,7 @@ Current limitations:
 - Generated `materials.json`.
 - Generated `objects.json`.
 - Generated `controls.json`.
+- Embedded GLB texture dimensions and image-buffer diagnostics in generated stats.
 - Generated `optimization-job.json` after optimization jobs.
 - Generated `optimization-history.json` after optimization jobs.
 - Studio app with Overview, Views, Interactions, Materials, Objects, and Bundle sections.
