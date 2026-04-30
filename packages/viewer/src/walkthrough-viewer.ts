@@ -1505,24 +1505,21 @@ export class WalkthroughViewer {
   }
 
   private findNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
-    const routeMeshes = [...this.passZoneMeshes, ...this.walkZoneMeshes].slice(0, 28);
+    const routeMeshes = [...this.passZoneMeshes, ...this.walkZoneMeshes].slice(0, 24);
     if (routeMeshes.length === 0) {
       return undefined;
     }
 
     const nodes: RouteNode[] = [
       { point: origin.clone(), previous: -1, cost: 0, visited: false },
-      ...routeMeshes.map((mesh) => {
-        const point = new THREE.Vector3();
-        mesh.getWorldPosition(point);
-        point.y = target.y;
-        return {
+      ...routeMeshes.flatMap((mesh) =>
+        this.navigationRoutePointsForMesh(mesh, target.y).map((point) => ({
           point,
           previous: -1,
           cost: Number.POSITIVE_INFINITY,
           visited: false
-        };
-      }),
+        }))
+      ),
       { point: target.clone(), previous: -1, cost: Number.POSITIVE_INFINITY, visited: false }
     ];
 
@@ -1589,6 +1586,31 @@ export class WalkthroughViewer {
     }
 
     return route;
+  }
+
+  private navigationRoutePointsForMesh(mesh: THREE.Mesh, y: number): THREE.Vector3[] {
+    const halfSize = mesh.userData["navigationHalfSize"];
+    if (!(halfSize instanceof THREE.Vector3)) {
+      const point = new THREE.Vector3();
+      mesh.getWorldPosition(point);
+      point.y = y;
+      return [point];
+    }
+    const x = Math.max(0, halfSize.x - this.collisionRadius * 1.2) * 0.55;
+    const z = Math.max(0, halfSize.z - this.collisionRadius * 1.2) * 0.55;
+    const localPoints = [
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(x, 0, 0),
+      new THREE.Vector3(-x, 0, 0),
+      new THREE.Vector3(0, 0, z),
+      new THREE.Vector3(0, 0, -z)
+    ];
+    return localPoints
+      .map((localPoint) => mesh.localToWorld(localPoint.clone()))
+      .map((point) => {
+        point.y = y;
+        return point;
+      });
   }
 
   private isInsideWalkZone(position: THREE.Vector3): boolean {
