@@ -1,5 +1,6 @@
 import { access, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 
 const args = process.argv.slice(2);
 const target = args.find((arg) => !arg.startsWith("--")) ?? "apps/viewer-demo/public/scenes/demo";
@@ -123,12 +124,14 @@ async function resourceStatus(asset, kind, source, label) {
   try {
     await access(fullPath);
     const info = await stat(fullPath);
+    const metadata = kind === "texture" ? await imageMetadata(fullPath) : undefined;
     return {
       kind,
       source: localSource,
       label,
       exists: true,
-      bytes: info.size
+      bytes: info.size,
+      ...(metadata ? { width: metadata.width, height: metadata.height } : {})
     };
   } catch {
     return {
@@ -138,6 +141,25 @@ async function resourceStatus(asset, kind, source, label) {
       exists: false,
       bytes: 0
     };
+  }
+}
+
+async function imageMetadata(filePath) {
+  const extension = path.extname(filePath).toLowerCase();
+  if (extension === ".ktx2" || extension === ".basis") {
+    return undefined;
+  }
+  try {
+    const metadata = await sharp(filePath).metadata();
+    if (typeof metadata.width !== "number" || typeof metadata.height !== "number") {
+      return undefined;
+    }
+    return {
+      width: metadata.width,
+      height: metadata.height
+    };
+  } catch {
+    return undefined;
   }
 }
 
@@ -174,9 +196,11 @@ async function listBundleImageFiles(dir = bundleDir, files = []) {
     }
     if (entry.isFile() && imageExtensions.has(path.extname(entry.name).toLowerCase())) {
       const info = await stat(fullPath);
+      const metadata = await imageMetadata(fullPath);
       files.push({
         source: relativePath,
-        bytes: info.size
+        bytes: info.size,
+        ...(metadata ? { width: metadata.width, height: metadata.height } : {})
       });
     }
   }
@@ -1102,6 +1126,12 @@ function createDiagnostics(manifest, report, graphs) {
   const navigationZones = Array.isArray(manifest.navigation?.zones) ? manifest.navigation.zones : [];
   const hasWalkZones = navigationZones.some((zone) => zone.kind === "walk" && zone.enabled !== false);
   const hasBlockZones = navigationZones.some((zone) => zone.kind === "block" && zone.enabled !== false);
+  const textureImages = [
+    ...report.looseImages,
+    ...report.models.flatMap((model) => model.externalResources ?? []).filter((resource) => resource.kind === "texture")
+  ].filter((image) => typeof image.width === "number" && typeof image.height === "number");
+  const oversizedTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 4096);
+  const largeTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 2048);
 
   if (parseFailures.length > 0) {
     diagnostics.push({
@@ -1269,6 +1299,24 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if (oversizedTextures.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "oversized-texture-dimensions",
+      title: "Oversized texture dimensions",
+      message: `${oversizedTextures.length} texture image(s) are larger than 4096px on one side.`,
+      action: "Resize or compress oversized textures before publishing; large textures can exhaust mobile GPU memory."
+    });
+  } else if (largeTextures.length > 8) {
+    diagnostics.push({
+      severity: "info",
+      code: "many-large-textures",
+      title: "Many large textures",
+      message: `${largeTextures.length} texture image(s) are larger than 2048px on one side.`,
+      action: "Run optimization or downscale less visible textures for faster mobile loading."
+    });
+  }
+
   if (!bounds) {
     diagnostics.push({
       severity: "warning",
@@ -1409,6 +1457,15 @@ function summarize(manifest, assets, models, graphs, looseImages) {
   const materialCount = models.reduce((sum, model) => sum + model.materialCount, 0);
   const textureCount = models.reduce((sum, model) => sum + (model.textureCount ?? 0), 0);
   const imageCount = models.reduce((sum, model) => sum + (model.imageCount ?? 0), 0);
+  const textureImages = [
+    ...looseImages,
+    ...models.flatMap((model) => model.externalResources ?? []).filter((resource) => resource.kind === "texture")
+  ].filter((image) => typeof image.width === "number" && typeof image.height === "number");
+  const maxTextureDimension = textureImages.reduce(
+    (max, image) => Math.max(max, image.width ?? 0, image.height ?? 0),
+    0
+  );
+  const oversizedTextureCount = textureImages.filter((image) => Math.max(image.width, image.height) > 4096).length;
   const compression = {
     meshopt: models.some((model) => model.compression?.meshopt),
     draco: models.some((model) => model.compression?.draco),
@@ -1481,6 +1538,8 @@ function summarize(manifest, assets, models, graphs, looseImages) {
     materialCount,
     textureCount,
     imageCount,
+    maxTextureDimension,
+    oversizedTextureCount,
     looseImageCount: looseImages.length,
     looseImages: looseImages.slice(0, 40),
     compression,
@@ -1728,6 +1787,17 @@ function createPublishReadiness(manifest, report, optimizationReport) {
         "No KTX2/Basis texture compression",
         "Texture images are present but the model does not advertise GPU texture compression.",
         "Install KTX-Software/toktx and run the production texture-compression pass."
+      )
+    );
+  }
+
+  if ((report.oversizedTextureCount ?? 0) > 0) {
+    warnings.push(
+      publishReadinessIssue(
+        "oversized-textures",
+        "Oversized textures detected",
+        `${report.oversizedTextureCount} texture image(s) are larger than 4096px.`,
+        "Run optimization or resize source textures before client/mobile delivery."
       )
     );
   }
