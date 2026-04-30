@@ -1231,6 +1231,13 @@ function graphWalkZoneCandidates(graph, modelScale) {
       : candidates[Math.floor(candidates.length / 2)]?.area;
   return candidates
     .filter((candidate) => {
+      if (
+        referenceArea &&
+        candidate.generic &&
+        candidate.area > Math.max(referenceArea * 8, 80)
+      ) {
+        return false;
+      }
       if (!referenceArea || !candidate.exterior) {
         return true;
       }
