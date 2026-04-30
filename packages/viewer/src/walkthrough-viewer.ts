@@ -903,24 +903,32 @@ export class WalkthroughViewer {
     node.visible = override.visible;
   }
 
+  private isLikelyExteriorSurfaceName(name: string): boolean {
+    return [
+      "terrain",
+      "landscape",
+      "grass",
+      "lawn",
+      "site",
+      "environment",
+      "background",
+      "plot"
+    ].some((keyword) => name.includes(keyword));
+  }
+
   private collectFloorMeshes(root: THREE.Object3D): THREE.Object3D[] {
     const floorNames = this.manifest.navigation.floorMeshNames.map((name) => name.toLowerCase());
     const meshes: THREE.Object3D[] = [];
-    const fallbackCandidates: { mesh: THREE.Mesh; area: number }[] = [];
+    const fallbackCandidates: { mesh: THREE.Mesh; area: number; exterior: boolean }[] = [];
     const rootBox = new THREE.Box3().setFromObject(root);
     const sceneHeight = Math.max(0.001, rootBox.max.y - rootBox.min.y);
     const lowBand = rootBox.min.y + Math.max(0.75, sceneHeight * 0.22);
+    const sceneFootprint = Math.max(1, (rootBox.max.x - rootBox.min.x) * (rootBox.max.z - rootBox.min.z));
 
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) {
         return;
       }
-      const name = node.name.toLowerCase();
-      if (floorNames.some((floorName) => name.includes(floorName))) {
-        meshes.push(node);
-        return;
-      }
-
       const box = new THREE.Box3().setFromObject(node);
       if (box.isEmpty()) {
         return;
@@ -928,18 +936,26 @@ export class WalkthroughViewer {
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
       const area = size.x * size.z;
+      const name = `${node.name} ${node.parent?.name ?? ""} ${node.userData["name"] ?? ""}`.toLowerCase();
+      const exteriorName = this.isLikelyExteriorSurfaceName(name);
+      const hugeExteriorPlane = exteriorName && area > sceneFootprint * 0.25;
+      if (floorNames.some((floorName) => name.includes(floorName)) && !hugeExteriorPlane) {
+        meshes.push(node);
+        return;
+      }
+
       const flatEnough = size.y <= Math.max(0.2, Math.min(size.x, size.z) * 0.16);
       const lowEnough = center.y <= lowBand;
       if (flatEnough && lowEnough && area > 0.75) {
-        fallbackCandidates.push({ mesh: node, area });
+        fallbackCandidates.push({ mesh: node, area, exterior: exteriorName || hugeExteriorPlane });
       }
     });
     if (meshes.length > 0) {
       return meshes;
     }
     return fallbackCandidates
-      .sort((a, b) => b.area - a.area)
-      .slice(0, 8)
+      .sort((a, b) => Number(a.exterior) - Number(b.exterior) || b.area - a.area)
+      .slice(0, 48)
       .map((candidate) => candidate.mesh);
   }
 
