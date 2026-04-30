@@ -1770,14 +1770,14 @@ export class WalkthroughViewer {
     let maxX = Math.min(globalMaxX, Math.max(origin.x, target.x) + margin);
     let minZ = Math.max(globalMinZ, Math.min(origin.z, target.z) - margin);
     let maxZ = Math.min(globalMaxZ, Math.max(origin.z, target.z) + margin);
-    let step = Math.max(0.34, this.collisionRadius * 1.35);
+    let step = Math.max(0.24, this.collisionRadius * 0.9);
     let columns = Math.max(2, Math.ceil((maxX - minX) / step) + 1);
     let rows = Math.max(2, Math.ceil((maxZ - minZ) / step) + 1);
-    const maxCells = 7200;
+    const maxCells = 14000;
 
     if (columns * rows > maxCells) {
       step = Math.sqrt(((maxX - minX) * (maxZ - minZ)) / maxCells);
-      step = THREE.MathUtils.clamp(step, 0.42, 0.95);
+      step = THREE.MathUtils.clamp(step, 0.28, 0.85);
       columns = Math.max(2, Math.ceil((maxX - minX) / step) + 1);
       rows = Math.max(2, Math.ceil((maxZ - minZ) / step) + 1);
     }
