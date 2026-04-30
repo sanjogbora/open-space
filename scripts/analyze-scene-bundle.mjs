@@ -864,6 +864,41 @@ function dominantFlatPlane(graph, sceneBounds) {
     .sort((a, b) => b.area - a.area)[0];
 }
 
+function graphFocusBounds(graph) {
+  const rawBounds = graphBounds(graph);
+  if (!graph || !rawBounds) {
+    return undefined;
+  }
+  const fullArea = Math.max(1, boundsArea(rawBounds));
+  const focusBounds = (graph.nodes ?? [])
+    .filter((node) => {
+      if (!node.bounds) {
+        return false;
+      }
+      const size = boundsSize(node.bounds);
+      if (!size) {
+        return false;
+      }
+      const [width, height, depth] = size.map(Math.abs);
+      const area = Math.max(0, width * depth);
+      const flat = height <= Math.max(0.08, Math.min(width, depth) * 0.04);
+      const name = `${node.name} ${node.meshName ?? ""}`;
+      const hugeRelativePlane = flat && area > fullArea * 0.45;
+      if (likelyExteriorPlaneName(name) && (flat || area > fullArea * 0.25)) {
+        return false;
+      }
+      if (hugeRelativePlane && area > 25) {
+        return false;
+      }
+      return height > 0.15 || area < fullArea * 0.35;
+    })
+    .map((node) => node.bounds);
+  if (focusBounds.length === 0) {
+    return rawBounds;
+  }
+  return graphBounds({ nodes: focusBounds.map((bounds, index) => ({ id: `focus-${index}`, bounds })) });
+}
+
 function keywordMatchCount(graph, keywords) {
   const normalized = keywords.map((keyword) => keyword.toLowerCase());
   return (graph?.nodes ?? []).filter((node) => {
@@ -879,6 +914,7 @@ function createDiagnostics(manifest, report, graphs) {
   const size = boundsSize(bounds);
   const largestDimension = size ? Math.max(...size.map(Math.abs)) : 0;
   const flatPlane = dominantFlatPlane(graph, bounds);
+  const focusedBounds = graphFocusBounds(graph);
   const modelScale = manifest.rendering?.modelScale ?? 1;
   const missingExternalResources = report.models.reduce(
     (sum, model) => sum + (model.missingExternalResourceCount ?? 0),
@@ -1020,6 +1056,21 @@ function createDiagnostics(manifest, report, graphs) {
       message: `${flatPlane.name} covers about ${percent}% of the scene footprint and can dominate camera framing, top views, and click-floor detection.`,
       action: "Run model repair to regenerate focused views, or add explicit walk zones and hide/rename exterior terrain if it should not drive navigation."
     });
+  }
+
+  if (bounds && focusedBounds) {
+    const sceneArea = Math.max(1, boundsArea(bounds));
+    const focusArea = boundsArea(focusedBounds);
+    const focusRatio = focusArea / sceneArea;
+    if (sceneArea > 40 && focusRatio > 0 && focusRatio < 0.32) {
+      diagnostics.push({
+        severity: "warning",
+        code: "focused-model-small-in-scene",
+        title: "Building occupies a small part of the scene bounds",
+        message: `The focused model footprint is about ${Math.max(1, Math.round(focusRatio * 100))}% of the full scene footprint.`,
+        action: "Run import repair so cameras, ground, and navigation use the focused building bounds; hide or rename site/terrain geometry if it should not drive framing."
+      });
+    }
   }
 
   if (floorMatches === 0 && !hasWalkZones) {
