@@ -24,6 +24,11 @@ export function damp(current: number, target: number, smoothing: number, delta: 
   return THREE.MathUtils.lerp(current, target, 1 - Math.exp(-smoothing * delta));
 }
 
+export function dampAngle(current: number, target: number, smoothing: number, delta: number): number {
+  const difference = THREE.MathUtils.euclideanModulo(target - current + Math.PI, Math.PI * 2) - Math.PI;
+  return current + difference * (1 - Math.exp(-smoothing * delta));
+}
+
 export function dampVector(
   current: THREE.Vector3,
   target: THREE.Vector3,
@@ -35,4 +40,3 @@ export function dampVector(
   current.z = damp(current.z, target.z, smoothing, delta);
   return current;
 }
-

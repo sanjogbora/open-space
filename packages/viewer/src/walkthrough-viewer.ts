@@ -19,7 +19,7 @@ import type {
 } from "@walkthrough/scene-schema";
 import { createDemoScene } from "./demo-scene";
 import { createHotspotSprite } from "./hotspot-sprite";
-import { clampToBounds, damp, easeOutCubic, toVector3 } from "./math";
+import { clampToBounds, damp, dampAngle, easeOutCubic, toVector3 } from "./math";
 import { createMoveMarker } from "./marker";
 import type {
   LoadingProgress,
@@ -1489,6 +1489,10 @@ export class WalkthroughViewer {
     const flatDistance = flatDelta.length();
     const clickMoveSpeed = this.controls.clickMoveSpeed ?? 1.2;
     if (flatDistance > 0.001) {
+      if (!this.draggingLook && flatDistance > 0.15) {
+        this.yaw = dampAngle(this.yaw, Math.atan2(flatDelta.x, -flatDelta.z), 2.7, delta);
+        this.pitch = damp(this.pitch, THREE.MathUtils.clamp(this.pitch, -0.18, 0.12), 1.4, delta);
+      }
       const desiredSpeed = THREE.MathUtils.clamp(flatDistance * 1.1, 0.18, clickMoveSpeed);
       const acceleration = flatDistance < 0.85 ? 4.5 : 2.8;
       this.clickMoveVelocity = damp(this.clickMoveVelocity, desiredSpeed, acceleration, delta);
