@@ -272,6 +272,7 @@ async function analyzeGltfDocument(document, format, asset) {
   let missingPositionPrimitiveCount = 0;
   let missingNormalPrimitiveCount = 0;
   let missingUvPrimitiveCount = 0;
+  let uv1PrimitiveCount = 0;
   let texturedMissingUvPrimitiveCount = 0;
   let missingPositionBoundsPrimitiveCount = 0;
   let invalidAccessorReferenceCount = 0;
@@ -316,6 +317,9 @@ async function analyzeGltfDocument(document, format, asset) {
         if (typeof primitive.material === "number" && texturedMaterialIndices.has(primitive.material)) {
           texturedMissingUvPrimitiveCount += 1;
         }
+      }
+      if (typeof primitive.attributes?.TEXCOORD_1 === "number") {
+        uv1PrimitiveCount += 1;
       }
       if (typeof primitive.attributes?.COLOR_0 === "number") {
         vertexColorPrimitiveCount += 1;
@@ -410,6 +414,7 @@ async function analyzeGltfDocument(document, format, asset) {
     missingPositionPrimitiveCount,
     missingNormalPrimitiveCount,
     missingUvPrimitiveCount,
+    uv1PrimitiveCount,
     texturedMissingUvPrimitiveCount,
     missingPositionBoundsPrimitiveCount,
     invalidAccessorReferenceCount,
@@ -1225,6 +1230,7 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.missingUvPrimitiveCount ?? 0),
     0
   );
+  const uv1PrimitiveCount = report.models.reduce((sum, model) => sum + (model.uv1PrimitiveCount ?? 0), 0);
   const texturedMissingUvPrimitiveCount = report.models.reduce(
     (sum, model) => sum + (model.texturedMissingUvPrimitiveCount ?? 0),
     0
@@ -1370,6 +1376,24 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Texture UVs missing",
       message: `${missingUvPrimitiveCount} primitive(s) do not include TEXCOORD_0 attributes even though the model uses images.`,
       action: "Unwrap UVs or bake textures into a GLB with valid TEXCOORD_0 attributes."
+    });
+  }
+
+  if ((report.secondaryUvLightmapMaterialCount ?? 0) > 0 && uv1PrimitiveCount === 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "lightmaps-missing-secondary-uvs",
+      title: "Lightmaps need secondary UVs",
+      message: `${report.secondaryUvLightmapMaterialCount} lightmapped material(s) expect TEXCOORD_1, but no mesh primitives expose a secondary UV set.`,
+      action: "Re-run Blender lightmap baking or export the model with secondary lightmap UVs before publishing."
+    });
+  } else if ((report.secondaryUvLightmapMaterialCount ?? 0) > 0 && uv1PrimitiveCount < (report.primitiveCount ?? 0)) {
+    diagnostics.push({
+      severity: "warning",
+      code: "some-lightmap-secondary-uvs-missing",
+      title: "Some meshes may miss lightmap UVs",
+      message: `${uv1PrimitiveCount}/${report.primitiveCount} primitive(s) expose TEXCOORD_1 while lightmapped materials are configured.`,
+      action: "Inspect baked lighting in the viewer; rebake or unwrap any surfaces where lightmaps appear stretched or missing."
     });
   }
 
@@ -1654,7 +1678,7 @@ function createDiagnostics(manifest, report, graphs) {
   return diagnostics;
 }
 
-function summarize(manifest, assets, models, graphs, looseImages) {
+function summarize(manifest, assets, models, graphs, looseImages, materialOverrides) {
   const totalBytes = assets.reduce((sum, asset) => sum + asset.bytes, 0);
   const missingAssetCount = assets.filter((asset) => !asset.exists).length;
   const modelBytes = assets
@@ -1666,9 +1690,14 @@ function summarize(manifest, assets, models, graphs, looseImages) {
   const warnings = [];
   const triangleCount = models.reduce((sum, model) => sum + model.triangleCount, 0);
   const meshCount = models.reduce((sum, model) => sum + model.meshCount, 0);
+  const primitiveCount = models.reduce((sum, model) => sum + (model.primitiveCount ?? 0), 0);
   const materialCount = models.reduce((sum, model) => sum + model.materialCount, 0);
   const textureCount = models.reduce((sum, model) => sum + (model.textureCount ?? 0), 0);
   const imageCount = models.reduce((sum, model) => sum + (model.imageCount ?? 0), 0);
+  const lightmapMaterials = (materialOverrides?.materials ?? []).filter((material) => material?.lightMapUrl);
+  const secondaryUvLightmapMaterialCount = lightmapMaterials.filter(
+    (material) => material.lightMapUvSet !== 0
+  ).length;
   const textureImages = [
     ...looseImages,
     ...models.flatMap((model) => model.externalResources ?? []).filter((resource) => resource.kind === "texture")
@@ -1747,9 +1776,12 @@ function summarize(manifest, assets, models, graphs, looseImages) {
     videoBytes,
     triangleCount,
     meshCount,
+    primitiveCount,
     materialCount,
     textureCount,
     imageCount,
+    lightmapMaterialCount: lightmapMaterials.length,
+    secondaryUvLightmapMaterialCount,
     maxTextureDimension,
     oversizedTextureCount,
     looseImageCount: looseImages.length,
@@ -2031,7 +2063,8 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "missing-pass-zones",
     "orphan-pass-zones",
     "walk-views-inside-block-zones",
-    "walk-views-outside-walk-zones"
+    "walk-views-outside-walk-zones",
+    "some-lightmap-secondary-uvs-missing"
   ]);
   for (const diagnostic of diagnostics) {
     if (!publishWarningDiagnostics.has(diagnostic.code)) {
@@ -2082,7 +2115,8 @@ const models = (await Promise.all(assets.map(modelStats))).filter(Boolean);
 const graphs = (await Promise.all(assets.map(modelGraph))).filter(Boolean);
 const materialDocs = (await Promise.all(assets.map(modelMaterials))).filter(Boolean);
 const looseImages = await looseBundleImages(assets, models);
-const report = summarize(manifest, assets, models, graphs, looseImages);
+const materialOverrides = await readJsonIfExists(path.resolve(bundleDir, "materials.json"));
+const report = summarize(manifest, assets, models, graphs, looseImages, materialOverrides);
 const optimizationReport = createOptimizationReport(report);
 const finalReport = {
   ...report,
