@@ -2076,18 +2076,28 @@ export class WalkthroughViewer {
     }
     horizontal.normalize();
     const sideways = new THREE.Vector3(-horizontal.z, 0, horizontal.x);
+    const directions = [
+      new THREE.Vector3(0, 0, 0),
+      horizontal.clone(),
+      horizontal.clone().multiplyScalar(-1),
+      sideways.clone(),
+      sideways.clone().multiplyScalar(-1),
+      horizontal.clone().add(sideways).normalize(),
+      horizontal.clone().sub(sideways).normalize(),
+      horizontal.clone().multiplyScalar(-1).add(sideways).normalize(),
+      horizontal.clone().multiplyScalar(-1).sub(sideways).normalize()
+    ];
     const probes = [
       new THREE.Vector3(0, 0, 0),
-      horizontal.clone().multiplyScalar(0.35),
-      horizontal.clone().multiplyScalar(-0.25),
-      sideways.clone().multiplyScalar(0.25),
-      sideways.clone().multiplyScalar(-0.25)
+      ...[0.35, 0.7, 1.1, 1.55].flatMap((radius) =>
+        directions.slice(1).map((direction) => direction.clone().multiplyScalar(radius))
+      )
     ];
     const direction = new THREE.Vector3(0, -1, 0);
     const raycaster = new THREE.Raycaster(undefined, direction, 0, Math.max(4, this.cameraHeight + 3));
     for (const offset of probes) {
       const origin = hit.point.clone().add(offset);
-      origin.y = Math.max(hit.point.y + 0.75, this.camera.position.y + 0.25);
+      origin.y = Math.max(hit.point.y + 1.1, this.camera.position.y + 0.25);
       raycaster.set(origin, direction);
       const floorHit = raycaster
         .intersectObjects(this.walkableMeshes, true)
