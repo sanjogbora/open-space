@@ -266,6 +266,7 @@ interface VideoSurfaceCandidate {
   triangleCount: number;
   label: string;
   score: number;
+  dimensions?: string;
 }
 
 interface DoorPassCandidate {
@@ -681,6 +682,24 @@ function videoSurfaceScore(name: string): number {
     score += 1;
   }
   return score;
+}
+
+function videoSurfaceShapeScore(bounds: SceneGraphDocument["nodes"][number]["bounds"]): number {
+  if (!bounds) {
+    return 0;
+  }
+  const width = Math.abs(bounds.max[0] - bounds.min[0]);
+  const height = Math.abs(bounds.max[1] - bounds.min[1]);
+  const depth = Math.abs(bounds.max[2] - bounds.min[2]);
+  const horizontal = Math.max(width, depth);
+  const thickness = Math.min(width, depth);
+  if (horizontal < 0.35 || height < 0.2) {
+    return 0;
+  }
+  const aspect = horizontal / Math.max(0.001, height);
+  const thin = thickness <= Math.max(0.08, horizontal * 0.18);
+  const screenLikeAspect = aspect >= 1.1 && aspect <= 3.2;
+  return (thin ? 4 : 0) + (screenLikeAspect ? 3 : 0);
 }
 
 function doorPassScore(name: string): number {
@@ -1517,14 +1536,24 @@ function App() {
         .filter((name): name is string => Boolean(name));
       const materialName = materialNames[0];
       const searchName = `${node.name} ${node.meshName ?? ""} ${materialNames.join(" ")}`;
-      const score = videoSurfaceScore(searchName);
+      const score = videoSurfaceScore(searchName) + videoSurfaceShapeScore(node.bounds);
+      const dimensions = node.bounds
+        ? [
+            Math.abs(node.bounds.max[0] - node.bounds.min[0]),
+            Math.abs(node.bounds.max[1] - node.bounds.min[1]),
+            Math.abs(node.bounds.max[2] - node.bounds.min[2])
+          ]
+            .map((value) => value.toFixed(2))
+            .join(" x ")
+        : undefined;
       return {
         id: node.id,
         meshName: node.name,
         ...(materialName ? { materialName } : {}),
         triangleCount: node.triangleCount,
         label: materialName ? `${node.name} / ${materialName}` : node.name,
-        score
+        score,
+        ...(dimensions ? { dimensions } : {})
       };
     });
     const likely = candidates.filter((candidate) => candidate.score > 0);
@@ -2807,6 +2836,31 @@ function App() {
     });
   };
 
+  const addLikelyVideoTextures = () => {
+    updateManifest((current) => {
+      const usedTargets = new Set(
+        videoTextureInteractions
+          .flatMap((interaction) => [interaction.targetMeshName, interaction.targetMaterialName])
+          .filter((value): value is string => Boolean(value))
+      );
+      const candidates = videoSurfaceCandidates
+        .filter((candidate) => candidate.score >= 6)
+        .filter((candidate) => !usedTargets.has(candidate.meshName) && (!candidate.materialName || !usedTargets.has(candidate.materialName)))
+        .slice(0, 4);
+      if (candidates.length === 0) {
+        return current;
+      }
+      const nextInteractions = candidates.map((candidate, index) =>
+        withVideoSurfaceCandidate(createVideoTexture(videoTextureInteractions.length + index + 1), candidate)
+      );
+      window.setTimeout(() => setSelectedInteractionId(nextInteractions[0]?.id ?? ""), 0);
+      return {
+        ...current,
+        interactions: [...current.interactions, ...nextInteractions]
+      };
+    });
+  };
+
   const removeVideoTexture = (interactionId: string) => {
     updateManifest((current) => {
       const interactions = current.interactions.filter((interaction) => interaction.id !== interactionId);
@@ -3870,6 +3924,15 @@ function App() {
                   <button type="button" className="icon-action" title="Add video surface" onClick={addVideoTexture}>
                     <Video size={17} aria-hidden="true" />
                   </button>
+                  <button
+                    type="button"
+                    className="icon-action"
+                    title="Map likely video screens"
+                    disabled={videoSurfaceCandidates.every((candidate) => candidate.score < 6)}
+                    onClick={addLikelyVideoTextures}
+                  >
+                    <Wrench size={17} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
               {hotspotInteractions.map((interaction) => (
@@ -4164,6 +4227,7 @@ function App() {
                             <span>{candidate.label}</span>
                             <small>
                               {candidate.triangleCount} triangles
+                              {candidate.dimensions ? ` / ${candidate.dimensions}` : ""}
                               {candidate.score > 0 ? ` / score ${candidate.score}` : ""}
                             </small>
                           </button>
