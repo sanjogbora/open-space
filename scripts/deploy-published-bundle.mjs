@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { cp, mkdir, readFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const args = process.argv.slice(2);
@@ -15,6 +15,7 @@ if (!deploymentArg) {
 const deploymentPath = path.resolve(deploymentArg);
 const deployment = JSON.parse(await readFile(deploymentPath, "utf8"));
 const sourceDir = path.dirname(deploymentPath);
+const deployStartedAt = new Date().toISOString();
 
 function run(command, commandArgs) {
   return new Promise((resolve, reject) => {
@@ -30,24 +31,107 @@ function run(command, commandArgs) {
   });
 }
 
+async function fileInfo(relativePath) {
+  const fullPath = path.join(sourceDir, relativePath);
+  try {
+    await access(fullPath);
+    const info = await stat(fullPath);
+    return { path: relativePath, exists: true, bytes: info.size };
+  } catch {
+    return { path: relativePath, exists: false, bytes: 0 };
+  }
+}
+
+async function validateDeployment() {
+  if (deployment.schemaVersion !== "0.1") {
+    throw new Error("Unsupported deployment manifest schema.");
+  }
+  if (!deployment.projectId || !deployment.version || !Array.isArray(deployment.assets)) {
+    throw new Error("Deployment manifest is missing projectId, version, or assets.");
+  }
+  const checks = await Promise.all(deployment.assets.map((asset) => fileInfo(asset.path)));
+  const missing = checks.filter((check) => !check.exists);
+  const mismatched = checks.filter((check) => {
+    const asset = deployment.assets.find((item) => item.path === check.path);
+    return check.exists && typeof asset?.bytes === "number" && check.bytes !== asset.bytes;
+  });
+  if (missing.length > 0 || mismatched.length > 0) {
+    throw new Error(
+      [
+        missing.length > 0 ? `${missing.length} asset(s) are missing` : undefined,
+        mismatched.length > 0 ? `${mismatched.length} asset(s) have changed size since publish` : undefined
+      ]
+        .filter(Boolean)
+        .join("; ")
+    );
+  }
+  return checks;
+}
+
+function headersFile(deployment) {
+  const lines = [];
+  for (const rule of deployment.headers ?? []) {
+    lines.push(rule.source);
+    for (const header of rule.headers ?? []) {
+      lines.push(`  ${header.key}: ${header.value}`);
+    }
+    lines.push("");
+  }
+  return `${lines.join("\n").trim()}\n`;
+}
+
+function vercelConfig(deployment) {
+  return {
+    headers: (deployment.headers ?? []).map((rule) => ({
+      source: rule.source,
+      headers: rule.headers
+    }))
+  };
+}
+
+async function writeDeployReport(mode, target, checks, reportDir = sourceDir) {
+  const report = {
+    schemaVersion: "0.1",
+    mode,
+    target,
+    deploymentPath,
+    projectId: deployment.projectId,
+    version: deployment.version,
+    startedAt: deployStartedAt,
+    completedAt: new Date().toISOString(),
+    dryRun,
+    assetCount: deployment.assetCount,
+    checkedAssetCount: checks.length,
+    totalBytes: deployment.totalBytes
+  };
+  if (!dryRun) {
+    await writeFile(path.join(reportDir, "deploy-report.json"), `${JSON.stringify(report, null, 2)}\n`);
+  }
+  console.log(JSON.stringify(report, null, 2));
+}
+
 async function deployToDirectory(outputRoot) {
+  const checks = await validateDeployment();
   const target = path.resolve(outputRoot, deployment.projectId, deployment.version);
   if (dryRun) {
-    console.log(JSON.stringify({ mode: "directory", sourceDir, target, dryRun: true }, null, 2));
+    await writeDeployReport("directory", target, checks);
     return;
   }
+  await writeFile(path.join(sourceDir, "_headers"), headersFile(deployment));
+  await writeFile(path.join(sourceDir, "vercel.json"), `${JSON.stringify(vercelConfig(deployment), null, 2)}\n`);
   await mkdir(path.dirname(target), { recursive: true });
   await cp(sourceDir, target, { recursive: true, force: true });
-  console.log(JSON.stringify({ mode: "directory", target, assetCount: deployment.assetCount }, null, 2));
+  await writeDeployReport("directory", target, checks, target);
 }
 
 async function deployToS3(targetUri) {
+  const checks = await validateDeployment();
   const args = ["s3", "sync", sourceDir, targetUri, "--delete"];
   if (dryRun) {
     args.push("--dryrun");
   }
   await run(process.env.AWS_CLI_PATH || "aws", args);
-  console.log(JSON.stringify({ mode: "s3", target: targetUri, assetCount: deployment.assetCount }, null, 2));
+  await writeDeployReport("s3", targetUri, checks);
 }
 
 if (s3Arg) {
