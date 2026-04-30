@@ -106,6 +106,8 @@ export interface NavigationZone {
   size: Vec3;
   rotationY?: number;
   enabled?: boolean;
+  source?: "authored" | "generated";
+  generatedBy?: string;
 }
 
 export interface BrandingConfig {
@@ -393,7 +395,9 @@ export function isNavigationZone(value: unknown): value is NavigationZone {
     isVec3(value["center"]) &&
     isVec3(value["size"]) &&
     (value["rotationY"] === undefined || typeof value["rotationY"] === "number") &&
-    (value["enabled"] === undefined || typeof value["enabled"] === "boolean")
+    (value["enabled"] === undefined || typeof value["enabled"] === "boolean") &&
+    (value["source"] === undefined || value["source"] === "authored" || value["source"] === "generated") &&
+    (value["generatedBy"] === undefined || typeof value["generatedBy"] === "string")
   );
 }
 

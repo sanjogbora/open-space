@@ -1275,6 +1275,15 @@ button.list-row {
   gap: 10px;
 }
 
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  color: #667681;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
 .zone-map {
   display: grid;
   gap: 8px;
@@ -1324,6 +1333,10 @@ button.list-row {
   background: rgba(8, 127, 231, 0.18);
   box-shadow: 0 8px 22px rgba(8, 127, 231, 0.12);
   touch-action: none;
+}
+
+.zone-map-item.generated {
+  border-style: dashed;
 }
 
 .zone-map-repair-point {

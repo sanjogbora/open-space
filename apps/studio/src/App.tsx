@@ -421,6 +421,25 @@ function zoneMapStyle(
   };
 }
 
+function navigationZoneOriginLabel(zone: NavigationZone): string | undefined {
+  if (zone.source === "generated") {
+    const generator = zone.generatedBy ? zone.generatedBy.replace(/-/g, " ") : "";
+    return generator ? `Generated: ${generator}` : "Generated";
+  }
+  if (zone.source === "authored") {
+    return "Authored";
+  }
+  return undefined;
+}
+
+function markNavigationZoneAuthored(zone: NavigationZone): NavigationZone {
+  const { generatedBy: _generatedBy, ...rest } = zone;
+  return {
+    ...rest,
+    source: "authored"
+  };
+}
+
 function roomCenter(room: RoomDefinition, views: readonly SceneView[]): Vec3 {
   const linkedView = views.find((view) => view.id === room.viewId);
   return room.center ?? linkedView?.position ?? [0, 0, 0];
@@ -995,7 +1014,8 @@ function createNavigationZone(
     center,
     size,
     rotationY: 0,
-    enabled: true
+    enabled: true,
+    source: "authored"
   };
 }
 
@@ -2006,7 +2026,9 @@ function App() {
           center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.max[2] + thickness / 2],
           size: [width + thickness * 2, height, thickness],
           rotationY: 0,
-          enabled: true
+          enabled: true,
+          source: "generated",
+          generatedBy: "navigation-bounds"
         },
         {
           id: "boundary-block-south",
@@ -2015,7 +2037,9 @@ function App() {
           center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.min[2] - thickness / 2],
           size: [width + thickness * 2, height, thickness],
           rotationY: 0,
-          enabled: true
+          enabled: true,
+          source: "generated",
+          generatedBy: "navigation-bounds"
         },
         {
           id: "boundary-block-east",
@@ -2024,7 +2048,9 @@ function App() {
           center: [bounds.max[0] + thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
           size: [thickness, height, depth + thickness * 2],
           rotationY: 0,
-          enabled: true
+          enabled: true,
+          source: "generated",
+          generatedBy: "navigation-bounds"
         },
         {
           id: "boundary-block-west",
@@ -2033,7 +2059,9 @@ function App() {
           center: [bounds.min[0] - thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
           size: [thickness, height, depth + thickness * 2],
           rotationY: 0,
-          enabled: true
+          enabled: true,
+          source: "generated",
+          generatedBy: "navigation-bounds"
         }
       ];
       return {
@@ -2063,7 +2091,9 @@ function App() {
         center: [Number(view.position[0].toFixed(3)), Number(floorY.toFixed(3)), Number(view.position[2].toFixed(3))],
         size: [patchSize, 0.08, patchSize],
         rotationY: 0,
-        enabled: true
+        enabled: true,
+        source: "generated",
+        generatedBy: "walk-view-patch"
       }));
       return {
         ...navigation,
@@ -2133,7 +2163,8 @@ function App() {
           ? [2.2, 0.08, 2.2]
           : [0.9, Math.max(1.8, navigation.cameraHeight + 0.6), 1.35],
         rotationY: 0,
-        enabled: true
+        enabled: true,
+        source: "authored"
       };
       return {
         ...navigation,
@@ -2160,7 +2191,8 @@ function App() {
         center: candidate.center,
         size: candidate.size,
         rotationY: 0,
-        enabled: true
+        enabled: true,
+        source: "authored"
       };
       return {
         ...navigation,
@@ -2176,7 +2208,9 @@ function App() {
   ) => {
     updateNavigation((navigation) => ({
       ...navigation,
-      zones: (navigation.zones ?? []).map((zone) => (zone.id === zoneId ? updater(zone) : zone))
+      zones: (navigation.zones ?? []).map((zone) =>
+        zone.id === zoneId ? markNavigationZoneAuthored(updater(zone)) : zone
+      )
     }));
   };
 
@@ -5635,9 +5669,11 @@ function App() {
                             <button
                               key={zone.id}
                               type="button"
-                              className={`zone-map-item ${zone.kind}${zone.enabled === false ? " disabled" : ""}`}
+                              className={`zone-map-item ${zone.kind}${zone.source === "generated" ? " generated" : ""}${zone.enabled === false ? " disabled" : ""}`}
                               style={zoneMapStyle(zone, manifest.navigation.bounds!)}
-                              title={`${zone.label} (${zone.kind})`}
+                              title={[`${zone.label} (${zone.kind})`, navigationZoneOriginLabel(zone)]
+                                .filter(Boolean)
+                                .join(" - ")}
                               onPointerDown={(event) => {
                                 event.preventDefault();
                                 const mapElement = event.currentTarget.closest(".zone-map-surface");
@@ -5672,6 +5708,9 @@ function App() {
                                   }))
                                 }
                               />
+                              {navigationZoneOriginLabel(zone) && (
+                                <small className="field-hint">{navigationZoneOriginLabel(zone)}</small>
+                              )}
                             </label>
                             <label>
                               <span>Kind</span>

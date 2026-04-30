@@ -1267,7 +1267,17 @@ function graphWalkZoneCandidates(graph, modelScale) {
       return candidate.area <= Math.max(referenceArea * 6, 12);
     })
     .slice(0, 12)
-    .map(({ area: _area, exterior: _exterior, generic: _generic, ...zone }) => zone);
+    .map(({ area: _area, exterior: _exterior, generic: _generic, ...zone }) =>
+      generatedNavigationZone(zone, "floor-detection")
+    );
+}
+
+function generatedNavigationZone(zone, generatedBy) {
+  return {
+    ...zone,
+    source: "generated",
+    generatedBy
+  };
 }
 
 function roomLabelFromZoneContents(zone, graph, modelScale) {
@@ -1566,7 +1576,7 @@ function graphPassZoneCandidates(graph, modelScale, cameraHeight, walkZones = []
     .filter(Boolean)
     .sort((a, b) => b.score - a.score)
     .slice(0, 16)
-    .map(({ score: _score, ...zone }) => zone);
+    .map(({ score: _score, ...zone }) => generatedNavigationZone(zone, "door-detection"));
 }
 
 function navigationZoneBox(zone) {
@@ -1649,7 +1659,7 @@ function autoPassZonesBetweenWalkZones(walkZones, cameraHeight) {
   return candidates
     .sort((a, b) => b.score - a.score)
     .slice(0, 12)
-    .map(({ score: _score, ...zone }) => zone);
+    .map(({ score: _score, ...zone }) => generatedNavigationZone(zone, "walk-zone-gap-detection"));
 }
 
 function navigationZonesOverlap(a, b, padding = 0.2) {
@@ -1719,7 +1729,7 @@ function createBridgePassZone(from, to, index, cameraHeight) {
   const depthSize = Math.min(3.2, Math.max(1, zGap + 0.85));
   const overlapWidth = Math.min(2.4, Math.max(1, xOverlap || 1.2));
   const overlapDepth = Math.min(2.4, Math.max(1, zOverlap || 1.2));
-  return {
+  return generatedNavigationZone({
     id: `pass-bridge-${index}`,
     label: `Bridge pass ${index}`,
     kind: "pass",
@@ -1734,7 +1744,7 @@ function createBridgePassZone(from, to, index, cameraHeight) {
         : [overlapWidth, Math.max(1.8, cameraHeight + 0.65), depthSize],
     rotationY: 0,
     enabled: true
-  };
+  }, "navigation-island-bridge");
 }
 
 function autoBridgePassZones(routeZones, cameraHeight) {
@@ -1772,7 +1782,9 @@ function autoBoundaryBlockZones(bounds, cameraHeight) {
       center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.max[2] + thickness / 2],
       size: [width + thickness * 2, height, thickness],
       rotationY: 0,
-      enabled: true
+      enabled: true,
+      source: "generated",
+      generatedBy: "navigation-bounds"
     },
     {
       id: "boundary-block-south",
@@ -1781,7 +1793,9 @@ function autoBoundaryBlockZones(bounds, cameraHeight) {
       center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.min[2] - thickness / 2],
       size: [width + thickness * 2, height, thickness],
       rotationY: 0,
-      enabled: true
+      enabled: true,
+      source: "generated",
+      generatedBy: "navigation-bounds"
     },
     {
       id: "boundary-block-east",
@@ -1790,7 +1804,9 @@ function autoBoundaryBlockZones(bounds, cameraHeight) {
       center: [bounds.max[0] + thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
       size: [thickness, height, depth + thickness * 2],
       rotationY: 0,
-      enabled: true
+      enabled: true,
+      source: "generated",
+      generatedBy: "navigation-bounds"
     },
     {
       id: "boundary-block-west",
@@ -1799,7 +1815,9 @@ function autoBoundaryBlockZones(bounds, cameraHeight) {
       center: [bounds.min[0] - thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
       size: [thickness, height, depth + thickness * 2],
       rotationY: 0,
-      enabled: true
+      enabled: true,
+      source: "generated",
+      generatedBy: "navigation-bounds"
     }
   ];
 }
@@ -1822,6 +1840,8 @@ function autoWalkZonesForViews(views, existingRouteZones, bounds, cameraHeight) 
       size: [width, 0.08, depth],
       rotationY: 0,
       enabled: true,
+      source: "generated",
+      generatedBy: "walk-view-patch",
       cameraHeight
     }))
     .map(({ cameraHeight: _cameraHeight, ...zone }) => zone);
@@ -1830,6 +1850,7 @@ function autoWalkZonesForViews(views, existingRouteZones, bounds, cameraHeight) 
 function isGeneratedNavigationZone(zone) {
   const id = String(zone?.id ?? "");
   return (
+    zone?.source === "generated" ||
     id === "walk-main" ||
     id.startsWith("walk-node-") ||
     id.startsWith("pass-node-") ||
@@ -1874,7 +1895,9 @@ function importedNavigationZones(bounds, existingZones = [], graph, modelScale =
       ],
       size: [width, 0.08, depth],
       rotationY: 0,
-      enabled: true
+      enabled: true,
+      source: "generated",
+      generatedBy: "bounds-fallback"
     },
     ...passZones,
     ...viewZones,
