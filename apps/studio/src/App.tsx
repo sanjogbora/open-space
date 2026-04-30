@@ -832,10 +832,16 @@ function doorPassScore(name: string): number {
   if (normalized.includes("opening") || normalized.includes("portal")) {
     score += 8;
   }
+  if (normalized.includes("passage") || normalized.includes("corridor")) {
+    score += 7;
+  }
+  if (normalized.includes("slider") || normalized.includes("sliding")) {
+    score += 6;
+  }
   if (normalized.includes("frame") || normalized.includes("threshold")) {
     score += 5;
   }
-  if (normalized.includes("entry") || normalized.includes("entrance")) {
+  if (normalized.includes("entry") || normalized.includes("entrance") || normalized.includes("balcony") || normalized.includes("terrace")) {
     score += 4;
   }
   if (normalized.includes("window")) {

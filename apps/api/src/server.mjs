@@ -1441,10 +1441,16 @@ function doorPassScore(name) {
   if (normalized.includes("opening") || normalized.includes("portal")) {
     score += 8;
   }
+  if (normalized.includes("passage") || normalized.includes("corridor")) {
+    score += 7;
+  }
+  if (normalized.includes("slider") || normalized.includes("sliding")) {
+    score += 6;
+  }
   if (normalized.includes("frame") || normalized.includes("threshold")) {
     score += 5;
   }
-  if (normalized.includes("entry") || normalized.includes("entrance")) {
+  if (normalized.includes("entry") || normalized.includes("entrance") || normalized.includes("balcony") || normalized.includes("terrace")) {
     score += 4;
   }
   if (normalized.includes("window")) {
@@ -1469,9 +1475,9 @@ function expandDoorPassToWalkZones(passZone, walkZones, cameraHeight) {
   }
   const nearby = walkZones
     .map((zone) => ({ zone, distance: zoneBoxDistanceToPoint(zone, passZone.center) }))
-    .filter((entry) => entry.distance <= 1.6)
+    .filter((entry) => entry.distance <= Math.max(1.8, cameraHeight * 1.65))
     .sort((a, b) => a.distance - b.distance)
-    .slice(0, 3)
+    .slice(0, 4)
     .map((entry) => entry.zone);
   if (nearby.length < 2) {
     return passZone;
@@ -1496,7 +1502,7 @@ function expandDoorPassToWalkZones(passZone, walkZones, cameraHeight) {
       }
     }
   }
-  if (!bestBridge || Math.max(bestBridge.xGap, bestBridge.zGap) > 2.4) {
+  if (!bestBridge || Math.max(bestBridge.xGap, bestBridge.zGap) > Math.max(2.6, cameraHeight * 1.7)) {
     return passZone;
   }
 
@@ -1563,7 +1569,7 @@ function graphPassZoneCandidates(graph, modelScale, cameraHeight, walkZones = []
         Math.max(0.1, scaledBounds.max[2] - scaledBounds.min[2])
       ];
       const footprint = Math.max(size[0], size[2]);
-      if (footprint > 4 || size[1] > Math.max(4, cameraHeight * 2.2)) {
+      if (footprint > (score >= 8 ? 6.5 : 4) || size[1] > Math.max(4, cameraHeight * 2.2)) {
         return undefined;
       }
       return expandDoorPassToWalkZones({
@@ -1618,6 +1624,7 @@ function pointInsideNavigationZone(zone, point, padding = 0.1) {
 
 function autoPassZonesBetweenWalkZones(walkZones, cameraHeight) {
   const candidates = [];
+  const maxGap = Math.min(1.45, Math.max(0.65, cameraHeight * 0.75));
   for (let aIndex = 0; aIndex < walkZones.length; aIndex += 1) {
     for (let bIndex = aIndex + 1; bIndex < walkZones.length; bIndex += 1) {
       const zoneA = walkZones[aIndex];
@@ -1629,7 +1636,7 @@ function autoPassZonesBetweenWalkZones(walkZones, cameraHeight) {
       const xGap = boxA.maxX < boxB.minX ? boxB.minX - boxA.maxX : boxB.maxX < boxA.minX ? boxA.minX - boxB.maxX : 0;
       const zGap = boxA.maxZ < boxB.minZ ? boxB.minZ - boxA.maxZ : boxB.maxZ < boxA.minZ ? boxA.minZ - boxB.maxZ : 0;
 
-      if (xGap > 0 && xGap <= 0.55 && zOverlap >= 0.65 && zOverlap <= 2.4) {
+      if (xGap > 0 && xGap <= maxGap && zOverlap >= 0.55 && zOverlap <= Math.max(2.6, cameraHeight * 1.6)) {
         const left = boxA.maxX < boxB.minX ? boxA : boxB;
         const right = left === boxA ? boxB : boxA;
         candidates.push({
@@ -1648,7 +1655,7 @@ function autoPassZonesBetweenWalkZones(walkZones, cameraHeight) {
         });
       }
 
-      if (zGap > 0 && zGap <= 0.55 && xOverlap >= 0.65 && xOverlap <= 2.4) {
+      if (zGap > 0 && zGap <= maxGap && xOverlap >= 0.55 && xOverlap <= Math.max(2.6, cameraHeight * 1.6)) {
         const near = boxA.maxZ < boxB.minZ ? boxA : boxB;
         const far = near === boxA ? boxB : boxA;
         candidates.push({
