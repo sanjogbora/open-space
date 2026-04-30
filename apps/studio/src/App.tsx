@@ -78,6 +78,15 @@ interface NavigationQaIssue {
   action?: string;
 }
 
+interface NavigationCoverage {
+  walkZones: number;
+  passZones: number;
+  blockZones: number;
+  routeComponents: number;
+  walkViews: number;
+  coveredWalkViews: number;
+}
+
 interface MaterialsDocument {
   schemaVersion: "0.1";
   generator: string;
@@ -606,6 +615,26 @@ function navigationQaIssues(manifest: SceneManifest): NavigationQaIssue[] {
   }
 
   return issues;
+}
+
+function navigationCoverage(manifest: SceneManifest): NavigationCoverage {
+  const navigation = manifest.navigation;
+  const walkZones = enabledNavigationZones(navigation, "walk");
+  const passZones = enabledNavigationZones(navigation, "pass");
+  const blockZones = enabledNavigationZones(navigation, "block");
+  const routeZones = [...walkZones, ...passZones];
+  const walkViews = manifest.views.filter((view) => view.kind === "walk");
+  const coveredWalkViews = walkViews.filter((view) =>
+    routeZones.some((zone) => pointInNavigationZone(zone, view.position, 0.25))
+  );
+  return {
+    walkZones: walkZones.length,
+    passZones: passZones.length,
+    blockZones: blockZones.length,
+    routeComponents: countNavigationComponents(routeZones),
+    walkViews: walkViews.length,
+    coveredWalkViews: coveredWalkViews.length
+  };
 }
 
 function isHotspot(interaction: SceneInteraction): interaction is HotspotInteraction {
@@ -1455,6 +1484,7 @@ function App() {
     ];
   }, [bundleStats, manifest]);
   const navigationIssues = useMemo(() => (manifest ? navigationQaIssues(manifest) : []), [manifest]);
+  const navigationCoverageSummary = useMemo(() => (manifest ? navigationCoverage(manifest) : null), [manifest]);
   const hasBlockingPublishErrors = publishChecks.some((check) => check.id === "diagnostics" && !check.ready);
 
   const selectedHotspot = useMemo(
@@ -4924,6 +4954,44 @@ function App() {
                         </div>
                       ))}
                     </div>
+                    {navigationCoverageSummary && (
+                      <div className="navigation-coverage-grid" aria-label="Navigation coverage summary">
+                        <div className="navigation-coverage-card">
+                          <span>Walk</span>
+                          <strong>{navigationCoverageSummary.walkZones}</strong>
+                        </div>
+                        <div className="navigation-coverage-card">
+                          <span>Pass</span>
+                          <strong>{navigationCoverageSummary.passZones}</strong>
+                        </div>
+                        <div className="navigation-coverage-card">
+                          <span>Block</span>
+                          <strong>{navigationCoverageSummary.blockZones}</strong>
+                        </div>
+                        <div
+                          className={
+                            navigationCoverageSummary.routeComponents > 1
+                              ? "navigation-coverage-card warn"
+                              : "navigation-coverage-card"
+                          }
+                        >
+                          <span>Islands</span>
+                          <strong>{navigationCoverageSummary.routeComponents}</strong>
+                        </div>
+                        <div
+                          className={
+                            navigationCoverageSummary.walkViews > navigationCoverageSummary.coveredWalkViews
+                              ? "navigation-coverage-card warn wide"
+                              : "navigation-coverage-card wide"
+                          }
+                        >
+                          <span>Views covered by zones</span>
+                          <strong>
+                            {navigationCoverageSummary.coveredWalkViews}/{navigationCoverageSummary.walkViews}
+                          </strong>
+                        </div>
+                      </div>
+                    )}
                     <div className="field-grid">
                       <NumberField
                         label="Model Scale"

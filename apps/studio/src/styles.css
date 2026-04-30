@@ -1158,6 +1158,44 @@ button.list-row {
   opacity: 0.82;
 }
 
+.navigation-coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.navigation-coverage-card {
+  min-height: 58px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid #dce5eb;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.navigation-coverage-card.wide {
+  grid-column: span 2;
+}
+
+.navigation-coverage-card.warn {
+  border-color: rgba(217, 139, 39, 0.32);
+  background: #fff8ed;
+}
+
+.navigation-coverage-card span {
+  color: #52636f;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.navigation-coverage-card strong {
+  color: #12191f;
+  font-size: 18px;
+}
+
 .repair-details {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
