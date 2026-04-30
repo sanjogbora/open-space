@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { access, cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -36,9 +37,10 @@ async function fileInfo(relativePath) {
   try {
     await access(fullPath);
     const info = await stat(fullPath);
-    return { path: relativePath, exists: true, bytes: info.size };
+    const sha256 = createHash("sha256").update(await readFile(fullPath)).digest("hex");
+    return { path: relativePath, exists: true, bytes: info.size, sha256 };
   } catch {
-    return { path: relativePath, exists: false, bytes: 0 };
+    return { path: relativePath, exists: false, bytes: 0, sha256: "" };
   }
 }
 
@@ -55,11 +57,16 @@ async function validateDeployment() {
     const asset = deployment.assets.find((item) => item.path === check.path);
     return check.exists && typeof asset?.bytes === "number" && check.bytes !== asset.bytes;
   });
-  if (missing.length > 0 || mismatched.length > 0) {
+  const hashMismatched = checks.filter((check) => {
+    const asset = deployment.assets.find((item) => item.path === check.path);
+    return check.exists && typeof asset?.sha256 === "string" && asset.sha256 && check.sha256 !== asset.sha256;
+  });
+  if (missing.length > 0 || mismatched.length > 0 || hashMismatched.length > 0) {
     throw new Error(
       [
         missing.length > 0 ? `${missing.length} asset(s) are missing` : undefined,
-        mismatched.length > 0 ? `${mismatched.length} asset(s) have changed size since publish` : undefined
+        mismatched.length > 0 ? `${mismatched.length} asset(s) have changed size since publish` : undefined,
+        hashMismatched.length > 0 ? `${hashMismatched.length} asset(s) have changed content since publish` : undefined
       ]
         .filter(Boolean)
         .join("; ")

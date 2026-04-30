@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { access, cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -2031,12 +2032,14 @@ async function listPublishAssets(root, dir = root, files = []) {
       continue;
     }
     const info = await stat(fullPath);
+    const sha256 = createHash("sha256").update(await readFile(fullPath)).digest("hex");
     const relativePath = path.relative(root, fullPath).replace(/\\/g, "/");
     const extension = path.extname(entry.name).toLowerCase();
     const immutable = [".glb", ".png", ".jpg", ".jpeg", ".webp", ".avif", ".ktx2", ".wasm", ".js", ".css"].includes(extension);
     files.push({
       path: relativePath,
       bytes: info.size,
+      sha256,
       cacheControl: immutable ? "public, max-age=31536000, immutable" : "public, max-age=300, must-revalidate"
     });
   }
