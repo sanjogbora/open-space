@@ -118,13 +118,14 @@ function isLocalGltfUri(uri) {
 }
 
 async function resourceStatus(asset, kind, source, label) {
-  const fullPath = path.resolve(path.dirname(asset.path), source);
+  const localSource = stripLocalResourceUri(source);
+  const fullPath = path.resolve(path.dirname(asset.path), localSource);
   try {
     await access(fullPath);
     const info = await stat(fullPath);
     return {
       kind,
-      source,
+      source: localSource,
       label,
       exists: true,
       bytes: info.size
@@ -132,7 +133,7 @@ async function resourceStatus(asset, kind, source, label) {
   } catch {
     return {
       kind,
-      source,
+      source: localSource,
       label,
       exists: false,
       bytes: 0
@@ -140,8 +141,17 @@ async function resourceStatus(asset, kind, source, label) {
   }
 }
 
+function stripLocalResourceUri(source) {
+  const clean = String(source).split(/[?#]/, 1)[0].replace(/\\/g, "/");
+  try {
+    return decodeURIComponent(clean);
+  } catch {
+    return clean;
+  }
+}
+
 function normalizeBundlePath(source) {
-  return source.split(/[?#]/, 1)[0].replace(/\\/g, "/").replace(/^\.?\//, "").toLowerCase();
+  return stripLocalResourceUri(source).replace(/^\.?\//, "").toLowerCase();
 }
 
 async function listBundleImageFiles(dir = bundleDir, files = []) {

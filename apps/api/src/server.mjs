@@ -274,7 +274,12 @@ function localGltfUri(value) {
 }
 
 function stripUriQuery(value) {
-  return value.split(/[?#]/, 1)[0].replace(/\\/g, "/");
+  const clean = value.split(/[?#]/, 1)[0].replace(/\\/g, "/");
+  try {
+    return decodeURIComponent(clean);
+  } catch {
+    return clean;
+  }
 }
 
 function isSafeLocalSceneUrl(value) {
