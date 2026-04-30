@@ -221,26 +221,52 @@ async function looseBundleImages(assets, models) {
   return imageFiles.filter((image) => !referenced.has(normalizeBundlePath(image.source)));
 }
 
-function parseGlbJson(bytes) {
+function parseGlb(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (bytes.byteLength < 20) {
+    throw new Error("GLB is too small to contain a valid header.");
+  }
   const magic = view.getUint32(0, true);
   const version = view.getUint32(4, true);
+  const totalLength = view.getUint32(8, true);
 
   if (magic !== 0x46546c67 || version !== 2) {
     throw new Error("Invalid GLB header.");
   }
-
-  const jsonChunkLength = view.getUint32(12, true);
-  const jsonChunkType = view.getUint32(16, true);
-
-  if (jsonChunkType !== 0x4e4f534a) {
-    throw new Error("GLB JSON chunk is missing.");
+  if (totalLength > bytes.byteLength) {
+    throw new Error("GLB header length is larger than the file.");
   }
 
-  return JSON.parse(new TextDecoder().decode(bytes.slice(20, 20 + jsonChunkLength)).trim());
+  let offset = 12;
+  let document;
+  let binBytes = 0;
+  while (offset + 8 <= Math.min(totalLength, bytes.byteLength)) {
+    const chunkLength = view.getUint32(offset, true);
+    const chunkType = view.getUint32(offset + 4, true);
+    const chunkStart = offset + 8;
+    const chunkEnd = chunkStart + chunkLength;
+    if (chunkEnd > bytes.byteLength) {
+      throw new Error("GLB chunk length extends past the file end.");
+    }
+    if (chunkType === 0x4e4f534a) {
+      document = JSON.parse(new TextDecoder().decode(bytes.slice(chunkStart, chunkEnd)).trim());
+    } else if (chunkType === 0x004e4942) {
+      binBytes += chunkLength;
+    }
+    offset = chunkEnd + (chunkLength % 4 === 0 ? 0 : 4 - (chunkLength % 4));
+  }
+
+  if (!document) {
+    throw new Error("GLB JSON chunk is missing.");
+  }
+  return { document, binBytes };
 }
 
-async function analyzeGltfDocument(document, format, asset) {
+function parseGlbJson(bytes) {
+  return parseGlb(bytes).document;
+}
+
+async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   const accessors = document.accessors ?? [];
   const meshes = document.meshes ?? [];
   const materials = document.materials ?? [];
@@ -277,6 +303,7 @@ async function analyzeGltfDocument(document, format, asset) {
   let missingPositionBoundsPrimitiveCount = 0;
   let invalidAccessorReferenceCount = 0;
   let invalidTextureReferenceCount = 0;
+  let undersizedBufferCount = 0;
   let texturesMissingImageCount = 0;
   let nonTrianglePrimitiveCount = 0;
   let vertexColorPrimitiveCount = 0;
@@ -363,6 +390,26 @@ async function analyzeGltfDocument(document, format, asset) {
       resourceStatus(asset, reference.kind, reference.source, reference.label)
     )
   );
+  const externalResourceBySource = new Map(
+    externalResources.map((resource) => [normalizeBundlePath(resource.source), resource])
+  );
+  for (const [bufferIndex, buffer] of (document.buffers ?? []).entries()) {
+    if (isLocalGltfUri(buffer.uri)) {
+      const resource = externalResourceBySource.get(normalizeBundlePath(buffer.uri));
+      if (resource?.exists && typeof buffer.byteLength === "number" && resource.bytes < buffer.byteLength) {
+        undersizedBufferCount += 1;
+      }
+      continue;
+    }
+    if (!buffer.uri && format === "glb" && bufferIndex === 0 && typeof buffer.byteLength === "number") {
+      if ((metadata.glbBinBytes ?? 0) < buffer.byteLength) {
+        undersizedBufferCount += 1;
+      }
+    }
+    if (!buffer.uri && format === "gltf") {
+      undersizedBufferCount += 1;
+    }
+  }
   const usesMeshopt =
     extensionsUsed.includes("EXT_meshopt_compression") ||
     (document.bufferViews ?? []).some((view) => Boolean(view.extensions?.EXT_meshopt_compression));
@@ -419,6 +466,7 @@ async function analyzeGltfDocument(document, format, asset) {
     missingPositionBoundsPrimitiveCount,
     invalidAccessorReferenceCount,
     invalidTextureReferenceCount,
+    undersizedBufferCount,
     texturesMissingImageCount,
     nonTrianglePrimitiveCount,
     vertexColorPrimitiveCount,
@@ -850,7 +898,8 @@ async function modelStats(asset) {
   try {
     if (extension === ".glb") {
       const bytes = await readFile(asset.path);
-      return analyzeGltfDocument(parseGlbJson(bytes), "glb", asset);
+      const parsed = parseGlb(bytes);
+      return analyzeGltfDocument(parsed.document, "glb", asset, { glbBinBytes: parsed.binBytes });
     }
 
     if (extension === ".gltf") {
@@ -1247,6 +1296,10 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.invalidTextureReferenceCount ?? 0),
     0
   );
+  const undersizedBufferCount = report.models.reduce(
+    (sum, model) => sum + (model.undersizedBufferCount ?? 0),
+    0
+  );
   const texturesMissingImageCount = report.models.reduce(
     (sum, model) => sum + (model.texturesMissingImageCount ?? 0),
     0
@@ -1328,6 +1381,16 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Invalid texture references",
       message: `${invalidTextureReferenceCount} texture/material reference(s) point outside the image or texture lists.`,
       action: "Repair or re-export the GLB/GLTF; broken texture references can make surfaces render flat, green, black, or missing."
+    });
+  }
+
+  if (undersizedBufferCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "undersized-model-buffers",
+      title: "Model buffer data is incomplete",
+      message: `${undersizedBufferCount} buffer(s) are shorter than the byteLength declared by the GLTF/GLB.`,
+      action: "Re-export or re-upload the model; incomplete buffers can make geometry disappear, render as a flat surface, or fail on some devices."
     });
   }
 
