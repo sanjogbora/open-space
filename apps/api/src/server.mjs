@@ -147,6 +147,25 @@ async function writeProjectAllBinary(projectId, filename, body) {
   );
 }
 
+async function clearPreviousModelAssets(projectId) {
+  const staleNames = [
+    "scene.glb",
+    "scene.gltf",
+    "scene.bin",
+    "scene.optimized.glb",
+    "scene.lightmapped.glb",
+    "source",
+    "textures",
+    "images",
+    "lightmaps"
+  ];
+  await Promise.all(
+    targetDirs(projectId).flatMap((target) =>
+      staleNames.map((name) => rm(path.join(target, name), { recursive: true, force: true }))
+    )
+  );
+}
+
 async function publishHistory(projectId) {
   return readJsonDefault(path.join(targetDirs(projectId)[0], "publish-history.json"), {
     schemaVersion: "0.1",
@@ -1717,6 +1736,7 @@ async function handleRequest(request, response) {
         throw badRequest("Uploaded model is empty.");
       }
       const filename = String(request.headers["x-file-name"] ?? "").toLowerCase();
+      await clearPreviousModelAssets(modelProjectId);
       const isGltfUpload = filename.endsWith(".gltf");
       const sceneUrl = filename.endsWith(".zip") || isZipBuffer(body)
         ? await writeProjectArchive(modelProjectId, body)
