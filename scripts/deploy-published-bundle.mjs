@@ -75,6 +75,25 @@ async function validateDeployment() {
   return checks;
 }
 
+function cachePolicySummary() {
+  const summary = {
+    immutable: 0,
+    revalidated: 0,
+    uncategorized: 0
+  };
+  for (const asset of deployment.assets ?? []) {
+    const cacheControl = String(asset.cacheControl ?? "").toLowerCase();
+    if (cacheControl.includes("immutable")) {
+      summary.immutable += 1;
+    } else if (cacheControl.includes("must-revalidate") || cacheControl.includes("no-cache")) {
+      summary.revalidated += 1;
+    } else {
+      summary.uncategorized += 1;
+    }
+  }
+  return summary;
+}
+
 function headersFile(deployment) {
   const lines = [];
   for (const rule of deployment.headers ?? []) {
@@ -109,7 +128,8 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir) {
     dryRun,
     assetCount: deployment.assetCount,
     checkedAssetCount: checks.length,
-    totalBytes: deployment.totalBytes
+    totalBytes: deployment.totalBytes,
+    cachePolicy: cachePolicySummary()
   };
   if (!dryRun) {
     await writeFile(path.join(reportDir, "deploy-report.json"), `${JSON.stringify(report, null, 2)}\n`);
