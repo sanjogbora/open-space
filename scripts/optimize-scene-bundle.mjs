@@ -67,9 +67,9 @@ async function textureEncoderStatusStep() {
   return {
     id: "gpu-texture-compression",
     label: "KTX2/Basis GPU texture compression",
-    status: toktxCommand ? "pending" : "blocked",
+    status: toktxCommand ? "skipped" : "blocked",
     note: toktxCommand
-      ? `toktx was found at ${toktxCommand}. KTX2 transcode wiring is ready for the next optimizer pass; this run kept WebP transfer compression active.`
+      ? `toktx was found at ${toktxCommand}. This optimizer pass still emits WebP transfer textures only; KTX2/Basis GPU texture output is not enabled yet.`
       : "toktx was not found. Install Khronos KTX-Software and set KTX_SOFTWARE_PATH or TOKTX_PATH to enable KTX2/Basis GPU texture output."
   };
 }
