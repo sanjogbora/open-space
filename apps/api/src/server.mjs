@@ -1700,10 +1700,16 @@ async function handleRequest(request, response) {
         throw badRequest("Uploaded model is empty.");
       }
       const filename = String(request.headers["x-file-name"] ?? "").toLowerCase();
+      const isGltfUpload = filename.endsWith(".gltf");
       const sceneUrl = filename.endsWith(".zip") || isZipBuffer(body)
         ? await writeProjectArchive(modelProjectId, body)
+        : isGltfUpload
+          ? "scene.gltf"
         : "scene.glb";
-      if (sceneUrl === "scene.glb") {
+      if (sceneUrl === "scene.gltf") {
+        validateGltfBuffer(body);
+        await writeProjectAllBinary(modelProjectId, "scene.gltf", body);
+      } else if (sceneUrl === "scene.glb") {
         validateGlbBuffer(body);
         await writeProjectAllBinary(modelProjectId, "scene.glb", body);
       }

@@ -2468,9 +2468,10 @@ function App() {
     const lowerName = file.name.toLowerCase();
     const isZip = lowerName.endsWith(".zip");
     const isGlb = lowerName.endsWith(".glb");
-    if (!isGlb && !isZip) {
+    const isGltf = lowerName.endsWith(".gltf");
+    if (!isGlb && !isGltf && !isZip) {
       setUploadState("error");
-      setUploadError("Upload a GLB file or a ZIP containing a GLB/GLTF plus its textures.");
+      setUploadError("Upload a GLB, GLTF, or a ZIP containing a GLB/GLTF plus its textures.");
       return;
     }
 
@@ -2480,7 +2481,7 @@ function App() {
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/model`, {
         method: "POST",
         headers: {
-          "content-type": isZip ? "application/zip" : "model/gltf-binary",
+          "content-type": isZip ? "application/zip" : isGltf ? "model/gltf+json" : "model/gltf-binary",
           "x-file-name": file.name
         },
         body: file
