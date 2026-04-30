@@ -115,6 +115,7 @@ interface BundleStats {
   materialCount: number;
   textureCount?: number;
   imageCount?: number;
+  embeddedImageCount?: number;
   maxTextureDimension?: number;
   oversizedTextureCount?: number;
   looseImageCount?: number;
@@ -153,6 +154,7 @@ interface BundleStats {
   }[];
   models?: readonly {
     format: string;
+    embeddedImageCount?: number;
     externalResourceCount?: number;
     missingExternalResourceCount?: number;
     externalResources?: readonly {
@@ -3494,6 +3496,7 @@ function App() {
                     <Stat label="Materials" value={String(bundleStats.materialCount)} />
                     <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
                     <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
+                    <Stat label="Embedded images" value={String(bundleStats.embeddedImageCount ?? 0)} />
                     <Stat label="Max texture" value={`${bundleStats.maxTextureDimension ?? 0}px`} />
                     <Stat label="Loose images" value={String(bundleStats.looseImageCount ?? 0)} />
                     <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
@@ -6015,6 +6018,7 @@ function App() {
                       <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
                       <Stat label="Textures" value={String(bundleStats.textureCount ?? 0)} />
                       <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
+                      <Stat label="Embedded images" value={String(bundleStats.embeddedImageCount ?? 0)} />
                       <Stat label="Max texture" value={`${bundleStats.maxTextureDimension ?? 0}px`} />
                       <Stat label="Oversized" value={String(bundleStats.oversizedTextureCount ?? 0)} />
                       <Stat label="Loose images" value={String(bundleStats.looseImageCount ?? 0)} />
