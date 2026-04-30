@@ -714,15 +714,17 @@ function runOptimize(projectId = "demo", profile = "balanced", applyOptimized = 
 }
 
 function lightmapBakeOptions(body = {}) {
-  const resolution = Math.min(4096, Math.max(256, Number(body.resolution ?? 1024)));
-  const samples = Math.min(1024, Math.max(16, Number(body.samples ?? 96)));
-  const margin = Math.min(96, Math.max(2, Number(body.margin ?? 16)));
+  const integerOption = (value, fallback, min, max) => {
+    const parsed = Number(value ?? fallback);
+    const finiteValue = Number.isFinite(parsed) ? parsed : fallback;
+    return Math.round(Math.min(max, Math.max(min, finiteValue)));
+  };
   const requestedMode = String(body.mode ?? "lighting").toLowerCase();
   const mode = ["lighting", "combined"].includes(requestedMode) ? requestedMode : "lighting";
   return {
-    resolution: Math.round(resolution),
-    samples: Math.round(samples),
-    margin: Math.round(margin),
+    resolution: integerOption(body.resolution, 1024, 256, 4096),
+    samples: integerOption(body.samples, 96, 16, 1024),
+    margin: integerOption(body.margin, 16, 2, 96),
     mode
   };
 }

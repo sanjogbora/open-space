@@ -10,9 +10,16 @@ const marginArg = args.find((arg) => arg.startsWith("--margin="));
 const modeArg = args.find((arg) => arg.startsWith("--mode="));
 const bundleDir = path.resolve(target);
 const blenderCommand = process.env.BLENDER_PATH || "blender";
-const resolution = Number(resolutionArg?.split("=")[1] ?? process.env.LIGHTMAP_RESOLUTION ?? 1024);
-const samples = Number(samplesArg?.split("=")[1] ?? process.env.LIGHTMAP_SAMPLES ?? 96);
-const margin = Number(marginArg?.split("=")[1] ?? process.env.LIGHTMAP_MARGIN ?? 16);
+
+function integerOption(rawValue, fallback, min, max) {
+  const parsed = Number(rawValue ?? fallback);
+  const value = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.round(Math.min(max, Math.max(min, value)));
+}
+
+const resolution = integerOption(resolutionArg?.split("=")[1] ?? process.env.LIGHTMAP_RESOLUTION, 1024, 256, 4096);
+const samples = integerOption(samplesArg?.split("=")[1] ?? process.env.LIGHTMAP_SAMPLES, 96, 16, 1024);
+const margin = integerOption(marginArg?.split("=")[1] ?? process.env.LIGHTMAP_MARGIN, 16, 2, 96);
 const requestedBakeMode = String(modeArg?.split("=")[1] ?? process.env.LIGHTMAP_BAKE_MODE ?? "lighting").toLowerCase();
 const bakeMode = ["lighting", "combined"].includes(requestedBakeMode) ? requestedBakeMode : "lighting";
 const outputSceneUrl = "scene.lightmapped.glb";
