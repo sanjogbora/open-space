@@ -5056,6 +5056,25 @@ function App() {
                         </div>
                       </div>
                     )}
+                    <div className="publish-action-card">
+                      <div>
+                        <strong>Regenerate navigation from model</strong>
+                        <p className="quiet-note">
+                          Re-analyze the active GLB/GLTF and rebuild views, rooms, bounds, walk zones, and pass zones.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        disabled={!apiConnected || repairState === "repairing"}
+                        onClick={() => void repairImport()}
+                      >
+                        <Wrench size={16} aria-hidden="true" />
+                        {repairState === "repairing" ? "Regenerating" : "Regenerate"}
+                      </button>
+                    </div>
+                    {repairError && <p className="error-note">{repairError}</p>}
+                    {repairSummary && <p className="success-note">{repairSummary}</p>}
                     <div className="field-grid">
                       <NumberField
                         label="Model Scale"
