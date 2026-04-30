@@ -911,6 +911,8 @@ function roomLabelFromName(name) {
 }
 
 function graphRoomCandidates(graph, modelScale, cameraHeight) {
+  const rawBounds = combineGraphBounds(graph);
+  const rawArea = rawBounds ? Math.max(1, boundsArea(rawBounds)) : 1;
   const roomKeywords = [
     "living",
     "dining",
@@ -953,6 +955,10 @@ function graphRoomCandidates(graph, modelScale, cameraHeight) {
       ];
       const area = Math.abs(size[0] * size[2]);
       const flatEnough = Math.abs(size[1]) <= Math.max(0.35, Math.min(Math.abs(size[0]), Math.abs(size[2])) * 0.22);
+      const genericDominantPlane = score === 0 && flatEnough && area > rawArea * modelScale * modelScale * 0.35;
+      if (genericDominantPlane || (score === 0 && likelyExteriorPlaneName(searchName))) {
+        return undefined;
+      }
       if ((score === 0 && !flatEnough) || area < 1.25) {
         return undefined;
       }
