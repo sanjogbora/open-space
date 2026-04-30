@@ -40,6 +40,14 @@ const idleOptimizationJob = {
   applied: false,
   steps: []
 };
+const idleLightmapBakeJob = {
+  schemaVersion: "0.1",
+  id: "",
+  status: "idle",
+  engine: "blender-cycles",
+  message: "No lightmap bake job has run for this project.",
+  steps: []
+};
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -166,14 +174,7 @@ async function optimizationHistory(projectId) {
 }
 
 async function lightmapBakeJob(projectId) {
-  return readJsonDefault(path.join(targetDirs(projectId)[0], "lightmap-bake-job.json"), {
-    schemaVersion: "0.1",
-    id: "",
-    status: "idle",
-    engine: "blender-cycles",
-    message: "No lightmap bake job has run for this project.",
-    steps: []
-  });
+  return readJsonDefault(path.join(targetDirs(projectId)[0], "lightmap-bake-job.json"), idleLightmapBakeJob);
 }
 
 async function fileExists(filePath) {
@@ -1521,11 +1522,14 @@ async function resetOptimizationState(projectId) {
   await Promise.all(
     targetDirs(projectId).flatMap((target) => [
       rm(path.join(target, "scene.optimized.glb"), { force: true }),
+      rm(path.join(target, "scene.lightmapped.glb"), { force: true }),
+      rm(path.join(target, "lightmaps"), { recursive: true, force: true }),
       writeFile(path.join(target, "optimization-job.json"), `${JSON.stringify(idleOptimizationJob, null, 2)}\n`),
       writeFile(
         path.join(target, "optimization-history.json"),
         `${JSON.stringify({ schemaVersion: "0.1", jobs: [] }, null, 2)}\n`
-      )
+      ),
+      writeFile(path.join(target, "lightmap-bake-job.json"), `${JSON.stringify(idleLightmapBakeJob, null, 2)}\n`)
     ])
   );
 }
