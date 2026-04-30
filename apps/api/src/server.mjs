@@ -1264,6 +1264,16 @@ function rangeOverlap(minA, maxA, minB, maxB) {
   return Math.max(0, Math.min(maxA, maxB) - Math.max(minA, minB));
 }
 
+function pointInsideNavigationZone(zone, point, padding = 0.1) {
+  const box = navigationZoneBox(zone);
+  return (
+    point[0] >= box.minX - padding &&
+    point[0] <= box.maxX + padding &&
+    point[2] >= box.minZ - padding &&
+    point[2] <= box.maxZ + padding
+  );
+}
+
 function autoPassZonesBetweenWalkZones(walkZones, cameraHeight) {
   const candidates = [];
   for (let aIndex = 0; aIndex < walkZones.length; aIndex += 1) {
@@ -1322,6 +1332,29 @@ function autoPassZonesBetweenWalkZones(walkZones, cameraHeight) {
     .map(({ score: _score, ...zone }) => zone);
 }
 
+function autoWalkZonesForViews(views, existingRouteZones, bounds, cameraHeight) {
+  if (!Array.isArray(views) || !bounds) {
+    return [];
+  }
+  const width = Math.max(0.9, Math.min(2.2, (bounds.max[0] - bounds.min[0]) * 0.18));
+  const depth = Math.max(0.9, Math.min(2.2, (bounds.max[2] - bounds.min[2]) * 0.18));
+  const floorY = bounds.min[1] + 0.03;
+  return views
+    .filter((view) => view.kind === "walk")
+    .filter((view) => !existingRouteZones.some((zone) => pointInsideNavigationZone(zone, view.position, 0.25)))
+    .map((view) => ({
+      id: `walk-auto-view-${view.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 72),
+      label: `${view.label} walk patch`,
+      kind: "walk",
+      center: [view.position[0], floorY, view.position[2]],
+      size: [width, 0.08, depth],
+      rotationY: 0,
+      enabled: true,
+      cameraHeight
+    }))
+    .map(({ cameraHeight: _cameraHeight, ...zone }) => zone);
+}
+
 function isGeneratedNavigationZone(zone) {
   const id = String(zone?.id ?? "");
   return (
@@ -1329,12 +1362,13 @@ function isGeneratedNavigationZone(zone) {
     id.startsWith("walk-node-") ||
     id.startsWith("pass-node-") ||
     id.startsWith("pass-auto-") ||
+    id.startsWith("walk-auto-view-") ||
     id.startsWith("walk-Object") ||
     id.startsWith("pass-Object")
   );
 }
 
-function importedNavigationZones(bounds, existingZones = [], graph, modelScale = 1, cameraHeight = 1.65) {
+function importedNavigationZones(bounds, existingZones = [], graph, modelScale = 1, cameraHeight = 1.65, views = []) {
   const preservedZones = Array.isArray(existingZones)
     ? existingZones.filter((zone) => !isGeneratedNavigationZone(zone))
     : [];
@@ -1343,8 +1377,9 @@ function importedNavigationZones(bounds, existingZones = [], graph, modelScale =
     ...graphPassZoneCandidates(graph, modelScale, cameraHeight),
     ...autoPassZonesBetweenWalkZones(graphZones, cameraHeight)
   ];
+  const viewZones = autoWalkZonesForViews(views, [...graphZones, ...passZones, ...preservedZones], bounds, cameraHeight);
   if (graphZones.length > 0) {
-    return [...graphZones, ...passZones, ...preservedZones];
+    return [...graphZones, ...passZones, ...viewZones, ...preservedZones];
   }
   if (!bounds) {
     return [...passZones, ...preservedZones];
@@ -1366,6 +1401,7 @@ function importedNavigationZones(bounds, existingZones = [], graph, modelScale =
       enabled: true
     },
     ...passZones,
+    ...viewZones,
     ...preservedZones
   ];
 }
@@ -1451,7 +1487,7 @@ async function resetManifestForUploadedModel(
         "pillar"
       ],
       ignoredCollisionMeshNames: manifest.navigation?.ignoredCollisionMeshNames ?? [],
-      zones: importedNavigationZones(bounds, manifest.navigation?.zones, graph, modelScale, cameraHeight),
+      zones: importedNavigationZones(bounds, manifest.navigation?.zones, graph, modelScale, cameraHeight, views),
       ...(navigationBounds ? { bounds: navigationBounds } : {})
     }
   };
