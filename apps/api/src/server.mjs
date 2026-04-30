@@ -1558,6 +1558,13 @@ async function listPublishAssets(root, dir = root, files = []) {
   return files;
 }
 
+async function removePublishOnlyTemporaryFiles(root) {
+  await Promise.all([
+    rm(path.join(root, ".lightmap-bake.py"), { force: true }),
+    rm(path.join(root, ".lightmap-bake-config.json"), { force: true })
+  ]);
+}
+
 async function publishProject(projectId) {
   await runAnalyze(projectId);
   const publishedAt = new Date().toISOString();
@@ -1575,6 +1582,7 @@ async function publishProject(projectId) {
   const output = path.join(publishedRoot, projectId, version);
   await mkdir(path.dirname(output), { recursive: true });
   await cp(source, output, { recursive: true, force: true });
+  await removePublishOnlyTemporaryFiles(output);
   const assets = await listPublishAssets(output);
   const totalBytes = assets.reduce((sum, asset) => sum + asset.bytes, 0);
   const scenePath = `/published/${projectId}/${version}/scene.manifest.json`;
