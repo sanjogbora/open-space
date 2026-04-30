@@ -125,12 +125,15 @@ async function resourceStatus(asset, kind, source, label) {
     await access(fullPath);
     const info = await stat(fullPath);
     const metadata = kind === "texture" ? await imageMetadata(fullPath) : undefined;
+    const exactSource = await exactCaseRelativePath(path.dirname(asset.path), localSource);
+    const caseMismatch = Boolean(exactSource && exactSource !== localSource.replace(/\\/g, "/"));
     return {
       kind,
       source: localSource,
       label,
       exists: true,
       bytes: info.size,
+      ...(caseMismatch ? { caseMismatch, actualSource: exactSource } : {}),
       ...(metadata ? { width: metadata.width, height: metadata.height } : {})
     };
   } catch {
@@ -142,6 +145,36 @@ async function resourceStatus(asset, kind, source, label) {
       bytes: 0
     };
   }
+}
+
+async function exactCaseRelativePath(baseDir, source) {
+  const cleanSource = stripLocalResourceUri(source);
+  const parts = cleanSource.split(/[\\/]+/).filter(Boolean);
+  let currentDir = baseDir;
+  const exactParts = [];
+  for (const part of parts) {
+    if (part === ".") {
+      continue;
+    }
+    if (part === "..") {
+      currentDir = path.dirname(currentDir);
+      exactParts.push(part);
+      continue;
+    }
+    let entries = [];
+    try {
+      entries = await readdir(currentDir, { withFileTypes: true });
+    } catch {
+      return undefined;
+    }
+    const match = entries.find((entry) => entry.name.toLowerCase() === part.toLowerCase());
+    if (!match) {
+      return undefined;
+    }
+    exactParts.push(match.name);
+    currentDir = path.join(currentDir, match.name);
+  }
+  return exactParts.join("/");
 }
 
 async function imageMetadata(filePath) {
@@ -1322,6 +1355,9 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.missingExternalResourceCount ?? 0),
     0
   );
+  const caseMismatchedExternalResources = report.models
+    .flatMap((model) => model.externalResources ?? [])
+    .filter((resource) => resource.exists && resource.caseMismatch);
   const parseFailures = report.models.filter((model) => model.parseError);
   const unsupportedRequiredExtensions = [
     ...new Set(report.models.flatMap((model) => model.unsupportedRequiredExtensions ?? []))
@@ -1594,6 +1630,16 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Missing model textures or buffers",
       message: `${missingExternalResources} GLTF resource(s) referenced by the model are not present next to the scene file.`,
       action: "Upload a ZIP containing the GLTF/GLB plus its texture and .bin folders, preserving relative paths."
+    });
+  }
+
+  if (caseMismatchedExternalResources.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "case-mismatched-model-resources",
+      title: "Texture or buffer path casing may fail when published",
+      message: `${caseMismatchedExternalResources.length} external model resource path(s) differ only by letter case from the files on disk.`,
+      action: "Rename files or update GLTF resource paths so casing matches exactly before deploying to Linux/CDN hosting."
     });
   }
 
