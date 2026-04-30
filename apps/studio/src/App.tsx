@@ -486,21 +486,22 @@ function navigationZonesOverlap(a: NavigationZone, b: NavigationZone, padding = 
   );
 }
 
-function countNavigationComponents(zones: readonly NavigationZone[]): number {
+function navigationComponents(zones: readonly NavigationZone[]): NavigationZone[][] {
   if (zones.length === 0) {
-    return 0;
+    return [];
   }
   const seen = new Set<string>();
-  let components = 0;
+  const components: NavigationZone[][] = [];
   for (const zone of zones) {
     if (seen.has(zone.id)) {
       continue;
     }
-    components += 1;
+    const component: NavigationZone[] = [];
     const queue = [zone];
     seen.add(zone.id);
     while (queue.length > 0) {
       const current = queue.shift()!;
+      component.push(current);
       for (const candidate of zones) {
         if (!seen.has(candidate.id) && navigationZonesOverlap(current, candidate)) {
           seen.add(candidate.id);
@@ -508,8 +509,71 @@ function countNavigationComponents(zones: readonly NavigationZone[]): number {
         }
       }
     }
+    components.push(component);
   }
   return components;
+}
+
+function countNavigationComponents(zones: readonly NavigationZone[]): number {
+  return navigationComponents(zones).length;
+}
+
+function zoneCenterDistance(a: NavigationZone, b: NavigationZone): number {
+  return Math.hypot(a.center[0] - b.center[0], a.center[2] - b.center[2]);
+}
+
+function nearestNavigationComponentBridge(
+  connectedZones: readonly NavigationZone[],
+  component: readonly NavigationZone[]
+): { from: NavigationZone; to: NavigationZone; distance: number } | null {
+  let nearest: { from: NavigationZone; to: NavigationZone; distance: number } | null = null;
+  connectedZones.forEach((from) => {
+    component.forEach((to) => {
+      const distance = zoneCenterDistance(from, to);
+      if (!nearest || distance < nearest.distance) {
+        nearest = { from, to, distance };
+      }
+    });
+  });
+  return nearest;
+}
+
+function createBridgePassZone(
+  from: NavigationZone,
+  to: NavigationZone,
+  index: number,
+  cameraHeight: number
+): NavigationZone {
+  const boxA = navigationZoneAabb(from);
+  const boxB = navigationZoneAabb(to);
+  const xGap = boxA.maxX < boxB.minX ? boxB.minX - boxA.maxX : boxB.maxX < boxA.minX ? boxA.minX - boxB.maxX : 0;
+  const zGap = boxA.maxZ < boxB.minZ ? boxB.minZ - boxA.maxZ : boxB.maxZ < boxA.minZ ? boxA.minZ - boxB.maxZ : 0;
+  const xOverlap = Math.max(0, Math.min(boxA.maxX, boxB.maxX) - Math.max(boxA.minX, boxB.minX));
+  const zOverlap = Math.max(0, Math.min(boxA.maxZ, boxB.maxZ) - Math.max(boxA.minZ, boxB.minZ));
+  const center: Vec3 = [
+    Number(((from.center[0] + to.center[0]) / 2).toFixed(3)),
+    Number(Math.max(0.8, cameraHeight * 0.55).toFixed(3)),
+    Number(((from.center[2] + to.center[2]) / 2).toFixed(3))
+  ];
+
+  const horizontalSize = Math.min(3.2, Math.max(1, xGap + 0.85));
+  const depthSize = Math.min(3.2, Math.max(1, zGap + 0.85));
+  const overlapWidth = Math.min(2.4, Math.max(1, xOverlap || 1.2));
+  const overlapDepth = Math.min(2.4, Math.max(1, zOverlap || 1.2));
+  const size: Vec3 =
+    xGap >= zGap
+      ? [horizontalSize, Math.max(1.8, cameraHeight + 0.65), overlapDepth]
+      : [overlapWidth, Math.max(1.8, cameraHeight + 0.65), depthSize];
+
+  return {
+    id: `pass-bridge-${index}`,
+    label: `Bridge pass ${index}`,
+    kind: "pass",
+    center,
+    size,
+    rotationY: 0,
+    enabled: true
+  };
 }
 
 function navigationQaIssues(manifest: SceneManifest): NavigationQaIssue[] {
@@ -1932,6 +1996,43 @@ function App() {
       return {
         ...navigation,
         zones: [...existing, ...viewZones]
+      };
+    });
+    setNotice("saved");
+  };
+
+  const createBridgePassZones = () => {
+    updateNavigation((navigation) => {
+      const routeZones = enabledNavigationZones(navigation).filter((zone) => zone.kind === "walk" || zone.kind === "pass");
+      const components = navigationComponents(routeZones);
+      if (components.length <= 1) {
+        setRepairSummary("Navigation zones are already connected.");
+        return navigation;
+      }
+
+      const existing = (navigation.zones ?? []).filter((zone) => !zone.id.startsWith("pass-bridge-"));
+      const bridges: NavigationZone[] = [];
+      const connectedComponents: NavigationZone[][] = [components[0] ?? []];
+      const cameraHeight = navigation.cameraHeight;
+
+      components.slice(1).forEach((component, index) => {
+        const nearest = nearestNavigationComponentBridge(connectedComponents.flat(), component);
+        if (!nearest || nearest.distance > 3.2) {
+          return;
+        }
+        bridges.push(createBridgePassZone(nearest.from, nearest.to, index + 1, cameraHeight));
+        connectedComponents.push(component);
+      });
+
+      if (bridges.length === 0) {
+        setRepairSummary("No close navigation islands found to bridge automatically.");
+        return navigation;
+      }
+
+      setRepairSummary(`Added ${bridges.length} bridge pass zone(s).`);
+      return {
+        ...navigation,
+        zones: [...existing, ...bridges]
       };
     });
     setNotice("saved");
@@ -5298,6 +5399,15 @@ function App() {
                         >
                           <Wrench size={16} aria-hidden="true" />
                           View Walks
+                        </button>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          disabled={(manifest.navigation.zones ?? []).filter((zone) => zone.kind === "walk").length < 2}
+                          onClick={createBridgePassZones}
+                        >
+                          <Wrench size={16} aria-hidden="true" />
+                          Bridge
                         </button>
                         <button
                           type="button"
