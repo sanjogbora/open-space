@@ -115,6 +115,8 @@ interface BundleStats {
   materialCount: number;
   textureCount?: number;
   imageCount?: number;
+  maxTextureDimension?: number;
+  oversizedTextureCount?: number;
   looseImageCount?: number;
   compression?: {
     meshopt?: boolean;
@@ -3421,6 +3423,7 @@ function App() {
                     <Stat label="Materials" value={String(bundleStats.materialCount)} />
                     <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
                     <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
+                    <Stat label="Max texture" value={`${bundleStats.maxTextureDimension ?? 0}px`} />
                     <Stat label="Loose images" value={String(bundleStats.looseImageCount ?? 0)} />
                     <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
                     <Stat label="Texture compression" value={textureCompressionLabel(bundleStats)} />
@@ -5906,6 +5909,8 @@ function App() {
                       <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
                       <Stat label="Textures" value={String(bundleStats.textureCount ?? 0)} />
                       <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
+                      <Stat label="Max texture" value={`${bundleStats.maxTextureDimension ?? 0}px`} />
+                      <Stat label="Oversized" value={String(bundleStats.oversizedTextureCount ?? 0)} />
                       <Stat label="Loose images" value={String(bundleStats.looseImageCount ?? 0)} />
                       <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
                       <Stat label="Texture compression" value={textureCompressionLabel(bundleStats)} />
