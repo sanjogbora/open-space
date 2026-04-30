@@ -525,7 +525,11 @@ async function modelDocument(scenePath) {
 }
 
 async function repairExternalTexturePaths(projectId) {
-  let copied = 0;
+  const result = {
+    copied: 0,
+    skippedAmbiguous: 0,
+    missing: 0
+  };
   await Promise.all(
     targetDirs(projectId).map(async (target) => {
       const manifest = await readJson(path.join(target, "scene.manifest.json"));
@@ -548,9 +552,7 @@ async function repairExternalTexturePaths(projectId) {
       const imageByName = new Map();
       for (const imagePath of looseImages) {
         const key = path.basename(imagePath).toLowerCase();
-        if (!imageByName.has(key)) {
-          imageByName.set(key, imagePath);
-        }
+        imageByName.set(key, [...(imageByName.get(key) ?? []), imagePath]);
       }
 
       await Promise.all(
@@ -559,18 +561,26 @@ async function repairExternalTexturePaths(projectId) {
           if (await fileExists(expectedPath)) {
             return;
           }
-          const sourcePath = imageByName.get(path.basename(uri).toLowerCase());
-          if (!sourcePath || path.resolve(sourcePath) === path.resolve(expectedPath)) {
+          const sourcePaths = (imageByName.get(path.basename(uri).toLowerCase()) ?? []).filter(
+            (sourcePath) => path.resolve(sourcePath) !== path.resolve(expectedPath)
+          );
+          if (sourcePaths.length === 0) {
+            result.missing += 1;
             return;
           }
+          if (sourcePaths.length > 1) {
+            result.skippedAmbiguous += 1;
+            return;
+          }
+          const [sourcePath] = sourcePaths;
           await mkdir(path.dirname(expectedPath), { recursive: true });
           await cp(sourcePath, expectedPath);
-          copied += 1;
+          result.copied += 1;
         })
       );
     })
   );
-  return copied;
+  return result;
 }
 
 function validateManifest(value) {
@@ -2276,7 +2286,7 @@ async function handleRequest(request, response) {
       }
       await resetOptimizationState(modelProjectId);
       await setManifestSceneUrl(modelProjectId, sceneUrl);
-      const repairedExternalResources = await repairExternalTexturePaths(modelProjectId);
+      const externalResourceRepair = await repairExternalTexturePaths(modelProjectId);
       await runAnalyze(modelProjectId);
       await resetManifestForUploadedModel(modelProjectId, sceneUrl);
       await runAnalyze(modelProjectId);
@@ -2287,7 +2297,8 @@ async function handleRequest(request, response) {
         controls: project.controls,
         stats: project.stats,
         optimization: project.optimization,
-        repairedExternalResources
+        repairedExternalResources: externalResourceRepair.copied,
+        externalResourceRepair
       });
       return;
     }
@@ -2328,7 +2339,7 @@ async function handleRequest(request, response) {
     const repairProjectId = projectIdFromPathname(url.pathname, "/repair-import");
     if (request.method === "POST" && repairProjectId) {
       await runAnalyze(repairProjectId);
-      const repairedExternalResources = await repairExternalTexturePaths(repairProjectId);
+      const externalResourceRepair = await repairExternalTexturePaths(repairProjectId);
       const current = await projectPayload(repairProjectId);
       await resetManifestForUploadedModel(repairProjectId, current.manifest.sceneUrl ?? "scene.glb", {
         resetInteractions: false,
@@ -2338,7 +2349,8 @@ async function handleRequest(request, response) {
       const project = await projectPayload(repairProjectId);
       sendJson(response, 200, {
         ok: true,
-        repairedExternalResources,
+        repairedExternalResources: externalResourceRepair.copied,
+        externalResourceRepair,
         manifest: project.manifest,
         controls: project.controls,
         stats: project.stats,

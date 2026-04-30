@@ -2648,15 +2648,26 @@ function App() {
         stats: BundleStats;
         optimization: OptimizationDocument;
         repairedExternalResources?: number;
+        externalResourceRepair?: {
+          copied?: number;
+          skippedAmbiguous?: number;
+          missing?: number;
+        };
       };
       setManifest(result.manifest);
       setControlsDoc(result.controls);
       setBundleStats(result.stats);
       setOptimizationDoc(result.optimization);
       setSelectedViewId(result.manifest.views[0]?.id ?? "");
+      const repair = result.externalResourceRepair;
+      const repairNotes = [
+        repair?.copied ? `Copied ${repair.copied} missing texture resource(s).` : "",
+        repair?.skippedAmbiguous ? `Skipped ${repair.skippedAmbiguous} ambiguous same-name texture match(es).` : "",
+        repair?.missing ? `${repair.missing} referenced texture resource(s) are still missing.` : ""
+      ].filter(Boolean);
       setRepairSummary(
-        result.repairedExternalResources
-          ? `Copied ${result.repairedExternalResources} missing texture resource(s) into the expected model paths.`
+        repairNotes.length > 0
+          ? repairNotes.join(" ")
           : "Import diagnostics refreshed; no missing texture paths needed copying."
       );
       setRepairState("done");
