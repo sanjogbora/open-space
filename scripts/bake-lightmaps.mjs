@@ -8,6 +8,7 @@ const resolutionArg = args.find((arg) => arg.startsWith("--resolution="));
 const samplesArg = args.find((arg) => arg.startsWith("--samples="));
 const marginArg = args.find((arg) => arg.startsWith("--margin="));
 const modeArg = args.find((arg) => arg.startsWith("--mode="));
+const maxMaterialsArg = args.find((arg) => arg.startsWith("--max-materials="));
 const bundleDir = path.resolve(target);
 const blenderCommand = process.env.BLENDER_PATH || "blender";
 
@@ -20,6 +21,7 @@ function integerOption(rawValue, fallback, min, max) {
 const resolution = integerOption(resolutionArg?.split("=")[1] ?? process.env.LIGHTMAP_RESOLUTION, 1024, 256, 4096);
 const samples = integerOption(samplesArg?.split("=")[1] ?? process.env.LIGHTMAP_SAMPLES, 96, 16, 1024);
 const margin = integerOption(marginArg?.split("=")[1] ?? process.env.LIGHTMAP_MARGIN, 16, 2, 96);
+const maxMaterials = integerOption(maxMaterialsArg?.split("=")[1] ?? process.env.LIGHTMAP_MAX_MATERIALS, 160, 1, 512);
 const requestedBakeMode = String(modeArg?.split("=")[1] ?? process.env.LIGHTMAP_BAKE_MODE ?? "lighting").toLowerCase();
 const bakeMode = ["lighting", "combined"].includes(requestedBakeMode) ? requestedBakeMode : "lighting";
 const outputSceneUrl = "scene.lightmapped.glb";
@@ -107,6 +109,7 @@ resolution = int(config["resolution"])
 samples = int(config["samples"])
 margin = int(config["margin"])
 bake_mode = config.get("bakeMode", "lighting")
+max_materials = int(config.get("maxMaterials", 160))
 
 def clean_name(value):
     value = re.sub(r"[^A-Za-z0-9_.-]+", "-", value or "material").strip("-")
@@ -199,6 +202,9 @@ for obj in meshes:
             seen.add(material.name)
         if material:
             material_areas[material.name] = max(material_areas.get(material.name, 0), object_footprint_area(obj))
+
+if len(materials) > max_materials:
+    raise RuntimeError(f"Lightmap bake blocked: {len(materials)} material slots need lightmaps, above the configured limit of {max_materials}. Optimize or merge materials before baking.")
 
 lightmaps = []
 for material in materials:
@@ -323,7 +329,8 @@ await writeFile(
       resolution,
       samples,
       margin,
-      bakeMode
+      bakeMode,
+      maxMaterials
     },
     null,
     2
@@ -390,11 +397,12 @@ try {
     resolution,
     samples,
     margin,
+    maxMaterials,
     bakeMode,
     steps: [
       step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
       step("unwrap-uv2", "Create secondary lightmap UVs", "completed", "Generated Lightmap UVs with Blender smart projection."),
-      step("bake-cycles", "Bake indirect lighting and shadows", "completed", `${samples} Cycles samples with automatic 256-${resolution}px ${bakeMode} lightmaps.`),
+      step("bake-cycles", "Bake indirect lighting and shadows", "completed", `${samples} Cycles samples with automatic 256-${resolution}px ${bakeMode} lightmaps; max ${maxMaterials} materials.`),
       step("assign-lightmaps", "Assign generated lightmaps to materials", "completed", "Updated materials.json and scene manifest.")
     ]
   };

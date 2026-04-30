@@ -735,6 +735,7 @@ function lightmapBakeOptions(body = {}) {
     resolution: integerOption(body.resolution, 1024, 256, 4096),
     samples: integerOption(body.samples, 96, 16, 1024),
     margin: integerOption(body.margin, 16, 2, 96),
+    maxMaterials: integerOption(body.maxMaterials, 160, 1, 512),
     mode
   };
 }
@@ -748,6 +749,7 @@ function runLightmapBake(projectId = "demo", options = {}) {
       ` --resolution=${bakeOptions.resolution}` +
       ` --samples=${bakeOptions.samples}` +
       ` --margin=${bakeOptions.margin}` +
+      ` --max-materials=${bakeOptions.maxMaterials}` +
       ` --mode=${bakeOptions.mode}`;
     const command =
       `node scripts/bake-lightmaps.mjs ${viewerTarget}${bakeArgs} && ` +
