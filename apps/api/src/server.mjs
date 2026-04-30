@@ -840,7 +840,7 @@ function likelyExteriorPlaneName(name) {
 }
 
 function graphFocusBounds(graph) {
-  const rawBounds = graphFocusBounds(graph);
+  const rawBounds = combineGraphBounds(graph);
   if (!rawBounds) {
     return undefined;
   }
