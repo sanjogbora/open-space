@@ -221,6 +221,34 @@ async function looseBundleImages(assets, models) {
   return imageFiles.filter((image) => !referenced.has(normalizeBundlePath(image.source)));
 }
 
+function missingResourceRelocationCandidates(models, looseImages) {
+  const looseByName = new Map();
+  for (const image of looseImages) {
+    const name = path.posix.basename(normalizeBundlePath(image.source));
+    const matches = looseByName.get(name) ?? [];
+    matches.push(image);
+    looseByName.set(name, matches);
+  }
+
+  const candidates = [];
+  for (const resource of models.flatMap((model) => model.externalResources ?? [])) {
+    if (resource.exists || resource.kind !== "texture") {
+      continue;
+    }
+    const name = path.posix.basename(normalizeBundlePath(resource.source));
+    const matches = looseByName.get(name) ?? [];
+    if (matches.length === 0) {
+      continue;
+    }
+    candidates.push({
+      source: resource.source,
+      matches: matches.map((match) => match.source).slice(0, 6),
+      ambiguous: matches.length > 1
+    });
+  }
+  return candidates;
+}
+
 function parseGlb(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (bytes.byteLength < 20) {
@@ -1569,6 +1597,23 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if ((report.relocatedTextureCandidateCount ?? 0) > 0) {
+    const ambiguous = report.ambiguousRelocatedTextureCandidateCount ?? 0;
+    diagnostics.push({
+      severity: ambiguous > 0 ? "warning" : "info",
+      code: "relocatable-texture-resources",
+      title: "Missing textures may be recoverable",
+      message:
+        ambiguous > 0
+          ? `${report.relocatedTextureCandidateCount} missing texture reference(s) have same-named files elsewhere in the bundle, but ${ambiguous} name match(es) are ambiguous.`
+          : `${report.relocatedTextureCandidateCount} missing texture reference(s) have same-named files elsewhere in the bundle.`,
+      action:
+        ambiguous > 0
+          ? "Keep the original texture folder structure if possible; otherwise choose the intended texture manually before repair."
+          : "Run import repair to copy the loose texture files into the exact paths expected by the model."
+    });
+  }
+
   if ((report.imageCount ?? 0) === 0 && (report.looseImageCount ?? 0) > 0) {
     diagnostics.push({
       severity: "warning",
@@ -1824,6 +1869,7 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     ...looseImages,
     ...models.flatMap((model) => model.externalResources ?? []).filter((resource) => resource.kind === "texture")
   ].filter((image) => typeof image.width === "number" && typeof image.height === "number");
+  const relocatedTextureCandidates = missingResourceRelocationCandidates(models, looseImages);
   const maxTextureDimension = textureImages.reduce(
     (max, image) => Math.max(max, image.width ?? 0, image.height ?? 0),
     0
@@ -1908,6 +1954,9 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     oversizedTextureCount,
     looseImageCount: looseImages.length,
     looseImages: looseImages.slice(0, 40),
+    relocatedTextureCandidateCount: relocatedTextureCandidates.length,
+    ambiguousRelocatedTextureCandidateCount: relocatedTextureCandidates.filter((candidate) => candidate.ambiguous).length,
+    relocatedTextureCandidates: relocatedTextureCandidates.slice(0, 20),
     compression,
     warnings,
     assets,
