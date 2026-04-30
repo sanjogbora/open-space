@@ -2084,8 +2084,14 @@ async function listPublishAssets(root, dir = root, files = []) {
 
 async function removePublishOnlyTemporaryFiles(root) {
   await Promise.all([
+    rm(path.join(root, "source"), { recursive: true, force: true }),
     rm(path.join(root, ".lightmap-bake.py"), { force: true }),
-    rm(path.join(root, ".lightmap-bake-config.json"), { force: true })
+    rm(path.join(root, ".lightmap-bake-config.json"), { force: true }),
+    rm(path.join(root, "optimization-job.json"), { force: true }),
+    rm(path.join(root, "optimization-history.json"), { force: true }),
+    rm(path.join(root, "lightmap-bake-job.json"), { force: true }),
+    rm(path.join(root, "publish-history.json"), { force: true }),
+    rm(path.join(root, "stats.json"), { force: true })
   ]);
 }
 
