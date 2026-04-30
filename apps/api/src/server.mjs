@@ -1202,6 +1202,76 @@ function graphWalkZoneCandidates(graph, modelScale) {
     .map(({ area: _area, exterior: _exterior, generic: _generic, ...zone }) => zone);
 }
 
+function zoneRoomLabel(zone, index) {
+  const label = roomLabelFromName(zone?.label ?? "");
+  const genericLabel =
+    !label ||
+    /\b(detected|walk|surface|floor|ground|slab|tile|carpet|rug|object|mesh)\b/i.test(label);
+  return genericLabel ? `Area ${index + 1}` : label;
+}
+
+function roomCandidatesFromWalkZones(walkZones, bounds, cameraHeight, existingCandidates = []) {
+  const existingCenters = existingCandidates
+    .map((candidate) => candidate.center)
+    .filter((center) => Array.isArray(center) && center.length >= 3);
+  const sceneCenter = bounds
+    ? [
+        (bounds.min[0] + bounds.max[0]) / 2,
+        bounds.min[1] + cameraHeight,
+        (bounds.min[2] + bounds.max[2]) / 2
+      ]
+    : undefined;
+  return [...(walkZones ?? [])]
+    .filter((zone) => zone?.kind === "walk" && zone.enabled !== false)
+    .sort(
+      (a, b) =>
+        Math.abs((b.size?.[0] ?? 0) * (b.size?.[2] ?? 0)) -
+        Math.abs((a.size?.[0] ?? 0) * (a.size?.[2] ?? 0))
+    )
+    .filter((zone) => {
+      const center = zone.center;
+      if (!Array.isArray(center) || center.length < 3) {
+        return false;
+      }
+      const minGap = Math.max(
+        1.25,
+        Math.min(Math.abs(zone.size?.[0] ?? 1), Math.abs(zone.size?.[2] ?? 1)) * 0.28
+      );
+      return !existingCenters.some((existingCenter) => {
+        const dx = existingCenter[0] - center[0];
+        const dz = existingCenter[2] - center[2];
+        return Math.hypot(dx, dz) < minGap;
+      });
+    })
+    .slice(0, Math.max(0, 10 - existingCandidates.length))
+    .map((zone, index) => {
+      const width = Math.max(0.8, Math.abs(zone.size?.[0] ?? 1));
+      const depth = Math.max(0.8, Math.abs(zone.size?.[2] ?? 1));
+      const center = [zone.center[0], zone.center[1] + cameraHeight, zone.center[2]];
+      const targetOffset = Math.min(3.5, Math.max(1, Math.max(width, depth) * 0.28));
+      const target = sceneCenter
+        ? [
+            center[0] + Math.sign(sceneCenter[0] - center[0] || (width >= depth ? 1 : 0)) * targetOffset,
+            Math.max(zone.center[1] + 1.05, center[1] - 0.3),
+            center[2] + Math.sign(sceneCenter[2] - center[2] || (depth > width ? 1 : 0)) * targetOffset
+          ]
+        : [
+            center[0] + (width >= depth ? targetOffset : 0),
+            Math.max(zone.center[1] + 1.05, center[1] - 0.3),
+            center[2] + (depth > width ? targetOffset : 0)
+          ];
+      return {
+        id: `auto-room-zone-${zone.id ?? index}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 64),
+        label: zoneRoomLabel(zone, existingCandidates.length + index),
+        center,
+        target,
+        dimensions: `${width.toFixed(1)}x${depth.toFixed(1)}m`,
+        area: width * depth,
+        score: 0
+      };
+    });
+}
+
 function doorPassScore(name) {
   const normalized = name.toLowerCase();
   let score = 0;
@@ -1553,7 +1623,15 @@ async function resetManifestForUploadedModel(
   const bounds = scaleBounds(rawBounds, modelScale);
   const cameraHeight = manifest.navigation?.cameraHeight ?? 1.65;
   const roomCandidates = graphRoomCandidates(graph, modelScale, cameraHeight);
-  const views = importedModelViews(bounds, cameraHeight, roomCandidates);
+  const walkZoneCandidates = graphWalkZoneCandidates(graph, modelScale);
+  const effectiveRoomCandidates =
+    roomCandidates.length >= 2
+      ? roomCandidates
+      : [
+          ...roomCandidates,
+          ...roomCandidatesFromWalkZones(walkZoneCandidates, bounds, cameraHeight, roomCandidates)
+        ].slice(0, 10);
+  const views = importedModelViews(bounds, cameraHeight, effectiveRoomCandidates);
   const margin = 0.75;
   const generatedGroundSize = bounds
     ? Math.max(30, (bounds.max[0] - bounds.min[0]) * 1.8, (bounds.max[2] - bounds.min[2]) * 1.8)
@@ -1597,7 +1675,7 @@ async function resetManifestForUploadedModel(
         Math.max(12, (generatedGroundSize ?? manifest.environment?.groundSize ?? 90) * 0.48)
     },
     views,
-    rooms: importedRooms(views, roomCandidates, manifest.rooms),
+    rooms: importedRooms(views, effectiveRoomCandidates, manifest.rooms),
     interactions: options.resetInteractions ? [] : manifest.interactions,
     navigation: {
       ...manifest.navigation,
