@@ -50,6 +50,10 @@ interface GltfNode {
   name?: string;
   mesh?: number;
   children?: readonly number[];
+  matrix?: readonly number[];
+  translation?: Vec3;
+  rotation?: readonly [number, number, number, number];
+  scale?: Vec3;
 }
 
 interface GltfBuffer {
@@ -212,26 +216,139 @@ function accessorBounds(accessor: GltfAccessor | undefined): Bounds3 | undefined
   };
 }
 
+type Mat4 = readonly number[];
+
+const identityMatrix: Mat4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+function matrixValue(matrix: Mat4, index: number): number {
+  return matrix[index] ?? 0;
+}
+
+function multiplyMat4(a: Mat4, b: Mat4): Mat4 {
+  const result = new Array(16).fill(0);
+  for (let column = 0; column < 4; column += 1) {
+    for (let row = 0; row < 4; row += 1) {
+      result[column * 4 + row] =
+        matrixValue(a, 0 * 4 + row) * matrixValue(b, column * 4 + 0) +
+        matrixValue(a, 1 * 4 + row) * matrixValue(b, column * 4 + 1) +
+        matrixValue(a, 2 * 4 + row) * matrixValue(b, column * 4 + 2) +
+        matrixValue(a, 3 * 4 + row) * matrixValue(b, column * 4 + 3);
+    }
+  }
+  return result;
+}
+
+function nodeLocalMatrix(node: GltfNode): Mat4 {
+  if (node.matrix?.length === 16) {
+    return [...node.matrix];
+  }
+  const translation = node.translation ?? [0, 0, 0];
+  const scale = node.scale ?? [1, 1, 1];
+  const [x, y, z, w] = node.rotation ?? [0, 0, 0, 1];
+  const x2 = x + x;
+  const y2 = y + y;
+  const z2 = z + z;
+  const xx = x * x2;
+  const xy = x * y2;
+  const xz = x * z2;
+  const yy = y * y2;
+  const yz = y * z2;
+  const zz = z * z2;
+  const wx = w * x2;
+  const wy = w * y2;
+  const wz = w * z2;
+  const sx = scale[0];
+  const sy = scale[1];
+  const sz = scale[2];
+  return [
+    (1 - (yy + zz)) * sx,
+    (xy + wz) * sx,
+    (xz - wy) * sx,
+    0,
+    (xy - wz) * sy,
+    (1 - (xx + zz)) * sy,
+    (yz + wx) * sy,
+    0,
+    (xz + wy) * sz,
+    (yz - wx) * sz,
+    (1 - (xx + yy)) * sz,
+    0,
+    translation[0],
+    translation[1],
+    translation[2],
+    1
+  ];
+}
+
+function transformPoint(matrix: Mat4, point: Vec3): Vec3 {
+  const [x, y, z] = point;
+  return [
+    matrixValue(matrix, 0) * x + matrixValue(matrix, 4) * y + matrixValue(matrix, 8) * z + matrixValue(matrix, 12),
+    matrixValue(matrix, 1) * x + matrixValue(matrix, 5) * y + matrixValue(matrix, 9) * z + matrixValue(matrix, 13),
+    matrixValue(matrix, 2) * x + matrixValue(matrix, 6) * y + matrixValue(matrix, 10) * z + matrixValue(matrix, 14)
+  ];
+}
+
+function transformBounds(bounds: Bounds3 | undefined, matrix: Mat4): Bounds3 | undefined {
+  if (!bounds) {
+    return undefined;
+  }
+  const localCorners: Vec3[] = [
+    [bounds.min[0], bounds.min[1], bounds.min[2]],
+    [bounds.max[0], bounds.min[1], bounds.min[2]],
+    [bounds.min[0], bounds.max[1], bounds.min[2]],
+    [bounds.max[0], bounds.max[1], bounds.min[2]],
+    [bounds.min[0], bounds.min[1], bounds.max[2]],
+    [bounds.max[0], bounds.min[1], bounds.max[2]],
+    [bounds.min[0], bounds.max[1], bounds.max[2]],
+    [bounds.max[0], bounds.max[1], bounds.max[2]]
+  ];
+  const corners = localCorners.map((corner) => transformPoint(matrix, corner));
+  return corners.reduce(
+    (current, point) => mergeBounds(current, { min: point, max: point })!,
+    undefined as Bounds3 | undefined
+  );
+}
+
 export function extractSceneGraph(document: GltfDocument, source: string): SceneGraphDocument {
   const accessors = document.accessors ?? [];
   const meshes = document.meshes ?? [];
+  const documentNodes = document.nodes ?? [];
   const materialUsage = new Map<number, SceneGraphMaterial>();
   const nodes: SceneGraphNode[] = [];
   const parentByChild = new Map<number, number>();
 
-  (document.nodes ?? []).forEach((node, nodeIndex) => {
+  documentNodes.forEach((node, nodeIndex) => {
     for (const childIndex of node.children ?? []) {
       parentByChild.set(childIndex, nodeIndex);
     }
   });
 
-  (document.nodes ?? []).forEach((node, sourceIndex) => {
+  const worldMatrixByNode = new Map<number, Mat4>();
+  const worldMatrix = (nodeIndex: number): Mat4 => {
+    const cached = worldMatrixByNode.get(nodeIndex);
+    if (cached) {
+      return cached;
+    }
+    const node = documentNodes[nodeIndex];
+    if (!node) {
+      return identityMatrix;
+    }
+    const local = nodeLocalMatrix(node);
+    const parentIndex = parentByChild.get(nodeIndex);
+    const matrix = typeof parentIndex === "number" ? multiplyMat4(worldMatrix(parentIndex), local) : local;
+    worldMatrixByNode.set(nodeIndex, matrix);
+    return matrix;
+  };
+
+  documentNodes.forEach((node, sourceIndex) => {
     const name = stableName(node.name, `Object ${sourceIndex}`);
     const mesh = typeof node.mesh === "number" ? meshes[node.mesh] : undefined;
     const materialIds = new Set<string>();
     let vertexCount = 0;
     let triangleCount = 0;
     let bounds: Bounds3 | undefined;
+    const matrix = worldMatrix(sourceIndex);
 
     for (const primitive of mesh?.primitives ?? []) {
       const positionAccessorIndex = primitive.attributes?.["POSITION"];
@@ -246,7 +363,7 @@ export function extractSceneGraph(document: GltfDocument, source: string): Scene
           : 0;
       vertexCount += vertices;
       triangleCount += triangles;
-      bounds = mergeBounds(bounds, accessorBounds(positionAccessor));
+      bounds = mergeBounds(bounds, transformBounds(accessorBounds(positionAccessor), matrix));
 
       if (typeof primitive.material === "number") {
         const materialName = stableName(

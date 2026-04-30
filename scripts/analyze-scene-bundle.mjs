@@ -398,26 +398,130 @@ function mergeBounds(current, next) {
   };
 }
 
+const identityMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+function multiplyMat4(a, b) {
+  const result = new Array(16).fill(0);
+  for (let column = 0; column < 4; column += 1) {
+    for (let row = 0; row < 4; row += 1) {
+      result[column * 4 + row] =
+        a[0 * 4 + row] * b[column * 4 + 0] +
+        a[1 * 4 + row] * b[column * 4 + 1] +
+        a[2 * 4 + row] * b[column * 4 + 2] +
+        a[3 * 4 + row] * b[column * 4 + 3];
+    }
+  }
+  return result;
+}
+
+function nodeLocalMatrix(node) {
+  if (Array.isArray(node.matrix) && node.matrix.length === 16) {
+    return [...node.matrix];
+  }
+  const translation = node.translation ?? [0, 0, 0];
+  const scale = node.scale ?? [1, 1, 1];
+  const [x, y, z, w] = node.rotation ?? [0, 0, 0, 1];
+  const x2 = x + x;
+  const y2 = y + y;
+  const z2 = z + z;
+  const xx = x * x2;
+  const xy = x * y2;
+  const xz = x * z2;
+  const yy = y * y2;
+  const yz = y * z2;
+  const zz = z * z2;
+  const wx = w * x2;
+  const wy = w * y2;
+  const wz = w * z2;
+  const sx = scale[0];
+  const sy = scale[1];
+  const sz = scale[2];
+  return [
+    (1 - (yy + zz)) * sx,
+    (xy + wz) * sx,
+    (xz - wy) * sx,
+    0,
+    (xy - wz) * sy,
+    (1 - (xx + zz)) * sy,
+    (yz + wx) * sy,
+    0,
+    (xz + wy) * sz,
+    (yz - wx) * sz,
+    (1 - (xx + yy)) * sz,
+    0,
+    translation[0],
+    translation[1],
+    translation[2],
+    1
+  ];
+}
+
+function transformPoint(matrix, point) {
+  const [x, y, z] = point;
+  return [
+    matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12],
+    matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13],
+    matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14]
+  ];
+}
+
+function transformBounds(bounds, matrix) {
+  if (!bounds) {
+    return undefined;
+  }
+  return [
+    [bounds.min[0], bounds.min[1], bounds.min[2]],
+    [bounds.max[0], bounds.min[1], bounds.min[2]],
+    [bounds.min[0], bounds.max[1], bounds.min[2]],
+    [bounds.max[0], bounds.max[1], bounds.min[2]],
+    [bounds.min[0], bounds.min[1], bounds.max[2]],
+    [bounds.max[0], bounds.min[1], bounds.max[2]],
+    [bounds.min[0], bounds.max[1], bounds.max[2]],
+    [bounds.max[0], bounds.max[1], bounds.max[2]]
+  ]
+    .map((corner) => transformPoint(matrix, corner))
+    .reduce((current, point) => mergeBounds(current, { min: point, max: point }), undefined);
+}
+
 function extractSceneGraph(document, source) {
   const accessors = document.accessors ?? [];
   const meshes = document.meshes ?? [];
+  const documentNodes = document.nodes ?? [];
   const materialUsage = new Map();
   const parentByChild = new Map();
   const nodes = [];
 
-  for (const [nodeIndex, node] of (document.nodes ?? []).entries()) {
+  for (const [nodeIndex, node] of documentNodes.entries()) {
     for (const childIndex of node.children ?? []) {
       parentByChild.set(childIndex, nodeIndex);
     }
   }
 
-  for (const [sourceIndex, node] of (document.nodes ?? []).entries()) {
+  const worldMatrixByNode = new Map();
+  const worldMatrix = (nodeIndex) => {
+    const cached = worldMatrixByNode.get(nodeIndex);
+    if (cached) {
+      return cached;
+    }
+    const node = documentNodes[nodeIndex];
+    if (!node) {
+      return identityMatrix;
+    }
+    const local = nodeLocalMatrix(node);
+    const parentIndex = parentByChild.get(nodeIndex);
+    const matrix = typeof parentIndex === "number" ? multiplyMat4(worldMatrix(parentIndex), local) : local;
+    worldMatrixByNode.set(nodeIndex, matrix);
+    return matrix;
+  };
+
+  for (const [sourceIndex, node] of documentNodes.entries()) {
     const name = stableName(node.name, `Object ${sourceIndex}`);
     const mesh = typeof node.mesh === "number" ? meshes[node.mesh] : undefined;
     const materialIds = new Set();
     let vertexCount = 0;
     let triangleCount = 0;
     let bounds;
+    const matrix = worldMatrix(sourceIndex);
 
     for (const primitive of mesh?.primitives ?? []) {
       const positionAccessorIndex = primitive.attributes?.POSITION;
@@ -432,7 +536,7 @@ function extractSceneGraph(document, source) {
           : 0;
       vertexCount += vertices;
       triangleCount += triangles;
-      bounds = mergeBounds(bounds, accessorBounds(positionAccessor));
+      bounds = mergeBounds(bounds, transformBounds(accessorBounds(positionAccessor), matrix));
 
       if (typeof primitive.material === "number") {
         const materialName = stableName(
