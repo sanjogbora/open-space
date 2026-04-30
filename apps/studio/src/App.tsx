@@ -2347,8 +2347,24 @@ function App() {
         throw new Error(error.error ?? `Lightmap bake failed with ${response.status}.`);
       }
       const result = (await response.json()) as {
+        manifest?: SceneManifest;
+        materials?: MaterialsDocument;
+        stats?: BundleStats;
+        optimization?: OptimizationDocument;
         lightmapBakeJob: LightmapBakeJobDocument;
       };
+      if (result.manifest) {
+        setManifest(result.manifest);
+      }
+      if (result.materials) {
+        setMaterialsDoc(result.materials);
+      }
+      if (result.stats) {
+        setBundleStats(result.stats);
+      }
+      if (result.optimization) {
+        setOptimizationDoc(result.optimization);
+      }
       setLightmapBakeJob(result.lightmapBakeJob);
       setBakeState(result.lightmapBakeJob.status === "blocked" ? "error" : "done");
       setBakeError(result.lightmapBakeJob.status === "blocked" ? result.lightmapBakeJob.message ?? "" : "");

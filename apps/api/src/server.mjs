@@ -1758,9 +1758,14 @@ async function handleRequest(request, response) {
     const lightmapBakeProjectId = projectIdFromPathname(url.pathname, "/bake-lightmaps");
     if (request.method === "POST" && lightmapBakeProjectId) {
       await runLightmapBake(lightmapBakeProjectId);
+      await runAnalyze(lightmapBakeProjectId);
       const project = await projectPayload(lightmapBakeProjectId);
       sendJson(response, 200, {
         ok: true,
+        manifest: project.manifest,
+        materials: project.materials,
+        stats: project.stats,
+        optimization: project.optimization,
         lightmapBakeJob: project.lightmapBakeJob
       });
       return;
