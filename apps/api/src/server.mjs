@@ -1249,23 +1249,28 @@ function graphPassZoneCandidates(graph, modelScale, cameraHeight) {
     .map(({ score: _score, ...zone }) => zone);
 }
 
+function isGeneratedNavigationZone(zone) {
+  const id = String(zone?.id ?? "");
+  return (
+    id === "walk-main" ||
+    id.startsWith("walk-node-") ||
+    id.startsWith("pass-node-") ||
+    id.startsWith("walk-Object") ||
+    id.startsWith("pass-Object")
+  );
+}
+
 function importedNavigationZones(bounds, existingZones = [], graph, modelScale = 1, cameraHeight = 1.65) {
-  const hasUserAuthoredZones =
-    Array.isArray(existingZones) &&
-    existingZones.some((zone) => {
-      const id = String(zone.id ?? "");
-      return !id.startsWith("walk-main") && !id.startsWith("walk-") && !id.startsWith("pass-");
-    });
-  if (hasUserAuthoredZones) {
-    return existingZones;
-  }
+  const preservedZones = Array.isArray(existingZones)
+    ? existingZones.filter((zone) => !isGeneratedNavigationZone(zone))
+    : [];
   const graphZones = graphWalkZoneCandidates(graph, modelScale);
   const passZones = graphPassZoneCandidates(graph, modelScale, cameraHeight);
   if (graphZones.length > 0) {
-    return [...graphZones, ...passZones];
+    return [...graphZones, ...passZones, ...preservedZones];
   }
   if (!bounds) {
-    return passZones;
+    return [...passZones, ...preservedZones];
   }
   const width = Math.max(1.5, bounds.max[0] - bounds.min[0]);
   const depth = Math.max(1.5, bounds.max[2] - bounds.min[2]);
@@ -1283,7 +1288,8 @@ function importedNavigationZones(bounds, existingZones = [], graph, modelScale =
       rotationY: 0,
       enabled: true
     },
-    ...passZones
+    ...passZones,
+    ...preservedZones
   ];
 }
 
@@ -1297,7 +1303,8 @@ async function resetManifestForUploadedModel(
     readJson(path.join(target, "scene.manifest.json")),
     readJson(path.join(target, "scene.graph.json"))
   ]);
-  const rawBounds = combineGraphBounds(graph);
+  const rawSceneBounds = combineGraphBounds(graph);
+  const rawBounds = graphFocusBounds(graph) ?? rawSceneBounds;
   const modelScale = unitScaleForBounds(rawBounds);
   const bounds = scaleBounds(rawBounds, modelScale);
   const cameraHeight = manifest.navigation?.cameraHeight ?? 1.65;
