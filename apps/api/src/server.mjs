@@ -2011,6 +2011,7 @@ async function handleRequest(request, response) {
       }
       await resetOptimizationState(modelProjectId);
       await setManifestSceneUrl(modelProjectId, sceneUrl);
+      const repairedExternalResources = await repairExternalTexturePaths(modelProjectId);
       await runAnalyze(modelProjectId);
       await resetManifestForUploadedModel(modelProjectId, sceneUrl);
       await runAnalyze(modelProjectId);
@@ -2020,7 +2021,8 @@ async function handleRequest(request, response) {
         manifest: project.manifest,
         controls: project.controls,
         stats: project.stats,
-        optimization: project.optimization
+        optimization: project.optimization,
+        repairedExternalResources
       });
       return;
     }

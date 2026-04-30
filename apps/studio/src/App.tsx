@@ -2646,6 +2646,7 @@ function App() {
         controls?: SceneControlsDocument;
         stats?: BundleStats;
         optimization?: OptimizationDocument;
+        repairedExternalResources?: number;
       };
       if (result.manifest) {
         setManifest(result.manifest);
