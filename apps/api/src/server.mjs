@@ -1102,6 +1102,9 @@ function importedRooms(views, roomCandidates, existingRooms = []) {
 }
 
 function graphWalkZoneCandidates(graph, modelScale) {
+  const focusBounds = scaleBounds(graphFocusBounds(graph), modelScale);
+  const focusHeight = focusBounds ? Math.max(0.1, focusBounds.max[1] - focusBounds.min[1]) : 1;
+  const genericFloorMaxY = focusBounds ? focusBounds.min[1] + Math.max(0.65, focusHeight * 0.42) : Number.POSITIVE_INFINITY;
   const floorKeywords = [
     "floor",
     "ground",
@@ -1122,6 +1125,7 @@ function graphWalkZoneCandidates(graph, modelScale) {
       }
       const searchName = `${node.name} ${node.meshName ?? ""}`.toLowerCase();
       const keywordMatched = floorKeywords.some((keyword) => searchName.includes(keyword));
+      const exteriorNamed = likelyExteriorPlaneName(searchName);
       const scaledBounds = scaleBounds(node.bounds, modelScale);
       if (!scaledBounds) {
         return undefined;
@@ -1133,12 +1137,14 @@ function graphWalkZoneCandidates(graph, modelScale) {
       ];
       const area = Math.abs(size[0] * size[2]);
       const flatEnough = Math.abs(size[1]) <= Math.max(0.24, Math.min(Math.abs(size[0]), Math.abs(size[2])) * 0.18);
-      if (!keywordMatched || !flatEnough || area < 1) {
+      const centerY = (scaledBounds.min[1] + scaledBounds.max[1]) / 2;
+      const genericLowFlatSurface = !keywordMatched && !exteriorNamed && flatEnough && centerY <= genericFloorMaxY;
+      if ((!keywordMatched && !genericLowFlatSurface) || !flatEnough || area < 1) {
         return undefined;
       }
       return {
         id: `walk-${node.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 60),
-        label: node.name || "Walk surface",
+        label: node.name || (genericLowFlatSurface ? "Detected walk surface" : "Walk surface"),
         kind: "walk",
         center: [
           (scaledBounds.min[0] + scaledBounds.max[0]) / 2,
@@ -1149,7 +1155,8 @@ function graphWalkZoneCandidates(graph, modelScale) {
         rotationY: 0,
         enabled: true,
         area,
-        exterior: likelyExteriorPlaneName(searchName)
+        exterior: exteriorNamed,
+        generic: genericLowFlatSurface
       };
     })
     .filter(Boolean)
@@ -1167,7 +1174,7 @@ function graphWalkZoneCandidates(graph, modelScale) {
       return candidate.area <= Math.max(referenceArea * 6, 12);
     })
     .slice(0, 12)
-    .map(({ area: _area, exterior: _exterior, ...zone }) => zone);
+    .map(({ area: _area, exterior: _exterior, generic: _generic, ...zone }) => zone);
 }
 
 function doorPassScore(name) {
