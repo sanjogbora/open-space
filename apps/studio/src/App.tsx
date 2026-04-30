@@ -133,6 +133,11 @@ interface BundleStats {
     message: string;
     action?: string;
   }[];
+  publishReadiness?: {
+    status: "ready" | "warning" | "blocked";
+    blockers: readonly PublishReadinessIssue[];
+    warnings: readonly PublishReadinessIssue[];
+  };
   assets?: readonly {
     kind: string;
     source: string;
@@ -155,6 +160,13 @@ interface BundleStats {
       bytes?: number;
     }[];
   }[];
+}
+
+interface PublishReadinessIssue {
+  code: string;
+  title: string;
+  message: string;
+  action?: string;
 }
 
 interface OptimizationDocument {
@@ -212,7 +224,7 @@ interface OptimizationJobDocument {
   steps: readonly {
     id: string;
     label: string;
-    status: "completed" | "pending" | "failed" | "skipped";
+    status: "completed" | "pending" | "failed" | "skipped" | "blocked";
     note?: string;
   }[];
 }
@@ -257,6 +269,14 @@ interface PublishEntry {
   cdnBasePath?: string;
   assetCount?: number;
   totalBytes?: number;
+}
+
+interface PublishCheck {
+  id: string;
+  label: string;
+  ready: boolean;
+  detail: string;
+  blocking?: boolean;
 }
 
 interface VideoSurfaceCandidate {
@@ -1528,14 +1548,19 @@ function App() {
     () => manifest?.interactions.filter(isMaterialVariantInteraction) ?? [],
     [manifest]
   );
-  const publishChecks = useMemo(() => {
+  const navigationIssues = useMemo(() => (manifest ? navigationQaIssues(manifest) : []), [manifest]);
+  const navigationCoverageSummary = useMemo(() => (manifest ? navigationCoverage(manifest) : null), [manifest]);
+  const publishChecks = useMemo<PublishCheck[]>(() => {
     const errorDiagnostics = bundleStats?.diagnostics?.filter((diagnostic) => diagnostic.severity === "error") ?? [];
+    const publishBlockers = bundleStats?.publishReadiness?.blockers ?? [];
+    const navigationErrorCount = navigationIssues.filter((issue) => issue.severity === "error").length;
     return [
       {
         id: "views",
         label: "Starting views",
         ready: (manifest?.views.length ?? 0) > 0,
-        detail: `${manifest?.views.length ?? 0} configured`
+        detail: `${manifest?.views.length ?? 0} configured`,
+        blocking: true
       },
       {
         id: "assets",
@@ -1544,13 +1569,35 @@ function App() {
         detail:
           bundleStats && bundleStats.missingAssetCount > 0
             ? `${bundleStats.missingAssetCount} missing`
-            : "All present"
+            : "All present",
+        blocking: true
       },
       {
         id: "diagnostics",
         label: "Blocking diagnostics",
         ready: errorDiagnostics.length === 0,
-        detail: errorDiagnostics.length > 0 ? `${errorDiagnostics.length} error(s)` : "No errors"
+        detail: errorDiagnostics.length > 0 ? `${errorDiagnostics.length} error(s)` : "No errors",
+        blocking: true
+      },
+      {
+        id: "navigation",
+        label: "Navigation hard checks",
+        ready: navigationErrorCount === 0,
+        detail: navigationErrorCount > 0 ? `${navigationErrorCount} error(s)` : "No errors",
+        blocking: true
+      },
+      {
+        id: "production",
+        label: "Production quality gate",
+        ready: Boolean(bundleStats) && publishBlockers.length === 0,
+        detail: !bundleStats
+          ? "Run analysis"
+          : publishBlockers.length > 0
+            ? `${publishBlockers.length} blocker(s)`
+            : bundleStats.publishReadiness?.status === "warning"
+              ? `${bundleStats.publishReadiness.warnings.length} warning(s)`
+              : "Ready",
+        blocking: true
       },
       {
         id: "geometry",
@@ -1565,10 +1612,8 @@ function App() {
         detail: (bundleStats?.imageCount ?? 0) === 0 ? "No textures" : textureCompressionLabel(bundleStats)
       }
     ];
-  }, [bundleStats, manifest]);
-  const navigationIssues = useMemo(() => (manifest ? navigationQaIssues(manifest) : []), [manifest]);
-  const navigationCoverageSummary = useMemo(() => (manifest ? navigationCoverage(manifest) : null), [manifest]);
-  const hasBlockingPublishErrors = publishChecks.some((check) => check.id === "diagnostics" && !check.ready);
+  }, [bundleStats, manifest, navigationIssues]);
+  const hasBlockingPublishErrors = publishChecks.some((check) => check.blocking && !check.ready);
 
   const selectedHotspot = useMemo(
     () => hotspotInteractions.find((interaction) => interaction.id === selectedInteractionId),
@@ -3598,12 +3643,44 @@ function App() {
 
               <div className="publish-readiness-list" aria-label="Publish readiness">
                 {publishChecks.map((check) => (
-                  <div key={check.id} className={check.ready ? "readiness-row ready" : "readiness-row warn"}>
+                  <div
+                    key={check.id}
+                    className={
+                      check.ready ? "readiness-row ready" : check.blocking ? "readiness-row blocked" : "readiness-row warn"
+                    }
+                  >
                     <span>{check.label}</span>
                     <strong>{check.detail}</strong>
                   </div>
                 ))}
               </div>
+
+              {bundleStats?.publishReadiness &&
+                (bundleStats.publishReadiness.blockers.length > 0 ||
+                  bundleStats.publishReadiness.warnings.length > 0) && (
+                  <div className="diagnostic-list" aria-label="Publish quality gate details">
+                    {bundleStats.publishReadiness.blockers.map((issue) => (
+                      <div key={issue.code} className="diagnostic-card error">
+                        <AlertTriangle size={17} aria-hidden="true" />
+                        <div>
+                          <strong>{issue.title}</strong>
+                          <p>{issue.message}</p>
+                          {issue.action && <small>{issue.action}</small>}
+                        </div>
+                      </div>
+                    ))}
+                    {bundleStats.publishReadiness.warnings.map((issue) => (
+                      <div key={issue.code} className="diagnostic-card warning">
+                        <AlertTriangle size={17} aria-hidden="true" />
+                        <div>
+                          <strong>{issue.title}</strong>
+                          <p>{issue.message}</p>
+                          {issue.action && <small>{issue.action}</small>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
               <div className="publish-row">
                 <span>Draft Viewer</span>

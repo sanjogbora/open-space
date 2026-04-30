@@ -706,6 +706,15 @@ button.list-row {
   background: #fff8ed;
 }
 
+.readiness-row.blocked {
+  border-color: rgba(190, 62, 62, 0.3);
+  background: #fff4f4;
+}
+
+.readiness-row.blocked strong {
+  color: #9a2d2d;
+}
+
 .tool-readiness-list {
   margin-top: 2px;
 }
@@ -1572,6 +1581,11 @@ button.list-row {
 
 .job-step-row.pending strong {
   color: #8a4d00;
+}
+
+.job-step-row.blocked strong,
+.job-step-row.failed strong {
+  color: #9a2d2d;
 }
 
 .job-step-row.skipped strong {

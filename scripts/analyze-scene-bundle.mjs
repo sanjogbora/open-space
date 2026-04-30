@@ -1395,6 +1395,138 @@ function createOptimizationReport(report) {
   };
 }
 
+function publishReadinessIssue(code, title, message, action) {
+  return { code, title, message, action };
+}
+
+function createPublishReadiness(manifest, report, optimizationReport) {
+  const blockers = [];
+  const warnings = [];
+  const diagnostics = report.diagnostics ?? [];
+  const errorDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity === "error");
+  const hasGeometryCompression = Boolean(report.compression?.meshopt || report.compression?.draco);
+
+  if ((manifest.views?.length ?? 0) === 0) {
+    blockers.push(
+      publishReadinessIssue(
+        "no-starting-views",
+        "No starting views",
+        "The viewer has no configured camera views.",
+        "Create at least one walk view before publishing."
+      )
+    );
+  }
+
+  if ((report.missingAssetCount ?? 0) > 0) {
+    blockers.push(
+      publishReadinessIssue(
+        "missing-assets",
+        "Missing referenced assets",
+        `${report.missingAssetCount} referenced asset(s) are missing from the bundle.`,
+        "Upload or relink missing assets, then run analysis again."
+      )
+    );
+  }
+
+  for (const diagnostic of errorDiagnostics) {
+    blockers.push(
+      publishReadinessIssue(
+        `diagnostic-${diagnostic.code}`,
+        diagnostic.title,
+        diagnostic.message,
+        diagnostic.action
+      )
+    );
+  }
+
+  if (report.modelBytes > 10 * 1024 * 1024 && !hasGeometryCompression) {
+    blockers.push(
+      publishReadinessIssue(
+        "large-uncompressed-model",
+        "Large model is not geometry-compressed",
+        "The active scene model is over 10 MB and does not advertise Meshopt or Draco compression.",
+        "Run the optimizer and keep scene.optimized.glb active before publishing."
+      )
+    );
+  }
+
+  if (report.triangleCount > optimizationProfiles[0].budgets.maxTriangles) {
+    warnings.push(
+      publishReadinessIssue(
+        "mobile-triangle-budget",
+        "Over mobile triangle budget",
+        `Triangle count exceeds ${optimizationProfiles[0].budgets.maxTriangles.toLocaleString()} triangles.`,
+        "Simplify meshes or split heavy content before mobile delivery."
+      )
+    );
+  }
+
+  if (report.meshCount > optimizationProfiles[0].budgets.maxMeshes) {
+    warnings.push(
+      publishReadinessIssue(
+        "mobile-mesh-budget",
+        "High mesh count",
+        "The model is over the mobile mesh-count budget, which can increase draw calls.",
+        "Merge static meshes that share materials."
+      )
+    );
+  }
+
+  if (report.totalBytes > optimizationProfiles[0].budgets.maxTotalBytes) {
+    warnings.push(
+      publishReadinessIssue(
+        "mobile-total-size-budget",
+        "Large initial bundle",
+        "The bundle is over the mobile transfer-size target.",
+        "Optimize model/textures and lazy-load large media."
+      )
+    );
+  }
+
+  if ((report.imageCount ?? 0) > 0 && !report.compression?.basisu) {
+    warnings.push(
+      publishReadinessIssue(
+        "missing-gpu-texture-compression",
+        "No KTX2/Basis texture compression",
+        "Texture images are present but the model does not advertise GPU texture compression.",
+        "Install KTX-Software/toktx and run the production texture-compression pass."
+      )
+    );
+  }
+
+  if (!manifest.navigation?.bounds) {
+    warnings.push(
+      publishReadinessIssue(
+        "missing-navigation-bounds",
+        "Navigation bounds are missing",
+        "Users may be able to move into empty exterior space without bounds.",
+        "Use graph bounds and add boundary block zones before client delivery."
+      )
+    );
+  }
+
+  const mobileProfile = optimizationReport.profiles.find((profile) => profile.id === "mobile");
+  for (const warning of mobileProfile?.warnings ?? []) {
+    if (warnings.some((item) => item.code === `mobile-${warning.code}` || item.code === warning.code)) {
+      continue;
+    }
+    warnings.push(
+      publishReadinessIssue(
+        `mobile-${warning.code}`,
+        "Mobile profile warning",
+        warning.message,
+        "Run the optimizer or reduce the source scene before publishing for mobile."
+      )
+    );
+  }
+
+  return {
+    status: blockers.length > 0 ? "blocked" : warnings.length > 0 ? "warning" : "ready",
+    blockers,
+    warnings
+  };
+}
+
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 if (manifest.schemaVersion !== "0.1") {
   throw new Error(`Unsupported manifest schema: ${manifest.schemaVersion}`);
@@ -1407,9 +1539,13 @@ const materialDocs = (await Promise.all(assets.map(modelMaterials))).filter(Bool
 const looseImages = await looseBundleImages(assets, models);
 const report = summarize(manifest, assets, models, graphs, looseImages);
 const optimizationReport = createOptimizationReport(report);
+const finalReport = {
+  ...report,
+  publishReadiness: createPublishReadiness(manifest, report, optimizationReport)
+};
 
 if (writeStats) {
-  await writeFile(path.resolve(bundleDir, "stats.json"), `${JSON.stringify(report, null, 2)}\n`);
+  await writeFile(path.resolve(bundleDir, "stats.json"), `${JSON.stringify(finalReport, null, 2)}\n`);
   await writeFile(
     path.resolve(bundleDir, "optimization.json"),
     `${JSON.stringify(optimizationReport, null, 2)}\n`
@@ -1436,4 +1572,4 @@ if (writeStats) {
   }
 }
 
-console.log(JSON.stringify(report, null, 2));
+console.log(JSON.stringify(finalReport, null, 2));

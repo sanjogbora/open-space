@@ -1584,19 +1584,27 @@ async function removePublishOnlyTemporaryFiles(root) {
   ]);
 }
 
+function publishBlockersFromStats(stats) {
+  const readinessBlockers = stats.publishReadiness?.blockers ?? [];
+  if (readinessBlockers.length > 0) {
+    return readinessBlockers.map((blocker) => blocker.title ?? blocker.code).filter(Boolean);
+  }
+  const blockingDiagnostics = (stats.diagnostics ?? []).filter((diagnostic) => diagnostic.severity === "error");
+  return [
+    (stats.missingAssetCount ?? 0) > 0 ? `${stats.missingAssetCount} missing asset(s)` : undefined,
+    ...blockingDiagnostics.map((diagnostic) => diagnostic.title ?? diagnostic.code)
+  ].filter(Boolean);
+}
+
 async function publishProject(projectId) {
   await runAnalyze(projectId);
   const publishedAt = new Date().toISOString();
   const version = publishedAt.replace(/[-:.]/g, "").replace("T", "-").replace("Z", "z");
   const source = targetDirs(projectId)[0];
   const stats = await readJson(path.join(source, "stats.json"));
-  const blockingDiagnostics = (stats.diagnostics ?? []).filter((diagnostic) => diagnostic.severity === "error");
-  if ((stats.missingAssetCount ?? 0) > 0 || blockingDiagnostics.length > 0) {
-    const details = [
-      (stats.missingAssetCount ?? 0) > 0 ? `${stats.missingAssetCount} missing asset(s)` : undefined,
-      ...blockingDiagnostics.map((diagnostic) => diagnostic.title ?? diagnostic.code)
-    ].filter(Boolean);
-    throw badRequest(`Publish blocked: ${details.join("; ")}.`);
+  const publishBlockers = publishBlockersFromStats(stats);
+  if (publishBlockers.length > 0) {
+    throw badRequest(`Publish blocked: ${publishBlockers.join("; ")}.`);
   }
   const output = path.join(publishedRoot, projectId, version);
   await mkdir(path.dirname(output), { recursive: true });
