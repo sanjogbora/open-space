@@ -64,6 +64,15 @@ interface RouteNode {
   visited: boolean;
 }
 
+interface GridRouteNode {
+  x: number;
+  z: number;
+  previous?: string;
+  cost: number;
+  estimate: number;
+  closed: boolean;
+}
+
 export class WalkthroughViewer {
   private readonly container: HTMLElement;
   private readonly manifest: SceneManifest;
@@ -1505,6 +1514,10 @@ export class WalkthroughViewer {
   }
 
   private findNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
+    return this.findVisibilityNavigationRoute(target, origin) ?? this.findGridNavigationRoute(target, origin);
+  }
+
+  private findVisibilityNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
     const routeMeshes = this.navigationRouteMeshes(origin, target);
     if (routeMeshes.length === 0) {
       return undefined;
@@ -1586,6 +1599,198 @@ export class WalkthroughViewer {
     }
 
     return route;
+  }
+
+  private findGridNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
+    const flatDistance = Math.hypot(target.x - origin.x, target.z - origin.z);
+    if (flatDistance < 0.001 || this.walkZoneMeshes.length === 0) {
+      return undefined;
+    }
+
+    const margin = THREE.MathUtils.clamp(flatDistance * 0.55, 3, 9);
+    const globalMinX = this.minBounds?.x ?? Math.min(origin.x, target.x) - margin;
+    const globalMaxX = this.maxBounds?.x ?? Math.max(origin.x, target.x) + margin;
+    const globalMinZ = this.minBounds?.z ?? Math.min(origin.z, target.z) - margin;
+    const globalMaxZ = this.maxBounds?.z ?? Math.max(origin.z, target.z) + margin;
+    let minX = Math.max(globalMinX, Math.min(origin.x, target.x) - margin);
+    let maxX = Math.min(globalMaxX, Math.max(origin.x, target.x) + margin);
+    let minZ = Math.max(globalMinZ, Math.min(origin.z, target.z) - margin);
+    let maxZ = Math.min(globalMaxZ, Math.max(origin.z, target.z) + margin);
+    let step = Math.max(0.34, this.collisionRadius * 1.35);
+    let columns = Math.max(2, Math.ceil((maxX - minX) / step) + 1);
+    let rows = Math.max(2, Math.ceil((maxZ - minZ) / step) + 1);
+    const maxCells = 7200;
+
+    if (columns * rows > maxCells) {
+      step = Math.sqrt(((maxX - minX) * (maxZ - minZ)) / maxCells);
+      step = THREE.MathUtils.clamp(step, 0.42, 0.95);
+      columns = Math.max(2, Math.ceil((maxX - minX) / step) + 1);
+      rows = Math.max(2, Math.ceil((maxZ - minZ) / step) + 1);
+    }
+
+    maxX = minX + (columns - 1) * step;
+    maxZ = minZ + (rows - 1) * step;
+
+    const keyFor = (x: number, z: number) => `${x}:${z}`;
+    const pointFor = (x: number, z: number) => new THREE.Vector3(minX + x * step, target.y, minZ + z * step);
+    const passableCache = new Map<string, boolean>();
+    const isPassable = (x: number, z: number): boolean => {
+      if (x < 0 || z < 0 || x >= columns || z >= rows) {
+        return false;
+      }
+      const key = keyFor(x, z);
+      const cached = passableCache.get(key);
+      if (typeof cached === "boolean") {
+        return cached;
+      }
+      const point = pointFor(x, z);
+      const passable = !this.navigationFailureDetail(point);
+      passableCache.set(key, passable);
+      return passable;
+    };
+    const nearestPassableCell = (point: THREE.Vector3): { x: number; z: number } | undefined => {
+      const baseX = THREE.MathUtils.clamp(Math.round((point.x - minX) / step), 0, columns - 1);
+      const baseZ = THREE.MathUtils.clamp(Math.round((point.z - minZ) / step), 0, rows - 1);
+      for (let radius = 0; radius <= 5; radius += 1) {
+        for (let dz = -radius; dz <= radius; dz += 1) {
+          for (let dx = -radius; dx <= radius; dx += 1) {
+            if (Math.max(Math.abs(dx), Math.abs(dz)) !== radius) {
+              continue;
+            }
+            const x = baseX + dx;
+            const z = baseZ + dz;
+            if (isPassable(x, z)) {
+              return { x, z };
+            }
+          }
+        }
+      }
+      return undefined;
+    };
+
+    const start = nearestPassableCell(origin);
+    const goal = nearestPassableCell(target);
+    if (!start || !goal) {
+      return undefined;
+    }
+
+    const heuristic = (x: number, z: number) => Math.hypot(goal.x - x, goal.z - z) * step;
+    const startKey = keyFor(start.x, start.z);
+    const nodes = new Map<string, GridRouteNode>([
+      [startKey, { x: start.x, z: start.z, cost: 0, estimate: heuristic(start.x, start.z), closed: false }]
+    ]);
+    const open = [startKey];
+    const offsets = [
+      [-1, 0, 1],
+      [1, 0, 1],
+      [0, -1, 1],
+      [0, 1, 1],
+      [-1, -1, Math.SQRT2],
+      [-1, 1, Math.SQRT2],
+      [1, -1, Math.SQRT2],
+      [1, 1, Math.SQRT2]
+    ] as const;
+    let goalKey: string | undefined;
+    let iterations = 0;
+
+    while (open.length > 0 && iterations < maxCells) {
+      iterations += 1;
+      let bestOpenIndex = 0;
+      let bestEstimate = Number.POSITIVE_INFINITY;
+      for (let index = 0; index < open.length; index += 1) {
+        const openKey = open[index];
+        if (!openKey) {
+          continue;
+        }
+        const node = nodes.get(openKey);
+        if (node && node.estimate < bestEstimate) {
+          bestEstimate = node.estimate;
+          bestOpenIndex = index;
+        }
+      }
+      const currentKey = open.splice(bestOpenIndex, 1)[0];
+      if (!currentKey) {
+        continue;
+      }
+      const current = nodes.get(currentKey);
+      if (!current || current.closed) {
+        continue;
+      }
+      current.closed = true;
+      if (current.x === goal.x && current.z === goal.z) {
+        goalKey = currentKey;
+        break;
+      }
+
+      for (const [dx, dz, multiplier] of offsets) {
+        const nextX = current.x + dx;
+        const nextZ = current.z + dz;
+        if (!isPassable(nextX, nextZ)) {
+          continue;
+        }
+        if (dx !== 0 && dz !== 0 && (!isPassable(current.x + dx, current.z) || !isPassable(current.x, current.z + dz))) {
+          continue;
+        }
+        const nextKey = keyFor(nextX, nextZ);
+        const nextCost = current.cost + step * multiplier;
+        const existing = nodes.get(nextKey);
+        if (existing && (existing.closed || existing.cost <= nextCost)) {
+          continue;
+        }
+        nodes.set(nextKey, {
+          x: nextX,
+          z: nextZ,
+          previous: currentKey,
+          cost: nextCost,
+          estimate: nextCost + heuristic(nextX, nextZ),
+          closed: false
+        });
+        open.push(nextKey);
+      }
+    }
+
+    if (!goalKey) {
+      return undefined;
+    }
+
+    const points: THREE.Vector3[] = [target.clone()];
+    let currentKey: string | undefined = goalKey;
+    while (currentKey && currentKey !== startKey) {
+      const node = nodes.get(currentKey);
+      if (!node) {
+        return undefined;
+      }
+      points.unshift(pointFor(node.x, node.z));
+      currentKey = node.previous;
+    }
+    points.unshift(origin.clone());
+    return this.simplifyNavigationRoute(points);
+  }
+
+  private simplifyNavigationRoute(points: THREE.Vector3[]): THREE.Vector3[] | undefined {
+    if (points.length < 2) {
+      return undefined;
+    }
+    const route: THREE.Vector3[] = [];
+    let anchorIndex = 0;
+    while (anchorIndex < points.length - 1) {
+      let nextIndex = anchorIndex + 1;
+      for (let candidateIndex = points.length - 1; candidateIndex > anchorIndex; candidateIndex -= 1) {
+        const candidate = points[candidateIndex];
+        const anchor = points[anchorIndex];
+        if (candidate && anchor && !this.navigationRouteFailureDetail(candidate, anchor)) {
+          nextIndex = candidateIndex;
+          break;
+        }
+      }
+      const nextPoint = points[nextIndex];
+      if (!nextPoint) {
+        return undefined;
+      }
+      route.push(nextPoint.clone());
+      anchorIndex = nextIndex;
+    }
+    return route.length > 0 ? route : undefined;
   }
 
   private navigationRouteMeshes(origin: THREE.Vector3, target: THREE.Vector3): THREE.Mesh[] {
