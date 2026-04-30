@@ -1753,7 +1753,8 @@ export class WalkthroughViewer {
 
   private findGridNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
     const flatDistance = Math.hypot(target.x - origin.x, target.z - origin.z);
-    if (flatDistance < 0.001 || this.walkZoneMeshes.length === 0) {
+    const hasRouteSurface = this.walkZoneMeshes.length > 0 || this.geometryFloorMeshes.length > 0;
+    if (flatDistance < 0.001 || !hasRouteSurface) {
       return undefined;
     }
 
@@ -1795,7 +1796,9 @@ export class WalkthroughViewer {
         return cached;
       }
       const point = pointFor(x, z);
-      const passable = !this.navigationFailureDetail(point);
+      const hasExplicitWalkZones = this.walkZoneMeshes.length > 0;
+      const onDetectedFloor = this.geometryFloorMeshes.length > 0 && this.canStandOnGeometryFloor(point);
+      const passable = (hasExplicitWalkZones || onDetectedFloor) && !this.navigationFailureDetail(point);
       passableCache.set(key, passable);
       return passable;
     };
