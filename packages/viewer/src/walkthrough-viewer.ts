@@ -1393,6 +1393,7 @@ export class WalkthroughViewer {
     dampVector(nextPosition, target, clickMoveSpeed, delta);
     if (this.canOccupyPosition(nextPosition, this.camera.position)) {
       this.camera.position.copy(nextPosition);
+      this.snapCameraToFloor();
       this.clampCamera();
       return;
     }
@@ -1465,7 +1466,7 @@ export class WalkthroughViewer {
     position: THREE.Vector3,
     origin?: THREE.Vector3
   ): NavigationFailureDetail | undefined {
-    const candidate = position.clone();
+    const candidate = this.navigationProbePosition(position);
     if (this.minBounds && this.maxBounds) {
       if (
         candidate.x < this.minBounds.x ||
@@ -1503,12 +1504,28 @@ export class WalkthroughViewer {
         ? { reason: "blocked-collision", blockerName, point: candidate.clone() }
         : { reason: "blocked-collision", point: candidate.clone() };
     }
-    const originSphere = new THREE.Sphere(origin, this.collisionRadius);
+    const originSphere = new THREE.Sphere(this.navigationProbePosition(origin), this.collisionRadius);
     const originBlockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(originSphere));
     const newlyBlocked = effectiveBlockers.find((blocker) => !originBlockedBlockers.includes(blocker));
     return newlyBlocked
       ? { reason: "blocked-collision", blockerName: newlyBlocked.name, point: candidate.clone() }
       : undefined;
+  }
+
+  private navigationProbePosition(position: THREE.Vector3): THREE.Vector3 {
+    const candidate = position.clone();
+    if (!this.generatedWalkZonesOnly || this.geometryFloorMeshes.length === 0) {
+      return candidate;
+    }
+    const floorY = this.sampleGeometryFloorY(candidate);
+    if (typeof floorY !== "number") {
+      return candidate;
+    }
+    const expectedFloorY = candidate.y - this.cameraHeight;
+    if (Math.abs(floorY - expectedFloorY) <= Math.max(1.1, this.cameraHeight * 0.65)) {
+      candidate.y = floorY + this.cameraHeight;
+    }
+    return candidate;
   }
 
   private navigationRouteFailureDetail(
