@@ -1,13 +1,18 @@
 import { spawn } from "node:child_process";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const target = process.argv.find((arg, index) => index > 1 && !arg.startsWith("--")) ?? "apps/viewer-demo/public/scenes/demo";
+const args = process.argv.slice(2);
+const target = args.find((arg) => !arg.startsWith("--")) ?? "apps/viewer-demo/public/scenes/demo";
+const resolutionArg = args.find((arg) => arg.startsWith("--resolution="));
+const samplesArg = args.find((arg) => arg.startsWith("--samples="));
+const marginArg = args.find((arg) => arg.startsWith("--margin="));
 const bundleDir = path.resolve(target);
 const blenderCommand = process.env.BLENDER_PATH || "blender";
-const resolution = Number(process.env.LIGHTMAP_RESOLUTION ?? 1024);
-const samples = Number(process.env.LIGHTMAP_SAMPLES ?? 96);
-const margin = Number(process.env.LIGHTMAP_MARGIN ?? 16);
+const resolution = Number(resolutionArg?.split("=")[1] ?? process.env.LIGHTMAP_RESOLUTION ?? 1024);
+const samples = Number(samplesArg?.split("=")[1] ?? process.env.LIGHTMAP_SAMPLES ?? 96);
+const margin = Number(marginArg?.split("=")[1] ?? process.env.LIGHTMAP_MARGIN ?? 16);
+const outputSceneUrl = "scene.lightmapped.glb";
 
 function jobId(timestamp) {
   return `bake-${timestamp.replace(/[-:.]/g, "").replace("T", "-").replace("Z", "z")}`;
@@ -74,6 +79,7 @@ const blenderPython = String.raw`
 import bpy
 import json
 import math
+import mathutils
 import os
 import re
 import sys
@@ -94,6 +100,31 @@ margin = int(config["margin"])
 def clean_name(value):
     value = re.sub(r"[^A-Za-z0-9_.-]+", "-", value or "material").strip("-")
     return (value or "material")[:72]
+
+def clamp_power_of_two(value, minimum, maximum):
+    value = max(minimum, min(maximum, int(value)))
+    power = 1
+    while power < value:
+        power *= 2
+    lower = max(minimum, power // 2)
+    return lower if abs(value - lower) < abs(power - value) else min(maximum, power)
+
+def object_footprint_area(obj):
+    corners = [obj.matrix_world @ mathutils.Vector(corner) for corner in obj.bound_box]
+    min_x = min(corner.x for corner in corners)
+    max_x = max(corner.x for corner in corners)
+    min_z = min(corner.z for corner in corners)
+    max_z = max(corner.z for corner in corners)
+    return max(0.01, abs(max_x - min_x) * abs(max_z - min_z))
+
+def lightmap_size_for_area(area):
+    if area < 1.25:
+        return min(512, resolution)
+    if area < 5:
+        return min(1024, resolution)
+    if area < 16:
+        return min(1536, resolution)
+    return resolution
 
 os.makedirs(lightmap_dir, exist_ok=True)
 bpy.ops.object.select_all(action="SELECT")
@@ -140,17 +171,21 @@ bpy.context.scene.world.color = (0.78, 0.82, 0.88)
 
 materials = []
 seen = set()
+material_areas = {}
 for obj in meshes:
     for slot in obj.material_slots:
         material = slot.material
         if material and material.name not in seen:
             materials.append(material)
             seen.add(material.name)
+        if material:
+            material_areas[material.name] = max(material_areas.get(material.name, 0), object_footprint_area(obj))
 
 lightmaps = []
 for material in materials:
     nodes = material.node_tree.nodes
-    image = bpy.data.images.new(f"{material.name}-lightmap", width=resolution, height=resolution, alpha=False, float_buffer=False)
+    material_resolution = clamp_power_of_two(lightmap_size_for_area(material_areas.get(material.name, 1)), 256, resolution)
+    image = bpy.data.images.new(f"{material.name}-lightmap", width=material_resolution, height=material_resolution, alpha=False, float_buffer=False)
     image.generated_color = (1.0, 1.0, 1.0, 1.0)
     node = nodes.new(type="ShaderNodeTexImage")
     node.name = "WalkthroughLightmapBake"
@@ -162,7 +197,8 @@ for material in materials:
         "materialName": material.name,
         "relativeUrl": relative_url,
         "imageName": image.name,
-        "outputPath": os.path.join(lightmap_dir, f"{clean_name(material.name)}.png")
+        "outputPath": os.path.join(lightmap_dir, f"{clean_name(material.name)}.png"),
+        "resolution": material_resolution
     })
 
 bpy.ops.object.select_all(action="DESELECT")
@@ -182,7 +218,7 @@ bpy.ops.export_scene.gltf(filepath=output_glb, export_format="GLB", export_texco
 with open(report_path, "w", encoding="utf8") as handle:
     json.dump({
         "materialCount": len(materials),
-        "lightmaps": [{"materialName": item["materialName"], "url": item["relativeUrl"]} for item in lightmaps]
+        "lightmaps": [{"materialName": item["materialName"], "url": item["relativeUrl"], "resolution": item["resolution"]} for item in lightmaps]
     }, handle, indent=2)
 `;
 
@@ -218,7 +254,11 @@ if (!hasBlender) {
 }
 
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-const sceneUrl = manifest.sceneUrl ?? "scene.glb";
+const manifestSceneUrl = manifest.sceneUrl ?? "scene.glb";
+const fallbackSourceUrl = manifest.originalSceneUrl && manifestSceneUrl === outputSceneUrl
+  ? manifest.originalSceneUrl
+  : manifestSceneUrl;
+const sceneUrl = fallbackSourceUrl ?? manifestSceneUrl;
 const sourcePath = path.resolve(bundleDir, sceneUrl);
 if (!(await fileExists(sourcePath))) {
   throw new Error(`Scene source not found: ${sceneUrl}`);
@@ -241,7 +281,11 @@ await writeJob(startedJob);
 const scriptPath = path.join(bundleDir, ".lightmap-bake.py");
 const configPath = path.join(bundleDir, ".lightmap-bake-config.json");
 const reportPath = path.join(bundleDir, "lightmaps", "lightmap-report.json");
-const outputGlb = path.join(bundleDir, "scene.lightmapped.glb");
+const outputGlb = path.join(bundleDir, outputSceneUrl);
+await Promise.all([
+  rm(outputGlb, { force: true }),
+  rm(path.join(bundleDir, "lightmaps"), { recursive: true, force: true })
+]);
 await mkdir(path.dirname(reportPath), { recursive: true });
 await writeFile(scriptPath, blenderPython);
 await writeFile(
@@ -285,7 +329,7 @@ try {
       {
         ...existingMaterials,
         generator: "walkthrough-lightmap-bake",
-        source: "scene.lightmapped.glb",
+        source: outputSceneUrl,
         materials: [...byName.values()]
       },
       null,
@@ -297,7 +341,7 @@ try {
     `${JSON.stringify(
       {
         ...manifest,
-        sceneUrl: "scene.lightmapped.glb",
+        sceneUrl: outputSceneUrl,
         originalSceneUrl: manifest.originalSceneUrl ?? sceneUrl,
         materialsUrl: manifest.materialsUrl ?? "materials.json",
         rendering: {
@@ -315,13 +359,16 @@ try {
     ...startedJob,
     status: "completed",
     completedAt,
-    message: `Baked ${report.lightmaps?.length ?? 0} lightmap texture(s) and exported scene.lightmapped.glb.`,
-    outputSceneUrl: "scene.lightmapped.glb",
+    message: `Baked ${report.lightmaps?.length ?? 0} lightmap texture(s) and exported ${outputSceneUrl}.`,
+    outputSceneUrl,
     lightmapCount: report.lightmaps?.length ?? 0,
+    resolution,
+    samples,
+    margin,
     steps: [
       step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
       step("unwrap-uv2", "Create secondary lightmap UVs", "completed", "Generated Lightmap UVs with Blender smart projection."),
-      step("bake-cycles", "Bake indirect lighting and shadows", "completed", `${samples} Cycles samples at ${resolution}px.`),
+      step("bake-cycles", "Bake indirect lighting and shadows", "completed", `${samples} Cycles samples with automatic 256-${resolution}px lightmaps.`),
       step("assign-lightmaps", "Assign generated lightmaps to materials", "completed", "Updated materials.json and scene manifest.")
     ]
   };
