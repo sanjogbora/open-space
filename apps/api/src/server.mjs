@@ -2035,6 +2035,23 @@ async function removePublishOnlyTemporaryFiles(root) {
   ]);
 }
 
+function publishedIndexHtml(scenePath) {
+  const viewerUrl = `/?scene=${encodeURIComponent(scenePath)}`;
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content="0; url=${viewerUrl}" />
+    <title>Open walkthrough</title>
+  </head>
+  <body>
+    <a href="${viewerUrl}">Open walkthrough</a>
+  </body>
+</html>
+`;
+}
+
 function publishBlockersFromStats(stats) {
   const readinessBlockers = stats.publishReadiness?.blockers ?? [];
   if (readinessBlockers.length > 0) {
@@ -2061,15 +2078,18 @@ async function publishProject(projectId) {
   await mkdir(path.dirname(output), { recursive: true });
   await cp(source, output, { recursive: true, force: true });
   await removePublishOnlyTemporaryFiles(output);
+  const scenePath = `/published/${projectId}/${version}/scene.manifest.json`;
+  const viewerUrl = `/?scene=${encodeURIComponent(scenePath)}`;
+  await writeFile(path.join(output, "index.html"), publishedIndexHtml(scenePath));
   const assets = await listPublishAssets(output);
   const totalBytes = assets.reduce((sum, asset) => sum + asset.bytes, 0);
-  const scenePath = `/published/${projectId}/${version}/scene.manifest.json`;
   const deployment = {
     schemaVersion: "0.1",
     projectId,
     version,
     publishedAt,
     scenePath,
+    viewerUrl,
     cdnBasePath: `/published/${projectId}/${version}/`,
     assetCount: assets.length,
     totalBytes,
@@ -2091,6 +2111,7 @@ async function publishProject(projectId) {
     version,
     publishedAt,
     scenePath,
+    viewerUrl,
     deploymentPath: `apps/viewer-demo/public/published/${projectId}/${version}/deployment.json`,
     cdnBasePath: deployment.cdnBasePath,
     assetCount: deployment.assetCount,
