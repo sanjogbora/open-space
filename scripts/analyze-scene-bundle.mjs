@@ -967,7 +967,15 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
-  if ((report.looseImageCount ?? 0) > 0) {
+  if ((report.imageCount ?? 0) === 0 && (report.looseImageCount ?? 0) > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "loose-textures-not-referenced",
+      title: "Texture folder is not connected to the model",
+      message: `${report.looseImageCount} loose image file(s) were found, but the active model does not reference image textures.`,
+      action: "Ask for the original GLTF/GLB export with embedded or correctly linked textures, or upload a ZIP that preserves the exact texture paths used by the model."
+    });
+  } else if ((report.looseImageCount ?? 0) > 0) {
     diagnostics.push({
       severity: "info",
       code: "loose-texture-files",
