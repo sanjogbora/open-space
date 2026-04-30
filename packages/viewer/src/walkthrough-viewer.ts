@@ -1437,6 +1437,7 @@ export class WalkthroughViewer {
     const direct = this.camera.position.clone().add(delta);
     if (this.canOccupyPosition(direct, this.camera.position)) {
       this.camera.position.copy(direct);
+      this.snapCameraToFloor();
       this.clampCamera();
       return;
     }
@@ -1444,12 +1445,14 @@ export class WalkthroughViewer {
     const slideX = this.camera.position.clone().add(new THREE.Vector3(delta.x, 0, 0));
     if (this.canOccupyPosition(slideX, this.camera.position)) {
       this.camera.position.copy(slideX);
+      this.snapCameraToFloor();
       this.clampCamera();
     }
 
     const slideZ = this.camera.position.clone().add(new THREE.Vector3(0, 0, delta.z));
     if (this.canOccupyPosition(slideZ, this.camera.position)) {
       this.camera.position.copy(slideZ);
+      this.snapCameraToFloor();
       this.clampCamera();
     }
   }
@@ -1885,26 +1888,43 @@ export class WalkthroughViewer {
   }
 
   private canStandOnGeometryFloor(position: THREE.Vector3): boolean {
-    if (this.geometryFloorMeshes.length === 0) {
+    const floorY = this.sampleGeometryFloorY(position);
+    if (typeof floorY !== "number") {
       return false;
     }
+    const expectedFloorY = position.y - this.cameraHeight;
+    return Math.abs(floorY - expectedFloorY) <= Math.max(0.45, this.cameraHeight * 0.35);
+  }
+
+  private snapCameraToFloor(): void {
+    const floorY = this.sampleGeometryFloorY(this.camera.position);
+    if (typeof floorY !== "number") {
+      return;
+    }
+    const nextY = floorY + this.cameraHeight;
+    if (Math.abs(nextY - this.camera.position.y) <= 0.65) {
+      this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, nextY, 0.5);
+    }
+  }
+
+  private sampleGeometryFloorY(position: THREE.Vector3): number | undefined {
+    if (this.geometryFloorMeshes.length === 0) {
+      return undefined;
+    }
     const raycaster = new THREE.Raycaster(
-      new THREE.Vector3(position.x, position.y + 0.35, position.z),
+      new THREE.Vector3(position.x, position.y + 1.2, position.z),
       new THREE.Vector3(0, -1, 0),
       0,
-      Math.max(1.2, this.cameraHeight + 1.2)
+      Math.max(3.2, this.cameraHeight + 2.4)
     );
     const hit = raycaster.intersectObjects(this.geometryFloorMeshes, true).find((candidate) => {
       if (!(candidate.object instanceof THREE.Mesh) || !candidate.face) {
         return false;
       }
       const normal = candidate.face.normal.clone().transformDirection(candidate.object.matrixWorld);
-      const horizontalEnough = Math.abs(normal.y) >= 0.45;
-      const expectedFloorY = position.y - this.cameraHeight;
-      const closeToCameraFloor = Math.abs(candidate.point.y - expectedFloorY) <= Math.max(0.45, this.cameraHeight * 0.35);
-      return horizontalEnough && closeToCameraFloor;
+      return Math.abs(normal.y) >= 0.45 && candidate.point.y <= position.y + 0.35;
     });
-    return Boolean(hit);
+    return hit?.point.y;
   }
 
   private isWalkableHit(hit: THREE.Intersection): boolean {
