@@ -2196,7 +2196,9 @@ export class WalkthroughViewer {
       this.emitNavigationFailure(
         "route-not-found",
         event,
-        floorHit.point
+        routeFailureDetail.point ?? floorHit.point,
+        undefined,
+        routeFailureDetail.blockerName
       );
       return true;
     }
@@ -2222,7 +2224,9 @@ export class WalkthroughViewer {
       return "Move target is outside the authored walk zone.";
     }
     if (reason === "route-not-found") {
-      return "No connected walk/pass route reaches the clicked floor point.";
+      return blockerName
+        ? `No connected walk/pass route reaches the clicked floor point because ${blockerName} blocks the route.`
+        : "No connected walk/pass route reaches the clicked floor point.";
     }
     if (reason === "blocked-collision") {
       return blockerName
