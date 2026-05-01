@@ -36,6 +36,7 @@ export type NavigationFailureReason =
   | "outside-bounds"
   | "outside-walk-zone"
   | "route-not-found"
+  | "blocked-step"
   | "blocked-collision";
 
 export interface NavigationFailure {

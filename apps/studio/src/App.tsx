@@ -512,6 +512,17 @@ function navigationRepairRecommendation(draft: NavigationRepairDraft): Navigatio
     };
   }
 
+  if (draft.reason === "blocked-step") {
+    return {
+      title: "Recommended fix: tune stair movement",
+      detail:
+        "The clicked route crosses a height change bigger than the current step limits. If this is a stair or threshold, increase Step Up or Step Down in Movement Controls; add a walk patch only if the landing itself is missing.",
+      primaryLabel: "Add Walk Patch",
+      action: "walk",
+      requiresPoint: true
+    };
+  }
+
   if (draft.reason === "blocked-collision") {
     if (draft.point) {
       return {

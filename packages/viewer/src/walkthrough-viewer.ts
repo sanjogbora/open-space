@@ -1789,8 +1789,22 @@ export class WalkthroughViewer {
     }
     const steps = Math.max(2, Math.ceil(distance / Math.max(0.18, this.collisionRadius * 0.75)));
     let previous = origin.clone();
+    let previousFloorY = this.stableFloorY ?? origin.y - this.cameraHeight;
+    const maxStepUp = this.controls.maxStepUp ?? this.maxStepUp;
+    const maxStepDown = this.controls.maxStepDown ?? this.maxStepDown;
     for (let index = 1; index <= steps; index += 1) {
       const point = this.navigationProbePosition(origin.clone().lerp(target, index / steps));
+      const floorY = this.sampleGeometryFloorY(point, {
+        maxDelta: Math.max(maxStepDown, maxStepUp, this.cameraHeight * 0.5)
+      });
+      if (typeof floorY === "number") {
+        const heightDelta = floorY - previousFloorY;
+        if (heightDelta > maxStepUp || heightDelta < -maxStepDown) {
+          return { reason: "blocked-step", point: point.clone() };
+        }
+        previousFloorY = floorY;
+        point.y = floorY + this.cameraHeight;
+      }
       const failure = this.navigationFailureDetail(point, previous);
       if (failure) {
         return { ...failure, point: failure.point ?? point.clone() };
@@ -2369,7 +2383,7 @@ export class WalkthroughViewer {
         return true;
       }
       this.emitNavigationFailure(
-        "route-not-found",
+        routeFailureDetail.reason === "blocked-step" ? "blocked-step" : "route-not-found",
         event,
         routeFailureDetail.point ?? floorHit.point,
         undefined,
@@ -2474,6 +2488,9 @@ export class WalkthroughViewer {
       return blockerName
         ? `No connected walk/pass route reaches the clicked floor point because ${blockerName} blocks the route.`
         : "No connected walk/pass route reaches the clicked floor point.";
+    }
+    if (reason === "blocked-step") {
+      return "The route crosses a height change larger than the configured step limits.";
     }
     if (reason === "blocked-collision") {
       return blockerName
