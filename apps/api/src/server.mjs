@@ -256,8 +256,56 @@ function validateGlbBuffer(body) {
   }
   const magic = body.readUInt32LE(0);
   const version = body.readUInt32LE(4);
+  const declaredLength = body.readUInt32LE(8);
   if (magic !== 0x46546c67 || version !== 2) {
     throw badRequest("Only binary GLB v2 uploads are supported in this milestone.");
+  }
+  if (declaredLength !== body.length) {
+    throw badRequest(
+      declaredLength > body.length
+        ? "GLB upload is truncated; the header length is larger than the uploaded file."
+        : "GLB upload has trailing bytes after the declared file length."
+    );
+  }
+  let offset = 12;
+  let jsonChunks = 0;
+  let jsonChunkStart = 0;
+  let jsonChunkLength = 0;
+  while (offset < body.length) {
+    if (offset + 8 > body.length) {
+      throw badRequest("GLB chunk header is truncated.");
+    }
+    const chunkLength = body.readUInt32LE(offset);
+    const chunkType = body.readUInt32LE(offset + 4);
+    const chunkStart = offset + 8;
+    const chunkEnd = chunkStart + chunkLength;
+    if (chunkLength % 4 !== 0) {
+      throw badRequest("GLB chunk length must be 4-byte aligned.");
+    }
+    if (chunkEnd > body.length) {
+      throw badRequest("GLB chunk data is truncated.");
+    }
+    if (chunkType === 0x4e4f534a) {
+      jsonChunks += 1;
+      jsonChunkStart = chunkStart;
+      jsonChunkLength = chunkLength;
+    }
+    offset = chunkEnd;
+  }
+  if (offset !== body.length) {
+    throw badRequest("GLB chunks do not match the declared file length.");
+  }
+  if (jsonChunks !== 1) {
+    throw badRequest("GLB must contain exactly one JSON chunk.");
+  }
+  let document;
+  try {
+    document = JSON.parse(body.subarray(jsonChunkStart, jsonChunkStart + jsonChunkLength).toString("utf8").trim());
+  } catch {
+    throw badRequest("GLB JSON chunk is invalid.");
+  }
+  if (document?.asset?.version !== "2.0") {
+    throw badRequest("Only glTF 2.0 GLB uploads are supported.");
   }
 }
 
@@ -268,7 +316,14 @@ function parseGlbJsonDocument(body) {
   if (jsonChunkType !== 0x4e4f534a) {
     throw badRequest("GLB JSON chunk is missing.");
   }
-  return JSON.parse(body.subarray(20, 20 + jsonChunkLength).toString("utf8").trim());
+  const jsonText = body.subarray(20, 20 + jsonChunkLength).toString("utf8").trim();
+  let document;
+  try {
+    document = JSON.parse(jsonText);
+  } catch {
+    throw badRequest("GLB JSON chunk is invalid.");
+  }
+  return document;
 }
 
 function validateGltfBuffer(body) {
