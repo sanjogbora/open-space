@@ -54,6 +54,7 @@ interface CollisionBlocker {
 interface NavigationFailureDetail {
   reason: NavigationFailureReason;
   blockerName?: string;
+  blockerKind?: CollisionBlocker["kind"];
   point?: THREE.Vector3;
 }
 
@@ -1614,16 +1615,22 @@ export class WalkthroughViewer {
       return undefined;
     }
     if (!origin) {
-      const blockerName = effectiveBlockers[0]?.name;
-      return blockerName
-        ? { reason: "blocked-collision", blockerName, point: candidate.clone() }
+      const blocker = effectiveBlockers[0];
+      return blocker?.name
+        ? { reason: "blocked-collision", blockerName: blocker.name, blockerKind: blocker.kind, point: candidate.clone() }
         : { reason: "blocked-collision", point: candidate.clone() };
+    }
+    if (
+      effectiveBlockers.every((blocker) => blocker.kind === "inferred") &&
+      this.isPassZoneBridgeSegment(origin, candidate)
+    ) {
+      return undefined;
     }
     const originSphere = new THREE.Sphere(this.navigationProbePosition(origin), this.collisionRadius);
     const originBlockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(originSphere));
     const newlyBlocked = effectiveBlockers.find((blocker) => !originBlockedBlockers.includes(blocker));
     return newlyBlocked
-      ? { reason: "blocked-collision", blockerName: newlyBlocked.name, point: candidate.clone() }
+      ? { reason: "blocked-collision", blockerName: newlyBlocked.name, blockerKind: newlyBlocked.kind, point: candidate.clone() }
       : undefined;
   }
 
@@ -2011,15 +2018,31 @@ export class WalkthroughViewer {
     return this.passZoneMeshes.some((mesh) => this.isInsideNavigationZone(mesh, position));
   }
 
+  private isPassZoneBridgeSegment(origin: THREE.Vector3, target: THREE.Vector3): boolean {
+    if (this.passZoneMeshes.length === 0) {
+      return false;
+    }
+    const midpoint = origin.clone().lerp(target, 0.5);
+    return [origin, midpoint, target].some((point) =>
+      this.passZoneMeshes.some((mesh) =>
+        this.isInsideNavigationZoneWithPadding(mesh, point, Math.max(0.42, this.collisionRadius * 1.75))
+      )
+    );
+  }
+
   private isInsideNavigationZone(mesh: THREE.Mesh, position: THREE.Vector3): boolean {
+    return this.isInsideNavigationZoneWithPadding(mesh, position, this.collisionRadius);
+  }
+
+  private isInsideNavigationZoneWithPadding(mesh: THREE.Mesh, position: THREE.Vector3, padding: number): boolean {
     const halfSize = mesh.userData["navigationHalfSize"];
     if (!(halfSize instanceof THREE.Vector3)) {
       return false;
     }
     const local = mesh.worldToLocal(position.clone());
     return (
-      Math.abs(local.x) <= halfSize.x + this.collisionRadius &&
-      Math.abs(local.z) <= halfSize.z + this.collisionRadius
+      Math.abs(local.x) <= halfSize.x + padding &&
+      Math.abs(local.z) <= halfSize.z + padding
     );
   }
 
