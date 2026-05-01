@@ -1138,6 +1138,24 @@ button.list-row {
   line-height: 1.45;
 }
 
+.repair-followup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #bfe5d3;
+  border-radius: 8px;
+  background: #f1fbf6;
+}
+
+.repair-followup p {
+  color: #146c43;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
 .navigation-qa-list {
   display: grid;
   gap: 8px;
@@ -2023,6 +2041,7 @@ code {
   .zone-editor-heading,
   .zone-simple-heading,
   .repair-recommendation,
+  .repair-followup,
   .toggle-grid,
   .vector-field {
     grid-template-columns: 1fr;

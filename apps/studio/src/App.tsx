@@ -2295,7 +2295,11 @@ function App() {
         zones: [...zones, zone]
       };
     });
-    setRepairSummary(kind === "pass" ? "Added a doorway pass at the blocked point." : "Added a walk patch at the blocked point.");
+    setRepairSummary(
+      kind === "pass"
+        ? "Added a doorway pass at the blocked point. Save changes, then retry the click in the viewer."
+        : "Added a walk patch at the blocked point. Save changes, then retry the click in the viewer."
+    );
     setNotice("saved");
   };
 
@@ -2391,7 +2395,7 @@ function App() {
       };
     });
     setBlockerNameDraft("");
-    setRepairSummary(`Ignored ${trimmed} as navigation collision.`);
+    setRepairSummary(`Ignored ${trimmed} as navigation collision. Save changes, then retry the click in the viewer.`);
     setNotice("saved");
   };
 
@@ -5615,7 +5619,31 @@ function App() {
                       </button>
                     </div>
                     {repairError && <p className="error-note">{repairError}</p>}
-                    {repairSummary && <p className="success-note">{repairSummary}</p>}
+                    {repairSummary && (
+                      <div className="repair-followup">
+                        <p>{repairSummary}</p>
+                        <div className="inline-actions">
+                          <button
+                            type="button"
+                            className="button primary"
+                            disabled={!apiConnected}
+                            onClick={() => void saveToApi()}
+                          >
+                            <Save size={16} aria-hidden="true" />
+                            Save Changes
+                          </button>
+                          <a
+                            className="button secondary"
+                            href={navigationDebugViewerUrl(activeProjectId)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <ExternalLink size={16} aria-hidden="true" />
+                            Retry Viewer
+                          </a>
+                        </div>
+                      </div>
+                    )}
                     <div className="field-grid">
                       <NumberField
                         label="Model Scale"
