@@ -5536,6 +5536,32 @@ function App() {
                       }
                     />
                     <NumberField
+                      label="Step Up"
+                      min={0.05}
+                      max={1.2}
+                      step={0.01}
+                      value={controlsDoc.movement.maxStepUp ?? 0.42}
+                      onChange={(value) =>
+                        updateControls((current) => ({
+                          ...current,
+                          movement: { ...current.movement, maxStepUp: value }
+                        }))
+                      }
+                    />
+                    <NumberField
+                      label="Step Down"
+                      min={0.05}
+                      max={2}
+                      step={0.01}
+                      value={controlsDoc.movement.maxStepDown ?? 0.78}
+                      onChange={(value) =>
+                        updateControls((current) => ({
+                          ...current,
+                          movement: { ...current.movement, maxStepDown: value }
+                        }))
+                      }
+                    />
+                    <NumberField
                       label="Horizontal Look"
                       min={0.001}
                       max={0.02}

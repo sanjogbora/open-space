@@ -187,6 +187,8 @@ export interface SceneControlsDocument {
     dragLook: boolean;
     moveSpeed: number;
     clickMoveSpeed?: number;
+    maxStepUp?: number;
+    maxStepDown?: number;
     lookSensitivityX: number;
     lookSensitivityY: number;
     clickMoveThresholdPx: number;

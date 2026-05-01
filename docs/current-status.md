@@ -23,7 +23,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Left-click drag, right-click drag, and touch drag look around.
 - Mobile tap and drag-look controls are present.
 - Movement behavior is now driven by `controls.json`.
-- Studio has a Controls tab for enabling/disabling WASD, click-to-move, drag-look, speed, sensitivity, and click threshold.
+- Studio has a Controls tab for enabling/disabling WASD, click-to-move, drag-look, speed, step thresholds, sensitivity, and click threshold.
 - Studio navigation repair now shows a recommended plain-English fix from the viewer failure reason.
 - Studio navigation zones now default to readable walk/pass/block cards with raw coordinates hidden under Advanced.
 - Studio zone map now has paint tools for adding walk areas, door passes, and blockers visually.

@@ -120,6 +120,8 @@ export class WalkthroughViewer {
     dragLook: true,
     moveSpeed: 3.8,
     clickMoveSpeed: 1.2,
+    maxStepUp: 0.42,
+    maxStepDown: 0.78,
     lookSensitivityX: 0.004,
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8
@@ -1678,14 +1680,20 @@ export class WalkthroughViewer {
       return position;
     }
     const floorY = this.sampleGeometryFloorY(position, {
-      maxDelta: Math.max(this.maxStepDown, this.maxStepUp, this.cameraHeight * 0.5)
+      maxDelta: Math.max(
+        this.controls.maxStepDown ?? this.maxStepDown,
+        this.controls.maxStepUp ?? this.maxStepUp,
+        this.cameraHeight * 0.5
+      )
     });
     if (typeof floorY !== "number") {
       return position;
     }
     const originFloorY = (this.stableFloorY ?? origin.y - this.cameraHeight);
     const heightDelta = floorY - originFloorY;
-    if (heightDelta > this.maxStepUp || heightDelta < -this.maxStepDown) {
+    const maxStepUp = this.controls.maxStepUp ?? this.maxStepUp;
+    const maxStepDown = this.controls.maxStepDown ?? this.maxStepDown;
+    if (heightDelta > maxStepUp || heightDelta < -maxStepDown) {
       return undefined;
     }
     const next = position.clone();
