@@ -1092,7 +1092,7 @@ export class WalkthroughViewer {
       if (ignoredCollisionNames.some((ignoredName) => collisionSearchName.includes(ignoredName))) {
         return;
       }
-      if (isPortalLikeObject(node, collisionSearchName) && !isExplicitPortalCollision(collisionSearchName)) {
+      if (isDoorwayNavigationPanel(node, collisionSearchName) && !isExplicitPortalCollision(collisionSearchName)) {
         return;
       }
       const box = new THREE.Box3().setFromObject(node);
@@ -2384,7 +2384,7 @@ export class WalkthroughViewer {
     hit: THREE.Intersection,
     objectName: string
   ): THREE.Intersection | undefined {
-    if (!(hit.object instanceof THREE.Mesh) || !isPortalLikeObject(hit.object, objectName)) {
+    if (!(hit.object instanceof THREE.Mesh) || !isDoorwayNavigationPanel(hit.object, objectName)) {
       return undefined;
     }
 
@@ -2885,6 +2885,25 @@ function isPortalLikeObject(mesh: THREE.Mesh, objectName: string): boolean {
   return /(^|[^a-z])(door|doorway|opening|entrance|entry|passage|corridor|balcony|terrace|patio|slider|sliding)([^a-z]|$)/.test(
     descriptor
   );
+}
+
+function isDoorwayNavigationPanel(mesh: THREE.Mesh, objectName: string): boolean {
+  if (isPortalLikeObject(mesh, objectName)) {
+    return true;
+  }
+  const parentName = mesh.parent?.name ?? "";
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  const materialNames = materials.map((material) => material.name).join(" ");
+  const descriptor = `${objectName} ${mesh.name} ${parentName} ${materialNames}`.toLowerCase();
+  const panelNamedAsOpening =
+    /(^|[^a-z])(glass|glazing|pane|partition|screen|shutter|gate|french|sliding)([^a-z]|$)/.test(descriptor) &&
+    /(^|[^a-z])(door|opening|entry|entrance|balcony|terrace|patio|passage|corridor)([^a-z]|$)/.test(descriptor);
+  const materialLooksTransparent = materials.some(
+    (material) =>
+      material.transparent ||
+      ("opacity" in material && typeof material.opacity === "number" && material.opacity < 0.82)
+  );
+  return panelNamedAsOpening || (materialLooksTransparent && isPortalLikeObject(mesh, descriptor));
 }
 
 function isExplicitPortalCollision(name: string): boolean {
