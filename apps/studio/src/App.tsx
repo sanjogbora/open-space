@@ -3738,6 +3738,7 @@ function App() {
               <ImportNextSteps
                 stats={bundleStats}
                 apiConnected={apiConnected}
+                viewerUrl={`http://127.0.0.1:5173/?scene=${encodeURIComponent(projectScenePath(activeProjectId))}`}
                 repairState={repairState}
                 optimizeState={optimizeState}
                 bakeState={bakeState}
@@ -6638,6 +6639,7 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
 function ImportNextSteps({
   stats,
   apiConnected,
+  viewerUrl,
   repairState,
   optimizeState,
   bakeState,
@@ -6647,6 +6649,7 @@ function ImportNextSteps({
 }: {
   stats: BundleStats | null;
   apiConnected: boolean;
+  viewerUrl: string;
   repairState: RepairState;
   optimizeState: OptimizeState;
   bakeState: BakeState;
@@ -6683,7 +6686,7 @@ function ImportNextSteps({
               ? onOptimize
               : step.action === "bake"
                 ? onBake
-                : () => window.open("http://127.0.0.1:5173/", "_blank", "noopener,noreferrer");
+                : () => window.open(viewerUrl, "_blank", "noopener,noreferrer");
         return (
           <div key={step.action} className={`import-next-step ${step.action}`}>
             <div>
