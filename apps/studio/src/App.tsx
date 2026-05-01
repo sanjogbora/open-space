@@ -3735,6 +3735,16 @@ function App() {
               </div>
               {repairError && <p className="error-note">{repairError}</p>}
               {repairSummary && <p className="success-note">{repairSummary}</p>}
+              <ImportNextSteps
+                stats={bundleStats}
+                apiConnected={apiConnected}
+                repairState={repairState}
+                optimizeState={optimizeState}
+                bakeState={bakeState}
+                onRepair={() => void repairImport()}
+                onOptimize={() => void optimizeProject()}
+                onBake={() => void bakeLightmaps()}
+              />
             </div>
 
             <div className="panel stats-panel">
@@ -6534,6 +6544,162 @@ function DiagnosticList({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+type ImportNextStepAction = "repair" | "optimize" | "bake" | "test";
+
+interface ImportNextStep {
+  action: ImportNextStepAction;
+  title: string;
+  detail: string;
+  button: string;
+}
+
+function importActionForDiagnostic(code: string): ImportNextStepAction | undefined {
+  if (
+    [
+      "dominant-flat-plane",
+      "focused-model-small-in-scene",
+      "large-coordinate-units",
+      "missing-scene-bounds",
+      "missing-model-resources",
+      "relocatable-texture-resources",
+      "loose-textures-not-referenced",
+      "no-named-floor-meshes",
+      "no-named-collision-meshes",
+      "missing-walk-zones",
+      "missing-pass-zones",
+      "disconnected-navigation-zones",
+      "orphan-pass-zones",
+      "walk-views-outside-navigation-bounds",
+      "walk-views-inside-block-zones",
+      "walk-views-outside-walk-zones"
+    ].includes(code)
+  ) {
+    return "repair";
+  }
+  if (
+    [
+      "missing-geometry-compression",
+      "missing-texture-compression",
+      "oversized-texture-dimensions",
+      "many-large-textures"
+    ].includes(code)
+  ) {
+    return "optimize";
+  }
+  if (
+    [
+      "missing-normal-attributes",
+      "lightmaps-missing-secondary-uvs",
+      "some-lightmap-secondary-uvs-missing"
+    ].includes(code)
+  ) {
+    return "bake";
+  }
+  return undefined;
+}
+
+function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
+  if (action === "repair") {
+    return {
+      action,
+      title: "Repair import first",
+      detail: "Regenerate focused bounds, views, rooms, navigation zones, and recover texture paths where possible.",
+      button: "Repair Import"
+    };
+  }
+  if (action === "optimize") {
+    return {
+      action,
+      title: "Optimize for web",
+      detail: "Create the optimized GLB artifact, apply compression, refresh stats, and reduce mobile loading risk.",
+      button: "Optimize"
+    };
+  }
+  if (action === "bake") {
+    return {
+      action,
+      title: "Improve lighting",
+      detail: "Run the Blender/Cycles lightmap workflow when Blender is installed, then inspect the viewer result.",
+      button: "Bake Lightmaps"
+    };
+  }
+  return {
+    action,
+    title: "Test in viewer",
+    detail: "The import report has no blocking action. Open the viewer and test walking, click movement, and room buttons.",
+    button: "Open Viewer"
+  };
+}
+
+function ImportNextSteps({
+  stats,
+  apiConnected,
+  repairState,
+  optimizeState,
+  bakeState,
+  onRepair,
+  onOptimize,
+  onBake
+}: {
+  stats: BundleStats | null;
+  apiConnected: boolean;
+  repairState: RepairState;
+  optimizeState: OptimizeState;
+  bakeState: BakeState;
+  onRepair: () => void;
+  onOptimize: () => void;
+  onBake: () => void;
+}) {
+  const diagnostics = stats?.diagnostics ?? [];
+  const priority = diagnostics.filter((diagnostic) => diagnostic.severity !== "info");
+  const actions = [
+    ...new Set(priority.map((diagnostic) => importActionForDiagnostic(diagnostic.code)).filter(Boolean))
+  ] as ImportNextStepAction[];
+  const steps = (actions.length > 0 ? actions : ["test" as const]).slice(0, 3).map(nextStepCopy);
+  const firstIssue = priority[0];
+
+  return (
+    <div className="import-next-steps">
+      <div className="compact-panel-heading">
+        <strong>Recommended next step</strong>
+        {firstIssue ? <small>{firstIssue.title}</small> : <small>Import report looks usable</small>}
+      </div>
+      {steps.map((step) => {
+        const disabled =
+          step.action === "test"
+            ? false
+            : !apiConnected ||
+              (step.action === "repair" && repairState === "repairing") ||
+              (step.action === "optimize" && optimizeState === "optimizing") ||
+              (step.action === "bake" && bakeState === "baking");
+        const onClick =
+          step.action === "repair"
+            ? onRepair
+            : step.action === "optimize"
+              ? onOptimize
+              : step.action === "bake"
+                ? onBake
+                : () => window.open("http://127.0.0.1:5173/", "_blank", "noopener,noreferrer");
+        return (
+          <div key={step.action} className={`import-next-step ${step.action}`}>
+            <div>
+              <strong>{step.title}</strong>
+              <p>{step.detail}</p>
+            </div>
+            <button type="button" className="button secondary" disabled={disabled} onClick={onClick}>
+              {step.action === "repair" && <Wrench size={15} aria-hidden="true" />}
+              {step.action === "optimize" && <Activity size={15} aria-hidden="true" />}
+              {step.action === "bake" && <Palette size={15} aria-hidden="true" />}
+              {step.action === "test" && <ExternalLink size={15} aria-hidden="true" />}
+              {step.button}
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

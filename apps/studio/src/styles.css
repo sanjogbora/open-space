@@ -668,6 +668,75 @@ button.list-row {
   margin-bottom: 4px;
 }
 
+.import-next-steps {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #d3e3ee;
+  border-radius: 8px;
+  background: #f6fbff;
+}
+
+.compact-panel-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.compact-panel-heading strong {
+  color: #24313a;
+  font-size: 13px;
+}
+
+.compact-panel-heading small {
+  min-width: 0;
+  overflow: hidden;
+  color: #60717c;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-next-step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #dce7ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.import-next-step strong {
+  color: #24313a;
+  font-size: 13px;
+}
+
+.import-next-step p {
+  margin-top: 3px;
+  color: #52636f;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.import-next-step.repair {
+  border-color: #c9e1f4;
+}
+
+.import-next-step.optimize {
+  border-color: #f1d5a6;
+}
+
+.import-next-step.bake {
+  border-color: #d8cce8;
+}
+
+.import-next-step.test {
+  border-color: #bee2d0;
+}
+
 .publish-readiness-list {
   display: grid;
   gap: 8px;
