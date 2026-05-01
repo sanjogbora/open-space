@@ -7,10 +7,14 @@ const args = process.argv.slice(2);
 const deploymentArg = args.find((arg) => !arg.startsWith("--"));
 const outArg = args.find((arg) => arg.startsWith("--out="))?.slice("--out=".length);
 const s3Arg = args.find((arg) => arg.startsWith("--s3="))?.slice("--s3=".length);
+const viewerBaseArg = args.find((arg) => arg.startsWith("--viewer-base="))?.slice("--viewer-base=".length);
+const publicBaseArg = args.find((arg) => arg.startsWith("--public-base="))?.slice("--public-base=".length);
 const dryRun = args.includes("--dry-run");
 
 if (!deploymentArg) {
-  throw new Error("Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--dry-run]");
+  throw new Error(
+    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--dry-run]"
+  );
 }
 
 const deploymentPath = path.resolve(deploymentArg);
@@ -140,7 +144,61 @@ function vercelConfig(deployment) {
   };
 }
 
+function normalizeUrlBase(value, label) {
+  if (!value) {
+    return undefined;
+  }
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${label} must be an absolute http(s) URL.`);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`${label} must use http or https.`);
+  }
+  return parsed.href.replace(/\/+$/, "");
+}
+
+function launchIndexHtml(viewerBase, publicBase) {
+  const sceneUrl = `${publicBase}/scene.manifest.json`;
+  const viewerUrl = `${viewerBase}/?scene=${encodeURIComponent(sceneUrl)}`;
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content="0; url=${viewerUrl}" />
+    <title>Open walkthrough</title>
+  </head>
+  <body>
+    <a href="${viewerUrl}">Open walkthrough</a>
+  </body>
+</html>
+`;
+}
+
+function embedSnippetHtml(viewerBase, publicBase) {
+  const sceneUrl = `${publicBase}/scene.manifest.json`;
+  const embedUrl = `${viewerBase}/embed.js`;
+  const title = deployment.projectId || "Walkthrough";
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Embed ${title}</title>
+  </head>
+  <body>
+    <script src="${embedUrl}" data-scene="${sceneUrl}" data-title="${title}" data-height="640px"></script>
+  </body>
+</html>
+`;
+}
+
 async function writeDeployReport(mode, target, checks, reportDir = sourceDir) {
+  const viewerBase = normalizeUrlBase(viewerBaseArg, "--viewer-base");
+  const publicBase = normalizeUrlBase(publicBaseArg, "--public-base");
   const report = {
     schemaVersion: "0.1",
     mode,
@@ -154,7 +212,15 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir) {
     assetCount: deployment.assetCount,
     checkedAssetCount: checks.length,
     totalBytes: deployment.totalBytes,
-    cachePolicy: cachePolicySummary()
+    cachePolicy: cachePolicySummary(),
+    ...(viewerBase ? { viewerBase } : {}),
+    ...(publicBase ? { publicBase } : {}),
+    ...(viewerBase && publicBase
+      ? {
+          launchUrl: `${viewerBase}/?scene=${encodeURIComponent(`${publicBase}/scene.manifest.json`)}`,
+          embedScript: `<script src="${viewerBase}/embed.js" data-scene="${publicBase}/scene.manifest.json" data-title="${deployment.projectId}" data-height="640px"></script>`
+        }
+      : {})
   };
   if (!dryRun) {
     await writeFile(path.join(reportDir, "deploy-report.json"), `${JSON.stringify(report, null, 2)}\n`);
@@ -164,6 +230,11 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir) {
 
 async function deployToDirectory(outputRoot) {
   const checks = await validateDeployment();
+  const viewerBase = normalizeUrlBase(viewerBaseArg, "--viewer-base");
+  const publicBase = normalizeUrlBase(publicBaseArg, "--public-base");
+  if ((viewerBase && !publicBase) || (!viewerBase && publicBase)) {
+    throw new Error("--viewer-base and --public-base must be provided together.");
+  }
   const target = path.resolve(outputRoot, deployment.projectId, deployment.version);
   if (dryRun) {
     await writeDeployReport("directory", target, checks);
@@ -173,11 +244,18 @@ async function deployToDirectory(outputRoot) {
   await cp(sourceDir, target, { recursive: true, force: true });
   await writeFile(path.join(target, "_headers"), headersFile(deployment));
   await writeFile(path.join(target, "vercel.json"), `${JSON.stringify(vercelConfig(deployment), null, 2)}\n`);
+  if (viewerBase && publicBase) {
+    await writeFile(path.join(target, "index.html"), launchIndexHtml(viewerBase, publicBase));
+    await writeFile(path.join(target, "embed.html"), embedSnippetHtml(viewerBase, publicBase));
+  }
   await writeDeployReport("directory", target, checks, target);
 }
 
 async function deployToS3(targetUri) {
   const checks = await validateDeployment();
+  if ((viewerBaseArg && !publicBaseArg) || (!viewerBaseArg && publicBaseArg)) {
+    throw new Error("--viewer-base and --public-base must be provided together.");
+  }
   const args = ["s3", "sync", sourceDir, targetUri, "--delete"];
   if (dryRun) {
     args.push("--dryrun");

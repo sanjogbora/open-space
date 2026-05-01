@@ -55,6 +55,24 @@ Usage:
 
 The script inserts an iframe pointed at the hosted viewer. This keeps the viewer isolated from the client page and gives us a stable path for fullscreen, autoplay, and future runtime messaging.
 
+## Static Deployment
+
+Published versions include `deployment.json`, which can be validated and copied with:
+
+```txt
+node scripts/deploy-published-bundle.mjs apps/viewer-demo/public/published/<project>/<version>/deployment.json --out=dist/published
+```
+
+For production/self-hosting, pass both public URLs so the exported folder gets a launch page and embed example that point at the hosted viewer app and the deployed scene assets:
+
+```txt
+node scripts/deploy-published-bundle.mjs apps/viewer-demo/public/published/<project>/<version>/deployment.json --out=dist/published --viewer-base=https://viewer.example.com --public-base=https://cdn.example.com/open-space/<version>/
+```
+
+- `--viewer-base` is the hosted viewer application origin.
+- `--public-base` is the final public URL of the deployed scene folder.
+- The deploy script writes `_headers`, `vercel.json`, `index.html`, `embed.html`, and `deploy-report.json` for static hosts.
+
 ## Manifest Rules
 
 - `schemaVersion` must be `0.1`.

@@ -1083,14 +1083,14 @@ function publishedLocalDeployCommand(entry: PublishEntry): string {
   if (!entry.deploymentPath) {
     return "";
   }
-  return `node scripts/deploy-published-bundle.mjs ${shellQuote(entry.deploymentPath)} --out=dist/published`;
+  return `node scripts/deploy-published-bundle.mjs ${shellQuote(entry.deploymentPath)} --out=dist/published --viewer-base=https://viewer.example.com --public-base=https://cdn.example.com/open-space/${entry.version}/`;
 }
 
 function publishedBucketDeployCommand(entry: PublishEntry): string {
   if (!entry.deploymentPath) {
     return "";
   }
-  return `node scripts/deploy-published-bundle.mjs ${shellQuote(entry.deploymentPath)} --s3=s3://your-bucket/open-space/${entry.version}`;
+  return `node scripts/deploy-published-bundle.mjs ${shellQuote(entry.deploymentPath)} --s3=s3://your-bucket/open-space/${entry.version} --viewer-base=https://viewer.example.com --public-base=https://cdn.example.com/open-space/${entry.version}/`;
 }
 
 function formatBytes(bytes: number): string {
