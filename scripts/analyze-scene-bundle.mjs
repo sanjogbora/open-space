@@ -2128,6 +2128,14 @@ function createDiagnostics(manifest, report, graphs) {
       message: `${report.looseImageCount} loose image file(s) were found, but the active model does not reference image textures.`,
       action: "Ask for the original GLTF/GLB export with embedded or correctly linked textures, or upload a ZIP that preserves the exact texture paths used by the model."
     });
+  } else if ((report.materialCount ?? 0) > 0 && (report.textureCount ?? 0) === 0 && (report.imageCount ?? 0) === 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "model-has-no-texture-images",
+      title: "Model has no texture images",
+      message: "The active model has materials but no texture/image definitions, so surfaces will rely only on flat material colors.",
+      action: "If the source render has brick, fabric, wood, or wall textures, upload the GLTF ZIP with its texture folder or re-export a GLB with embedded textures."
+    });
   } else if ((report.looseImageCount ?? 0) > 0) {
     diagnostics.push({
       severity: "info",

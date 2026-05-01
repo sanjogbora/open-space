@@ -733,6 +733,10 @@ button.list-row {
   border-color: #d8cce8;
 }
 
+.import-next-step.review {
+  border-color: #f1c1c7;
+}
+
 .import-next-step.test {
   border-color: #bee2d0;
 }

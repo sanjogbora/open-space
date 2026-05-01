@@ -6549,7 +6549,7 @@ function DiagnosticList({
   );
 }
 
-type ImportNextStepAction = "repair" | "optimize" | "bake" | "test";
+type ImportNextStepAction = "repair" | "optimize" | "bake" | "review" | "test";
 
 interface ImportNextStep {
   action: ImportNextStepAction;
@@ -6600,6 +6600,17 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   ) {
     return "bake";
   }
+  if (
+    [
+      "model-has-no-texture-images",
+      "malformed-model",
+      "invalid-default-scene",
+      "default-scene-has-no-renderable-meshes",
+      "unsupported-required-extensions"
+    ].includes(code)
+  ) {
+    return "review";
+  }
   return undefined;
 }
 
@@ -6626,6 +6637,14 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
       title: "Improve lighting",
       detail: "Run the Blender/Cycles lightmap workflow when Blender is installed, then inspect the viewer result.",
       button: "Bake Lightmaps"
+    };
+  }
+  if (action === "review") {
+    return {
+      action,
+      title: "Fix the source export",
+      detail: "The model report found an issue that needs the original export, texture ZIP, or source model to be corrected.",
+      button: "Review Diagnostics"
     };
   }
   return {
@@ -6662,7 +6681,9 @@ function ImportNextSteps({
   const actions = [
     ...new Set(priority.map((diagnostic) => importActionForDiagnostic(diagnostic.code)).filter(Boolean))
   ] as ImportNextStepAction[];
-  const steps = (actions.length > 0 ? actions : ["test" as const]).slice(0, 3).map(nextStepCopy);
+  const steps = (actions.length > 0 ? actions : priority.length > 0 ? ["review" as const] : ["test" as const])
+    .slice(0, 3)
+    .map(nextStepCopy);
   const firstIssue = priority[0];
 
   return (
@@ -6686,7 +6707,9 @@ function ImportNextSteps({
               ? onOptimize
               : step.action === "bake"
                 ? onBake
-                : () => window.open(viewerUrl, "_blank", "noopener,noreferrer");
+                : step.action === "review"
+                  ? () => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })
+                  : () => window.open(viewerUrl, "_blank", "noopener,noreferrer");
         return (
           <div key={step.action} className={`import-next-step ${step.action}`}>
             <div>
@@ -6697,6 +6720,7 @@ function ImportNextSteps({
               {step.action === "repair" && <Wrench size={15} aria-hidden="true" />}
               {step.action === "optimize" && <Activity size={15} aria-hidden="true" />}
               {step.action === "bake" && <Palette size={15} aria-hidden="true" />}
+              {step.action === "review" && <AlertTriangle size={15} aria-hidden="true" />}
               {step.action === "test" && <ExternalLink size={15} aria-hidden="true" />}
               {step.button}
             </button>
