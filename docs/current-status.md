@@ -88,6 +88,7 @@ Current limitations:
 - Hotspot, link, object-toggle, and video texture support.
 - Runtime material override loading.
 - Runtime material variant switching.
+- Viewer can relight unlit/flat GLTF materials as standard lit materials, with a Studio toggle to disable it when a source intentionally uses flat rendering.
 - Runtime object inspection panel.
 - Visual smoke tests for desktop/mobile viewer and Studio.
 - Automatic Blender lightmap bake job and manual lightmap upload workflow.

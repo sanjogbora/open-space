@@ -2116,6 +2116,7 @@ async function resetManifestForUploadedModel(
     rendering: {
       ...manifest.rendering,
       doubleSidedMaterials: true,
+      relightUnlitMaterials: manifest.rendering?.relightUnlitMaterials ?? true,
       modelScale
     },
     environment: {

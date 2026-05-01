@@ -799,15 +799,18 @@ export class WalkthroughViewer {
         node.castShadow = !architecturalShell;
         node.receiveShadow = true;
         if (Array.isArray(node.material)) {
-          node.material.forEach((material) => {
+          node.material = node.material.map((sourceMaterial) => {
+            const material = this.normalizeLoadedMaterial(sourceMaterial);
             this.applyMaterialOverride(material);
             this.prepareMaterial(material, name);
             if (forceDoubleSided || architecturalShell) {
               material.side = THREE.DoubleSide;
             }
             material.needsUpdate = true;
+            return material;
           });
         } else {
+          node.material = this.normalizeLoadedMaterial(node.material);
           this.applyMaterialOverride(node.material);
           this.prepareMaterial(node.material, name);
           if (forceDoubleSided || architecturalShell) {
@@ -817,6 +820,31 @@ export class WalkthroughViewer {
         }
       }
     });
+  }
+
+  private normalizeLoadedMaterial(material: THREE.Material): THREE.Material {
+    const relightUnlit = this.manifest.rendering?.relightUnlitMaterials !== false;
+    if (!relightUnlit || !(material instanceof THREE.MeshBasicMaterial)) {
+      return material;
+    }
+    const nextMaterial = new THREE.MeshStandardMaterial({
+      name: material.name,
+      color: material.color.clone(),
+      map: material.map ?? null,
+      alphaMap: material.alphaMap ?? null,
+      transparent: material.transparent,
+      opacity: material.opacity,
+      alphaTest: material.alphaTest,
+      side: material.side,
+      vertexColors: material.vertexColors,
+      roughness: 0.78,
+      metalness: 0
+    });
+    nextMaterial.userData = { ...material.userData, relitFromUnlit: true };
+    if (material.map) {
+      material.map.colorSpace = THREE.SRGBColorSpace;
+    }
+    return nextMaterial;
   }
 
   private registerTopViewHiddenObject(object: THREE.Object3D): void {

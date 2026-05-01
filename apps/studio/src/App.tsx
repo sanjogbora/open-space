@@ -5790,6 +5790,19 @@ function App() {
                         />
                         <span>Double-sided walls and ceilings</span>
                       </label>
+                      <label className="toggle-row compact-toggle">
+                        <input
+                          type="checkbox"
+                          checked={manifest.rendering?.relightUnlitMaterials ?? true}
+                          onChange={(event) =>
+                            updateRendering((rendering) => ({
+                              ...rendering,
+                              relightUnlitMaterials: event.target.checked
+                            }))
+                          }
+                        />
+                        <span>Relight flat/unlit materials</span>
+                      </label>
                       <label>
                         <span>Floor Keywords</span>
                         <input

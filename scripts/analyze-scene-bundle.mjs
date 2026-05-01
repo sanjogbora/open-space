@@ -1758,6 +1758,10 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.transmissionMaterialCount ?? 0),
     0
   );
+  const unlitMaterialCount = report.models.reduce(
+    (sum, model) => sum + (model.unlitMaterialCount ?? 0),
+    0
+  );
   const vertexColorPrimitiveCount = report.models.reduce(
     (sum, model) => sum + (model.vertexColorPrimitiveCount ?? 0),
     0
@@ -2070,6 +2074,16 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Physical glass/transmission materials detected",
       message: `${transmissionMaterialCount} material(s) use transmission or volume extensions.`,
       action: "Compare glass in the viewer after optimization; browser viewers may need simpler glass settings for stable performance."
+    });
+  }
+
+  if (unlitMaterialCount > 0 && unlitMaterialCount / Math.max(1, report.materialCount ?? 0) >= 0.5) {
+    diagnostics.push({
+      severity: "info",
+      code: "mostly-unlit-materials",
+      title: "Most materials are exported as unlit",
+      message: `${unlitMaterialCount}/${report.materialCount ?? 0} material(s) use KHR_materials_unlit, which can make architectural models look flat under viewer lighting.`,
+      action: "Keep Relight flat/unlit materials enabled in Controls unless the source intentionally uses flat/emissive rendering."
     });
   }
 

@@ -129,6 +129,7 @@ export interface QualityProfile {
 
 export interface RenderingConfig {
   doubleSidedMaterials?: boolean;
+  relightUnlitMaterials?: boolean;
   modelScale?: number;
 }
 
