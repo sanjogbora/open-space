@@ -78,6 +78,17 @@ interface NavigationRepairDraft {
   point?: Vec3;
 }
 
+type NavigationRepairAction = "pass" | "walk" | "ignore";
+
+interface NavigationRepairRecommendation {
+  title: string;
+  detail: string;
+  primaryLabel: string;
+  action: NavigationRepairAction;
+  requiresPoint?: boolean;
+  requiresBlocker?: boolean;
+}
+
 interface NavigationQaIssue {
   id: string;
   severity: "error" | "warning" | "info";
@@ -473,6 +484,60 @@ function navigationZonePlainHelp(kind: NavigationZone["kind"]): string {
     return "Use this to connect two walk areas through a door or opening.";
   }
   return "People cannot move through this area.";
+}
+
+function navigationRepairRecommendation(draft: NavigationRepairDraft): NavigationRepairRecommendation {
+  if (draft.reason === "route-not-found") {
+    return {
+      title: "Recommended fix: add a doorway connector",
+      detail:
+        "The clicked floor exists, but the route cannot cross from the current walk area to that spot. Add a green pass zone at the blocked point, then save and retry the click.",
+      primaryLabel: "Add Door Pass",
+      action: "pass",
+      requiresPoint: true
+    };
+  }
+
+  if (draft.reason === "outside-walk-zone" || draft.reason === "no-walkable-hit") {
+    return {
+      title: "Recommended fix: add clickable floor",
+      detail:
+        "The clicked spot is not inside any walk area. Add a blue walk patch there if a person should be allowed to stand on that part of the model.",
+      primaryLabel: "Add Walk Patch",
+      action: "walk",
+      requiresPoint: true
+    };
+  }
+
+  if (draft.reason === "blocked-collision") {
+    if (draft.point) {
+      return {
+        title: "Recommended fix: add a doorway connector",
+        detail:
+          "Something is acting like a wall at the clicked point. If this is a door or opening, add a green pass zone first. Ignore the blocker only when you know the detected object is not really a wall.",
+        primaryLabel: "Add Door Pass",
+        action: "pass",
+        requiresPoint: true
+      };
+    }
+    return {
+      title: "Recommended fix: ignore the false blocker",
+      detail:
+        "The viewer reported a blocker but no precise floor point. Ignore it only if this object is not actually supposed to stop movement.",
+      primaryLabel: "Ignore Blocker",
+      action: "ignore",
+      requiresBlocker: true
+    };
+  }
+
+  return {
+    title: "Recommended fix: review the clicked point",
+    detail:
+      "This looks like a bounds or setup issue. Use the zone map first; if the point should be reachable, add a walk patch or pass zone near the highlighted point.",
+    primaryLabel: draft.point ? "Add Walk Patch" : "Review Zones",
+    action: draft.point ? "walk" : "pass",
+    requiresPoint: true
+  };
 }
 
 function markNavigationZoneAuthored(zone: NavigationZone): NavigationZone {
@@ -1652,6 +1717,10 @@ function App() {
   );
   const navigationIssues = useMemo(() => (manifest ? navigationQaIssues(manifest) : []), [manifest]);
   const navigationCoverageSummary = useMemo(() => (manifest ? navigationCoverage(manifest) : null), [manifest]);
+  const repairRecommendation = useMemo(
+    () => (navigationRepairDraft ? navigationRepairRecommendation(navigationRepairDraft) : null),
+    [navigationRepairDraft]
+  );
   const publishChecks = useMemo<PublishCheck[]>(() => {
     const errorDiagnostics = bundleStats?.diagnostics?.filter((diagnostic) => diagnostic.severity === "error") ?? [];
     const publishBlockers = bundleStats?.publishReadiness?.blockers ?? [];
@@ -2226,6 +2295,19 @@ function App() {
         zones: [...zones, zone]
       };
     });
+    setRepairSummary(kind === "pass" ? "Added a doorway pass at the blocked point." : "Added a walk patch at the blocked point.");
+    setNotice("saved");
+  };
+
+  const applyNavigationRepairRecommendation = () => {
+    if (!repairRecommendation || !navigationRepairDraft) {
+      return;
+    }
+    if (repairRecommendation.action === "ignore") {
+      ignoreCollisionName(navigationRepairDraft.blockerName);
+      return;
+    }
+    addNavigationRepairZone(repairRecommendation.action);
   };
 
   const addPassZoneFromCandidate = (candidate: DoorPassCandidate) => {
@@ -2309,6 +2391,8 @@ function App() {
       };
     });
     setBlockerNameDraft("");
+    setRepairSummary(`Ignored ${trimmed} as navigation collision.`);
+    setNotice("saved");
   };
 
   const moveNavigationZoneOnMap = (
@@ -5407,6 +5491,26 @@ function App() {
                             </div>
                           )}
                         </dl>
+                        {repairRecommendation && (
+                          <div className="repair-recommendation">
+                            <div>
+                              <strong>{repairRecommendation.title}</strong>
+                              <p>{repairRecommendation.detail}</p>
+                            </div>
+                            <button
+                              type="button"
+                              className="button primary"
+                              disabled={
+                                (repairRecommendation.requiresPoint && !navigationRepairDraft.point) ||
+                                (repairRecommendation.requiresBlocker && !navigationRepairDraft.blockerName)
+                              }
+                              onClick={applyNavigationRepairRecommendation}
+                            >
+                              <Wrench size={16} aria-hidden="true" />
+                              {repairRecommendation.primaryLabel}
+                            </button>
+                          </div>
+                        )}
                         <div className="inline-actions">
                           <button
                             type="button"

@@ -19,6 +19,8 @@ The viewer currently supports the core walkthrough navigation loop:
 - Mobile tap and drag-look controls are present.
 - Movement behavior is now driven by `controls.json`.
 - Studio has a Controls tab for enabling/disabling WASD, click-to-move, drag-look, speed, sensitivity, and click threshold.
+- Studio navigation repair now shows a recommended plain-English fix from the viewer failure reason.
+- Studio navigation zones now default to readable walk/pass/block cards with raw coordinates hidden under Advanced.
 - Viewer supports runtime material variant controls from the scene manifest.
 - Viewer supports hotspot, link, video texture, material variant, object-toggle, and object-pick interactions.
 - Viewer has share, copy-embed, fullscreen, and screenshot controls.

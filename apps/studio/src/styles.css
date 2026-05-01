@@ -1116,6 +1116,28 @@ button.list-row {
   color: #17415d;
 }
 
+.repair-recommendation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #bfe5d3;
+  border-radius: 8px;
+  background: #f1fbf6;
+}
+
+.repair-recommendation strong {
+  color: #146c43;
+}
+
+.repair-recommendation p {
+  margin-top: 4px;
+  color: #315466;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .navigation-qa-list {
   display: grid;
   gap: 8px;
@@ -1999,6 +2021,8 @@ code {
   .field-grid,
   .variant-editor-row,
   .zone-editor-heading,
+  .zone-simple-heading,
+  .repair-recommendation,
   .toggle-grid,
   .vector-field {
     grid-template-columns: 1fr;
@@ -2006,6 +2030,11 @@ code {
 
   .variant-editor-row .icon-action,
   .zone-editor-row .icon-action {
+    width: 100%;
+  }
+
+  .zone-simple-actions,
+  .repair-recommendation .button {
     width: 100%;
   }
 
