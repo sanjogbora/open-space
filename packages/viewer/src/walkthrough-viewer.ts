@@ -446,12 +446,8 @@ export class WalkthroughViewer {
     this.generatedWalkZonesOnly = zones.hasWalkZones && !zones.hasAuthoredWalkZones;
     this.geometryFloorMeshes = fallbackFloors.length > 0 ? fallbackFloors : this.collectFloorMeshes(root);
     if (zones.walkMeshes.length > 0) {
-      this.floorMeshes = this.generatedWalkZonesOnly && this.geometryFloorMeshes.length > 0
-        ? this.geometryFloorMeshes
-        : zones.walkMeshes;
-      this.walkableMeshes = this.generatedWalkZonesOnly && this.geometryFloorMeshes.length > 0
-        ? [...this.geometryFloorMeshes, ...zones.walkMeshes]
-        : zones.walkMeshes;
+      this.floorMeshes = zones.walkMeshes;
+      this.walkableMeshes = [...zones.walkMeshes, ...zones.passMeshes];
     } else {
       this.floorMeshes = this.geometryFloorMeshes;
       this.walkableMeshes = this.collectWalkableMeshes(root);
@@ -1597,12 +1593,10 @@ export class WalkthroughViewer {
 
     const cameraSphere = new THREE.Sphere(candidate, this.collisionRadius);
     const insidePassZone = this.isInsidePassZone(candidate);
-    const onGeneratedImportFloor = this.generatedWalkZonesOnly && this.canStandOnGeometryFloor(candidate);
     if (
       this.walkZoneMeshes.length > 0 &&
       !this.isInsideWalkZone(candidate) &&
-      !insidePassZone &&
-      !onGeneratedImportFloor
+      !insidePassZone
     ) {
       return { reason: "outside-walk-zone", point: candidate.clone() };
     }
@@ -1807,7 +1801,7 @@ export class WalkthroughViewer {
       }
       const point = pointFor(x, z);
       const hasExplicitWalkZones = this.walkZoneMeshes.length > 0;
-      const onDetectedFloor = this.geometryFloorMeshes.length > 0 && this.canStandOnGeometryFloor(point);
+      const onDetectedFloor = !hasExplicitWalkZones && this.geometryFloorMeshes.length > 0 && this.canStandOnGeometryFloor(point);
       const passable = (hasExplicitWalkZones || onDetectedFloor) && !this.navigationFailureDetail(point);
       passableCache.set(key, passable);
       return passable;
