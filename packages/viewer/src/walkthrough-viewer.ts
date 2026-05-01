@@ -106,6 +106,8 @@ export class WalkthroughViewer {
   private readonly managedTextures: ManagedTexture[] = [];
   private readonly keys = new Set<string>();
   private readonly collisionRadius = 0.28;
+  private readonly maxStepUp = 0.42;
+  private readonly maxStepDown = 0.78;
   private readonly materialOverrides = new Map<string, MaterialOverride>();
   private readonly materialLightMaps: THREE.Texture[] = [];
   private readonly objectOverrides = new Map<string, ObjectOverride>();
@@ -1592,8 +1594,9 @@ export class WalkthroughViewer {
       nextPosition.z += flatDelta.z;
     }
     nextPosition.y = damp(nextPosition.y, target.y, 5.5, delta);
-    if (this.canOccupyPosition(nextPosition, this.camera.position)) {
-      this.camera.position.copy(nextPosition);
+    const steppedPosition = this.resolveSteppedMovementPosition(nextPosition, this.camera.position, delta);
+    if (steppedPosition && this.canOccupyPosition(steppedPosition, this.camera.position)) {
+      this.camera.position.copy(steppedPosition);
       this.snapCameraToFloor(delta);
       this.clampCamera();
       return;
@@ -1637,27 +1640,59 @@ export class WalkthroughViewer {
   }
 
   private moveCameraBy(delta: THREE.Vector3): void {
-    const direct = this.camera.position.clone().add(delta);
-    if (this.canOccupyPosition(direct, this.camera.position)) {
+    const direct = this.resolveSteppedMovementPosition(this.camera.position.clone().add(delta), this.camera.position);
+    if (direct && this.canOccupyPosition(direct, this.camera.position)) {
       this.camera.position.copy(direct);
       this.snapCameraToFloor();
       this.clampCamera();
       return;
     }
 
-    const slideX = this.camera.position.clone().add(new THREE.Vector3(delta.x, 0, 0));
-    if (this.canOccupyPosition(slideX, this.camera.position)) {
+    const slideX = this.resolveSteppedMovementPosition(
+      this.camera.position.clone().add(new THREE.Vector3(delta.x, 0, 0)),
+      this.camera.position
+    );
+    if (slideX && this.canOccupyPosition(slideX, this.camera.position)) {
       this.camera.position.copy(slideX);
       this.snapCameraToFloor();
       this.clampCamera();
     }
 
-    const slideZ = this.camera.position.clone().add(new THREE.Vector3(0, 0, delta.z));
-    if (this.canOccupyPosition(slideZ, this.camera.position)) {
+    const slideZ = this.resolveSteppedMovementPosition(
+      this.camera.position.clone().add(new THREE.Vector3(0, 0, delta.z)),
+      this.camera.position
+    );
+    if (slideZ && this.canOccupyPosition(slideZ, this.camera.position)) {
       this.camera.position.copy(slideZ);
       this.snapCameraToFloor();
       this.clampCamera();
     }
+  }
+
+  private resolveSteppedMovementPosition(
+    position: THREE.Vector3,
+    origin: THREE.Vector3,
+    delta = 1 / 60
+  ): THREE.Vector3 | undefined {
+    if (this.geometryFloorMeshes.length === 0) {
+      return position;
+    }
+    const floorY = this.sampleGeometryFloorY(position, {
+      maxDelta: Math.max(this.maxStepDown, this.maxStepUp, this.cameraHeight * 0.5)
+    });
+    if (typeof floorY !== "number") {
+      return position;
+    }
+    const originFloorY = (this.stableFloorY ?? origin.y - this.cameraHeight);
+    const heightDelta = floorY - originFloorY;
+    if (heightDelta > this.maxStepUp || heightDelta < -this.maxStepDown) {
+      return undefined;
+    }
+    const next = position.clone();
+    const targetY = floorY + this.cameraHeight;
+    const smoothing = Math.abs(heightDelta) <= Math.max(0.16, this.cameraHeight * 0.1) ? 7.5 : 3.4;
+    next.y = damp(position.y, targetY, smoothing, delta);
+    return next;
   }
 
   private canOccupyPosition(position: THREE.Vector3, origin?: THREE.Vector3): boolean {
