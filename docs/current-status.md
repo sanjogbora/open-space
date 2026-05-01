@@ -8,6 +8,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - A blue floor marker appears at the selected destination.
 - The camera eases toward the clicked point.
 - If a clicked point is slightly outside a walk zone, the viewer now searches nearby reachable floor points before failing.
+- Door/opening clicks keep a projected floor target for routing or repair even when the first target is outside the current walk zone.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
 - Predefined room/view buttons move the camera to saved views.
 - A floorplan/minimap overlay tracks camera position and can jump to saved views.

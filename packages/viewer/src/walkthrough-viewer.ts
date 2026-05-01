@@ -2214,6 +2214,7 @@ export class WalkthroughViewer {
       Math.max(4.5, this.cameraHeight + 3.2)
     );
     const offsets = [0.45, 0.8, 1.25, 1.8, 2.5, 3.4, 4.6, 5.8];
+    let fallbackFloorHit: THREE.Intersection | undefined;
     for (const offset of offsets) {
       const probe = this.camera.position.clone().addScaledVector(direction, baseDistance + offset);
       const origin = probe.clone();
@@ -2225,13 +2226,14 @@ export class WalkthroughViewer {
       if (!floorHit) {
         continue;
       }
+      fallbackFloorHit ??= floorHit;
       const target = floorHit.point.clone();
       target.y = floorHit.point.y + this.cameraHeight;
       if (!this.navigationFailureDetail(target, this.camera.position)) {
         return floorHit;
       }
     }
-    return undefined;
+    return fallbackFloorHit;
   }
 
   private tryMoveToFloorHit(floorHit: THREE.Intersection, event: PointerEvent): boolean {
