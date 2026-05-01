@@ -7,8 +7,11 @@ The viewer currently supports the core walkthrough navigation loop:
 - Click or tap a floor mesh to move.
 - A blue floor marker appears at the selected destination.
 - The camera eases toward the clicked point.
+- If a clicked point is slightly outside a walk zone, the viewer now searches nearby reachable floor points before failing.
+- Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
 - Predefined room/view buttons move the camera to saved views.
 - A floorplan/minimap overlay tracks camera position and can jump to saved views.
+- Top views can hide ceiling/roof shell meshes so uploaded apartments are inspectable from above.
 - Movement is constrained by configured scene bounds.
 - Basic collision boxes are generated from configured collision mesh names.
 - Keyboard movement works with WASD/arrow keys.
@@ -37,13 +40,15 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer supports in-viewport object picking with object/material details.
 - Studio Interactions can create and edit hotspots, external scene links, and object toggles.
 - Analyzer inspects embedded GLB image payloads for dimensions, invalid buffer references, and unsupported MIME types.
+- API upload validation rejects malformed GLB containers with broken lengths, truncated chunks, invalid JSON chunks, or non-glTF 2.0 assets.
+- Studio/API expose Blender/Cycles lightmap bake jobs with quality presets, UV2 generation, generated lightmap assets, and material assignment.
 
 Current limitations:
 
 - Collision is box-based, not a full navmesh/capsule controller.
 - No stair/level transition logic yet.
 - No editable floor-plan authoring UI yet.
-- No guided pathfinding around obstacles yet.
+- Pathfinding is still an internal generated grid/waypoint fallback, not an authored production navmesh.
 - No in-editor navigation-zone painting yet.
 
 ## Implemented Product Foundation
@@ -75,6 +80,7 @@ Current limitations:
 - Runtime material variant switching.
 - Runtime object inspection panel.
 - Visual smoke tests for desktop/mobile viewer and Studio.
+- Automatic Blender lightmap bake job and manual lightmap upload workflow.
 
 ## Major Work Remaining
 
@@ -84,11 +90,11 @@ Current limitations:
 - Draco compression as an optional alternative to Meshopt.
 - Mesh simplification.
 - Draw-call optimization and safe mesh merging.
-- Lightmap UV generation.
-- Blender/Cycles or custom bake orchestration.
-- Light editor and bake settings UI.
+- Production-grade bake farm scheduling, denoise/artifact repair, and light editing.
 - Material texture maps, normal maps, emissive maps, UV controls, and texture-backed variants.
 - Studio-linked in-viewport object editing and placement tools.
+- Full navmesh/capsule controller with stair and multi-level handling.
+- Editable floor-plan/navigation-zone painting UI.
 - Robust reimport identity matching across renamed/restructured models.
 - Durable project/account backend.
 - Multi-project API and database persistence.

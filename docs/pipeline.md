@@ -13,6 +13,7 @@ Current CLI:
 ```txt
 pnpm.cmd analyze:demo
 node scripts/optimize-scene-bundle.mjs apps/viewer-demo/public/scenes/demo --profile=balanced --apply
+node scripts/bake-lightmaps.mjs apps/viewer-demo/public/scenes/demo --preset=medium --mode=lighting
 ```
 
 This runs:
@@ -87,6 +88,25 @@ If Khronos KTX-Software is not installed, the KTX2 step is marked `blocked` and 
 
 The demo scene now compresses from roughly 34 KB to roughly 15 KB with Meshopt enabled. On larger production scenes, the same job path will preserve the original `scene.glb`, generate `scene.optimized.glb`, apply the optimized artifact, refresh stats, and expose rollback in Studio.
 
+## Current Lightmap Bake Path
+
+The bake script uses Blender headless when `blender` is on PATH or `BLENDER_PATH` is set.
+
+Current steps:
+
+- Validate that Blender is available.
+- Import the active scene GLB/glTF.
+- Generate a secondary `Lightmap` UV set with Blender smart projection.
+- Create one bake texture per material, sized by object footprint and preset cap.
+- Bake `lighting` or `combined` output with Cycles samples from the selected preset.
+- Export `scene.lightmapped.glb`.
+- Write generated images under `lightmaps/`.
+- Update `materials.json` with `lightMapUrl`, `lightMapIntensity`, and `lightMapUvSet`.
+- Update `scene.manifest.json` to load the lightmapped scene.
+- Write `lightmap-bake-job.json` with stage-level status.
+
+If Blender is missing, the job is marked `blocked` and leaves the editable project unchanged.
+
 ## Initial Budgets
 
 - Total bundle: 160 MB.
@@ -102,5 +122,5 @@ These are conservative early defaults. Later phases will add device-specific bud
 - Generate optimization recommendations.
 - Add Draco as an alternative geometry compression option where useful.
 - Add a dedicated KTX2 normal-map profile and stronger texture quality controls.
-- Add Blender-headless bake job orchestration.
+- Improve Blender bake output with denoise/post-process controls and artifact checks.
 - Emit publish-ready asset manifests.
