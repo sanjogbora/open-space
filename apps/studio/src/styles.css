@@ -1479,19 +1479,59 @@ button.list-row {
 
 .zone-map-heading {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .zone-map-heading strong {
+  display: block;
   color: #24313a;
   font-size: 13px;
 }
 
 .zone-map-heading small {
+  display: block;
+  margin-top: 3px;
   color: #667681;
   font-size: 12px;
+}
+
+.zone-paint-tools {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid #d6dde2;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.zone-paint-tools button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid #d6dde2;
+  color: #52636f;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.zone-paint-tools button:last-child {
+  border-right: 0;
+}
+
+.zone-paint-tools button.active {
+  color: #ffffff;
+  background: #087fe7;
+}
+
+.zone-paint-tools button.active.pass {
+  background: #118c5b;
+}
+
+.zone-paint-tools button.active.block {
+  background: #b74335;
 }
 
 .zone-map-surface {
@@ -1506,6 +1546,12 @@ button.list-row {
     linear-gradient(90deg, rgba(38, 50, 59, 0.06) 1px, transparent 1px),
     #f8fafb;
   background-size: 36px 36px;
+}
+
+.zone-map-surface.paint-mode {
+  cursor: crosshair;
+  outline: 2px solid rgba(8, 127, 231, 0.18);
+  outline-offset: 2px;
 }
 
 .zone-map-item {
@@ -2055,6 +2101,15 @@ code {
   .zone-simple-actions,
   .repair-recommendation .button {
     width: 100%;
+  }
+
+  .zone-paint-tools {
+    width: 100%;
+  }
+
+  .zone-paint-tools button {
+    flex: 1;
+    padding: 0 7px;
   }
 
   .publish-action-card,

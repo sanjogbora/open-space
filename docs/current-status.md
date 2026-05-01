@@ -21,6 +21,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio has a Controls tab for enabling/disabling WASD, click-to-move, drag-look, speed, sensitivity, and click threshold.
 - Studio navigation repair now shows a recommended plain-English fix from the viewer failure reason.
 - Studio navigation zones now default to readable walk/pass/block cards with raw coordinates hidden under Advanced.
+- Studio zone map now has paint tools for adding walk areas, door passes, and blockers visually.
 - Viewer supports runtime material variant controls from the scene manifest.
 - Viewer supports hotspot, link, video texture, material variant, object-toggle, and object-pick interactions.
 - Viewer has share, copy-embed, fullscreen, and screenshot controls.
@@ -49,9 +50,9 @@ Current limitations:
 
 - Collision is box-based, not a full navmesh/capsule controller.
 - No stair/level transition logic yet.
-- No editable floor-plan authoring UI yet.
+- Floor-plan authoring is still basic: zones can be painted and dragged, but not yet drawn as polygons.
 - Pathfinding is still an internal generated grid/waypoint fallback, not an authored production navmesh.
-- No in-editor navigation-zone painting yet.
+- No polygon navmesh editor yet.
 
 ## Implemented Product Foundation
 
@@ -96,7 +97,7 @@ Current limitations:
 - Material texture maps, normal maps, emissive maps, UV controls, and texture-backed variants.
 - Studio-linked in-viewport object editing and placement tools.
 - Full navmesh/capsule controller with stair and multi-level handling.
-- Editable floor-plan/navigation-zone painting UI.
+- Polygon-based floor-plan/navigation-zone painting UI.
 - Robust reimport identity matching across renamed/restructured models.
 - Durable project/account backend.
 - Multi-project API and database persistence.

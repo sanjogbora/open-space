@@ -1271,6 +1271,7 @@ function App() {
     initialNavigationRepairDraft
   );
   const [expandedNavigationZoneIds, setExpandedNavigationZoneIds] = useState<Set<string>>(new Set());
+  const [navigationPaintKind, setNavigationPaintKind] = useState<NavigationZone["kind"] | null>(null);
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
 
@@ -2130,6 +2131,38 @@ function App() {
     });
   };
 
+  const createNavigationZoneAtPoint = (
+    kind: NavigationZone["kind"],
+    point: Vec3,
+    navigation: SceneManifest["navigation"]
+  ): NavigationZone => {
+    const zones = navigation.zones ?? [];
+    const nextIndex = zones.length + 1;
+    const base = createNavigationZone(nextIndex, kind, navigation.bounds);
+    const idSuffix = `${Date.now()}`.slice(-6);
+    const cameraHeight = navigation.cameraHeight;
+    const isWalk = kind === "walk";
+    const isPass = kind === "pass";
+    return {
+      ...base,
+      id: `${kind}-paint-${idSuffix}`,
+      label: kind === "walk" ? `Walk Area ${nextIndex}` : kind === "pass" ? `Door Pass ${nextIndex}` : `Blocker ${nextIndex}`,
+      center: [
+        Number(point[0].toFixed(3)),
+        isWalk
+          ? Number(((navigation.bounds?.min[1] ?? 0) + 0.03).toFixed(3))
+          : Number(Math.max(0.8, cameraHeight * 0.55).toFixed(3)),
+        Number(point[2].toFixed(3))
+      ],
+      size: isWalk
+        ? [2.4, 0.08, 2.4]
+        : isPass
+          ? [0.9, Math.max(1.8, cameraHeight + 0.6), 1.35]
+          : [0.35, Math.max(1.8, cameraHeight + 0.6), 2.8],
+      source: "authored"
+    };
+  };
+
   const createBoundaryBlockZones = () => {
     updateNavigation((navigation) => {
       const bounds = navigation.bounds;
@@ -2405,19 +2438,24 @@ function App() {
     clientX: number,
     clientY: number
   ) => {
-    const bounds = manifest?.navigation.bounds;
+    const navigation = manifest?.navigation;
+    const bounds = navigation?.bounds;
     if (!bounds) {
       return;
     }
-    const applyPosition = (x: number, y: number) => {
+    const pointFromClient = (x: number, y: number): Vec3 => {
       const rect = mapElement.getBoundingClientRect();
       const ratioX = clampNumber((x - rect.left) / Math.max(1, rect.width), 0, 1);
       const ratioY = clampNumber((y - rect.top) / Math.max(1, rect.height), 0, 1);
       const nextX = bounds.min[0] + ratioX * (bounds.max[0] - bounds.min[0]);
       const nextZ = bounds.max[2] - ratioY * (bounds.max[2] - bounds.min[2]);
+      return [Number(nextX.toFixed(3)), bounds.min[1], Number(nextZ.toFixed(3))];
+    };
+    const applyPosition = (x: number, y: number) => {
+      const point = pointFromClient(x, y);
       updateNavigationZone(zoneId, (zone) => ({
         ...zone,
-        center: [Number(nextX.toFixed(3)), zone.center[1], Number(nextZ.toFixed(3))]
+        center: [point[0], zone.center[1], point[2]]
       }));
     };
     applyPosition(clientX, clientY);
@@ -2428,6 +2466,37 @@ function App() {
     };
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp, { once: true });
+  };
+
+  const paintNavigationZoneOnMap = (
+    kind: NavigationZone["kind"],
+    mapElement: HTMLElement,
+    clientX: number,
+    clientY: number
+  ) => {
+    const navigation = manifest?.navigation;
+    const bounds = navigation?.bounds;
+    if (!bounds) {
+      return;
+    }
+    const rect = mapElement.getBoundingClientRect();
+    const ratioX = clampNumber((clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+    const ratioY = clampNumber((clientY - rect.top) / Math.max(1, rect.height), 0, 1);
+    const point: Vec3 = [
+      Number((bounds.min[0] + ratioX * (bounds.max[0] - bounds.min[0])).toFixed(3)),
+      bounds.min[1],
+      Number((bounds.max[2] - ratioY * (bounds.max[2] - bounds.min[2])).toFixed(3))
+    ];
+    const zone = createNavigationZoneAtPoint(kind, point, navigation);
+    updateNavigation((currentNavigation) => {
+      return {
+        ...currentNavigation,
+        zones: [...(currentNavigation.zones ?? []), zone]
+      };
+    });
+    setExpandedNavigationZoneIds((current) => new Set(current).add(zone.id));
+    setRepairSummary(`${navigationZoneKindLabel(kind)} added on the map. Save changes, then retry the viewer.`);
+    setNotice("saved");
   };
 
   const moveRoomOnMap = (
@@ -5887,13 +5956,45 @@ function App() {
                         </button>
                       </div>
                     </div>
-                    {manifest.navigation.bounds && (manifest.navigation.zones ?? []).length > 0 && (
+                    {manifest.navigation.bounds && (
                       <div className="zone-map">
                         <div className="zone-map-heading">
-                          <strong>Zone map</strong>
-                          <small>Drag a zone to move its center on X/Z</small>
+                          <div>
+                            <strong>Zone map</strong>
+                            <small>
+                              {navigationPaintKind
+                                ? `Click the map to add a ${navigationZoneKindLabel(navigationPaintKind).toLowerCase()}.`
+                                : "Drag existing zones, or choose a paint tool to add one."}
+                            </small>
+                          </div>
+                          <div className="zone-paint-tools" aria-label="Paint navigation zone">
+                            {(["walk", "pass", "block"] as const).map((kind) => (
+                              <button
+                                key={kind}
+                                type="button"
+                                className={navigationPaintKind === kind ? `active ${kind}` : kind}
+                                onClick={() => setNavigationPaintKind((current) => (current === kind ? null : kind))}
+                              >
+                                {navigationZoneKindLabel(kind)}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        <div className="zone-map-surface">
+                        <div
+                          className={navigationPaintKind ? "zone-map-surface paint-mode" : "zone-map-surface"}
+                          onPointerDown={(event) => {
+                            if (!navigationPaintKind || event.target !== event.currentTarget) {
+                              return;
+                            }
+                            event.preventDefault();
+                            paintNavigationZoneOnMap(
+                              navigationPaintKind,
+                              event.currentTarget,
+                              event.clientX,
+                              event.clientY
+                            );
+                          }}
+                        >
                           {navigationRepairDraft?.point && (
                             <span
                               className="zone-map-repair-point"
@@ -5912,6 +6013,7 @@ function App() {
                                 .join(" - ")}
                               onPointerDown={(event) => {
                                 event.preventDefault();
+                                event.stopPropagation();
                                 const mapElement = event.currentTarget.closest(".zone-map-surface");
                                 if (mapElement instanceof HTMLElement) {
                                   moveNavigationZoneOnMap(
