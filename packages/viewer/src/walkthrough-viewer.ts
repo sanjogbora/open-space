@@ -141,6 +141,7 @@ export class WalkthroughViewer {
   private movePath: THREE.Vector3[] = [];
   private clickMoveVelocity = 0;
   private cameraTween: CameraTween | undefined;
+  private stableFloorY: number | undefined;
   private activeView: SceneView | undefined;
   private pointerDown: { x: number; y: number; time: number } | undefined;
   private yaw = 0;
@@ -253,6 +254,7 @@ export class WalkthroughViewer {
     this.moveTarget = undefined;
     this.movePath = [];
     this.moveMarker.visible = false;
+    this.stableFloorY = undefined;
     this.cameraTween = {
       fromPosition: this.camera.position.clone(),
       toPosition: this.toSceneVector(view.position, { preserveMeterY: true }),
@@ -1247,6 +1249,7 @@ export class WalkthroughViewer {
       this.camera.position.set(-4, 1.65, 4);
       this.cameraTarget.set(0, 1.35, 0);
     }
+    this.stableFloorY = this.camera.position.y - this.cameraHeight;
     this.updateAnglesFromTarget();
     this.camera.lookAt(this.cameraTarget);
   }
@@ -1329,6 +1332,7 @@ export class WalkthroughViewer {
         }
         this.updateAnglesFromTarget();
         this.camera.lookAt(this.cameraTarget);
+        this.stableFloorY = this.camera.position.y - this.cameraHeight;
         return true;
       }
     }
@@ -1352,6 +1356,7 @@ export class WalkthroughViewer {
     this.camera.updateProjectionMatrix();
     this.updateAnglesFromTarget();
     this.camera.lookAt(this.cameraTarget);
+    this.stableFloorY = this.camera.position.y - this.cameraHeight;
   }
 
   private addLighting(): void {
@@ -1516,6 +1521,7 @@ export class WalkthroughViewer {
     const distance = this.camera.position.distanceTo(target);
     if (distance < 0.035) {
       this.camera.position.copy(target);
+      this.stableFloorY = target.y - this.cameraHeight;
       this.clickMoveVelocity = 0;
       const nextWaypoint = this.movePath.shift();
       if (nextWaypoint) {
@@ -2097,10 +2103,19 @@ export class WalkthroughViewer {
     if (typeof floorY !== "number") {
       return;
     }
-    const nextY = floorY + this.cameraHeight;
+    const currentFloorY = this.camera.position.y - this.cameraHeight;
+    const previousFloorY = this.stableFloorY ?? currentFloorY;
+    const bumpTolerance = Math.max(0.16, this.cameraHeight * 0.1);
+    const levelDelta = floorY - previousFloorY;
+    const targetFloorY = Math.abs(levelDelta) <= bumpTolerance ? previousFloorY : floorY;
+    const nextY = targetFloorY + this.cameraHeight;
     const difference = Math.abs(nextY - this.camera.position.y);
-    if (difference <= Math.max(0.28, this.cameraHeight * 0.18)) {
-      this.camera.position.y = damp(this.camera.position.y, nextY, 8.5, delta);
+    if (difference <= Math.max(0.62, this.cameraHeight * 0.38)) {
+      const smoothing = Math.abs(levelDelta) <= bumpTolerance ? 7.5 : 3.2;
+      this.camera.position.y = damp(this.camera.position.y, nextY, smoothing, delta);
+      this.stableFloorY = damp(previousFloorY, targetFloorY, smoothing, delta);
+    } else {
+      this.stableFloorY = currentFloorY;
     }
   }
 

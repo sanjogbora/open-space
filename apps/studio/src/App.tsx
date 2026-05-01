@@ -494,7 +494,7 @@ function navigationRepairRecommendation(draft: NavigationRepairDraft): Navigatio
     return {
       title: "Recommended fix: add a doorway connector",
       detail:
-        "The clicked floor exists, but the route cannot cross from the current walk area to that spot. Add a green pass zone at the blocked point, then save and retry the click.",
+        "The clicked floor exists, but the route cannot cross from the current walk area to that spot. Add a green pass zone and a target walk patch if needed, then save and retry the click.",
       primaryLabel: "Add Door Pass",
       action: "pass",
       requiresPoint: true
@@ -517,7 +517,7 @@ function navigationRepairRecommendation(draft: NavigationRepairDraft): Navigatio
       return {
         title: "Recommended fix: add a doorway connector",
         detail:
-          "Something is acting like a wall at the clicked point. If this is a door or opening, add a green pass zone first. Ignore the blocker only when you know the detected object is not really a wall.",
+          "Something is acting like a wall at the clicked point. If this is a door or opening, add a green pass zone first; Studio will add a target walk patch if that side is missing one.",
         primaryLabel: "Add Door Pass",
         action: "pass",
         requiresPoint: true
@@ -2313,20 +2313,25 @@ function App() {
       const from = navigationRepairDraft?.from;
       const dx = from ? point[0] - from[0] : 0;
       const dz = from ? point[2] - from[2] : 0;
-      const hasDirection = Math.hypot(dx, dz) > 0.05;
+      const routeDistance = Math.hypot(dx, dz);
+      const hasDirection = routeDistance > 0.05;
+      const unitX = hasDirection ? dx / routeDistance : 0;
+      const unitZ = hasDirection ? dz / routeDistance : 1;
       const rotationY = !isWalk && hasDirection ? Math.atan2(dx, dz) : 0;
       const passLength = hasDirection
-        ? Number(clampNumber(Math.hypot(dx, dz) * 0.42, 1.35, 2.6).toFixed(3))
+        ? Number(clampNumber(routeDistance * 0.36, 1.35, 2.6).toFixed(3))
         : 1.35;
+      const passCenterOffset = !isWalk && hasDirection ? Math.min(0.65, routeDistance * 0.22) : 0;
+      const zoneCenter: Vec3 = [
+        Number((point[0] - unitX * passCenterOffset).toFixed(3)),
+        isWalk ? Number(floorY.toFixed(3)) : Math.max(0.8, navigation.cameraHeight * 0.55),
+        Number((point[2] - unitZ * passCenterOffset).toFixed(3))
+      ];
       const zone: NavigationZone = {
         id: `${kind}-repair-${idSuffix}`,
         label: isWalk ? "Walk repair" : "Door pass repair",
         kind,
-        center: [
-          Number(point[0].toFixed(3)),
-          isWalk ? Number(floorY.toFixed(3)) : Math.max(0.8, navigation.cameraHeight * 0.55),
-          Number(point[2].toFixed(3))
-        ],
+        center: zoneCenter,
         size: isWalk
           ? [2.2, 0.08, 2.2]
           : [0.9, Math.max(1.8, navigation.cameraHeight + 0.6), passLength],
@@ -2334,14 +2339,31 @@ function App() {
         enabled: true,
         source: "authored"
       };
+      const needsTargetWalkPatch =
+        kind === "pass" &&
+        !enabledNavigationZones(navigation, "walk").some((walkZone) =>
+          pointInNavigationZone(walkZone, [point[0], floorY, point[2]], 0.35)
+        );
+      const targetWalkPatch: NavigationZone | undefined = needsTargetWalkPatch
+        ? {
+            id: `walk-repair-${idSuffix}`,
+            label: "Target walk repair",
+            kind: "walk",
+            center: [Number(point[0].toFixed(3)), Number(floorY.toFixed(3)), Number(point[2].toFixed(3))],
+            size: [2.2, 0.08, 2.2],
+            rotationY: 0,
+            enabled: true,
+            source: "authored"
+          }
+        : undefined;
       return {
         ...navigation,
-        zones: [...zones, zone]
+        zones: targetWalkPatch ? [...zones, zone, targetWalkPatch] : [...zones, zone]
       };
     });
     setRepairSummary(
       kind === "pass"
-        ? "Added a doorway pass at the blocked point. Save changes, then retry the click in the viewer."
+        ? "Added a doorway pass and any missing target walk area. Save changes, then retry the click in the viewer."
         : "Added a walk patch at the blocked point. Save changes, then retry the click in the viewer."
     );
     setNotice("saved");
