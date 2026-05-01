@@ -44,6 +44,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Interactions can create and edit hotspots, external scene links, and object toggles.
 - Analyzer inspects embedded GLB image payloads for dimensions, invalid buffer references, and unsupported MIME types.
 - API upload validation rejects malformed GLB containers with broken lengths, truncated chunks, invalid JSON chunks, or non-glTF 2.0 assets.
+- API texture repair scores duplicate loose texture candidates by relative path and texture-folder context before copying.
 - Studio/API expose Blender/Cycles lightmap bake jobs with quality presets, UV2 generation, generated lightmap assets, and material assignment.
 
 Current limitations:

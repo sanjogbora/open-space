@@ -579,6 +579,46 @@ async function modelDocument(scenePath) {
   return undefined;
 }
 
+function normalizedRelativePath(root, filePath) {
+  return path.relative(root, filePath).replace(/\\/g, "/").toLowerCase();
+}
+
+function textureCandidateScore(target, scenePath, uri, sourcePath) {
+  const cleanUri = stripUriQuery(uri).replace(/\\/g, "/");
+  const expectedPath = path.resolve(path.dirname(scenePath), cleanUri);
+  const expectedRelative = normalizedRelativePath(target, expectedPath);
+  const sourceRelative = normalizedRelativePath(target, sourcePath);
+  const sourceParts = sourceRelative.split("/");
+  const uriParts = cleanUri.toLowerCase().split("/").filter(Boolean);
+  let score = 0;
+
+  if (sourceRelative === expectedRelative) {
+    score += 120;
+  }
+  if (sourceRelative.endsWith(cleanUri.toLowerCase())) {
+    score += 90;
+  }
+  if (uriParts.length >= 2 && sourceRelative.endsWith(uriParts.slice(-2).join("/"))) {
+    score += 55;
+  }
+  if (uriParts.length >= 3 && sourceRelative.endsWith(uriParts.slice(-3).join("/"))) {
+    score += 35;
+  }
+
+  const sourceFolder = sourceParts.at(-2) ?? "";
+  const uriFolder = uriParts.at(-2) ?? "";
+  if (sourceFolder && uriFolder && sourceFolder === uriFolder) {
+    score += 18;
+  }
+  if (["texture", "textures", "image", "images", "maps", "materials"].includes(sourceFolder)) {
+    score += 8;
+  }
+  if (path.extname(sourcePath).toLowerCase() === path.extname(cleanUri).toLowerCase()) {
+    score += 6;
+  }
+  return score;
+}
+
 async function repairExternalTexturePaths(projectId) {
   const result = {
     copied: 0,
@@ -623,11 +663,18 @@ async function repairExternalTexturePaths(projectId) {
             result.missing += 1;
             return;
           }
-          if (sourcePaths.length > 1) {
+          const rankedSources = sourcePaths
+            .map((sourcePath) => ({
+              sourcePath,
+              score: textureCandidateScore(target, scenePath, uri, sourcePath)
+            }))
+            .sort((a, b) => b.score - a.score || a.sourcePath.localeCompare(b.sourcePath));
+          const [bestSource, nextSource] = rankedSources;
+          if (!bestSource || (nextSource && nextSource.score === bestSource.score)) {
             result.skippedAmbiguous += 1;
             return;
           }
-          const [sourcePath] = sourcePaths;
+          const sourcePath = bestSource.sourcePath;
           await mkdir(path.dirname(expectedPath), { recursive: true });
           await cp(sourcePath, expectedPath);
           result.copied += 1;
