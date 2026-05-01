@@ -14,6 +14,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer movement stabilizes floor height so tiny ridges and threshold geometry do not make the camera bounce as aggressively.
 - Viewer movement resolves bounded step-up/step-down floor changes so thresholds and simple stairs are smoother while larger vertical jumps are blocked.
 - Viewer navigation failures now distinguish oversized step/level changes from ordinary wall or route blocks.
+- Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
 - Predefined room/view buttons move the camera to saved views.
 - A floorplan/minimap overlay tracks camera position and can jump to saved views.

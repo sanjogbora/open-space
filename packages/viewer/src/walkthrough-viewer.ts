@@ -1697,8 +1697,10 @@ export class WalkthroughViewer {
       return undefined;
     }
     const next = position.clone();
-    const targetY = floorY + this.cameraHeight;
-    const smoothing = Math.abs(heightDelta) <= Math.max(0.16, this.cameraHeight * 0.1) ? 7.5 : 3.4;
+    const bumpTolerance = this.floorBumpTolerance();
+    const targetFloorY = Math.abs(heightDelta) <= bumpTolerance ? originFloorY : floorY;
+    const targetY = targetFloorY + this.cameraHeight;
+    const smoothing = Math.abs(heightDelta) <= bumpTolerance ? 6.5 : 2.4;
     next.y = damp(position.y, targetY, smoothing, delta);
     return next;
   }
@@ -2203,18 +2205,22 @@ export class WalkthroughViewer {
     }
     const currentFloorY = this.camera.position.y - this.cameraHeight;
     const previousFloorY = this.stableFloorY ?? currentFloorY;
-    const bumpTolerance = Math.max(0.16, this.cameraHeight * 0.1);
+    const bumpTolerance = this.floorBumpTolerance();
     const levelDelta = floorY - previousFloorY;
     const targetFloorY = Math.abs(levelDelta) <= bumpTolerance ? previousFloorY : floorY;
     const nextY = targetFloorY + this.cameraHeight;
     const difference = Math.abs(nextY - this.camera.position.y);
     if (difference <= Math.max(0.62, this.cameraHeight * 0.38)) {
-      const smoothing = Math.abs(levelDelta) <= bumpTolerance ? 7.5 : 3.2;
+      const smoothing = Math.abs(levelDelta) <= bumpTolerance ? 6.5 : 2.4;
       this.camera.position.y = damp(this.camera.position.y, nextY, smoothing, delta);
       this.stableFloorY = damp(previousFloorY, targetFloorY, smoothing, delta);
     } else {
       this.stableFloorY = currentFloorY;
     }
+  }
+
+  private floorBumpTolerance(): number {
+    return Math.max(0.24, this.cameraHeight * 0.14);
   }
 
   private sampleGeometryFloorY(
@@ -2255,7 +2261,34 @@ export class WalkthroughViewer {
     const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
     const horizontalEnough = Math.abs(normal.y) >= 0.45;
     const belowEye = hit.point.y <= this.camera.position.y + 0.25;
-    return horizontalEnough && belowEye;
+    if (!horizontalEnough || !belowEye) {
+      return false;
+    }
+    if (
+      this.objectBelongsToCollection(hit.object, this.walkZoneMeshes) ||
+      this.objectBelongsToCollection(hit.object, this.passZoneMeshes) ||
+      this.objectBelongsToCollection(hit.object, this.geometryFloorMeshes)
+    ) {
+      return true;
+    }
+    if (this.geometryFloorMeshes.length === 0) {
+      return true;
+    }
+    const probe = hit.point.clone();
+    probe.y = hit.point.y + this.cameraHeight;
+    const floorY = this.sampleGeometryFloorY(probe, { maxDelta: Math.max(0.3, this.cameraHeight * 0.2) });
+    return typeof floorY === "number" && Math.abs(floorY - hit.point.y) <= this.floorBumpTolerance();
+  }
+
+  private objectBelongsToCollection(object: THREE.Object3D, collection: readonly THREE.Object3D[]): boolean {
+    let current: THREE.Object3D | null = object;
+    while (current) {
+      if (collection.includes(current)) {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
   }
 
   private findWalkableHit(): THREE.Intersection | undefined {
