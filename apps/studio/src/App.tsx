@@ -1151,6 +1151,85 @@ function createNavigationZone(
   };
 }
 
+function createBoundaryBlockZoneSet(
+  bounds: NonNullable<SceneManifest["navigation"]["bounds"]>,
+  cameraHeight: number
+): NavigationZone[] {
+  const width = Math.max(1, bounds.max[0] - bounds.min[0]);
+  const depth = Math.max(1, bounds.max[2] - bounds.min[2]);
+  const height = Math.max(1.8, bounds.max[1] - bounds.min[1], cameraHeight + 0.6);
+  const y = bounds.min[1] + height / 2;
+  const thickness = Math.max(0.35, Math.min(width, depth) * 0.035);
+  return [
+    {
+      id: "boundary-block-north",
+      label: "Boundary North",
+      kind: "block",
+      center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.max[2] + thickness / 2],
+      size: [width + thickness * 2, height, thickness],
+      rotationY: 0,
+      enabled: true,
+      source: "generated",
+      generatedBy: "navigation-bounds"
+    },
+    {
+      id: "boundary-block-south",
+      label: "Boundary South",
+      kind: "block",
+      center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.min[2] - thickness / 2],
+      size: [width + thickness * 2, height, thickness],
+      rotationY: 0,
+      enabled: true,
+      source: "generated",
+      generatedBy: "navigation-bounds"
+    },
+    {
+      id: "boundary-block-east",
+      label: "Boundary East",
+      kind: "block",
+      center: [bounds.max[0] + thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
+      size: [thickness, height, depth + thickness * 2],
+      rotationY: 0,
+      enabled: true,
+      source: "generated",
+      generatedBy: "navigation-bounds"
+    },
+    {
+      id: "boundary-block-west",
+      label: "Boundary West",
+      kind: "block",
+      center: [bounds.min[0] - thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
+      size: [thickness, height, depth + thickness * 2],
+      rotationY: 0,
+      enabled: true,
+      source: "generated",
+      generatedBy: "navigation-bounds"
+    }
+  ];
+}
+
+function createWalkZonesForViews(
+  walkViews: readonly SceneView[],
+  navigation: SceneManifest["navigation"]
+): NavigationZone[] {
+  const bounds = navigation.bounds;
+  const floorY = bounds ? bounds.min[1] + 0.03 : 0.03;
+  const patchSize = bounds
+    ? Math.max(1.6, Math.min(4, Math.max(bounds.max[0] - bounds.min[0], bounds.max[2] - bounds.min[2]) * 0.16))
+    : 2.4;
+  return walkViews.map((view) => ({
+    id: `walk-view-${view.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 64),
+    label: `${view.label} walk patch`,
+    kind: "walk",
+    center: [Number(view.position[0].toFixed(3)), Number(floorY.toFixed(3)), Number(view.position[2].toFixed(3))],
+    size: [patchSize, 0.08, patchSize],
+    rotationY: 0,
+    enabled: true,
+    source: "generated",
+    generatedBy: "walk-view-patch"
+  }));
+}
+
 function projectScenePath(projectId: string): string {
   return `/scenes/${projectId}/scene.manifest.json`;
 }
@@ -2100,9 +2179,9 @@ function App() {
     }));
   };
 
-  const applyBoundsFromGraph = () => {
+  const navigationBoundsFromGraph = (): SceneManifest["navigation"]["bounds"] | undefined => {
     if (!sceneGraph) {
-      return;
+      return undefined;
     }
     const nodeBounds = sceneGraph.nodes
       .map((node) => node.bounds)
@@ -2111,7 +2190,7 @@ function App() {
       );
     const firstBounds = nodeBounds[0];
     if (!firstBounds) {
-      return;
+      return undefined;
     }
     const bounds = nodeBounds.slice(1).reduce(
       (current, next) => ({
@@ -2130,20 +2209,28 @@ function App() {
     );
     const scale = manifest?.rendering?.modelScale ?? 1;
     const margin = 0.75;
+    return {
+      min: [
+        bounds.min[0] * scale - margin,
+        Math.min(0.2, bounds.min[1] * scale - 0.1),
+        bounds.min[2] * scale - margin
+      ],
+      max: [
+        bounds.max[0] * scale + margin,
+        Math.max(bounds.max[1] * scale + 0.5, (manifest?.navigation.cameraHeight ?? 1.65) + 0.5),
+        bounds.max[2] * scale + margin
+      ]
+    };
+  };
+
+  const applyBoundsFromGraph = () => {
+    const bounds = navigationBoundsFromGraph();
+    if (!bounds) {
+      return;
+    }
     updateNavigation((navigation) => ({
       ...navigation,
-      bounds: {
-        min: [
-          bounds.min[0] * scale - margin,
-          Math.min(0.2, bounds.min[1] * scale - 0.1),
-          bounds.min[2] * scale - margin
-        ],
-        max: [
-          bounds.max[0] * scale + margin,
-          Math.max(bounds.max[1] * scale + 0.5, navigation.cameraHeight + 0.5),
-          bounds.max[2] * scale + margin
-        ]
-      }
+      bounds
     }));
   };
 
@@ -2196,61 +2283,10 @@ function App() {
       if (!bounds) {
         return navigation;
       }
-      const width = Math.max(1, bounds.max[0] - bounds.min[0]);
-      const depth = Math.max(1, bounds.max[2] - bounds.min[2]);
-      const height = Math.max(1.8, bounds.max[1] - bounds.min[1]);
-      const y = bounds.min[1] + height / 2;
-      const thickness = Math.max(0.35, Math.min(width, depth) * 0.035);
       const existing = (navigation.zones ?? []).filter((zone) => !zone.id.startsWith("boundary-block-"));
-      const boundaryZones: NavigationZone[] = [
-        {
-          id: "boundary-block-north",
-          label: "Boundary North",
-          kind: "block",
-          center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.max[2] + thickness / 2],
-          size: [width + thickness * 2, height, thickness],
-          rotationY: 0,
-          enabled: true,
-          source: "generated",
-          generatedBy: "navigation-bounds"
-        },
-        {
-          id: "boundary-block-south",
-          label: "Boundary South",
-          kind: "block",
-          center: [(bounds.min[0] + bounds.max[0]) / 2, y, bounds.min[2] - thickness / 2],
-          size: [width + thickness * 2, height, thickness],
-          rotationY: 0,
-          enabled: true,
-          source: "generated",
-          generatedBy: "navigation-bounds"
-        },
-        {
-          id: "boundary-block-east",
-          label: "Boundary East",
-          kind: "block",
-          center: [bounds.max[0] + thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
-          size: [thickness, height, depth + thickness * 2],
-          rotationY: 0,
-          enabled: true,
-          source: "generated",
-          generatedBy: "navigation-bounds"
-        },
-        {
-          id: "boundary-block-west",
-          label: "Boundary West",
-          kind: "block",
-          center: [bounds.min[0] - thickness / 2, y, (bounds.min[2] + bounds.max[2]) / 2],
-          size: [thickness, height, depth + thickness * 2],
-          rotationY: 0,
-          enabled: true,
-          source: "generated",
-          generatedBy: "navigation-bounds"
-        }
-      ];
       return {
         ...navigation,
-        zones: [...existing, ...boundaryZones]
+        zones: [...existing, ...createBoundaryBlockZoneSet(bounds, navigation.cameraHeight)]
       };
     });
     setNotice("saved");
@@ -2262,26 +2298,79 @@ function App() {
       return;
     }
     updateNavigation((navigation) => {
-      const bounds = navigation.bounds;
       const existing = (navigation.zones ?? []).filter((zone) => !zone.id.startsWith("walk-view-"));
-      const floorY = bounds ? bounds.min[1] + 0.03 : 0.03;
-      const patchSize = bounds
-        ? Math.max(1.6, Math.min(4, Math.max(bounds.max[0] - bounds.min[0], bounds.max[2] - bounds.min[2]) * 0.16))
-        : 2.4;
-      const viewZones: NavigationZone[] = walkViews.map((view) => ({
-        id: `walk-view-${view.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 64),
-        label: `${view.label} walk patch`,
-        kind: "walk",
-        center: [Number(view.position[0].toFixed(3)), Number(floorY.toFixed(3)), Number(view.position[2].toFixed(3))],
-        size: [patchSize, 0.08, patchSize],
-        rotationY: 0,
-        enabled: true,
-        source: "generated",
-        generatedBy: "walk-view-patch"
-      }));
       return {
         ...navigation,
-        zones: [...existing, ...viewZones]
+        zones: [...existing, ...createWalkZonesForViews(walkViews, navigation)]
+      };
+    });
+    setNotice("saved");
+  };
+
+  const autoRepairNavigation = () => {
+    const walkViews = manifest?.views.filter((view) => view.kind === "walk") ?? [];
+    const graphBounds = navigationBoundsFromGraph();
+    updateNavigation((navigation) => {
+      const bounds = navigation.bounds ?? graphBounds;
+      const existing = (navigation.zones ?? []).filter(
+        (zone) =>
+          !zone.id.startsWith("boundary-block-") &&
+          !zone.id.startsWith("walk-view-") &&
+          !zone.id.startsWith("pass-bridge-")
+      );
+      const zones: NavigationZone[] = [...existing];
+      const repairedNavigation: SceneManifest["navigation"] = {
+        ...navigation,
+        ...(bounds ? { bounds } : {}),
+        zones
+      };
+      let boundaryCount = 0;
+      let walkPatchCount = 0;
+      let bridgeCount = 0;
+
+      if (bounds) {
+        const boundaryZones = createBoundaryBlockZoneSet(bounds, navigation.cameraHeight);
+        boundaryCount = boundaryZones.length;
+        zones.push(...boundaryZones);
+      }
+
+      if (walkViews.length > 0) {
+        const viewZones = createWalkZonesForViews(walkViews, repairedNavigation);
+        walkPatchCount = viewZones.length;
+        zones.push(...viewZones);
+      }
+
+      const routeZones = enabledNavigationZones({ ...repairedNavigation, zones }).filter(
+        (zone) => zone.kind === "walk" || zone.kind === "pass"
+      );
+      const components = navigationComponents(routeZones);
+      if (components.length > 1) {
+        const connectedComponents: NavigationZone[][] = [components[0] ?? []];
+        components.slice(1).forEach((component, index) => {
+          const nearest = nearestNavigationComponentBridge(connectedComponents.flat(), component);
+          if (!nearest || nearest.gap > Math.max(2.4, navigation.cameraHeight * 1.45)) {
+            return;
+          }
+          zones.push(createBridgePassZone(nearest.from, nearest.to, index + 1, navigation.cameraHeight));
+          bridgeCount += 1;
+          connectedComponents.push(component);
+        });
+      }
+
+      const summary = [
+        bounds && !navigation.bounds ? "set bounds" : undefined,
+        boundaryCount > 0 ? `${boundaryCount} boundary block(s)` : undefined,
+        walkPatchCount > 0 ? `${walkPatchCount} walk patch(es)` : undefined,
+        bridgeCount > 0 ? `${bridgeCount} bridge pass zone(s)` : undefined
+      ].filter(Boolean);
+      setRepairSummary(
+        summary.length > 0
+          ? `Auto repair added ${summary.join(", ")}. Save changes, then retry the viewer.`
+          : "Auto repair found no navigation changes to add."
+      );
+      return {
+        ...repairedNavigation,
+        zones
       };
     });
     setNotice("saved");
@@ -6041,6 +6130,15 @@ function App() {
                         >
                           <Wrench size={16} aria-hidden="true" />
                           Bridge
+                        </button>
+                        <button
+                          type="button"
+                          className="button primary"
+                          disabled={!sceneGraph && !manifest.navigation.bounds && manifest.views.filter((view) => view.kind === "walk").length === 0}
+                          onClick={autoRepairNavigation}
+                        >
+                          <Wrench size={16} aria-hidden="true" />
+                          Auto Fix
                         </button>
                         <button
                           type="button"

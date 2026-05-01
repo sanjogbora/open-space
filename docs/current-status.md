@@ -19,6 +19,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Predefined room/view buttons move the camera to saved views.
 - A floorplan/minimap overlay tracks camera position and can jump to saved views.
 - Studio hides generated navigation zones by default so normal repairs focus on manual walk/pass/block patches.
+- Studio has an Auto Fix navigation action that can set graph bounds, add boundary blocks, add walk patches from saved views, and bridge close navigation islands.
 - Viewer initial-camera repair avoids likely exterior/grass planes when it can recover to a better navigation surface.
 - Bundle analysis warns when the first camera view appears to start on a dominant exterior/terrain plane.
 - Top views can hide ceiling/roof shell meshes so uploaded apartments are inspectable from above.
