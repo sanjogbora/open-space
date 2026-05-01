@@ -485,8 +485,61 @@ function defaultSceneStats(document) {
   };
 }
 
+function componentTypeByteSize(componentType) {
+  switch (componentType) {
+    case 5120:
+    case 5121:
+      return 1;
+    case 5122:
+    case 5123:
+      return 2;
+    case 5125:
+    case 5126:
+      return 4;
+    default:
+      return 0;
+  }
+}
+
+function accessorTypeComponentCount(type) {
+  switch (type) {
+    case "SCALAR":
+      return 1;
+    case "VEC2":
+      return 2;
+    case "VEC3":
+      return 3;
+    case "VEC4":
+    case "MAT2":
+      return 4;
+    case "MAT3":
+      return 9;
+    case "MAT4":
+      return 16;
+    default:
+      return 0;
+  }
+}
+
+function accessorElementByteSize(accessor) {
+  return componentTypeByteSize(accessor?.componentType) * accessorTypeComponentCount(accessor?.type);
+}
+
+function accessorRequiredByteLength(accessor, bufferView) {
+  const count = accessor?.count ?? 0;
+  const elementBytes = accessorElementByteSize(accessor);
+  if (count <= 0 || elementBytes <= 0) {
+    return 0;
+  }
+  const stride = typeof bufferView?.byteStride === "number" && bufferView.byteStride > 0
+    ? bufferView.byteStride
+    : elementBytes;
+  return (count - 1) * stride + elementBytes;
+}
+
 async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   const accessors = document.accessors ?? [];
+  const bufferViews = document.bufferViews ?? [];
   const meshes = document.meshes ?? [];
   const materials = document.materials ?? [];
   const extensionsUsed = document.extensionsUsed ?? [];
@@ -523,6 +576,10 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   let invalidPositionBoundsPrimitiveCount = 0;
   let collapsedPositionBoundsPrimitiveCount = 0;
   let invalidAccessorReferenceCount = 0;
+  let invalidBufferViewReferenceCount = 0;
+  let invalidBufferViewRangeCount = 0;
+  let invalidAccessorBufferViewCount = 0;
+  let invalidAccessorByteRangeCount = 0;
   let invalidTextureReferenceCount = 0;
   let undersizedBufferCount = 0;
   let texturesMissingImageCount = 0;
@@ -638,6 +695,64 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       undersizedBufferCount += 1;
     }
   }
+  const bufferByteLengths = (document.buffers ?? []).map((buffer, bufferIndex) => {
+    if (isLocalGltfUri(buffer.uri)) {
+      const resource = externalResourceBySource.get(normalizeBundlePath(buffer.uri));
+      return resource?.exists ? resource.bytes : buffer.byteLength;
+    }
+    if (!buffer.uri && format === "glb" && bufferIndex === 0) {
+      return metadata.glbBinBytes ?? buffer.byteLength;
+    }
+    return buffer.byteLength;
+  });
+  for (const bufferView of bufferViews) {
+    const bufferIndex = bufferView?.buffer;
+    const bufferLength = typeof bufferIndex === "number" ? bufferByteLengths[bufferIndex] : undefined;
+    if (typeof bufferIndex !== "number" || bufferIndex < 0 || bufferIndex >= bufferByteLengths.length) {
+      invalidBufferViewReferenceCount += 1;
+      continue;
+    }
+    const byteOffset = bufferView.byteOffset ?? 0;
+    const byteLength = bufferView.byteLength ?? 0;
+    if (
+      !Number.isFinite(byteOffset) ||
+      !Number.isFinite(byteLength) ||
+      byteOffset < 0 ||
+      byteLength < 0 ||
+      typeof bufferLength !== "number" ||
+      byteOffset + byteLength > bufferLength
+    ) {
+      invalidBufferViewRangeCount += 1;
+    }
+  }
+  for (const accessor of accessors) {
+    if (typeof accessor?.bufferView === "number") {
+      const bufferView = bufferViews[accessor.bufferView];
+      if (!bufferView) {
+        invalidAccessorBufferViewCount += 1;
+      } else if (!bufferView.extensions?.EXT_meshopt_compression) {
+        const byteOffset = accessor.byteOffset ?? 0;
+        const requiredBytes = accessorRequiredByteLength(accessor, bufferView);
+        const viewBytes = bufferView.byteLength ?? 0;
+        if (
+          !Number.isFinite(byteOffset) ||
+          byteOffset < 0 ||
+          requiredBytes < 0 ||
+          byteOffset + requiredBytes > viewBytes
+        ) {
+          invalidAccessorByteRangeCount += 1;
+        }
+      }
+    }
+    const sparseIndicesView = accessor?.sparse?.indices?.bufferView;
+    if (typeof sparseIndicesView === "number" && (sparseIndicesView < 0 || sparseIndicesView >= bufferViews.length)) {
+      invalidAccessorBufferViewCount += 1;
+    }
+    const sparseValuesView = accessor?.sparse?.values?.bufferView;
+    if (typeof sparseValuesView === "number" && (sparseValuesView < 0 || sparseValuesView >= bufferViews.length)) {
+      invalidAccessorBufferViewCount += 1;
+    }
+  }
   const usesMeshopt =
     extensionsUsed.includes("EXT_meshopt_compression") ||
     (document.bufferViews ?? []).some((view) => Boolean(view.extensions?.EXT_meshopt_compression));
@@ -723,6 +838,10 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     invalidPositionBoundsPrimitiveCount,
     collapsedPositionBoundsPrimitiveCount,
     invalidAccessorReferenceCount,
+    invalidBufferViewReferenceCount,
+    invalidBufferViewRangeCount,
+    invalidAccessorBufferViewCount,
+    invalidAccessorByteRangeCount,
     invalidTextureReferenceCount,
     undersizedBufferCount,
     texturesMissingImageCount,
@@ -1591,6 +1710,22 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.invalidAccessorReferenceCount ?? 0),
     0
   );
+  const invalidBufferViewReferenceCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidBufferViewReferenceCount ?? 0),
+    0
+  );
+  const invalidBufferViewRangeCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidBufferViewRangeCount ?? 0),
+    0
+  );
+  const invalidAccessorBufferViewCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidAccessorBufferViewCount ?? 0),
+    0
+  );
+  const invalidAccessorByteRangeCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidAccessorByteRangeCount ?? 0),
+    0
+  );
   const invalidTextureReferenceCount = report.models.reduce(
     (sum, model) => sum + (model.invalidTextureReferenceCount ?? 0),
     0
@@ -1739,6 +1874,46 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Invalid mesh accessor references",
       message: `${invalidAccessorReferenceCount} primitive attribute/index reference(s) point outside the accessor list.`,
       action: "Repair or re-export the GLB/GLTF; invalid accessors can make geometry disappear or render incorrectly."
+    });
+  }
+
+  if (invalidBufferViewReferenceCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-buffer-view-references",
+      title: "Invalid bufferView references",
+      message: `${invalidBufferViewReferenceCount} bufferView definition(s) point outside the buffer list.`,
+      action: "Repair or re-export the GLB/GLTF; broken bufferViews can make geometry, UVs, or images disappear."
+    });
+  }
+
+  if (invalidBufferViewRangeCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-buffer-view-ranges",
+      title: "bufferView byte ranges are invalid",
+      message: `${invalidBufferViewRangeCount} bufferView definition(s) extend beyond their declared or actual buffer data.`,
+      action: "Re-export or re-upload the model; invalid buffer ranges commonly render as missing, exploded, or flat geometry."
+    });
+  }
+
+  if (invalidAccessorBufferViewCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-accessor-buffer-views",
+      title: "Accessors reference invalid bufferViews",
+      message: `${invalidAccessorBufferViewCount} accessor or sparse accessor bufferView reference(s) are invalid.`,
+      action: "Repair or re-export the model; mesh attributes must point at valid bufferViews for reliable rendering and navigation analysis."
+    });
+  }
+
+  if (invalidAccessorByteRangeCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-accessor-byte-ranges",
+      title: "Accessor byte ranges are invalid",
+      message: `${invalidAccessorByteRangeCount} accessor definition(s) read beyond their bufferView byte range.`,
+      action: "Re-export the model from the source tool or run it through a glTF repair pipeline before importing."
     });
   }
 
