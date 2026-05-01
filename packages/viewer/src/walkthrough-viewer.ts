@@ -45,6 +45,11 @@ interface HotspotBinding {
   sprite: THREE.Sprite;
 }
 
+interface TopViewHiddenObject {
+  object: THREE.Object3D;
+  baseVisible: boolean;
+}
+
 interface CollisionBlocker {
   box: THREE.Box3;
   name: string;
@@ -105,6 +110,7 @@ export class WalkthroughViewer {
   private readonly materialLightMaps: THREE.Texture[] = [];
   private readonly objectOverrides = new Map<string, ObjectOverride>();
   private readonly objectToggleStates = new Map<string, boolean>();
+  private readonly topViewHiddenObjects: TopViewHiddenObject[] = [];
   private controls: SceneControlsDocument["movement"] = {
     enabled: true,
     clickToMove: true,
@@ -135,6 +141,7 @@ export class WalkthroughViewer {
   private movePath: THREE.Vector3[] = [];
   private clickMoveVelocity = 0;
   private cameraTween: CameraTween | undefined;
+  private activeView: SceneView | undefined;
   private pointerDown: { x: number; y: number; time: number } | undefined;
   private yaw = 0;
   private pitch = 0;
@@ -241,6 +248,8 @@ export class WalkthroughViewer {
     if (!view) {
       return;
     }
+    this.activeView = view;
+    this.applyViewObjectVisibility(view);
     this.moveTarget = undefined;
     this.movePath = [];
     this.moveMarker.visible = false;
@@ -338,6 +347,7 @@ export class WalkthroughViewer {
       this.prepareLoadedScene(this.sceneRoot);
       this.scene.add(this.sceneRoot);
       this.sceneRoot.updateMatrixWorld(true);
+      this.applyViewObjectVisibility(this.activeView);
       this.pickableMeshes = this.collectPickableMeshes(this.sceneRoot);
       this.configureNavigationSurfaces(this.sceneRoot);
       this.fitLightingToScene(this.sceneRoot);
@@ -422,6 +432,7 @@ export class WalkthroughViewer {
     this.sceneRoot = demo.root;
     this.scene.add(demo.root);
     demo.root.updateMatrixWorld(true);
+    this.applyViewObjectVisibility(this.activeView);
     this.pickableMeshes = this.collectPickableMeshes(demo.root);
     this.configureNavigationSurfaces(demo.root, [demo.floor]);
     this.fitLightingToScene(demo.root);
@@ -780,6 +791,7 @@ export class WalkthroughViewer {
       if (node instanceof THREE.Mesh) {
         this.applyObjectOverride(node);
         const name = node.name.toLowerCase();
+        this.registerTopViewHiddenObject(node);
         const architecturalShell =
           name.includes("wall") || name.includes("floor") || name.includes("ceiling");
         node.castShadow = !architecturalShell;
@@ -802,6 +814,27 @@ export class WalkthroughViewer {
           node.material.needsUpdate = true;
         }
       }
+    });
+  }
+
+  private registerTopViewHiddenObject(object: THREE.Object3D): void {
+    const descriptor = `${object.name} ${object.parent?.name ?? ""} ${object.userData["name"] ?? ""}`.toLowerCase();
+    const hideInTopView =
+      /(^|[^a-z])(ceiling|false-ceiling|dropped-ceiling|roof|roofing|lid|cover)([^a-z]|$)/.test(descriptor) &&
+      !/(^|[^a-z])(fan|light|lamp|fixture|chandelier|downlight|spotlight)([^a-z]|$)/.test(descriptor);
+    if (!hideInTopView || this.topViewHiddenObjects.some((entry) => entry.object === object)) {
+      return;
+    }
+    this.topViewHiddenObjects.push({
+      object,
+      baseVisible: object.visible
+    });
+  }
+
+  private applyViewObjectVisibility(view: SceneView | undefined): void {
+    const hideTopShell = view?.kind === "top";
+    this.topViewHiddenObjects.forEach((entry) => {
+      entry.object.visible = hideTopShell ? false : entry.baseVisible;
     });
   }
 
@@ -1201,6 +1234,7 @@ export class WalkthroughViewer {
   private applyInitialCamera(): void {
     const firstView = this.manifest.views[0];
     if (firstView) {
+      this.activeView = firstView;
       this.camera.position.copy(this.toSceneVector(firstView.position, { preserveMeterY: true }));
       this.cameraTarget.copy(this.toSceneVector(firstView.target, { preserveMeterY: true }));
       this.camera.fov = firstView.fov ?? 62;
