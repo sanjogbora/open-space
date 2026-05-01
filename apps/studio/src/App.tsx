@@ -1286,6 +1286,7 @@ function App() {
   );
   const [expandedNavigationZoneIds, setExpandedNavigationZoneIds] = useState<Set<string>>(new Set());
   const [navigationPaintKind, setNavigationPaintKind] = useState<NavigationZone["kind"] | null>(null);
+  const [showGeneratedNavigationZones, setShowGeneratedNavigationZones] = useState(false);
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
 
@@ -1732,6 +1733,18 @@ function App() {
   );
   const navigationIssues = useMemo(() => (manifest ? navigationQaIssues(manifest) : []), [manifest]);
   const navigationCoverageSummary = useMemo(() => (manifest ? navigationCoverage(manifest) : null), [manifest]);
+  const navigationZones = useMemo(() => manifest?.navigation.zones ?? [], [manifest]);
+  const generatedNavigationZoneCount = useMemo(
+    () => navigationZones.filter((zone) => zone.source === "generated").length,
+    [navigationZones]
+  );
+  const visibleNavigationZones = useMemo(
+    () =>
+      showGeneratedNavigationZones
+        ? navigationZones
+        : navigationZones.filter((zone) => zone.source !== "generated"),
+    [navigationZones, showGeneratedNavigationZones]
+  );
   const repairRecommendation = useMemo(
     () => (navigationRepairDraft ? navigationRepairRecommendation(navigationRepairDraft) : null),
     [navigationRepairDraft]
@@ -6054,8 +6067,24 @@ function App() {
                           <Plus size={16} aria-hidden="true" />
                           Pass
                         </button>
+                        {generatedNavigationZoneCount > 0 && (
+                          <label className="toggle-row compact-toggle zone-generated-toggle">
+                            <input
+                              type="checkbox"
+                              checked={showGeneratedNavigationZones}
+                              onChange={(event) => setShowGeneratedNavigationZones(event.target.checked)}
+                            />
+                            <span>Auto zones</span>
+                          </label>
+                        )}
                       </div>
                     </div>
+                    {generatedNavigationZoneCount > 0 && !showGeneratedNavigationZones && (
+                      <div className="zone-helper-strip">
+                        <strong>{generatedNavigationZoneCount} auto-detected zone(s) are active but hidden.</strong>
+                        <span>Keep this off for normal repairs; turn it on only when you need to inspect detection.</span>
+                      </div>
+                    )}
                     {manifest.navigation.bounds && (
                       <div className="zone-map">
                         <div className="zone-map-heading">
@@ -6102,7 +6131,7 @@ function App() {
                               title="Viewer blocked point"
                             />
                           )}
-                          {(manifest.navigation.zones ?? []).map((zone) => (
+                          {visibleNavigationZones.map((zone) => (
                             <button
                               key={zone.id}
                               type="button"
@@ -6132,7 +6161,7 @@ function App() {
                       </div>
                     )}
                     <div className="zone-editor-list">
-                      {(manifest.navigation.zones ?? []).map((zone) => {
+                      {visibleNavigationZones.map((zone) => {
                         const advancedOpen = expandedNavigationZoneIds.has(zone.id);
                         return (
                           <div key={zone.id} className={`zone-editor-row ${zone.kind}`}>
@@ -6237,10 +6266,16 @@ function App() {
                           </div>
                         );
                       })}
-                      {(manifest.navigation.zones ?? []).length === 0 && (
+                      {visibleNavigationZones.length === 0 && navigationZones.length === 0 && (
                         <p className="quiet-note">
                           No explicit zones yet. Add a walk zone to define clickable floor area, block zones for hard
                           boundaries, and pass zones for doors or openings.
+                        </p>
+                      )}
+                      {visibleNavigationZones.length === 0 && navigationZones.length > 0 && (
+                        <p className="quiet-note">
+                          Only auto-detected zones exist right now. Enable Auto zones to inspect them, or use the repair
+                          buttons above to add manual patches.
                         </p>
                       )}
                     </div>

@@ -18,6 +18,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
 - Predefined room/view buttons move the camera to saved views.
 - A floorplan/minimap overlay tracks camera position and can jump to saved views.
+- Studio hides generated navigation zones by default so normal repairs focus on manual walk/pass/block patches.
 - Top views can hide ceiling/roof shell meshes so uploaded apartments are inspectable from above.
 - Movement is constrained by configured scene bounds.
 - Basic collision boxes are generated from configured collision mesh names.
