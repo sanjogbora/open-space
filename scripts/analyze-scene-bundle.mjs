@@ -1466,6 +1466,7 @@ function dominantFlatPlane(graph, sceneBounds) {
         name: node.name || node.meshName || "Flat surface",
         area,
         sceneArea,
+        bounds: node.bounds,
         exteriorNamed
       };
     })
@@ -1537,6 +1538,18 @@ function pointInNavigationBounds(point, bounds, padding = 0) {
     point[0] <= bounds.max[0] + padding &&
     point[1] >= bounds.min[1] - padding &&
     point[1] <= bounds.max[1] + padding &&
+    point[2] >= bounds.min[2] - padding &&
+    point[2] <= bounds.max[2] + padding
+  );
+}
+
+function pointInBoundsFootprint(point, bounds, padding = 0) {
+  if (!point || !bounds) {
+    return false;
+  }
+  return (
+    point[0] >= bounds.min[0] - padding &&
+    point[0] <= bounds.max[0] + padding &&
     point[2] >= bounds.min[2] - padding &&
     point[2] <= bounds.max[2] + padding
   );
@@ -2212,6 +2225,22 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Large flat plane detected",
       message: `${flatPlane.name} covers about ${percent}% of the scene footprint and can dominate camera framing, top views, and click-floor detection.`,
       action: "Run model repair to regenerate focused views, or add explicit walk zones and hide/rename exterior terrain if it should not drive navigation."
+    });
+  }
+
+  const firstWalkView = (manifest.views ?? []).find((view) => view.kind === "walk") ?? manifest.views?.[0];
+  if (
+    flatPlane &&
+    firstWalkView?.position &&
+    pointInBoundsFootprint(firstWalkView.position, flatPlane.bounds, 0.2) &&
+    (flatPlane.exteriorNamed || flatPlane.area / Math.max(1, flatPlane.sceneArea) > 0.55)
+  ) {
+    diagnostics.push({
+      severity: "warning",
+      code: "initial-view-on-dominant-plane",
+      title: "First camera may start on exterior terrain",
+      message: `${firstWalkView.label ?? "The first view"} is positioned over ${flatPlane.name}, a large flat surface that can make the viewer open to grass or empty space.`,
+      action: "Run import repair or move the first walk view onto the intended interior floor before publishing."
     });
   }
 
