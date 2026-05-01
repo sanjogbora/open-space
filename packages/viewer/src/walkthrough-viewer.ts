@@ -1322,6 +1322,7 @@ export class WalkthroughViewer {
     const cameraTooFar = cameraOffset > Math.max(40, radius * 7);
     const targetTooFar = targetOffset > Math.max(30, radius * 5);
     const navigationInvalid = Boolean(this.navigationFailureDetail(this.camera.position));
+    const startsOnExteriorPlane = this.cameraStartsOnLikelyExteriorSurface(box);
     if (
       firstView &&
       !invalidCamera &&
@@ -1329,7 +1330,8 @@ export class WalkthroughViewer {
       !yTooFarAbove &&
       !cameraTooFar &&
       !targetTooFar &&
-      !navigationInvalid
+      !navigationInvalid &&
+      !startsOnExteriorPlane
     ) {
       return;
     }
@@ -1340,18 +1342,27 @@ export class WalkthroughViewer {
   }
 
   private fitCameraToNavigationSurface(sceneBox: THREE.Box3): boolean {
+    const sceneFootprint = Math.max(
+      1,
+      (sceneBox.max.x - sceneBox.min.x) * (sceneBox.max.z - sceneBox.min.z)
+    );
     const surfaces = (this.walkZoneMeshes.length > 0 ? this.walkZoneMeshes : this.floorMeshes)
       .map((mesh) => {
         const box = new THREE.Box3().setFromObject(mesh);
         const size = box.getSize(new THREE.Vector3());
+        const name = `${mesh.name} ${mesh.parent?.name ?? ""} ${mesh.userData["name"] ?? ""}`.toLowerCase();
+        const exterior =
+          this.isLikelyExteriorSurfaceName(name) ||
+          (this.walkZoneMeshes.length === 0 && Math.abs(size.x * size.z) > sceneFootprint * 0.55);
         return {
           box,
           size,
-          area: Math.abs(size.x * size.z)
+          area: Math.abs(size.x * size.z),
+          exterior
         };
       })
       .filter((surface) => !surface.box.isEmpty() && surface.area > 0.2)
-      .sort((a, b) => b.area - a.area);
+      .sort((a, b) => Number(a.exterior) - Number(b.exterior) || b.area - a.area);
 
     const sceneCenter = sceneBox.getCenter(new THREE.Vector3());
     for (const surface of surfaces) {
@@ -1383,6 +1394,38 @@ export class WalkthroughViewer {
     }
 
     return false;
+  }
+
+  private cameraStartsOnLikelyExteriorSurface(sceneBox: THREE.Box3): boolean {
+    if (this.floorMeshes.length === 0) {
+      return false;
+    }
+    const raycaster = new THREE.Raycaster(
+      this.camera.position.clone(),
+      new THREE.Vector3(0, -1, 0),
+      0,
+      Math.max(4, this.cameraHeight + 2)
+    );
+    const hit = raycaster.intersectObjects(this.floorMeshes, true)[0];
+    if (!hit) {
+      return false;
+    }
+    const object = hit.object;
+    if (this.walkZoneMeshes.length > 0 && this.objectBelongsToCollection(object, this.walkZoneMeshes)) {
+      return false;
+    }
+    const name = `${object.name} ${object.parent?.name ?? ""} ${object.userData["name"] ?? ""}`.toLowerCase();
+    const box = new THREE.Box3().setFromObject(object);
+    if (box.isEmpty()) {
+      return false;
+    }
+    const size = box.getSize(new THREE.Vector3());
+    const area = Math.abs(size.x * size.z);
+    const sceneFootprint = Math.max(
+      1,
+      (sceneBox.max.x - sceneBox.min.x) * (sceneBox.max.z - sceneBox.min.z)
+    );
+    return this.isLikelyExteriorSurfaceName(name) || area > sceneFootprint * 0.6;
   }
 
   private fitCameraToBox(box: THREE.Box3): void {
