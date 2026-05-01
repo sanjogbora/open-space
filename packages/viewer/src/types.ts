@@ -42,6 +42,7 @@ export interface NavigationFailure {
   reason: NavigationFailureReason;
   message: string;
   point?: [number, number, number];
+  cameraPosition?: [number, number, number];
   objectName?: string;
   blockerName?: string;
   screen: {

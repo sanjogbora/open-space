@@ -2397,6 +2397,7 @@ export class WalkthroughViewer {
       reason,
       message: this.navigationFailureMessage(reason, objectName, blockerName),
       ...(point ? { point: [point.x, point.y, point.z] } : {}),
+      cameraPosition: [this.camera.position.x, this.camera.position.y, this.camera.position.z],
       ...(objectName ? { objectName } : {}),
       ...(blockerName ? { blockerName } : {}),
       screen: {

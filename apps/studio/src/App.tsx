@@ -76,6 +76,7 @@ interface NavigationRepairDraft {
   reason: string;
   blockerName: string;
   point?: Vec3;
+  from?: Vec3;
 }
 
 type NavigationRepairAction = "pass" | "walk" | "ignore";
@@ -392,13 +393,15 @@ function initialNavigationRepairDraft(): NavigationRepairDraft | null {
   const blockerName = params.get("blocker") ?? "";
   const reason = params.get("reason") ?? "";
   const point = parsePointParam(params.get("point"));
-  if (!blockerName && !reason && !point) {
+  const from = parsePointParam(params.get("from"));
+  if (!blockerName && !reason && !point && !from) {
     return null;
   }
   return {
     reason,
     blockerName,
-    ...(point ? { point } : {})
+    ...(point ? { point } : {}),
+    ...(from ? { from } : {})
   };
 }
 
@@ -2307,6 +2310,14 @@ function App() {
       const idSuffix = `${Date.now()}`.slice(-6);
       const isWalk = kind === "walk";
       const floorY = navigation.bounds ? navigation.bounds.min[1] + 0.03 : 0.03;
+      const from = navigationRepairDraft?.from;
+      const dx = from ? point[0] - from[0] : 0;
+      const dz = from ? point[2] - from[2] : 0;
+      const hasDirection = Math.hypot(dx, dz) > 0.05;
+      const rotationY = !isWalk && hasDirection ? Math.atan2(dx, dz) : 0;
+      const passLength = hasDirection
+        ? Number(clampNumber(Math.hypot(dx, dz) * 0.42, 1.35, 2.6).toFixed(3))
+        : 1.35;
       const zone: NavigationZone = {
         id: `${kind}-repair-${idSuffix}`,
         label: isWalk ? "Walk repair" : "Door pass repair",
@@ -2318,8 +2329,8 @@ function App() {
         ],
         size: isWalk
           ? [2.2, 0.08, 2.2]
-          : [0.9, Math.max(1.8, navigation.cameraHeight + 0.6), 1.35],
-        rotationY: 0,
+          : [0.9, Math.max(1.8, navigation.cameraHeight + 0.6), passLength],
+        rotationY,
         enabled: true,
         source: "authored"
       };
@@ -5561,6 +5572,12 @@ function App() {
                             <div>
                               <dt>Point</dt>
                               <dd>{navigationRepairDraft.point.map((value) => value.toFixed(2)).join(", ")}</dd>
+                            </div>
+                          )}
+                          {navigationRepairDraft.from && (
+                            <div>
+                              <dt>From</dt>
+                              <dd>{navigationRepairDraft.from.map((value) => value.toFixed(2)).join(", ")}</dd>
                             </div>
                           )}
                         </dl>
