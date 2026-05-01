@@ -426,6 +426,65 @@ function embeddedImagePayload(image, document, metadata) {
   return undefined;
 }
 
+function defaultSceneStats(document) {
+  const nodes = document.nodes ?? [];
+  const meshes = document.meshes ?? [];
+  const scenes = document.scenes ?? [];
+  const explicitDefaultScene = typeof document.scene === "number";
+  const defaultSceneIndex = explicitDefaultScene ? document.scene : scenes.length > 0 ? 0 : undefined;
+  const defaultScene =
+    typeof defaultSceneIndex === "number" && defaultSceneIndex >= 0 && defaultSceneIndex < scenes.length
+      ? scenes[defaultSceneIndex]
+      : undefined;
+  const invalidDefaultScene = explicitDefaultScene && !defaultScene;
+  const rootNodeIndices = Array.isArray(defaultScene?.nodes)
+    ? defaultScene.nodes.filter((index) => typeof index === "number" && index >= 0 && index < nodes.length)
+    : [];
+  const reachableNodes = new Set();
+  const visitNode = (nodeIndex) => {
+    if (reachableNodes.has(nodeIndex) || nodeIndex < 0 || nodeIndex >= nodes.length) {
+      return;
+    }
+    reachableNodes.add(nodeIndex);
+    for (const childIndex of nodes[nodeIndex]?.children ?? []) {
+      if (typeof childIndex === "number") {
+        visitNode(childIndex);
+      }
+    }
+  };
+  rootNodeIndices.forEach(visitNode);
+
+  const nodeMeshIndices = new Set(
+    nodes
+      .map((node) => node.mesh)
+      .filter((index) => typeof index === "number" && index >= 0 && index < meshes.length)
+  );
+  const renderableNodeCount = nodes.filter(
+    (node) => typeof node.mesh === "number" && node.mesh >= 0 && node.mesh < meshes.length
+  ).length;
+  const defaultSceneRenderableNodeCount = [...reachableNodes].filter((nodeIndex) => {
+    const meshIndex = nodes[nodeIndex]?.mesh;
+    return typeof meshIndex === "number" && meshIndex >= 0 && meshIndex < meshes.length;
+  }).length;
+  const defaultSceneMeshIndices = new Set(
+    [...reachableNodes]
+      .map((nodeIndex) => nodes[nodeIndex]?.mesh)
+      .filter((index) => typeof index === "number" && index >= 0 && index < meshes.length)
+  );
+
+  return {
+    sceneCount: scenes.length,
+    defaultSceneIndex,
+    invalidDefaultScene,
+    defaultSceneRootNodeCount: rootNodeIndices.length,
+    defaultSceneReachableNodeCount: reachableNodes.size,
+    renderableNodeCount,
+    defaultSceneRenderableNodeCount,
+    unusedMeshCount: meshes.filter((_, index) => !nodeMeshIndices.has(index)).length,
+    unreferencedDefaultSceneMeshCount: meshes.filter((_, index) => !defaultSceneMeshIndices.has(index)).length
+  };
+}
+
 async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   const accessors = document.accessors ?? [];
   const meshes = document.meshes ?? [];
@@ -635,10 +694,13 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     });
   }
 
+  const sceneStats = defaultSceneStats(document);
+
   return {
     format,
     version: document.asset?.version,
     generator: document.asset?.generator,
+    ...sceneStats,
     nodeCount: document.nodes?.length ?? 0,
     meshCount: meshes.length,
     primitiveCount,
@@ -1578,6 +1640,22 @@ function createDiagnostics(manifest, report, graphs) {
   ].filter((image) => typeof image.width === "number" && typeof image.height === "number");
   const oversizedTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 4096);
   const largeTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 2048);
+  const invalidDefaultSceneModels = report.models.filter((model) => model.invalidDefaultScene);
+  const emptyDefaultSceneModels = report.models.filter(
+    (model) =>
+      (model.meshCount ?? 0) > 0 &&
+      (model.sceneCount ?? 0) > 0 &&
+      !model.invalidDefaultScene &&
+      (model.defaultSceneRenderableNodeCount ?? 0) === 0
+  );
+  const missingSceneDefinitionModels = report.models.filter(
+    (model) => (model.meshCount ?? 0) > 0 && (model.sceneCount ?? 0) === 0
+  );
+  const unreferencedDefaultSceneMeshCount = report.models.reduce(
+    (sum, model) => sum + (model.unreferencedDefaultSceneMeshCount ?? 0),
+    0
+  );
+  const meshCount = report.models.reduce((sum, model) => sum + (model.meshCount ?? 0), 0);
 
   if (parseFailures.length > 0) {
     diagnostics.push({
@@ -1586,6 +1664,51 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Model could not be parsed",
       message: parseFailures.map((model) => `${model.source ?? model.format}: ${model.parseError}`).join("; "),
       action: "Re-export the file as glTF 2.0/GLB from Blender or your CAD/DCC tool, then upload the repaired ZIP/GLB."
+    });
+  }
+
+  if (invalidDefaultSceneModels.length > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-default-scene",
+      title: "Default scene index is invalid",
+      message: `${invalidDefaultSceneModels.length} model file(s) point to a default scene that does not exist.`,
+      action: "Open the model in Blender, ensure the intended objects are in the active scene, then re-export as glTF 2.0/GLB."
+    });
+  }
+
+  if (emptyDefaultSceneModels.length > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "default-scene-has-no-renderable-meshes",
+      title: "Default scene has no visible meshes",
+      message: `${emptyDefaultSceneModels.length} model file(s) contain meshes, but no renderable mesh nodes are reachable from the default scene.`,
+      action: "Re-export with the building objects linked to the exported scene; otherwise viewers may show an empty model or only helper geometry."
+    });
+  }
+
+  if (missingSceneDefinitionModels.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-gltf-scene-definitions",
+      title: "Scene definitions are missing",
+      message: `${missingSceneDefinitionModels.length} model file(s) contain meshes but no glTF scene list.`,
+      action: "Re-export with a valid default scene so browsers, optimizers, and publishing builds load the same objects consistently."
+    });
+  }
+
+  if (
+    meshCount > 0 &&
+    unreferencedDefaultSceneMeshCount > 0 &&
+    unreferencedDefaultSceneMeshCount < meshCount &&
+    unreferencedDefaultSceneMeshCount / meshCount > 0.25
+  ) {
+    diagnostics.push({
+      severity: "info",
+      code: "meshes-outside-default-scene",
+      title: "Meshes exist outside the default scene",
+      message: `${unreferencedDefaultSceneMeshCount}/${meshCount} mesh definition(s) are not reachable from the default scene.`,
+      action: "Confirm these are unused library meshes. If important objects are missing, link them into the exported scene before import."
     });
   }
 
