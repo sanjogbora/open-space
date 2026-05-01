@@ -4,8 +4,18 @@ import os from "node:os";
 import path from "node:path";
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS, EXTMeshoptCompression, KHRTextureBasisu } from "@gltf-transform/extensions";
-import { dedup, meshopt, prune, reorder, resample, textureCompress, weld } from "@gltf-transform/functions";
-import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
+import {
+  dedup,
+  getGLPrimitiveCount,
+  meshopt,
+  prune,
+  reorder,
+  resample,
+  simplify,
+  textureCompress,
+  weld
+} from "@gltf-transform/functions";
+import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from "meshoptimizer";
 import sharp from "sharp";
 
 const args = process.argv.slice(2);
@@ -156,7 +166,7 @@ function compactGlbJson(bytes) {
 }
 
 async function optimizeGlb(sourcePath, outputPath, profile) {
-  await Promise.all([MeshoptEncoder.ready, MeshoptDecoder.ready]);
+  await Promise.all([MeshoptEncoder.ready, MeshoptDecoder.ready, MeshoptSimplifier.ready]);
   const level = profile === "mobile" ? "high" : "medium";
   const textureLimit =
     profile === "mobile" ? [1024, 1024] : profile === "desktop" ? [4096, 4096] : [2048, 2048];
@@ -172,7 +182,10 @@ async function optimizeGlb(sourcePath, outputPath, profile) {
     dedup(),
     prune(),
     weld({ overwrite: false }),
-    resample(),
+    resample()
+  );
+  const meshSimplificationStep = await applyMeshSimplification(document, profile);
+  await document.transform(
     textureCompress({
       encoder: sharp,
       targetFormat: "webp",
@@ -188,7 +201,75 @@ async function optimizeGlb(sourcePath, outputPath, profile) {
     meshopt({ encoder: MeshoptEncoder, level })
   );
   await io.write(outputPath, document);
-  return gpuTextureStep;
+  return { meshSimplificationStep, gpuTextureStep };
+}
+
+function countDocumentTriangles(document) {
+  let total = 0;
+  for (const mesh of document.getRoot().listMeshes()) {
+    for (const primitive of mesh.listPrimitives()) {
+      try {
+        total += Math.max(0, Math.floor(getGLPrimitiveCount(primitive)));
+      } catch {
+        // Non-renderable malformed primitives are reported by the analyzer.
+      }
+    }
+  }
+  return total;
+}
+
+async function applyMeshSimplification(document, profile) {
+  if (profile === "desktop") {
+    return {
+      id: "mesh-simplification",
+      label: "Simplify heavy mesh geometry",
+      status: "skipped",
+      note: "Desktop profile preserves source geometry."
+    };
+  }
+
+  const beforeTriangles = countDocumentTriangles(document);
+  const minimumTriangles = profile === "mobile" ? 150_000 : 500_000;
+  if (beforeTriangles < minimumTriangles) {
+    return {
+      id: "mesh-simplification",
+      label: "Simplify heavy mesh geometry",
+      status: "skipped",
+      beforeTriangles,
+      afterTriangles: beforeTriangles,
+      note: `Scene has ${formatCount(beforeTriangles)} triangles, below the ${formatCount(minimumTriangles)} ${profile} simplification threshold.`
+    };
+  }
+
+  const ratio = profile === "mobile" ? 0.82 : 0.92;
+  const error = profile === "mobile" ? 0.001 : 0.00035;
+  await document.transform(
+    simplify({
+      simplifier: MeshoptSimplifier,
+      ratio,
+      error,
+      lockBorder: true
+    }),
+    prune()
+  );
+  const afterTriangles = countDocumentTriangles(document);
+  return {
+    id: "mesh-simplification",
+    label: "Simplify heavy mesh geometry",
+    status: afterTriangles < beforeTriangles ? "completed" : "skipped",
+    beforeTriangles,
+    afterTriangles,
+    ratio,
+    error,
+    note:
+      afterTriangles < beforeTriangles
+        ? `Reduced geometry from ${formatCount(beforeTriangles)} to ${formatCount(afterTriangles)} triangles.`
+        : "Simplifier did not reduce this model within the configured error limit."
+  };
+}
+
+function formatCount(value) {
+  return Number(value).toLocaleString("en-US");
 }
 
 function percentChange(before, after) {
@@ -389,7 +470,7 @@ if (sourcePath.toLowerCase().endsWith(".glb")) {
   const compactBytes = compactGlbJson(sourceBytes);
   await writeFile(outputPath, compactBytes);
 }
-const gpuTextureStep = await optimizeGlb(sourcePath, outputPath, profile);
+const { meshSimplificationStep, gpuTextureStep } = await optimizeGlb(sourcePath, outputPath, profile);
 const afterInfo = await stat(outputPath);
 
 if (applyOptimized) {
@@ -441,6 +522,7 @@ const job = {
       label: "Weld vertices and resample animation data",
       status: "completed"
     },
+    meshSimplificationStep,
     {
       id: "mesh-reorder",
       label: "Reorder mesh data for transmission size",

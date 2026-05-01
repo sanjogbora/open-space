@@ -75,6 +75,7 @@ Current steps:
 - Compact the GLB JSON chunk.
 - Deduplicate and prune unused resources with glTF Transform.
 - Weld vertices and resample animation data.
+- Simplify heavy mesh geometry on mobile/balanced profiles when triangle count crosses conservative thresholds.
 - Resize and convert eligible image textures to WebP transfer textures.
 - Convert eligible embedded color textures to KTX2/Basis when `toktx` is installed.
 - Reorder mesh data for transmission size.
