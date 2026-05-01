@@ -61,8 +61,16 @@ type PublishState = "idle" | "publishing" | "done" | "error";
 type OptimizeState = "idle" | "optimizing" | "done" | "error";
 type RepairState = "idle" | "repairing" | "done" | "error";
 type BakeState = "idle" | "baking" | "done" | "error";
+type BakePreset = "draft" | "medium" | "high" | "super";
 type HotspotIcon = NonNullable<HotspotInteraction["icon"]>;
 type MovementToggle = "enabled" | "keyboard" | "clickToMove" | "dragLook";
+
+const bakePresetDefaults: Record<BakePreset, { resolution: number; samples: number; margin: number }> = {
+  draft: { resolution: 512, samples: 32, margin: 8 },
+  medium: { resolution: 1024, samples: 96, margin: 16 },
+  high: { resolution: 2048, samples: 192, margin: 24 },
+  super: { resolution: 4096, samples: 384, margin: 32 }
+};
 
 interface NavigationRepairDraft {
   reason: string;
@@ -244,6 +252,7 @@ interface LightmapBakeJobDocument {
   status: "idle" | "running" | "completed" | "blocked" | "failed";
   engine: string;
   bakeMode?: "lighting" | "combined";
+  preset?: BakePreset;
   message?: string;
   startedAt?: string;
   completedAt?: string;
@@ -1147,6 +1156,7 @@ function App() {
   const [bakeState, setBakeState] = useState<BakeState>("idle");
   const [bakeError, setBakeError] = useState("");
   const [bakeSettings, setBakeSettings] = useState({
+    preset: "medium" as BakePreset,
     resolution: 1024,
     samples: 96,
     margin: 16,
@@ -4697,6 +4707,25 @@ function App() {
                   </button>
                 </div>
                 <div className="field-grid">
+                  <label className="field">
+                    <span>Quality preset</span>
+                    <select
+                      value={bakeSettings.preset}
+                      onChange={(event) => {
+                        const preset = event.target.value as BakePreset;
+                        setBakeSettings((current) => ({
+                          ...current,
+                          preset,
+                          ...bakePresetDefaults[preset]
+                        }));
+                      }}
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="super">Super</option>
+                    </select>
+                  </label>
                   <NumberField
                     label="Max lightmap px"
                     min={256}
@@ -4760,6 +4789,7 @@ function App() {
                         <span>{lightmapBakeJob.engine}</span>
                         {lightmapBakeJob.message && <small>{lightmapBakeJob.message}</small>}
                         {lightmapBakeJob.bakeMode && <small>{lightmapBakeJob.bakeMode} bake</small>}
+                        {lightmapBakeJob.preset && <small>{lightmapBakeJob.preset} quality</small>}
                       </div>
                       <strong>{lightmapBakeJob.status}</strong>
                     </div>

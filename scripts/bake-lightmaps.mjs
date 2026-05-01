@@ -9,8 +9,16 @@ const samplesArg = args.find((arg) => arg.startsWith("--samples="));
 const marginArg = args.find((arg) => arg.startsWith("--margin="));
 const modeArg = args.find((arg) => arg.startsWith("--mode="));
 const maxMaterialsArg = args.find((arg) => arg.startsWith("--max-materials="));
+const presetArg = args.find((arg) => arg.startsWith("--preset="));
 const bundleDir = path.resolve(target);
 const blenderCommand = process.env.BLENDER_PATH || "blender";
+
+const bakePresets = {
+  draft: { resolution: 512, samples: 32, margin: 8 },
+  medium: { resolution: 1024, samples: 96, margin: 16 },
+  high: { resolution: 2048, samples: 192, margin: 24 },
+  super: { resolution: 4096, samples: 384, margin: 32 }
+};
 
 function integerOption(rawValue, fallback, min, max) {
   const parsed = Number(rawValue ?? fallback);
@@ -18,9 +26,12 @@ function integerOption(rawValue, fallback, min, max) {
   return Math.round(Math.min(max, Math.max(min, value)));
 }
 
-const resolution = integerOption(resolutionArg?.split("=")[1] ?? process.env.LIGHTMAP_RESOLUTION, 1024, 256, 4096);
-const samples = integerOption(samplesArg?.split("=")[1] ?? process.env.LIGHTMAP_SAMPLES, 96, 16, 1024);
-const margin = integerOption(marginArg?.split("=")[1] ?? process.env.LIGHTMAP_MARGIN, 16, 2, 96);
+const requestedPreset = String(presetArg?.split("=")[1] ?? process.env.LIGHTMAP_PRESET ?? "medium").toLowerCase();
+const preset = Object.hasOwn(bakePresets, requestedPreset) ? requestedPreset : "medium";
+const presetDefaults = bakePresets[preset];
+const resolution = integerOption(resolutionArg?.split("=")[1] ?? process.env.LIGHTMAP_RESOLUTION, presetDefaults.resolution, 256, 4096);
+const samples = integerOption(samplesArg?.split("=")[1] ?? process.env.LIGHTMAP_SAMPLES, presetDefaults.samples, 16, 1024);
+const margin = integerOption(marginArg?.split("=")[1] ?? process.env.LIGHTMAP_MARGIN, presetDefaults.margin, 2, 96);
 const maxMaterials = integerOption(maxMaterialsArg?.split("=")[1] ?? process.env.LIGHTMAP_MAX_MATERIALS, 160, 1, 512);
 const requestedBakeMode = String(modeArg?.split("=")[1] ?? process.env.LIGHTMAP_BAKE_MODE ?? "lighting").toLowerCase();
 const bakeMode = ["lighting", "combined"].includes(requestedBakeMode) ? requestedBakeMode : "lighting";
@@ -290,6 +301,7 @@ if (!hasBlender) {
     completedAt: timestamp,
     engine: "blender-cycles",
     bakeMode,
+    preset,
     message: "Blender was not found. Install Blender or set BLENDER_PATH before running automatic lightmap baking.",
     steps: [
       step("detect-blender", "Detect Blender renderer", "failed", "blender --version failed"),
@@ -320,6 +332,7 @@ const startedJob = {
   engine: "blender-cycles",
   message: `Baking ${sceneUrl} with Blender.`,
   bakeMode,
+  preset,
   steps: [
     step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
     ...initialSteps.slice(1)
@@ -448,6 +461,7 @@ try {
     margin,
     maxMaterials,
     bakeMode,
+    preset,
     steps: [
       step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
       step("unwrap-uv2", "Create secondary lightmap UVs", "completed", "Generated Lightmap UVs with Blender smart projection."),

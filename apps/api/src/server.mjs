@@ -724,6 +724,12 @@ function runOptimize(projectId = "demo", profile = "balanced", applyOptimized = 
 }
 
 function lightmapBakeOptions(body = {}) {
+  const presets = {
+    draft: { resolution: 512, samples: 32, margin: 8 },
+    medium: { resolution: 1024, samples: 96, margin: 16 },
+    high: { resolution: 2048, samples: 192, margin: 24 },
+    super: { resolution: 4096, samples: 384, margin: 32 }
+  };
   const integerOption = (value, fallback, min, max) => {
     const parsed = Number(value ?? fallback);
     const finiteValue = Number.isFinite(parsed) ? parsed : fallback;
@@ -731,10 +737,14 @@ function lightmapBakeOptions(body = {}) {
   };
   const requestedMode = String(body.mode ?? "lighting").toLowerCase();
   const mode = ["lighting", "combined"].includes(requestedMode) ? requestedMode : "lighting";
+  const requestedPreset = String(body.preset ?? "medium").toLowerCase();
+  const preset = Object.hasOwn(presets, requestedPreset) ? requestedPreset : "medium";
+  const presetDefaults = presets[preset];
   return {
-    resolution: integerOption(body.resolution, 1024, 256, 4096),
-    samples: integerOption(body.samples, 96, 16, 1024),
-    margin: integerOption(body.margin, 16, 2, 96),
+    preset,
+    resolution: integerOption(body.resolution, presetDefaults.resolution, 256, 4096),
+    samples: integerOption(body.samples, presetDefaults.samples, 16, 1024),
+    margin: integerOption(body.margin, presetDefaults.margin, 2, 96),
     maxMaterials: integerOption(body.maxMaterials, 160, 1, 512),
     mode
   };
@@ -750,7 +760,8 @@ function runLightmapBake(projectId = "demo", options = {}) {
       ` --samples=${bakeOptions.samples}` +
       ` --margin=${bakeOptions.margin}` +
       ` --max-materials=${bakeOptions.maxMaterials}` +
-      ` --mode=${bakeOptions.mode}`;
+      ` --mode=${bakeOptions.mode}` +
+      ` --preset=${bakeOptions.preset}`;
     const command =
       `node scripts/bake-lightmaps.mjs ${viewerTarget}${bakeArgs} && ` +
       `node scripts/bake-lightmaps.mjs ${studioTarget}${bakeArgs}`;
