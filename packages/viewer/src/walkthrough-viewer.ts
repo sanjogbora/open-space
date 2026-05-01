@@ -74,6 +74,11 @@ interface GridRouteNode {
   closed: boolean;
 }
 
+interface RecoveredNavigationTarget {
+  target: THREE.Vector3;
+  route?: THREE.Vector3[];
+}
+
 export class WalkthroughViewer {
   private readonly container: HTMLElement;
   private readonly manifest: SceneManifest;
@@ -2187,6 +2192,15 @@ export class WalkthroughViewer {
     }
     const failureDetail = this.navigationFailureDetail(nextTarget, this.camera.position);
     if (failureDetail) {
+      const recoveredTarget = this.findReachableTargetNear(nextTarget, this.camera.position);
+      if (recoveredTarget) {
+        if (recoveredTarget.route) {
+          this.startClickRoute(recoveredTarget.route, recoveredTarget.target);
+        } else {
+          this.startClickMove(recoveredTarget.target, recoveredTarget.target);
+        }
+        return true;
+      }
       this.emitNavigationFailure(
         failureDetail.reason,
         event,
@@ -2200,14 +2214,7 @@ export class WalkthroughViewer {
     if (routeFailureDetail) {
       const navigationRoute = this.findNavigationRoute(nextTarget, this.camera.position);
       if (navigationRoute) {
-        const [firstWaypoint, ...remainingWaypoints] = navigationRoute;
-        this.moveTarget = firstWaypoint;
-        this.movePath = remainingWaypoints;
-        this.clickMoveVelocity = 0;
-        this.cameraTween = undefined;
-        this.moveMarker.visible = true;
-        this.moveMarker.position.copy(floorHit.point);
-        this.moveMarker.position.y += 0.035;
+        this.startClickRoute(navigationRoute, floorHit.point);
         return true;
       }
       this.emitNavigationFailure(
@@ -2219,14 +2226,86 @@ export class WalkthroughViewer {
       );
       return true;
     }
-    this.moveTarget = nextTarget;
+    this.startClickMove(nextTarget, floorHit.point);
+    return true;
+  }
+
+  private startClickMove(target: THREE.Vector3, markerPoint: THREE.Vector3): void {
+    this.moveTarget = target;
     this.movePath = [];
     this.clickMoveVelocity = 0;
     this.cameraTween = undefined;
     this.moveMarker.visible = true;
-    this.moveMarker.position.copy(floorHit.point);
+    this.moveMarker.position.copy(markerPoint);
     this.moveMarker.position.y += 0.035;
-    return true;
+  }
+
+  private startClickRoute(route: THREE.Vector3[], markerPoint: THREE.Vector3): void {
+    const [firstWaypoint, ...remainingWaypoints] = route;
+    if (!firstWaypoint) {
+      return;
+    }
+    this.moveTarget = firstWaypoint;
+    this.movePath = remainingWaypoints;
+    this.clickMoveVelocity = 0;
+    this.cameraTween = undefined;
+    this.moveMarker.visible = true;
+    this.moveMarker.position.copy(markerPoint);
+    this.moveMarker.position.y += 0.035;
+  }
+
+  private findReachableTargetNear(
+    target: THREE.Vector3,
+    origin: THREE.Vector3
+  ): RecoveredNavigationTarget | undefined {
+    const candidates = this.nearbyNavigationCandidates(target);
+    for (const candidate of candidates) {
+      if (this.navigationFailureDetail(candidate, origin)) {
+        continue;
+      }
+      if (!this.navigationRouteFailureDetail(candidate, origin)) {
+        return { target: candidate };
+      }
+      const route = this.findNavigationRoute(candidate, origin);
+      if (route) {
+        return { target: candidate, route };
+      }
+    }
+    return undefined;
+  }
+
+  private nearbyNavigationCandidates(target: THREE.Vector3): THREE.Vector3[] {
+    const candidates: THREE.Vector3[] = [];
+    const seen = new Set<string>();
+    const addCandidate = (candidate: THREE.Vector3) => {
+      const probed = this.navigationProbePosition(candidate);
+      if (this.minBounds && this.maxBounds) {
+        clampToBounds(probed, this.minBounds, this.maxBounds);
+      }
+      const key = `${probed.x.toFixed(2)}:${probed.y.toFixed(2)}:${probed.z.toFixed(2)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        candidates.push(probed);
+      }
+    };
+
+    addCandidate(target.clone());
+    const rings = [0.22, 0.4, 0.65, 0.95, 1.35, 1.8, 2.35];
+    const slices = 16;
+    for (const radius of rings) {
+      for (let index = 0; index < slices; index += 1) {
+        const angle = (index / slices) * Math.PI * 2;
+        addCandidate(
+          new THREE.Vector3(
+            target.x + Math.cos(angle) * radius,
+            target.y,
+            target.z + Math.sin(angle) * radius
+          )
+        );
+      }
+    }
+
+    return candidates.sort((a, b) => a.distanceToSquared(target) - b.distanceToSquared(target));
   }
 
   private navigationFailureMessage(
