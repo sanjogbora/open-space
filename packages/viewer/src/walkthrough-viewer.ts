@@ -1547,7 +1547,7 @@ export class WalkthroughViewer {
     nextPosition.y = damp(nextPosition.y, target.y, 5.5, delta);
     if (this.canOccupyPosition(nextPosition, this.camera.position)) {
       this.camera.position.copy(nextPosition);
-      this.snapCameraToFloor();
+      this.snapCameraToFloor(delta);
       this.clampCamera();
       return;
     }
@@ -1676,7 +1676,7 @@ export class WalkthroughViewer {
     if (!this.generatedWalkZonesOnly || this.geometryFloorMeshes.length === 0) {
       return candidate;
     }
-    const floorY = this.sampleGeometryFloorY(candidate);
+    const floorY = this.sampleGeometryFloorY(candidate, { maxDelta: Math.max(0.75, this.cameraHeight * 0.45) });
     if (typeof floorY !== "number") {
       return candidate;
     }
@@ -2084,7 +2084,7 @@ export class WalkthroughViewer {
   }
 
   private canStandOnGeometryFloor(position: THREE.Vector3): boolean {
-    const floorY = this.sampleGeometryFloorY(position);
+    const floorY = this.sampleGeometryFloorY(position, { maxDelta: Math.max(0.75, this.cameraHeight * 0.45) });
     if (typeof floorY !== "number") {
       return false;
     }
@@ -2092,34 +2092,46 @@ export class WalkthroughViewer {
     return Math.abs(floorY - expectedFloorY) <= Math.max(0.45, this.cameraHeight * 0.35);
   }
 
-  private snapCameraToFloor(): void {
-    const floorY = this.sampleGeometryFloorY(this.camera.position);
+  private snapCameraToFloor(delta = 1 / 60): void {
+    const floorY = this.sampleGeometryFloorY(this.camera.position, { maxDelta: Math.max(0.28, this.cameraHeight * 0.18) });
     if (typeof floorY !== "number") {
       return;
     }
     const nextY = floorY + this.cameraHeight;
-    if (Math.abs(nextY - this.camera.position.y) <= 0.65) {
-      this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, nextY, 0.5);
+    const difference = Math.abs(nextY - this.camera.position.y);
+    if (difference <= Math.max(0.28, this.cameraHeight * 0.18)) {
+      this.camera.position.y = damp(this.camera.position.y, nextY, 8.5, delta);
     }
   }
 
-  private sampleGeometryFloorY(position: THREE.Vector3): number | undefined {
+  private sampleGeometryFloorY(
+    position: THREE.Vector3,
+    options: { maxDelta?: number } = {}
+  ): number | undefined {
     if (this.geometryFloorMeshes.length === 0) {
       return undefined;
     }
+    const expectedFloorY = position.y - this.cameraHeight;
     const raycaster = new THREE.Raycaster(
       new THREE.Vector3(position.x, position.y + 1.2, position.z),
       new THREE.Vector3(0, -1, 0),
       0,
       Math.max(3.2, this.cameraHeight + 2.4)
     );
-    const hit = raycaster.intersectObjects(this.geometryFloorMeshes, true).find((candidate) => {
+    const hits = raycaster.intersectObjects(this.geometryFloorMeshes, true).filter((candidate) => {
       if (!(candidate.object instanceof THREE.Mesh) || !candidate.face) {
         return false;
       }
       const normal = candidate.face.normal.clone().transformDirection(candidate.object.matrixWorld);
       return Math.abs(normal.y) >= 0.45 && candidate.point.y <= position.y + 0.35;
     });
+    const maxDelta = options.maxDelta ?? Math.max(0.6, this.cameraHeight * 0.35);
+    const stableHit = hits
+      .filter((candidate) => Math.abs(candidate.point.y - expectedFloorY) <= maxDelta)
+      .sort(
+        (a, b) => Math.abs(a.point.y - expectedFloorY) - Math.abs(b.point.y - expectedFloorY)
+      )[0];
+    const hit = stableHit ?? hits[0];
     return hit?.point.y;
   }
 

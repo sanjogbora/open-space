@@ -1261,11 +1261,23 @@ button.list-row {
 
 .zone-editor-row {
   display: grid;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 13px;
   border: 1px solid #e3e8eb;
   border-radius: 8px;
   background: #fbfcfd;
+}
+
+.zone-editor-row.walk {
+  border-color: rgba(8, 127, 231, 0.22);
+}
+
+.zone-editor-row.pass {
+  border-color: rgba(17, 140, 91, 0.24);
+}
+
+.zone-editor-row.block {
+  border-color: rgba(183, 67, 53, 0.24);
 }
 
 .zone-editor-heading {
@@ -1273,6 +1285,142 @@ button.list-row {
   grid-template-columns: minmax(160px, 1fr) 120px 120px 38px;
   align-items: end;
   gap: 10px;
+}
+
+.zone-simple-heading {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 11px;
+}
+
+.zone-kind-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #087fe7;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.zone-editor-row.pass .zone-kind-icon {
+  background: #118c5b;
+}
+
+.zone-editor-row.block .zone-kind-icon {
+  background: #b74335;
+}
+
+.zone-simple-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.zone-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.zone-title-row input {
+  min-width: min(280px, 100%);
+  flex: 1;
+  height: 34px;
+  font-weight: 800;
+}
+
+.zone-kind-pill,
+.zone-origin-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.zone-kind-pill.walk {
+  color: #075b9f;
+  background: #e6f3ff;
+}
+
+.zone-kind-pill.pass {
+  color: #0e6242;
+  background: #e8f7ef;
+}
+
+.zone-kind-pill.block {
+  color: #8f2f25;
+  background: #fff0ee;
+}
+
+.zone-origin-pill {
+  color: #5f6f79;
+  background: #edf1f3;
+}
+
+.zone-simple-main p,
+.zone-simple-main small {
+  color: #52636f;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.zone-simple-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.compact-button {
+  height: 34px;
+  padding: 0 10px;
+}
+
+.zone-kind-segmented {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid #d6dde2;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.zone-kind-segmented button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid #d6dde2;
+  color: #52636f;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.zone-kind-segmented button:last-child {
+  border-right: 0;
+}
+
+.zone-kind-segmented button.active {
+  color: #ffffff;
+  background: #24313a;
+}
+
+.zone-advanced-editor {
+  display: grid;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e3e8eb;
 }
 
 .field-hint {

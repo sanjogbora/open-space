@@ -443,6 +443,38 @@ function navigationZoneOriginLabel(zone: NavigationZone): string | undefined {
   return undefined;
 }
 
+function navigationZoneKindLabel(kind: NavigationZone["kind"]): string {
+  if (kind === "walk") {
+    return "Walk area";
+  }
+  if (kind === "pass") {
+    return "Door pass";
+  }
+  return "Blocker";
+}
+
+function navigationZonePlainSummary(zone: NavigationZone): string {
+  const width = zone.size[0].toFixed(2);
+  const depth = zone.size[2].toFixed(2);
+  if (zone.kind === "walk") {
+    return `${width} x ${depth} m clickable floor patch`;
+  }
+  if (zone.kind === "pass") {
+    return `${width} x ${depth} m doorway connector`;
+  }
+  return `${width} x ${depth} m hard boundary`;
+}
+
+function navigationZonePlainHelp(kind: NavigationZone["kind"]): string {
+  if (kind === "walk") {
+    return "People can stand and click-to-move inside this area.";
+  }
+  if (kind === "pass") {
+    return "Use this to connect two walk areas through a door or opening.";
+  }
+  return "People cannot move through this area.";
+}
+
 function markNavigationZoneAuthored(zone: NavigationZone): NavigationZone {
   const { generatedBy: _generatedBy, ...rest } = zone;
   return {
@@ -1173,6 +1205,7 @@ function App() {
   const [navigationRepairDraft, setNavigationRepairDraft] = useState<NavigationRepairDraft | null>(
     initialNavigationRepairDraft
   );
+  const [expandedNavigationZoneIds, setExpandedNavigationZoneIds] = useState<Set<string>>(new Set());
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
 
@@ -2241,6 +2274,23 @@ function App() {
       ...navigation,
       zones: (navigation.zones ?? []).filter((zone) => zone.id !== zoneId)
     }));
+    setExpandedNavigationZoneIds((current) => {
+      const next = new Set(current);
+      next.delete(zoneId);
+      return next;
+    });
+  };
+
+  const toggleNavigationZoneAdvanced = (zoneId: string) => {
+    setExpandedNavigationZoneIds((current) => {
+      const next = new Set(current);
+      if (next.has(zoneId)) {
+        next.delete(zoneId);
+      } else {
+        next.add(zoneId);
+      }
+      return next;
+    });
   };
 
   const ignoreCollisionName = (name: string) => {
@@ -5748,88 +5798,111 @@ function App() {
                       </div>
                     )}
                     <div className="zone-editor-list">
-                      {(manifest.navigation.zones ?? []).map((zone) => (
-                        <div key={zone.id} className="zone-editor-row">
-                          <div className="zone-editor-heading">
-                            <label>
-                              <span>Label</span>
-                              <input
-                                value={zone.label}
-                                onChange={(event) =>
-                                  updateNavigationZone(zone.id, (current) => ({
-                                    ...current,
-                                    label: event.target.value
-                                  }))
-                                }
-                              />
-                              {navigationZoneOriginLabel(zone) && (
-                                <small className="field-hint">{navigationZoneOriginLabel(zone)}</small>
-                              )}
-                            </label>
-                            <label>
-                              <span>Kind</span>
-                              <select
-                                value={zone.kind}
-                                onChange={(event) =>
-                                  updateNavigationZone(zone.id, (current) => ({
-                                    ...current,
-                                    kind: event.target.value as NavigationZone["kind"]
-                                  }))
-                                }
-                              >
-                                <option value="walk">Walk</option>
-                                <option value="block">Block</option>
-                                <option value="pass">Pass</option>
-                              </select>
-                            </label>
-                            <label className="toggle-row compact-toggle">
-                              <input
-                                type="checkbox"
-                                checked={zone.enabled !== false}
-                                onChange={(event) =>
-                                  updateNavigationZone(zone.id, (current) => ({
-                                    ...current,
-                                    enabled: event.target.checked
-                                  }))
-                                }
-                              />
-                              <span>Enabled</span>
-                            </label>
-                            <button
-                              type="button"
-                              className="icon-action danger"
-                              title="Delete zone"
-                              onClick={() => removeNavigationZone(zone.id)}
-                            >
-                              <Trash2 size={17} aria-hidden="true" />
-                            </button>
+                      {(manifest.navigation.zones ?? []).map((zone) => {
+                        const advancedOpen = expandedNavigationZoneIds.has(zone.id);
+                        return (
+                          <div key={zone.id} className={`zone-editor-row ${zone.kind}`}>
+                            <div className="zone-simple-heading">
+                              <div className="zone-kind-icon" aria-hidden="true">
+                                {zone.kind === "walk" ? "W" : zone.kind === "pass" ? "P" : "B"}
+                              </div>
+                              <div className="zone-simple-main">
+                                <div className="zone-title-row">
+                                  <input
+                                    aria-label={`${zone.label} label`}
+                                    value={zone.label}
+                                    onChange={(event) =>
+                                      updateNavigationZone(zone.id, (current) => ({
+                                        ...current,
+                                        label: event.target.value
+                                      }))
+                                    }
+                                  />
+                                  <span className={`zone-kind-pill ${zone.kind}`}>
+                                    {navigationZoneKindLabel(zone.kind)}
+                                  </span>
+                                  {navigationZoneOriginLabel(zone) && (
+                                    <span className="zone-origin-pill">{navigationZoneOriginLabel(zone)}</span>
+                                  )}
+                                </div>
+                                <p>{navigationZonePlainSummary(zone)}</p>
+                                <small>{navigationZonePlainHelp(zone.kind)}</small>
+                              </div>
+                              <div className="zone-simple-actions">
+                                <label className="toggle-row compact-toggle">
+                                  <input
+                                    type="checkbox"
+                                    checked={zone.enabled !== false}
+                                    onChange={(event) =>
+                                      updateNavigationZone(zone.id, (current) => ({
+                                        ...current,
+                                        enabled: event.target.checked
+                                      }))
+                                    }
+                                  />
+                                  <span>On</span>
+                                </label>
+                                <button
+                                  type="button"
+                                  className="button secondary compact-button"
+                                  onClick={() => toggleNavigationZoneAdvanced(zone.id)}
+                                >
+                                  <Settings2 size={16} aria-hidden="true" />
+                                  {advancedOpen ? "Hide" : "Advanced"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="icon-action danger"
+                                  title="Delete zone"
+                                  onClick={() => removeNavigationZone(zone.id)}
+                                >
+                                  <Trash2 size={17} aria-hidden="true" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="zone-kind-segmented" aria-label={`Change ${zone.label} zone type`}>
+                              {(["walk", "pass", "block"] as const).map((kind) => (
+                                <button
+                                  key={kind}
+                                  type="button"
+                                  className={zone.kind === kind ? "active" : ""}
+                                  onClick={() => updateNavigationZone(zone.id, (current) => ({ ...current, kind }))}
+                                >
+                                  {navigationZoneKindLabel(kind)}
+                                </button>
+                              ))}
+                            </div>
+                            {advancedOpen && (
+                              <div className="zone-advanced-editor">
+                                <VectorEditor
+                                  label="Center"
+                                  value={zone.center}
+                                  onChange={(value) =>
+                                    updateNavigationZone(zone.id, (current) => ({ ...current, center: value }))
+                                  }
+                                />
+                                <VectorEditor
+                                  label="Size"
+                                  value={zone.size}
+                                  onChange={(value) =>
+                                    updateNavigationZone(zone.id, (current) => ({ ...current, size: value }))
+                                  }
+                                />
+                                <NumberField
+                                  label="Rotation Y"
+                                  min={-3.14}
+                                  max={3.14}
+                                  step={0.01}
+                                  value={zone.rotationY ?? 0}
+                                  onChange={(value) =>
+                                    updateNavigationZone(zone.id, (current) => ({ ...current, rotationY: value }))
+                                  }
+                                />
+                              </div>
+                            )}
                           </div>
-                          <VectorEditor
-                            label="Center"
-                            value={zone.center}
-                            onChange={(value) =>
-                              updateNavigationZone(zone.id, (current) => ({ ...current, center: value }))
-                            }
-                          />
-                          <VectorEditor
-                            label="Size"
-                            value={zone.size}
-                            onChange={(value) =>
-                              updateNavigationZone(zone.id, (current) => ({ ...current, size: value }))
-                            }
-                          />
-                          <NumberField
-                            label="Rotation Y"
-                            min={-3.14}
-                            max={3.14}
-                            step={0.01}
-                            value={zone.rotationY ?? 0}
-                            onChange={(value) =>
-                              updateNavigationZone(zone.id, (current) => ({ ...current, rotationY: value }))
-                            }
-                          />
-                        </div>
-                      ))}
+                        );
+                      })}
                       {(manifest.navigation.zones ?? []).length === 0 && (
                         <p className="quiet-note">
                           No explicit zones yet. Add a walk zone to define clickable floor area, block zones for hard
