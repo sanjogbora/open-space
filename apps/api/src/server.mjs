@@ -1756,17 +1756,21 @@ function navigationComponents(zones) {
   return components;
 }
 
-function zoneCenterDistance(a, b) {
-  return Math.hypot(a.center[0] - b.center[0], a.center[2] - b.center[2]);
+function zoneBridgeGap(a, b) {
+  const boxA = navigationZoneBox(a);
+  const boxB = navigationZoneBox(b);
+  const xGap = boxA.maxX < boxB.minX ? boxB.minX - boxA.maxX : boxB.maxX < boxA.minX ? boxA.minX - boxB.maxX : 0;
+  const zGap = boxA.maxZ < boxB.minZ ? boxB.minZ - boxA.maxZ : boxB.maxZ < boxA.minZ ? boxA.minZ - boxB.maxZ : 0;
+  return Math.hypot(xGap, zGap);
 }
 
 function nearestNavigationComponentBridge(connectedZones, component) {
   let nearest;
   connectedZones.forEach((from) => {
     component.forEach((to) => {
-      const distance = zoneCenterDistance(from, to);
-      if (!nearest || distance < nearest.distance) {
-        nearest = { from, to, distance };
+      const gap = zoneBridgeGap(from, to);
+      if (!nearest || gap < nearest.gap) {
+        nearest = { from, to, gap };
       }
     });
   });
@@ -1811,7 +1815,7 @@ function autoBridgePassZones(routeZones, cameraHeight) {
   const connectedComponents = [components[0] ?? []];
   components.slice(1).forEach((component, index) => {
     const nearest = nearestNavigationComponentBridge(connectedComponents.flat(), component);
-    if (!nearest || nearest.distance > 3.2) {
+    if (!nearest || nearest.gap > Math.max(2.4, cameraHeight * 1.45)) {
       return;
     }
     bridges.push(createBridgePassZone(nearest.from, nearest.to, index + 1, cameraHeight));
