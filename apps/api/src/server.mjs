@@ -1008,6 +1008,38 @@ function roomLabelFromName(name) {
   return cleaned || "Room";
 }
 
+const roomSemanticHints = [
+  { label: "Living TV", keywords: ["tv", "television", "media", "console"], weight: 4 },
+  { label: "Living", keywords: ["living", "sofa", "couch", "lounge", "coffee table"], weight: 3 },
+  { label: "Dining", keywords: ["dining", "dinner", "chair", "table"], weight: 2 },
+  { label: "Kitchen", keywords: ["kitchen", "fridge", "refrigerator", "sink", "cooktop", "stove", "oven", "hob", "countertop"], weight: 3 },
+  { label: "Master Bedroom", keywords: ["master", "king bed", "queen bed"], weight: 4 },
+  { label: "Bedroom", keywords: ["bedroom", "bed", "mattress", "wardrobe", "closet", "dresser"], weight: 3 },
+  { label: "Bath", keywords: ["bath", "toilet", "wc", "shower", "basin", "vanity"], weight: 3 },
+  { label: "Balcony", keywords: ["balcony", "terrace", "patio", "deck", "sitout"], weight: 3 },
+  { label: "Foyer", keywords: ["foyer", "entry", "entrance", "lobby"], weight: 3 },
+  { label: "Pooja", keywords: ["pooja", "puja", "temple", "mandir"], weight: 4 },
+  { label: "Study", keywords: ["study", "office", "desk", "workstation"], weight: 3 },
+  { label: "Utility", keywords: ["utility", "washer", "washing", "laundry", "dry area"], weight: 3 },
+  { label: "Family Room", keywords: ["family", "multipurpose", "den"], weight: 3 }
+];
+
+function semanticRoomLabelForName(name) {
+  const normalized = String(name ?? "").toLowerCase();
+  let best;
+  for (const hint of roomSemanticHints) {
+    const matches = hint.keywords.filter((keyword) => normalized.includes(keyword)).length;
+    if (matches === 0) {
+      continue;
+    }
+    const score = matches * hint.weight;
+    if (!best || score > best.score) {
+      best = { label: hint.label, score };
+    }
+  }
+  return best;
+}
+
 function graphRoomCandidates(graph, modelScale, cameraHeight) {
   const rawBounds = combineGraphBounds(graph);
   const rawArea = rawBounds ? Math.max(1, boundsArea(rawBounds)) : 1;
@@ -1031,15 +1063,6 @@ function graphRoomCandidates(graph, modelScale, cameraHeight) {
     "dry area",
     "hall"
   ];
-  const roomHints = [
-    { label: "Living", keywords: ["sofa", "couch", "tv", "television", "media", "lounge"], weight: 3 },
-    { label: "Dining", keywords: ["dining", "dinner", "chair", "table"], weight: 2 },
-    { label: "Kitchen", keywords: ["kitchen", "fridge", "refrigerator", "sink", "cooktop", "stove", "oven"], weight: 3 },
-    { label: "Bedroom", keywords: ["bed", "mattress", "wardrobe", "closet", "dresser"], weight: 3 },
-    { label: "Bath", keywords: ["bath", "toilet", "wc", "shower", "basin", "vanity"], weight: 3 },
-    { label: "Study", keywords: ["study", "office", "desk"], weight: 3 },
-    { label: "Utility", keywords: ["utility", "washer", "washing", "laundry"], weight: 3 }
-  ];
   const rejectKeywords = ["wall", "door", "window", "glass", "ceiling", "roof", "railing", "column", "pillar"];
   return (graph?.nodes ?? [])
     .map((node) => {
@@ -1051,16 +1074,9 @@ function graphRoomCandidates(graph, modelScale, cameraHeight) {
         return undefined;
       }
       let score = roomKeywords.reduce((sum, keyword) => sum + (searchName.includes(keyword) ? 1 : 0), 0);
-      let semanticLabel;
-      for (const hint of roomHints) {
-        const matches = hint.keywords.filter((keyword) => searchName.includes(keyword)).length;
-        if (matches > 0) {
-          const hintScore = matches * hint.weight;
-          score += hintScore;
-          if (!semanticLabel || hintScore > semanticLabel.score) {
-            semanticLabel = { label: hint.label, score: hintScore };
-          }
-        }
+      const semanticLabel = semanticRoomLabelForName(searchName);
+      if (semanticLabel) {
+        score += semanticLabel.score;
       }
       const scaledBounds = scaleBounds(node.bounds, modelScale);
       if (!scaledBounds) {
@@ -1318,17 +1334,6 @@ function roomLabelFromZoneContents(zone, graph, modelScale) {
   if (!zone || !graph) {
     return undefined;
   }
-  const roomHints = [
-    { label: "Living", keywords: ["sofa", "couch", "tv", "television", "media", "lounge"], weight: 3 },
-    { label: "Dining", keywords: ["dining", "dinner", "chair", "table"], weight: 2 },
-    { label: "Kitchen", keywords: ["kitchen", "fridge", "refrigerator", "sink", "cooktop", "stove", "oven"], weight: 3 },
-    { label: "Bedroom", keywords: ["bed", "mattress", "wardrobe", "closet", "dresser"], weight: 3 },
-    { label: "Bath", keywords: ["bath", "toilet", "wc", "shower", "basin", "vanity"], weight: 3 },
-    { label: "Balcony", keywords: ["balcony", "terrace", "patio", "deck"], weight: 3 },
-    { label: "Entry", keywords: ["entry", "entrance", "foyer", "lobby"], weight: 3 },
-    { label: "Study", keywords: ["study", "office", "desk"], weight: 3 },
-    { label: "Utility", keywords: ["utility", "washer", "washing", "laundry", "dry area"], weight: 3 }
-  ];
   const rejectKeywords = ["wall", "door", "window", "glass", "ceiling", "roof", "floor", "slab", "tile", "ground"];
   const box = navigationZoneBox(zone);
   const scores = new Map();
@@ -1357,11 +1362,9 @@ function roomLabelFromZoneContents(zone, graph, modelScale) {
     if (rejectKeywords.some((keyword) => searchName.includes(keyword))) {
       continue;
     }
-    for (const hint of roomHints) {
-      const matches = hint.keywords.filter((keyword) => searchName.includes(keyword)).length;
-      if (matches > 0) {
-        scores.set(hint.label, (scores.get(hint.label) ?? 0) + matches * hint.weight);
-      }
+    const semanticLabel = semanticRoomLabelForName(searchName);
+    if (semanticLabel) {
+      scores.set(semanticLabel.label, (scores.get(semanticLabel.label) ?? 0) + semanticLabel.score);
     }
   }
   const best = [...scores.entries()].sort((a, b) => b[1] - a[1])[0];
