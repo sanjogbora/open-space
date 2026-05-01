@@ -792,6 +792,7 @@ export class WalkthroughViewer {
     root.traverse((node) => {
       if (node instanceof THREE.Mesh) {
         this.applyObjectOverride(node);
+        this.prepareGeometry(node);
         const name = node.name.toLowerCase();
         this.registerTopViewHiddenObject(node);
         const architecturalShell =
@@ -820,6 +821,18 @@ export class WalkthroughViewer {
         }
       }
     });
+  }
+
+  private prepareGeometry(mesh: THREE.Mesh): void {
+    const geometry = mesh.geometry;
+    if (!(geometry instanceof THREE.BufferGeometry)) {
+      return;
+    }
+    if (!geometry.getAttribute("position") || geometry.getAttribute("normal")) {
+      return;
+    }
+    geometry.computeVertexNormals();
+    geometry.userData = { ...geometry.userData, generatedNormals: true };
   }
 
   private normalizeLoadedMaterial(material: THREE.Material): THREE.Material {
