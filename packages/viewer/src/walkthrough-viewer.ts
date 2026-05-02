@@ -1817,10 +1817,33 @@ export class WalkthroughViewer {
       }
     }
 
+    const originProbe = origin ? this.navigationProbePosition(origin) : undefined;
+    const originSphere = originProbe ? new THREE.Sphere(originProbe, this.collisionRadius) : undefined;
+    const originBlockedBlockers = originSphere
+      ? this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(originSphere))
+      : [];
+    const bridgePassesInferredBlockers = Boolean(
+      originProbe && this.isPassZoneBridgeSegment(originProbe, candidate)
+    );
     const blockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(cameraSphere));
     const effectiveBlockers = insidePassZone
       ? blockedBlockers.filter((blocker) => blocker.kind === "authored")
       : blockedBlockers;
+    if (originProbe) {
+      const sweptBlocker = this.navigationSegmentBlocker(originProbe, candidate, {
+        ignoreBlockers: originBlockedBlockers,
+        ignoreInferredBlockers: bridgePassesInferredBlockers,
+        authoredOnly: insidePassZone
+      });
+      if (sweptBlocker) {
+        return {
+          reason: "blocked-collision",
+          blockerName: sweptBlocker.name,
+          blockerKind: sweptBlocker.kind,
+          point: candidate.clone()
+        };
+      }
+    }
     if (effectiveBlockers.length === 0) {
       return undefined;
     }
@@ -1832,16 +1855,46 @@ export class WalkthroughViewer {
     }
     if (
       effectiveBlockers.every((blocker) => blocker.kind === "inferred") &&
-      this.isPassZoneBridgeSegment(origin, candidate)
+      bridgePassesInferredBlockers
     ) {
       return undefined;
     }
-    const originSphere = new THREE.Sphere(this.navigationProbePosition(origin), this.collisionRadius);
-    const originBlockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(originSphere));
     const newlyBlocked = effectiveBlockers.find((blocker) => !originBlockedBlockers.includes(blocker));
     return newlyBlocked
       ? { reason: "blocked-collision", blockerName: newlyBlocked.name, blockerKind: newlyBlocked.kind, point: candidate.clone() }
       : undefined;
+  }
+
+  private navigationSegmentBlocker(
+    origin: THREE.Vector3,
+    target: THREE.Vector3,
+    options: {
+      ignoreBlockers?: readonly CollisionBlocker[];
+      ignoreInferredBlockers?: boolean;
+      authoredOnly?: boolean;
+    } = {}
+  ): CollisionBlocker | undefined {
+    if (origin.distanceToSquared(target) < 0.0001) {
+      return undefined;
+    }
+    const ignored = new Set(options.ignoreBlockers ?? []);
+    const minY = Math.min(origin.y, target.y) - this.collisionRadius;
+    const maxY = Math.max(origin.y, target.y) + this.collisionRadius;
+    return this.collisionBlockers.find((blocker) => {
+      if (ignored.has(blocker)) {
+        return false;
+      }
+      if (options.authoredOnly && blocker.kind !== "authored") {
+        return false;
+      }
+      if (options.ignoreInferredBlockers && blocker.kind === "inferred") {
+        return false;
+      }
+      if (maxY < blocker.box.min.y || minY > blocker.box.max.y) {
+        return false;
+      }
+      return segmentIntersectsInflatedBox2D(origin, target, blocker.box, this.collisionRadius);
+    });
   }
 
   private navigationProbePosition(position: THREE.Vector3): THREE.Vector3 {
@@ -2955,6 +3008,37 @@ function distanceToSegment2D(point: THREE.Vector3, start: THREE.Vector3, end: TH
   const closestX = start.x + segmentX * t;
   const closestZ = start.z + segmentZ * t;
   return Math.hypot(point.x - closestX, point.z - closestZ);
+}
+
+function segmentIntersectsInflatedBox2D(
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  box: THREE.Box3,
+  padding: number
+): boolean {
+  const minX = box.min.x - padding;
+  const maxX = box.max.x + padding;
+  const minZ = box.min.z - padding;
+  const maxZ = box.max.z + padding;
+  let minT = 0;
+  let maxT = 1;
+
+  const clipAxis = (startValue: number, endValue: number, minValue: number, maxValue: number): boolean => {
+    const delta = endValue - startValue;
+    if (Math.abs(delta) < 0.000001) {
+      return startValue >= minValue && startValue <= maxValue;
+    }
+    let axisMinT = (minValue - startValue) / delta;
+    let axisMaxT = (maxValue - startValue) / delta;
+    if (axisMinT > axisMaxT) {
+      [axisMinT, axisMaxT] = [axisMaxT, axisMinT];
+    }
+    minT = Math.max(minT, axisMinT);
+    maxT = Math.min(maxT, axisMaxT);
+    return minT <= maxT;
+  };
+
+  return clipAxis(start.x, end.x, minX, maxX) && clipAxis(start.z, end.z, minZ, maxZ);
 }
 
 function pointToSegmentDistance(point: THREE.Vector2, start: THREE.Vector2, end: THREE.Vector2): number {
