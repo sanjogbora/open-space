@@ -1301,6 +1301,31 @@ button.list-row {
   background: rgba(191, 215, 232, 0.45);
 }
 
+.zone-shape-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  grid-column: 1 / -1;
+  padding: 10px;
+  border: 1px solid #dce5eb;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.zone-shape-tools strong,
+.zone-shape-tools p {
+  margin: 0;
+  color: #26343d;
+}
+
+.zone-shape-tools p {
+  margin-top: 3px;
+  color: #60717c;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .repair-recommendation {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

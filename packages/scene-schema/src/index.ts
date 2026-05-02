@@ -1,4 +1,5 @@
 export type Vec3 = readonly [number, number, number];
+export type Vec2 = readonly [number, number];
 export type Euler3 = readonly [number, number, number];
 
 export type ViewKind = "walk" | "orbit" | "top";
@@ -104,6 +105,7 @@ export interface NavigationZone {
   kind: NavigationZoneKind;
   center: Vec3;
   size: Vec3;
+  polygon?: readonly Vec2[];
   rotationY?: number;
   enabled?: boolean;
   source?: "authored" | "generated";
@@ -310,6 +312,14 @@ function isVec3(value: unknown): value is Vec3 {
   );
 }
 
+function isVec2(value: unknown): value is Vec2 {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    value.every((item) => typeof item === "number" && Number.isFinite(item))
+  );
+}
+
 function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
@@ -399,6 +409,8 @@ export function isNavigationZone(value: unknown): value is NavigationZone {
     (value["kind"] === "walk" || value["kind"] === "block" || value["kind"] === "pass") &&
     isVec3(value["center"]) &&
     isVec3(value["size"]) &&
+    (value["polygon"] === undefined ||
+      (Array.isArray(value["polygon"]) && value["polygon"].length >= 3 && value["polygon"].every(isVec2))) &&
     (value["rotationY"] === undefined || typeof value["rotationY"] === "number") &&
     (value["enabled"] === undefined || typeof value["enabled"] === "boolean") &&
     (value["source"] === undefined || value["source"] === "authored" || value["source"] === "generated") &&

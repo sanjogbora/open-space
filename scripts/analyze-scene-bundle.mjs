@@ -1578,11 +1578,46 @@ function pointInNavigationZone(zone, point, padding = 0) {
   const sin = Math.sin(rotation);
   const localX = dx * cos - dz * sin;
   const localZ = dx * sin + dz * cos;
+  if (Array.isArray(zone.polygon) && zone.polygon.length >= 3) {
+    return (
+      Math.abs(point[1] - zone.center[1]) <= zone.size[1] / 2 + padding &&
+      pointInPolygonWithPadding([localX, localZ], zone.polygon, padding)
+    );
+  }
   return (
     Math.abs(localX) <= zone.size[0] / 2 + padding &&
     Math.abs(point[1] - zone.center[1]) <= zone.size[1] / 2 + padding &&
     Math.abs(localZ) <= zone.size[2] / 2 + padding
   );
+}
+
+function pointInPolygonWithPadding(point, polygon, padding) {
+  let inside = false;
+  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current, current += 1) {
+    const a = polygon[current];
+    const b = polygon[previous];
+    if ((a[1] > point[1]) !== (b[1] > point[1]) && point[0] < ((b[0] - a[0]) * (point[1] - a[1])) / (b[1] - a[1]) + a[0]) {
+      inside = !inside;
+    }
+    if (padding > 0 && pointToSegmentDistance2D(point, a, b) <= padding) {
+      return true;
+    }
+  }
+  return inside;
+}
+
+function pointToSegmentDistance2D(point, start, end) {
+  const segmentX = end[0] - start[0];
+  const segmentZ = end[1] - start[1];
+  const segmentLengthSq = segmentX * segmentX + segmentZ * segmentZ;
+  if (segmentLengthSq < 0.0001) {
+    return Math.hypot(point[0] - start[0], point[1] - start[1]);
+  }
+  const t = Math.min(
+    1,
+    Math.max(0, ((point[0] - start[0]) * segmentX + (point[1] - start[1]) * segmentZ) / segmentLengthSq)
+  );
+  return Math.hypot(point[0] - (start[0] + segmentX * t), point[1] - (start[1] + segmentZ * t));
 }
 
 function navigationZoneAabb(zone) {
@@ -1591,12 +1626,15 @@ function navigationZoneAabb(zone) {
   const rotation = zone.rotationY ?? 0;
   const cos = Math.cos(rotation);
   const sin = Math.sin(rotation);
-  const localCorners = [
-    [-halfX, -halfZ],
-    [halfX, -halfZ],
-    [halfX, halfZ],
-    [-halfX, halfZ]
-  ];
+  const localCorners =
+    Array.isArray(zone.polygon) && zone.polygon.length >= 3
+      ? zone.polygon
+      : [
+          [-halfX, -halfZ],
+          [halfX, -halfZ],
+          [halfX, halfZ],
+          [-halfX, halfZ]
+        ];
   const corners = localCorners.map(([x, z]) => [
     zone.center[0] + x * cos - z * sin,
     zone.center[2] + x * sin + z * cos

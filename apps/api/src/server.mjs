@@ -1746,11 +1746,27 @@ function graphPassZoneCandidates(graph, modelScale, cameraHeight, walkZones = []
 function navigationZoneBox(zone) {
   const halfX = Math.abs(zone.size?.[0] ?? 0) / 2;
   const halfZ = Math.abs(zone.size?.[2] ?? 0) / 2;
+  const rotation = zone.rotationY ?? 0;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const localCorners =
+    Array.isArray(zone.polygon) && zone.polygon.length >= 3
+      ? zone.polygon
+      : [
+          [-halfX, -halfZ],
+          [halfX, -halfZ],
+          [halfX, halfZ],
+          [-halfX, halfZ]
+        ];
+  const corners = localCorners.map(([x, z]) => [
+    zone.center[0] + x * cos - z * sin,
+    zone.center[2] + x * sin + z * cos
+  ]);
   return {
-    minX: zone.center[0] - halfX,
-    maxX: zone.center[0] + halfX,
-    minZ: zone.center[2] - halfZ,
-    maxZ: zone.center[2] + halfZ
+    minX: Math.min(...corners.map(([x]) => x)),
+    maxX: Math.max(...corners.map(([x]) => x)),
+    minZ: Math.min(...corners.map(([, z]) => z)),
+    maxZ: Math.max(...corners.map(([, z]) => z))
   };
 }
 
@@ -1759,6 +1775,15 @@ function rangeOverlap(minA, maxA, minB, maxB) {
 }
 
 function pointInsideNavigationZone(zone, point, padding = 0.1) {
+  if (Array.isArray(zone.polygon) && zone.polygon.length >= 3) {
+    const rotation = -(zone.rotationY ?? 0);
+    const dx = point[0] - zone.center[0];
+    const dz = point[2] - zone.center[2];
+    const cos = Math.cos(rotation);
+    const sin = Math.sin(rotation);
+    const localPoint = [dx * cos - dz * sin, dx * sin + dz * cos];
+    return pointInPolygonWithPadding(localPoint, zone.polygon, padding);
+  }
   const box = navigationZoneBox(zone);
   return (
     point[0] >= box.minX - padding &&
@@ -1766,6 +1791,35 @@ function pointInsideNavigationZone(zone, point, padding = 0.1) {
     point[2] >= box.minZ - padding &&
     point[2] <= box.maxZ + padding
   );
+}
+
+function pointInPolygonWithPadding(point, polygon, padding) {
+  let inside = false;
+  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current, current += 1) {
+    const a = polygon[current];
+    const b = polygon[previous];
+    if ((a[1] > point[1]) !== (b[1] > point[1]) && point[0] < ((b[0] - a[0]) * (point[1] - a[1])) / (b[1] - a[1]) + a[0]) {
+      inside = !inside;
+    }
+    if (padding > 0 && pointToSegmentDistance2D(point, a, b) <= padding) {
+      return true;
+    }
+  }
+  return inside;
+}
+
+function pointToSegmentDistance2D(point, start, end) {
+  const segmentX = end[0] - start[0];
+  const segmentZ = end[1] - start[1];
+  const segmentLengthSq = segmentX * segmentX + segmentZ * segmentZ;
+  if (segmentLengthSq < 0.0001) {
+    return Math.hypot(point[0] - start[0], point[1] - start[1]);
+  }
+  const t = Math.min(
+    1,
+    Math.max(0, ((point[0] - start[0]) * segmentX + (point[1] - start[1]) * segmentZ) / segmentLengthSq)
+  );
+  return Math.hypot(point[0] - (start[0] + segmentX * t), point[1] - (start[1] + segmentZ * t));
 }
 
 function autoPassZonesBetweenWalkZones(walkZones, cameraHeight) {

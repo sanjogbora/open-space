@@ -38,6 +38,7 @@ import {
   type SceneView,
   type VideoTextureInteraction,
   type RoomDefinition,
+  type Vec2,
   type Vec3
 } from "@walkthrough/scene-schema";
 
@@ -470,13 +471,14 @@ function navigationZoneKindLabel(kind: NavigationZone["kind"]): string {
 function navigationZonePlainSummary(zone: NavigationZone): string {
   const width = zone.size[0].toFixed(2);
   const depth = zone.size[2].toFixed(2);
+  const shape = zone.polygon && zone.polygon.length >= 3 ? `${zone.polygon.length}-point polygon` : "rectangle";
   if (zone.kind === "walk") {
-    return `${width} x ${depth} m clickable floor patch`;
+    return `${shape}, ${width} x ${depth} m clickable floor patch`;
   }
   if (zone.kind === "pass") {
-    return `${width} x ${depth} m doorway connector`;
+    return `${shape}, ${width} x ${depth} m doorway connector`;
   }
-  return `${width} x ${depth} m hard boundary`;
+  return `${shape}, ${width} x ${depth} m hard boundary`;
 }
 
 function navigationZonePlainHelp(kind: NavigationZone["kind"]): string {
@@ -562,6 +564,17 @@ function markNavigationZoneAuthored(zone: NavigationZone): NavigationZone {
   };
 }
 
+function rectangularPolygonForZone(zone: NavigationZone): Vec2[] {
+  const halfX = zone.size[0] / 2;
+  const halfZ = zone.size[2] / 2;
+  return [
+    [-halfX, -halfZ],
+    [halfX, -halfZ],
+    [halfX, halfZ],
+    [-halfX, halfZ]
+  ];
+}
+
 function roomCenter(room: RoomDefinition, views: readonly SceneView[]): Vec3 {
   const linkedView = views.find((view) => view.id === room.viewId);
   return room.center ?? linkedView?.position ?? [0, 0, 0];
@@ -623,11 +636,46 @@ function pointInNavigationZone(zone: NavigationZone, point: Vec3, padding = 0): 
   const sin = Math.sin(rotation);
   const localX = dx * cos - dz * sin;
   const localZ = dx * sin + dz * cos;
+  if (zone.polygon && zone.polygon.length >= 3) {
+    return (
+      Math.abs(point[1] - zone.center[1]) <= zone.size[1] / 2 + padding &&
+      pointInPolygonWithPadding([localX, localZ], zone.polygon, padding)
+    );
+  }
   return (
     Math.abs(localX) <= zone.size[0] / 2 + padding &&
     Math.abs(point[1] - zone.center[1]) <= zone.size[1] / 2 + padding &&
     Math.abs(localZ) <= zone.size[2] / 2 + padding
   );
+}
+
+function pointInPolygonWithPadding(point: Vec2, polygon: readonly Vec2[], padding: number): boolean {
+  let inside = false;
+  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current, current += 1) {
+    const a = polygon[current]!;
+    const b = polygon[previous]!;
+    if ((a[1] > point[1]) !== (b[1] > point[1]) && point[0] < ((b[0] - a[0]) * (point[1] - a[1])) / (b[1] - a[1]) + a[0]) {
+      inside = !inside;
+    }
+    if (padding > 0 && pointToSegmentDistance2D(point, a, b) <= padding) {
+      return true;
+    }
+  }
+  return inside;
+}
+
+function pointToSegmentDistance2D(point: Vec2, start: Vec2, end: Vec2): number {
+  const segmentX = end[0] - start[0];
+  const segmentZ = end[1] - start[1];
+  const segmentLengthSq = segmentX * segmentX + segmentZ * segmentZ;
+  if (segmentLengthSq < 0.0001) {
+    return Math.hypot(point[0] - start[0], point[1] - start[1]);
+  }
+  const t = Math.min(
+    1,
+    Math.max(0, ((point[0] - start[0]) * segmentX + (point[1] - start[1]) * segmentZ) / segmentLengthSq)
+  );
+  return Math.hypot(point[0] - (start[0] + segmentX * t), point[1] - (start[1] + segmentZ * t));
 }
 
 function navigationZoneAabb(zone: NavigationZone) {
@@ -636,12 +684,15 @@ function navigationZoneAabb(zone: NavigationZone) {
   const rotation = zone.rotationY ?? 0;
   const cos = Math.cos(rotation);
   const sin = Math.sin(rotation);
-  const localCorners: Array<[number, number]> = [
-    [-halfX, -halfZ],
-    [halfX, -halfZ],
-    [halfX, halfZ],
-    [-halfX, halfZ]
-  ];
+  const localCorners: readonly Vec2[] =
+    zone.polygon && zone.polygon.length >= 3
+      ? zone.polygon
+      : [
+          [-halfX, -halfZ],
+          [halfX, -halfZ],
+          [halfX, halfZ],
+          [-halfX, halfZ]
+        ];
   const corners: Array<[number, number]> = localCorners.map(([x, z]) => [
     zone.center[0] + x * cos - z * sin,
     zone.center[2] + x * sin + z * cos
@@ -6537,6 +6588,43 @@ function App() {
                                     updateNavigationZone(zone.id, (current) => ({ ...current, rotationY: value }))
                                   }
                                 />
+                                <div className="zone-shape-tools">
+                                  <div>
+                                    <strong>Shape</strong>
+                                    <p>
+                                      {zone.polygon && zone.polygon.length >= 3
+                                        ? `${zone.polygon.length} polygon points stored for this zone.`
+                                        : "Rectangular zone. Convert to polygon before detailed vertex editing."}
+                                    </p>
+                                  </div>
+                                  <div className="inline-actions">
+                                    <button
+                                      type="button"
+                                      className="button secondary compact-button"
+                                      onClick={() =>
+                                        updateNavigationZone(zone.id, (current) => ({
+                                          ...current,
+                                          polygon: rectangularPolygonForZone(current)
+                                        }))
+                                      }
+                                    >
+                                      Polygon
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="button secondary compact-button"
+                                      disabled={!zone.polygon}
+                                      onClick={() =>
+                                        updateNavigationZone(zone.id, (current) => {
+                                          const { polygon: _polygon, ...rest } = current;
+                                          return rest;
+                                        })
+                                      }
+                                    >
+                                      Rectangle
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>

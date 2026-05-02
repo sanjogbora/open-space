@@ -531,16 +531,23 @@ export class WalkthroughViewer {
   private createNavigationZoneMesh(zone: NavigationZone): THREE.Mesh {
     const center = this.toSceneVector(zone.center);
     const size = this.toSceneSize(zone.size);
-    const geometry = new THREE.BoxGeometry(
-      Math.max(0.05, size.x),
-      Math.max(0.04, size.y),
-      Math.max(0.05, size.z)
-    );
+    const polygon =
+      zone.polygon && zone.polygon.length >= 3
+        ? zone.polygon.map(([x, z]) => new THREE.Vector2(x * this.manifestScale, z * this.manifestScale))
+        : undefined;
+    const geometry = polygon
+      ? this.createNavigationPolygonGeometry(polygon)
+      : new THREE.BoxGeometry(
+          Math.max(0.05, size.x),
+          Math.max(0.04, size.y),
+          Math.max(0.05, size.z)
+        );
     const material = new THREE.MeshBasicMaterial({
       color: zone.kind === "walk" ? "#1b8fff" : zone.kind === "pass" ? "#25c07b" : "#ff5f57",
       transparent: true,
       opacity: this.debug ? (zone.kind === "walk" ? 0.22 : zone.kind === "pass" ? 0.3 : 0.34) : 0,
-      depthWrite: false
+      depthWrite: false,
+      side: THREE.DoubleSide
     });
     material.colorWrite = this.debug;
     const mesh = new THREE.Mesh(geometry, material);
@@ -555,7 +562,29 @@ export class WalkthroughViewer {
       Math.max(0.04, size.y) / 2,
       Math.max(0.05, size.z) / 2
     );
+    if (polygon) {
+      mesh.userData["navigationPolygon"] = polygon;
+      mesh.userData["navigationHalfHeight"] = Math.max(0.04, size.y) / 2;
+    }
     return mesh;
+  }
+
+  private createNavigationPolygonGeometry(points: readonly THREE.Vector2[]): THREE.BufferGeometry {
+    const geometry = new THREE.BufferGeometry();
+    const vertices: number[] = [];
+    points.forEach((point) => {
+      vertices.push(point.x, 0, point.y);
+    });
+    const indices: number[] = [];
+    for (let index = 1; index < points.length - 1; index += 1) {
+      indices.push(0, index, index + 1);
+    }
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    return geometry;
   }
 
   private updateNavigationZoneVisibility(): void {
@@ -2235,10 +2264,37 @@ export class WalkthroughViewer {
       return false;
     }
     const local = mesh.worldToLocal(position.clone());
+    const polygon = mesh.userData["navigationPolygon"];
+    if (Array.isArray(polygon) && polygon.every((point) => point instanceof THREE.Vector2)) {
+      const halfHeight = typeof mesh.userData["navigationHalfHeight"] === "number" ? mesh.userData["navigationHalfHeight"] : halfSize.y;
+      return (
+        Math.abs(local.y) <= halfHeight + padding &&
+        this.pointInNavigationPolygon(new THREE.Vector2(local.x, local.z), polygon, padding)
+      );
+    }
     return (
       Math.abs(local.x) <= halfSize.x + padding &&
       Math.abs(local.z) <= halfSize.z + padding
     );
+  }
+
+  private pointInNavigationPolygon(
+    point: THREE.Vector2,
+    polygon: readonly THREE.Vector2[],
+    padding: number
+  ): boolean {
+    let inside = false;
+    for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current, current += 1) {
+      const a = polygon[current]!;
+      const b = polygon[previous]!;
+      if ((a.y > point.y) !== (b.y > point.y) && point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x) {
+        inside = !inside;
+      }
+      if (padding > 0 && pointToSegmentDistance(point, a, b) <= padding) {
+        return true;
+      }
+    }
+    return inside;
   }
 
   private canStandOnGeometryFloor(position: THREE.Vector3): boolean {
@@ -2872,6 +2928,21 @@ function distanceToSegment2D(point: THREE.Vector3, start: THREE.Vector3, end: TH
   const closestX = start.x + segmentX * t;
   const closestZ = start.z + segmentZ * t;
   return Math.hypot(point.x - closestX, point.z - closestZ);
+}
+
+function pointToSegmentDistance(point: THREE.Vector2, start: THREE.Vector2, end: THREE.Vector2): number {
+  const segmentX = end.x - start.x;
+  const segmentY = end.y - start.y;
+  const segmentLengthSq = segmentX * segmentX + segmentY * segmentY;
+  if (segmentLengthSq < 0.0001) {
+    return point.distanceTo(start);
+  }
+  const t = THREE.MathUtils.clamp(
+    ((point.x - start.x) * segmentX + (point.y - start.y) * segmentY) / segmentLengthSq,
+    0,
+    1
+  );
+  return Math.hypot(point.x - (start.x + segmentX * t), point.y - (start.y + segmentY * t));
 }
 
 function isGeneratedViewerNavigationZone(zone: NavigationZone): boolean {
