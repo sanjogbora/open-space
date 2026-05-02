@@ -2205,6 +2205,28 @@ export class WalkthroughViewer {
   }
 
   private navigationRoutePointsForMesh(mesh: THREE.Mesh, y: number): THREE.Vector3[] {
+    const polygon = mesh.userData["navigationPolygon"];
+    if (Array.isArray(polygon) && polygon.every((point) => point instanceof THREE.Vector2)) {
+      const centroid = polygon
+        .reduce((sum, point) => sum.add(point), new THREE.Vector2())
+        .multiplyScalar(1 / Math.max(1, polygon.length));
+      const localPoints = [
+        new THREE.Vector3(centroid.x, 0, centroid.y),
+        ...polygon.map((point) => point.clone().lerp(centroid, 0.28)).map((point) => new THREE.Vector3(point.x, 0, point.y)),
+        ...polygon.map((point, index) => {
+          const next = polygon[(index + 1) % polygon.length] ?? point;
+          const midpoint = point.clone().add(next).multiplyScalar(0.5).lerp(centroid, 0.18);
+          return new THREE.Vector3(midpoint.x, 0, midpoint.y);
+        })
+      ];
+      return this.uniqueNavigationRoutePoints(
+        localPoints.map((localPoint) => {
+          const point = mesh.localToWorld(localPoint.clone());
+          point.y = y;
+          return point;
+        })
+      );
+    }
     const halfSize = mesh.userData["navigationHalfSize"];
     if (!(halfSize instanceof THREE.Vector3)) {
       const point = new THREE.Vector3();
@@ -2217,21 +2239,26 @@ export class WalkthroughViewer {
     const xs = x > 0.05 ? [-x, 0, x] : [0];
     const zs = z > 0.05 ? [-z, 0, z] : [0];
     const localPoints = xs.flatMap((localX) => zs.map((localZ) => new THREE.Vector3(localX, 0, localZ)));
+    return this.uniqueNavigationRoutePoints(
+      localPoints
+        .map((localPoint) => mesh.localToWorld(localPoint.clone()))
+        .map((point) => {
+          point.y = y;
+          return point;
+        })
+    );
+  }
+
+  private uniqueNavigationRoutePoints(points: THREE.Vector3[]): THREE.Vector3[] {
     const seen = new Set<string>();
-    return localPoints
-      .map((localPoint) => mesh.localToWorld(localPoint.clone()))
-      .map((point) => {
-        point.y = y;
-        return point;
-      })
-      .filter((point) => {
-        const key = `${point.x.toFixed(2)}:${point.z.toFixed(2)}`;
-        if (seen.has(key)) {
-          return false;
-        }
-        seen.add(key);
-        return true;
-      });
+    return points.filter((point) => {
+      const key = `${point.x.toFixed(2)}:${point.z.toFixed(2)}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
   }
 
   private isInsideWalkZone(position: THREE.Vector3): boolean {
