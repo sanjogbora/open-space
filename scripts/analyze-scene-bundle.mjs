@@ -1441,6 +1441,46 @@ function likelyExteriorPlaneName(name) {
   ].some((keyword) => normalized.includes(keyword));
 }
 
+function likelyNonWalkSurfaceName(name) {
+  const normalized = String(name || "").toLowerCase();
+  return [
+    "plant",
+    "tree",
+    "chair",
+    "table",
+    "sofa",
+    "couch",
+    "bed",
+    "cabinet",
+    "cupboard",
+    "wardrobe",
+    "counter",
+    "worktop",
+    "shelf",
+    "tv",
+    "screen",
+    "monitor",
+    "appliance",
+    "fridge",
+    "oven",
+    "sink",
+    "toilet",
+    "vanity",
+    "decor",
+    "vase",
+    "lamp",
+    "light",
+    "fan",
+    "door",
+    "window",
+    "glass",
+    "wall",
+    "partition",
+    "ceiling",
+    "roof"
+  ].some((keyword) => normalized.includes(keyword));
+}
+
 function dominantFlatPlane(graph, sceneBounds) {
   if (!graph || !sceneBounds) {
     return undefined;
@@ -2391,6 +2431,26 @@ function createDiagnostics(manifest, report, graphs) {
       title: "No explicit walk zones",
       message: "Click-to-move will fall back to detected floor meshes, which can include roofs, counters, terrain, or tabletops.",
       action: "Add walk zones for the real floor areas users should be allowed to stand on."
+    });
+  }
+
+  const suspiciousGeneratedWalkZones = topology.walkZones.filter((zone) => {
+    if (zone.source !== "generated") {
+      return false;
+    }
+    return likelyNonWalkSurfaceName(`${zone.label ?? ""} ${zone.id ?? ""}`);
+  });
+  if (suspiciousGeneratedWalkZones.length > 0) {
+    const examples = suspiciousGeneratedWalkZones
+      .slice(0, 4)
+      .map((zone) => zone.label ?? zone.id)
+      .join(", ");
+    diagnostics.push({
+      severity: "warning",
+      code: "generated-walk-zones-on-non-floor-objects",
+      title: "Generated walk zones may include non-floor objects",
+      message: `${suspiciousGeneratedWalkZones.length} generated walk zone(s) look like furniture, decor, doors, windows, ceilings, or roofs${examples ? `: ${examples}` : ""}.`,
+      action: "Open Controls > Navigation repair, disable those generated walk zones, then add walk patches only on the real floor surfaces."
     });
   }
 
