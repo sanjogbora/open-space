@@ -1058,6 +1058,46 @@ function likelyExteriorPlaneName(name) {
   ].some((keyword) => normalized.includes(keyword));
 }
 
+function likelyNonWalkSurfaceName(name) {
+  const normalized = String(name || "").toLowerCase();
+  return [
+    "plant",
+    "tree",
+    "chair",
+    "table",
+    "sofa",
+    "couch",
+    "bed",
+    "cabinet",
+    "cupboard",
+    "wardrobe",
+    "counter",
+    "worktop",
+    "shelf",
+    "tv",
+    "screen",
+    "monitor",
+    "appliance",
+    "fridge",
+    "oven",
+    "sink",
+    "toilet",
+    "vanity",
+    "decor",
+    "vase",
+    "lamp",
+    "light",
+    "fan",
+    "door",
+    "window",
+    "glass",
+    "wall",
+    "partition",
+    "ceiling",
+    "roof"
+  ].some((keyword) => normalized.includes(keyword));
+}
+
 function graphFocusBounds(graph) {
   const rawBounds = combineGraphBounds(graph);
   if (!rawBounds) {
@@ -1383,6 +1423,7 @@ function graphWalkZoneCandidates(graph, modelScale) {
       const searchName = `${node.name} ${node.meshName ?? ""}`.toLowerCase();
       const keywordMatched = floorKeywords.some((keyword) => searchName.includes(keyword));
       const exteriorNamed = likelyExteriorPlaneName(searchName);
+      const nonWalkNamed = likelyNonWalkSurfaceName(searchName);
       const scaledBounds = scaleBounds(node.bounds, modelScale);
       if (!scaledBounds) {
         return undefined;
@@ -1395,13 +1436,14 @@ function graphWalkZoneCandidates(graph, modelScale) {
       const area = Math.abs(size[0] * size[2]);
       const flatEnough = Math.abs(size[1]) <= Math.max(0.24, Math.min(Math.abs(size[0]), Math.abs(size[2])) * 0.18);
       const centerY = (scaledBounds.min[1] + scaledBounds.max[1]) / 2;
-      const genericLowFlatSurface = !keywordMatched && !exteriorNamed && flatEnough && centerY <= genericFloorMaxY;
-      if ((!keywordMatched && !genericLowFlatSurface) || !flatEnough || area < 1) {
+      const genericLowFlatSurface =
+        !keywordMatched && !exteriorNamed && !nonWalkNamed && flatEnough && centerY <= genericFloorMaxY;
+      if (nonWalkNamed || (!keywordMatched && !genericLowFlatSurface) || !flatEnough || area < 1) {
         return undefined;
       }
       return {
         id: `walk-${node.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 60),
-        label: node.name || (genericLowFlatSurface ? "Detected walk surface" : "Walk surface"),
+        label: genericLowFlatSurface ? "Detected walk surface" : node.name || "Walk surface",
         kind: "walk",
         center: [
           (scaledBounds.min[0] + scaledBounds.max[0]) / 2,

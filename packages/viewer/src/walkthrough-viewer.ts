@@ -1056,15 +1056,16 @@ export class WalkthroughViewer {
       const area = size.x * size.z;
       const name = `${node.name} ${node.parent?.name ?? ""} ${node.userData["name"] ?? ""}`.toLowerCase();
       const exteriorName = this.isLikelyExteriorSurfaceName(name);
+      const nonWalkName = isLikelyNonWalkSurfaceName(name);
       const hugeExteriorPlane = exteriorName && area > sceneFootprint * 0.25;
-      if (floorNames.some((floorName) => name.includes(floorName)) && !hugeExteriorPlane) {
+      if (floorNames.some((floorName) => name.includes(floorName)) && !hugeExteriorPlane && !nonWalkName) {
         meshes.push(node);
         return;
       }
 
       const flatEnough = size.y <= Math.max(0.2, Math.min(size.x, size.z) * 0.16);
       const lowEnough = center.y <= lowBand;
-      if (flatEnough && lowEnough && area > 0.75) {
+      if (flatEnough && lowEnough && area > 0.75 && !nonWalkName) {
         fallbackCandidates.push({ mesh: node, area, exterior: exteriorName || hugeExteriorPlane });
       }
     });
@@ -3074,6 +3075,45 @@ function isGeneratedViewerNavigationZone(zone: NavigationZone): boolean {
     id.startsWith("walk-Object") ||
     id.startsWith("pass-Object")
   );
+}
+
+function isLikelyNonWalkSurfaceName(name: string): boolean {
+  return [
+    "plant",
+    "tree",
+    "chair",
+    "table",
+    "sofa",
+    "couch",
+    "bed",
+    "cabinet",
+    "cupboard",
+    "wardrobe",
+    "counter",
+    "worktop",
+    "shelf",
+    "tv",
+    "screen",
+    "monitor",
+    "appliance",
+    "fridge",
+    "oven",
+    "sink",
+    "toilet",
+    "vanity",
+    "decor",
+    "vase",
+    "lamp",
+    "light",
+    "fan",
+    "door",
+    "window",
+    "glass",
+    "wall",
+    "partition",
+    "ceiling",
+    "roof"
+  ].some((keyword) => name.includes(keyword));
 }
 
 function isPortalLikeObject(mesh: THREE.Mesh, objectName: string): boolean {
