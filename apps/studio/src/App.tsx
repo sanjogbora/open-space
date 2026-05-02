@@ -608,6 +608,26 @@ function navigationZonePolygonWorldPoints(zone: NavigationZone): Array<[number, 
   ]);
 }
 
+function snapPolygonPoint(point: Vec2, polygon: readonly Vec2[], pointIndex: number): Vec2 {
+  const grid = 0.05;
+  const snapDistance = 0.16;
+  let snappedX = Number((Math.round(point[0] / grid) * grid).toFixed(3));
+  let snappedZ = Number((Math.round(point[1] / grid) * grid).toFixed(3));
+  const neighbors = [
+    polygon[(pointIndex - 1 + polygon.length) % polygon.length],
+    polygon[(pointIndex + 1) % polygon.length]
+  ].filter((candidate): candidate is Vec2 => Boolean(candidate));
+  for (const neighbor of neighbors) {
+    if (Math.abs(snappedX - neighbor[0]) <= snapDistance) {
+      snappedX = neighbor[0];
+    }
+    if (Math.abs(snappedZ - neighbor[1]) <= snapDistance) {
+      snappedZ = neighbor[1];
+    }
+  }
+  return [snappedX, snappedZ];
+}
+
 function roomCenter(room: RoomDefinition, views: readonly SceneView[]): Vec3 {
   const linkedView = views.find((view) => view.id === room.viewId);
   return room.center ?? linkedView?.position ?? [0, 0, 0];
@@ -2792,10 +2812,11 @@ function App() {
           Number((dx * cos - dz * sin).toFixed(3)),
           Number((dx * sin + dz * cos).toFixed(3))
         ];
+        const polygon = zone.polygon ?? rectangularPolygonForZone(zone);
         return {
           ...zone,
-          polygon: (zone.polygon ?? rectangularPolygonForZone(zone)).map((point, index) =>
-            index === pointIndex ? localPoint : point
+          polygon: polygon.map((point, index) =>
+            index === pointIndex ? snapPolygonPoint(localPoint, polygon, pointIndex) : point
           )
         };
       });
@@ -2808,6 +2829,29 @@ function App() {
     };
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp, { once: true });
+  };
+
+  const insertNavigationZonePolygonPoint = (zoneId: string, afterIndex: number) => {
+    updateNavigationZone(zoneId, (zone) => {
+      const polygon = zone.polygon ?? rectangularPolygonForZone(zone);
+      const current = polygon[afterIndex];
+      const next = polygon[(afterIndex + 1) % polygon.length];
+      if (!current || !next) {
+        return zone;
+      }
+      const midpoint: Vec2 = [
+        Number(((current[0] + next[0]) / 2).toFixed(3)),
+        Number(((current[1] + next[1]) / 2).toFixed(3))
+      ];
+      return {
+        ...zone,
+        polygon: [
+          ...polygon.slice(0, afterIndex + 1),
+          midpoint,
+          ...polygon.slice(afterIndex + 1)
+        ]
+      };
+    });
   };
 
   const paintNavigationZoneOnMap = (
@@ -6568,29 +6612,47 @@ function App() {
                                 <span>{zone.label}</span>
                               </button>
                               {navigationZonePolygonWorldPoints(zone).map(([x, z], pointIndex) => (
-                                <button
-                                  key={`${zone.id}-vertex-${pointIndex}`}
-                                  type="button"
-                                  className={`zone-map-vertex ${zone.kind}`}
-                                  style={pointMapStyle([x, zone.center[1], z], manifest.navigation.bounds!)}
-                                  title={`${zone.label} point ${pointIndex + 1}`}
-                                  onPointerDown={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    const mapElement = event.currentTarget.closest(".zone-map-surface");
-                                    if (mapElement instanceof HTMLElement) {
-                                      moveNavigationZonePolygonPointOnMap(
-                                        zone.id,
-                                        pointIndex,
-                                        mapElement,
-                                        event.clientX,
-                                        event.clientY
-                                      );
-                                    }
-                                  }}
-                                >
-                                  <span>{pointIndex + 1}</span>
-                                </button>
+                                <div key={`${zone.id}-vertex-group-${pointIndex}`}>
+                                  <button
+                                    type="button"
+                                    className={`zone-map-edge-point ${zone.kind}`}
+                                    style={pointMapStyle([
+                                      (x + (navigationZonePolygonWorldPoints(zone)[(pointIndex + 1) % navigationZonePolygonWorldPoints(zone).length]?.[0] ?? x)) / 2,
+                                      zone.center[1],
+                                      (z + (navigationZonePolygonWorldPoints(zone)[(pointIndex + 1) % navigationZonePolygonWorldPoints(zone).length]?.[1] ?? z)) / 2
+                                    ], manifest.navigation.bounds!)}
+                                    title={`Insert point after ${pointIndex + 1}`}
+                                    onPointerDown={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      insertNavigationZonePolygonPoint(zone.id, pointIndex);
+                                    }}
+                                  >
+                                    <Plus size={11} aria-hidden="true" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={`zone-map-vertex ${zone.kind}`}
+                                    style={pointMapStyle([x, zone.center[1], z], manifest.navigation.bounds!)}
+                                    title={`${zone.label} point ${pointIndex + 1}`}
+                                    onPointerDown={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      const mapElement = event.currentTarget.closest(".zone-map-surface");
+                                      if (mapElement instanceof HTMLElement) {
+                                        moveNavigationZonePolygonPointOnMap(
+                                          zone.id,
+                                          pointIndex,
+                                          mapElement,
+                                          event.clientX,
+                                          event.clientY
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <span>{pointIndex + 1}</span>
+                                  </button>
+                                </div>
                               ))}
                             </div>
                           ))}

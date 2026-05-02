@@ -1931,6 +1931,40 @@ button.list-row {
   line-height: 1;
 }
 
+.zone-map-edge-point {
+  position: absolute;
+  z-index: 3;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ffffff;
+  border-radius: 999px;
+  color: #ffffff;
+  background: rgba(8, 127, 231, 0.82);
+  box-shadow: 0 0 0 2px rgba(8, 127, 231, 0.18);
+  cursor: copy;
+  transform: translate(-50%, -50%);
+  opacity: 0.84;
+  touch-action: none;
+}
+
+.zone-map-edge-point.pass {
+  background: rgba(17, 140, 91, 0.82);
+  box-shadow: 0 0 0 2px rgba(17, 140, 91, 0.18);
+}
+
+.zone-map-edge-point.block {
+  background: rgba(183, 67, 53, 0.82);
+  box-shadow: 0 0 0 2px rgba(183, 67, 53, 0.18);
+}
+
+.zone-map-edge-point:hover,
+.zone-map-edge-point:focus-visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
 .room-map {
   display: grid;
   gap: 8px;
