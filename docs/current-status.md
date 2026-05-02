@@ -41,7 +41,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio navigation zones now default to readable walk/pass/block cards with raw coordinates hidden under Advanced.
 - Studio now starts navigation repair with a guided setup card before the detailed zone editor.
 - Studio zone map now has paint tools for adding walk areas, door passes, and blockers visually.
-- Navigation zones can now store polygon footprints in addition to rectangles, and the viewer/analyzer honor polygon walk/pass/block zones.
+- Navigation zones can now store polygon footprints in addition to rectangles, and the viewer/analyzer/Studio map honor polygon walk/pass/block zones.
 - Viewer supports runtime material variant controls from the scene manifest.
 - Viewer supports hotspot, link, video texture, material variant, object-toggle, and object-pick interactions.
 - Viewer has share, copy-embed, fullscreen, and screenshot controls.

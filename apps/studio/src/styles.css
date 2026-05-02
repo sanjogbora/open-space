@@ -1813,6 +1813,10 @@ button.list-row {
   border-style: dashed;
 }
 
+.zone-map-item.polygon {
+  border-radius: 0;
+}
+
 .zone-map-repair-point {
   position: absolute;
   z-index: 3;

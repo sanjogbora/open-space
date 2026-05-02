@@ -438,6 +438,32 @@ function zoneMapStyle(
 ) {
   const width = Math.max(0.001, bounds.max[0] - bounds.min[0]);
   const depth = Math.max(0.001, bounds.max[2] - bounds.min[2]);
+  if (zone.polygon && zone.polygon.length >= 3) {
+    const rotation = zone.rotationY ?? 0;
+    const cos = Math.cos(rotation);
+    const sin = Math.sin(rotation);
+    const worldPoints: Array<[number, number]> = zone.polygon.map(([x, z]) => [
+      zone.center[0] + x * cos - z * sin,
+      zone.center[2] + x * sin + z * cos
+    ]);
+    const minX = Math.min(...worldPoints.map(([x]) => x));
+    const maxX = Math.max(...worldPoints.map(([x]) => x));
+    const minZ = Math.min(...worldPoints.map(([, z]) => z));
+    const maxZ = Math.max(...worldPoints.map(([, z]) => z));
+    const polygonWidth = Math.max(0.001, maxX - minX);
+    const polygonDepth = Math.max(0.001, maxZ - minZ);
+    const clipPath = `polygon(${worldPoints
+      .map(([x, z]) => `${((x - minX) / polygonWidth) * 100}% ${100 - ((z - minZ) / polygonDepth) * 100}%`)
+      .join(", ")})`;
+    return {
+      left: `${(((minX + maxX) / 2 - bounds.min[0]) / width) * 100}%`,
+      top: `${100 - (((minZ + maxZ) / 2 - bounds.min[2]) / depth) * 100}%`,
+      width: `${clampNumber((polygonWidth / width) * 100, 2, 100)}%`,
+      height: `${clampNumber((polygonDepth / depth) * 100, 2, 100)}%`,
+      transform: "translate(-50%, -50%)",
+      clipPath
+    };
+  }
   return {
     left: `${((zone.center[0] - bounds.min[0]) / width) * 100}%`,
     top: `${100 - ((zone.center[2] - bounds.min[2]) / depth) * 100}%`,
@@ -6462,7 +6488,7 @@ function App() {
                             <button
                               key={zone.id}
                               type="button"
-                              className={`zone-map-item ${zone.kind}${zone.source === "generated" ? " generated" : ""}${zone.enabled === false ? " disabled" : ""}`}
+                              className={`zone-map-item ${zone.kind}${zone.polygon && zone.polygon.length >= 3 ? " polygon" : ""}${zone.source === "generated" ? " generated" : ""}${zone.enabled === false ? " disabled" : ""}`}
                               style={zoneMapStyle(zone, manifest.navigation.bounds!)}
                               title={[`${zone.label} (${zone.kind})`, navigationZoneOriginLabel(zone)]
                                 .filter(Boolean)
