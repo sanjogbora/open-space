@@ -1169,6 +1169,28 @@ button.list-row {
   opacity: 0.82;
 }
 
+.screen-planner-card {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 11px;
+  border: 1px solid #b8dcf0;
+  border-radius: 8px;
+  background: #eef8ff;
+}
+
+.screen-planner-card strong,
+.screen-planner-card p {
+  margin: 0;
+  color: #17415d;
+}
+
+.screen-planner-card p {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .repair-panel {
   display: grid;
   gap: 14px;

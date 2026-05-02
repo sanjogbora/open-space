@@ -1948,6 +1948,19 @@ function App() {
       .sort((a, b) => b.score - a.score || b.triangleCount - a.triangleCount)
       .slice(0, 12);
   }, [sceneGraph]);
+  const likelyVideoSurfaceCandidates = useMemo(
+    () => videoSurfaceCandidates.filter((candidate) => candidate.score >= 6),
+    [videoSurfaceCandidates]
+  );
+  const mappedVideoSurfaceCount = useMemo(() => {
+    return videoSurfaceCandidates.filter((candidate) =>
+      videoTextureInteractions.some(
+        (interaction) =>
+          interaction.targetMeshName === candidate.meshName ||
+          (candidate.materialName && interaction.targetMaterialName === candidate.materialName)
+      )
+    ).length;
+  }, [videoSurfaceCandidates, videoTextureInteractions]);
 
   const collisionNameCandidates = useMemo(() => {
     if (!sceneGraph || !manifest) {
@@ -4609,6 +4622,34 @@ function App() {
                   </button>
                 </div>
               </div>
+              {videoSurfaceCandidates.length > 0 && (
+                <div className="screen-planner-card">
+                  <div>
+                    <strong>TV screens</strong>
+                    <p>
+                      {mappedVideoSurfaceCount}/{videoSurfaceCandidates.length} candidate surface(s) mapped
+                      {likelyVideoSurfaceCandidates.length > 0
+                        ? `, ${likelyVideoSurfaceCandidates.length} likely screen(s)`
+                        : ""}.
+                    </p>
+                  </div>
+                  <div className="inline-actions">
+                    <button type="button" className="button secondary compact-button" onClick={addVideoTexture}>
+                      <Video size={16} aria-hidden="true" />
+                      Add Screen
+                    </button>
+                    <button
+                      type="button"
+                      className="button primary compact-button"
+                      disabled={likelyVideoSurfaceCandidates.length === 0}
+                      onClick={addLikelyVideoTextures}
+                    >
+                      <Wrench size={16} aria-hidden="true" />
+                      Map Likely
+                    </button>
+                  </div>
+                </div>
+              )}
               {hotspotInteractions.map((interaction) => (
                 <button
                   key={interaction.id}
