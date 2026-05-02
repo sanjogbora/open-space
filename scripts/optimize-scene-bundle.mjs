@@ -327,7 +327,8 @@ function textureUseSets(document) {
 async function encodeKtxTexture(toktxCommand, inputPath, outputPath, options) {
   const commonArgs = ["--t2", "--genmipmap"];
   const qlevel = String(options.qlevel);
-  const attempts = options.alpha
+  const highQuality = options.alpha || options.normal;
+  const attempts = highQuality
     ? [
         [...commonArgs, "--encode", "uastc", "--zcmp", "18", outputPath, inputPath],
         [...commonArgs, "--uastc", "--zcmp", "18", outputPath, inputPath]
@@ -361,6 +362,7 @@ async function applyKtxCompression(document, profile) {
       label: "KTX2/Basis GPU texture compression",
       status: "blocked",
       convertedTextures: 0,
+      convertedNormalTextures: 0,
       skippedTextures: 0,
       note: "toktx was not found. Install Khronos KTX-Software and set KTX_SOFTWARE_PATH or TOKTX_PATH to enable KTX2/Basis GPU texture output."
     };
@@ -370,6 +372,7 @@ async function applyKtxCompression(document, profile) {
   const { normalTextures, alphaTextures } = textureUseSets(document);
   const qlevel = ktxQualityForProfile(profile);
   let convertedTextures = 0;
+  let convertedNormalTextures = 0;
   let skippedTextures = 0;
   const failed = [];
 
@@ -377,7 +380,7 @@ async function applyKtxCompression(document, profile) {
     for (const [index, texture] of document.getRoot().listTextures().entries()) {
       const image = texture.getImage();
       const extension = mimeExtension(texture.getMimeType());
-      if (!image || !extension || normalTextures.has(texture)) {
+      if (!image || !extension) {
         skippedTextures += 1;
         continue;
       }
@@ -387,6 +390,7 @@ async function applyKtxCompression(document, profile) {
       await writeFile(inputPath, image);
       const result = await encodeKtxTexture(toktxCommand, inputPath, outputPath, {
         alpha: alphaTextures.has(texture),
+        normal: normalTextures.has(texture),
         qlevel
       });
       if (!result.ok) {
@@ -402,6 +406,9 @@ async function applyKtxCompression(document, profile) {
         .setMimeType("image/ktx2")
         .setURI("");
       convertedTextures += 1;
+      if (normalTextures.has(texture)) {
+        convertedNormalTextures += 1;
+      }
     }
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
@@ -417,6 +424,7 @@ async function applyKtxCompression(document, profile) {
       label: "KTX2/Basis GPU texture compression",
       status: "failed",
       convertedTextures,
+      convertedNormalTextures,
       skippedTextures,
       failedTextures: failed.slice(0, 5),
       note: `${failed.length} texture(s) failed KTX2 conversion; the optimized scene still uses WebP/PNG image textures.`
@@ -428,6 +436,7 @@ async function applyKtxCompression(document, profile) {
     label: "KTX2/Basis GPU texture compression",
     status: convertedTextures > 0 ? "completed" : "skipped",
     convertedTextures,
+    convertedNormalTextures,
     skippedTextures,
     ...(failed.length > 0
       ? {
@@ -437,7 +446,7 @@ async function applyKtxCompression(document, profile) {
       : {
           note:
             convertedTextures > 0
-              ? `${convertedTextures} texture(s) converted with toktx at ${toktxCommand}. Normal maps are kept as source images unless a dedicated normal-map profile is added.`
+              ? `${convertedTextures} texture(s) converted with toktx at ${toktxCommand}; ${convertedNormalTextures} normal map(s) used the high-quality UASTC path.`
               : "No eligible embedded color textures were found for KTX2 conversion."
         })
   };
