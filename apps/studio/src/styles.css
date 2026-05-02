@@ -1894,6 +1894,43 @@ button.list-row {
   pointer-events: none;
 }
 
+.zone-map-vertex {
+  position: absolute;
+  z-index: 4;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #087fe7;
+  box-shadow: 0 0 0 2px rgba(8, 127, 231, 0.32), 0 8px 16px rgba(8, 127, 231, 0.18);
+  cursor: grab;
+  transform: translate(-50%, -50%);
+  touch-action: none;
+}
+
+.zone-map-vertex.pass {
+  background: #118c5b;
+  box-shadow: 0 0 0 2px rgba(17, 140, 91, 0.32), 0 8px 16px rgba(17, 140, 91, 0.18);
+}
+
+.zone-map-vertex.block {
+  background: #b74335;
+  box-shadow: 0 0 0 2px rgba(183, 67, 53, 0.32), 0 8px 16px rgba(183, 67, 53, 0.18);
+}
+
+.zone-map-vertex:active {
+  cursor: grabbing;
+}
+
+.zone-map-vertex span {
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .room-map {
   display: grid;
   gap: 8px;
