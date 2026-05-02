@@ -1782,7 +1782,10 @@ export class WalkthroughViewer {
       !this.isInsideWalkZone(candidate) &&
       !insidePassZone
     ) {
-      return { reason: "outside-walk-zone", point: candidate.clone() };
+      const generatedZoneMissOnFloor = this.generatedWalkZonesOnly && this.canStandOnGeometryFloor(candidate);
+      if (!generatedZoneMissOnFloor) {
+        return { reason: "outside-walk-zone", point: candidate.clone() };
+      }
     }
 
     const blockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(cameraSphere));

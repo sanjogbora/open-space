@@ -11,6 +11,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Door/opening clicks keep a projected floor target for routing or repair even when the first target is outside the current walk zone.
 - Viewer repair links include camera position so Studio can orient door-pass repair zones toward the attempted route.
 - Studio door-pass repair can also add a missing target-side walk patch so the clicked room becomes reachable.
+- Auto-generated walk zones now fall back to detected floor geometry when they miss a valid room floor, while authored zones remain strict.
 - Viewer movement stabilizes floor height so tiny ridges and threshold geometry do not make the camera bounce as aggressively.
 - Viewer movement resolves bounded step-up/step-down floor changes so thresholds and simple stairs are smoother while larger vertical jumps are blocked.
 - Viewer navigation failures now distinguish oversized step/level changes from ordinary wall or route blocks.
