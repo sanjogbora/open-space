@@ -21,6 +21,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio hides generated navigation zones by default so normal repairs focus on manual walk/pass/block patches.
 - Studio has an Auto Fix navigation action that can set graph bounds, add boundary blocks, add walk patches from saved views, and bridge close navigation islands.
 - Studio surfaces TV/video screen planning in Interactions with mapped candidate counts and one-click likely screen mapping.
+- Bundle analysis and publish readiness warn when planned video screens have no source or no valid target surface.
 - Viewer initial-camera repair avoids likely exterior/grass planes when it can recover to a better navigation surface.
 - Viewer doorway recovery treats named/transparent door panels as portal surfaces, then validates the floor beyond through normal bounds and route checks.
 - Bundle analysis warns when the first camera view appears to start on a dominant exterior/terrain plane.

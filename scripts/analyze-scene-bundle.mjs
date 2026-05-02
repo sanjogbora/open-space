@@ -1786,6 +1786,20 @@ function createDiagnostics(manifest, report, graphs) {
   const hasWalkZones = navigationZones.some((zone) => zone.kind === "walk" && zone.enabled !== false);
   const hasBlockZones = navigationZones.some((zone) => zone.kind === "block" && zone.enabled !== false);
   const topology = navigationTopology(manifest);
+  const videoTextures = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "video-texture");
+  const graphNodeNames = new Set((graph?.nodes ?? []).map((node) => node.name).filter(Boolean));
+  const graphMaterialNames = new Set((graph?.materials ?? []).map((material) => material.name).filter(Boolean));
+  const videoTexturesMissingSource = videoTextures.filter(
+    (interaction) => !String(interaction.source ?? "").trim()
+  );
+  const videoTexturesMissingTarget = videoTextures.filter(
+    (interaction) => !interaction.targetMeshName && !interaction.targetMaterialName
+  );
+  const videoTexturesWithMissingTargets = videoTextures.filter(
+    (interaction) =>
+      (interaction.targetMeshName && graph && !graphNodeNames.has(interaction.targetMeshName)) ||
+      (interaction.targetMaterialName && graph && !graphMaterialNames.has(interaction.targetMaterialName))
+  );
   const textureImages = [
     ...report.looseImages,
     ...report.models.flatMap((model) => model.externalResources ?? []).filter((resource) => resource.kind === "texture")
@@ -2359,6 +2373,36 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if (videoTexturesMissingSource.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "video-textures-missing-source",
+      title: "Video screens have no video source",
+      message: `${videoTexturesMissingSource.length} video screen interaction(s) are mapped but have no uploaded video or URL.`,
+      action: "Upload a video in Interactions or remove unused planned screens before publishing."
+    });
+  }
+
+  if (videoTexturesMissingTarget.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "video-textures-missing-target",
+      title: "Video screens are not mapped to surfaces",
+      message: `${videoTexturesMissingTarget.length} video screen interaction(s) do not target a mesh or material.`,
+      action: "Use Interactions > TV screens > Map Likely, or select a target mesh/material manually."
+    });
+  }
+
+  if (videoTexturesWithMissingTargets.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "video-textures-target-missing",
+      title: "Video screen target was not found",
+      message: `${videoTexturesWithMissingTargets.length} video screen interaction(s) reference mesh/material names that were not found in the current model graph.`,
+      action: "Remap those video screens after re-importing or repairing the model."
+    });
+  }
+
   if ((manifest.views?.length ?? 0) === 0) {
     diagnostics.push({
       severity: "error",
@@ -2794,7 +2838,10 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "orphan-pass-zones",
     "walk-views-inside-block-zones",
     "walk-views-outside-walk-zones",
-    "some-lightmap-secondary-uvs-missing"
+    "some-lightmap-secondary-uvs-missing",
+    "video-textures-missing-source",
+    "video-textures-missing-target",
+    "video-textures-target-missing"
   ]);
   for (const diagnostic of diagnostics) {
     if (!publishWarningDiagnostics.has(diagnostic.code)) {
