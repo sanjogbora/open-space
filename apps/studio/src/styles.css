@@ -1205,6 +1205,36 @@ button.list-row {
   color: #0e6242;
 }
 
+.environment-preset-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #d6e1d2;
+  border-radius: 8px;
+  background: #f7faf5;
+}
+
+.environment-preset-card strong,
+.environment-preset-card p {
+  margin: 0;
+  color: #36552c;
+}
+
+.environment-preset-card p {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.environment-preset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .repair-panel {
   display: grid;
   gap: 14px;

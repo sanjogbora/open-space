@@ -44,6 +44,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer supports hotspot, link, video texture, material variant, object-toggle, and object-pick interactions.
 - Viewer has share, copy-embed, fullscreen, and screenshot controls.
 - Viewer exposes camera pose for UI overlays and external integrations.
+- Studio has environment presets for interior walkthroughs, exterior grass context, and neutral model review.
 - Studio can upload a replacement GLB through the local API and rerun bundle analysis.
 - Analyzer now generates `optimization.json` with mobile, balanced, and desktop budget profiles.
 - Optimizer now emits `scene.optimized.glb` and `optimization-job.json`.

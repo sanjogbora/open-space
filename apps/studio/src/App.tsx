@@ -2186,6 +2186,46 @@ function App() {
     }));
   };
 
+  const applyEnvironmentPreset = (preset: "interior" | "exterior" | "review") => {
+    updateEnvironment((environment) => {
+      if (preset === "interior") {
+        return {
+          ...environment,
+          skyBackdropEnabled: true,
+          groundEnabled: false,
+          enclosureEnabled: false,
+          backgroundColor: "#d8dde2",
+          skyTopColor: "#d8e7f5",
+          skyHorizonColor: "#f3f6f8"
+        };
+      }
+      if (preset === "review") {
+        return {
+          ...environment,
+          skyBackdropEnabled: false,
+          groundEnabled: false,
+          enclosureEnabled: false,
+          backgroundColor: "#f4f6f8"
+        };
+      }
+      return {
+        ...environment,
+        skyBackdropEnabled: true,
+        groundEnabled: true,
+        enclosureEnabled: true,
+        backgroundColor: "#d8dde2",
+        skyTopColor: "#d8e7f5",
+        skyHorizonColor: "#f3f6f8",
+        groundColor: "#6f8f5a",
+        enclosureColor: "#5f7f4b",
+        groundSize: 90,
+        enclosureRadius: 44,
+        enclosureHeight: 14,
+        groundY: -0.04
+      };
+    });
+  };
+
   const updateNavigation = (updater: (navigation: SceneManifest["navigation"]) => SceneManifest["navigation"]) => {
     updateManifest((current) => ({
       ...current,
@@ -6538,6 +6578,26 @@ function App() {
               <div className="panel-heading">
                 <Globe2 size={18} aria-hidden="true" />
                 <h2>Environment</h2>
+              </div>
+              <div className="environment-preset-card">
+                <div>
+                  <strong>Environment presets</strong>
+                  <p>
+                    Use Interior when the model already has floors and walls, Exterior when you want grass outside
+                    windows, and Review when a model looks hidden by the background.
+                  </p>
+                </div>
+                <div className="environment-preset-actions">
+                  <button type="button" className="button secondary" onClick={() => applyEnvironmentPreset("interior")}>
+                    Interior
+                  </button>
+                  <button type="button" className="button secondary" onClick={() => applyEnvironmentPreset("exterior")}>
+                    Exterior
+                  </button>
+                  <button type="button" className="button secondary" onClick={() => applyEnvironmentPreset("review")}>
+                    Review
+                  </button>
+                </div>
               </div>
               <div className="toggle-grid">
                 <label>
