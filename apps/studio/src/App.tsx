@@ -6650,6 +6650,74 @@ function App() {
                                       Rectangle
                                     </button>
                                   </div>
+                                  {zone.polygon && zone.polygon.length >= 3 && (
+                                    <div className="zone-polygon-editor" aria-label={`${zone.label} polygon points`}>
+                                      {zone.polygon.map((point, pointIndex) => (
+                                        <div key={`${zone.id}-point-${pointIndex}`} className="zone-polygon-point">
+                                          <span>Point {pointIndex + 1}</span>
+                                          <input
+                                            type="number"
+                                            step="0.05"
+                                            value={point[0]}
+                                            aria-label={`Point ${pointIndex + 1} X`}
+                                            onChange={(event) =>
+                                              updateNavigationZone(zone.id, (current) => ({
+                                                ...current,
+                                                polygon: (current.polygon ?? []).map((item, index) =>
+                                                  index === pointIndex ? [toNumber(event.target.value, item[0]), item[1]] : item
+                                                )
+                                              }))
+                                            }
+                                          />
+                                          <input
+                                            type="number"
+                                            step="0.05"
+                                            value={point[1]}
+                                            aria-label={`Point ${pointIndex + 1} Z`}
+                                            onChange={(event) =>
+                                              updateNavigationZone(zone.id, (current) => ({
+                                                ...current,
+                                                polygon: (current.polygon ?? []).map((item, index) =>
+                                                  index === pointIndex ? [item[0], toNumber(event.target.value, item[1])] : item
+                                                )
+                                              }))
+                                            }
+                                          />
+                                          <button
+                                            type="button"
+                                            className="icon-action danger"
+                                            title={`Remove point ${pointIndex + 1}`}
+                                            disabled={(zone.polygon?.length ?? 0) <= 3}
+                                            onClick={() =>
+                                              updateNavigationZone(zone.id, (current) => ({
+                                                ...current,
+                                                polygon: (current.polygon ?? []).filter((_, index) => index !== pointIndex)
+                                              }))
+                                            }
+                                          >
+                                            <Trash2 size={15} aria-hidden="true" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                      <button
+                                        type="button"
+                                        className="button secondary compact-button"
+                                        onClick={() =>
+                                          updateNavigationZone(zone.id, (current) => {
+                                            const polygon = current.polygon ?? rectangularPolygonForZone(current);
+                                            const last = polygon[polygon.length - 1] ?? [0, 0];
+                                            return {
+                                              ...current,
+                                              polygon: [...polygon, [last[0] + 0.25, last[1] + 0.25]]
+                                            };
+                                          })
+                                        }
+                                      >
+                                        <Plus size={15} aria-hidden="true" />
+                                        Add Point
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )}

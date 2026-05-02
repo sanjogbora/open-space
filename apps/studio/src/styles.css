@@ -1326,6 +1326,35 @@ button.list-row {
   line-height: 1.35;
 }
 
+.zone-polygon-editor {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 7px;
+}
+
+.zone-polygon-point {
+  display: grid;
+  grid-template-columns: minmax(78px, 0.7fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.zone-polygon-point span {
+  color: #52636f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.zone-polygon-point input {
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d6dde2;
+  border-radius: 6px;
+  color: #1c2730;
+  background: #ffffff;
+}
+
 .repair-recommendation {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
