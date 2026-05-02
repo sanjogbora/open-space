@@ -1517,6 +1517,21 @@ function keywordMatchCount(graph, keywords) {
   }).length;
 }
 
+function duplicateNames(values) {
+  const counts = new Map();
+  for (const value of values) {
+    const normalized = String(value ?? "").trim();
+    if (!normalized) {
+      continue;
+    }
+    counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
 function enabledNavigationZones(navigation, kind) {
   return (navigation?.zones ?? []).filter((zone) => {
     if (zone.enabled === false) {
@@ -1789,6 +1804,8 @@ function createDiagnostics(manifest, report, graphs) {
   const videoTextures = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "video-texture");
   const graphNodeNames = new Set((graph?.nodes ?? []).map((node) => node.name).filter(Boolean));
   const graphMaterialNames = new Set((graph?.materials ?? []).map((material) => material.name).filter(Boolean));
+  const duplicateNodeNames = duplicateNames((graph?.nodes ?? []).map((node) => node.name)).slice(0, 8);
+  const duplicateMaterialNames = duplicateNames((graph?.materials ?? []).map((material) => material.name)).slice(0, 8);
   const videoTexturesMissingSource = videoTextures.filter(
     (interaction) => !String(interaction.source ?? "").trim()
   );
@@ -1975,6 +1992,32 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Unsupported image formats detected",
       message: `${unsupportedImageMimeCount} image definition(s) use a MIME type outside PNG, JPEG, WebP, AVIF, Basis, or KTX2.`,
       action: "Convert those textures to a web-supported format before publishing."
+    });
+  }
+
+  if (duplicateNodeNames.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "duplicate-node-names",
+      title: "Duplicate object names detected",
+      message: `${duplicateNodeNames.length} repeated object name(s) were found, including ${duplicateNodeNames
+        .slice(0, 3)
+        .map((item) => `${item.name} (${item.count})`)
+        .join(", ")}.`,
+      action: "Rename duplicate meshes/objects before export or use more specific material targets for interactions."
+    });
+  }
+
+  if (duplicateMaterialNames.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "duplicate-material-names",
+      title: "Duplicate material names detected",
+      message: `${duplicateMaterialNames.length} repeated material name(s) were found, including ${duplicateMaterialNames
+        .slice(0, 3)
+        .map((item) => `${item.name} (${item.count})`)
+        .join(", ")}.`,
+      action: "Rename duplicate materials before export so video screens, finish variants, and lightmaps target the intended surfaces."
     });
   }
 
@@ -2841,7 +2884,9 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "some-lightmap-secondary-uvs-missing",
     "video-textures-missing-source",
     "video-textures-missing-target",
-    "video-textures-target-missing"
+    "video-textures-target-missing",
+    "duplicate-node-names",
+    "duplicate-material-names"
   ]);
   for (const diagnostic of diagnostics) {
     if (!publishWarningDiagnostics.has(diagnostic.code)) {
