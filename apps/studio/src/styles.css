@@ -1169,7 +1169,8 @@ button.list-row {
   opacity: 0.82;
 }
 
-.screen-planner-card {
+.screen-planner-card,
+.room-planner-card {
   display: grid;
   gap: 10px;
   margin-bottom: 10px;
@@ -1180,15 +1181,28 @@ button.list-row {
 }
 
 .screen-planner-card strong,
-.screen-planner-card p {
+.screen-planner-card p,
+.room-planner-card strong,
+.room-planner-card p {
   margin: 0;
   color: #17415d;
 }
 
-.screen-planner-card p {
+.screen-planner-card p,
+.room-planner-card p {
   margin-top: 3px;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.room-planner-card {
+  border-color: #c7eadb;
+  background: #f3fbf7;
+}
+
+.room-planner-card strong,
+.room-planner-card p {
+  color: #0e6242;
 }
 
 .repair-panel {

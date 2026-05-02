@@ -1785,6 +1785,14 @@ function App() {
     () => rooms.find((room) => room.id === selectedRoomId) ?? rooms[0],
     [rooms, selectedRoomId]
   );
+  const walkViewCount = useMemo(
+    () => manifest?.views.filter((view) => view.kind === "walk").length ?? 0,
+    [manifest]
+  );
+  const linkedRoomViewCount = useMemo(() => {
+    const linkedViewIds = new Set(rooms.map((room) => room.viewId).filter(Boolean));
+    return manifest?.views.filter((view) => view.kind === "walk" && linkedViewIds.has(view.id)).length ?? 0;
+  }, [manifest, rooms]);
 
   const hotspotInteractions = useMemo(
     () => manifest?.interactions.filter(isHotspot) ?? [],
@@ -4382,6 +4390,24 @@ function App() {
                   </button>
                   <button type="button" className="icon-action" title="Add room" onClick={addRoom}>
                     <Plus size={17} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+              <div className="room-planner-card">
+                <div>
+                  <strong>Room map</strong>
+                  <p>
+                    {rooms.length} room(s), {linkedRoomViewCount}/{walkViewCount} walk view(s) linked.
+                  </p>
+                </div>
+                <div className="inline-actions">
+                  <button type="button" className="button secondary compact-button" onClick={syncRoomsFromViews}>
+                    <MapPin size={16} aria-hidden="true" />
+                    Sync
+                  </button>
+                  <button type="button" className="button secondary compact-button" onClick={addRoom}>
+                    <Plus size={16} aria-hidden="true" />
+                    Add
                   </button>
                 </div>
               </div>
