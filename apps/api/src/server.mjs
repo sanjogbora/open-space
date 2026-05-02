@@ -30,6 +30,8 @@ const defaultControlsDocument = {
     clickMoveSpeed: 1.2,
     maxStepUp: 0.42,
     maxStepDown: 0.78,
+    floorBumpTolerance: 0.24,
+    floorHeightSmoothing: 1.65,
     lookSensitivityX: 0.004,
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8
@@ -719,6 +721,8 @@ function validateControls(value) {
     (movement.clickMoveSpeed !== undefined && typeof movement.clickMoveSpeed !== "number") ||
     (movement.maxStepUp !== undefined && typeof movement.maxStepUp !== "number") ||
     (movement.maxStepDown !== undefined && typeof movement.maxStepDown !== "number") ||
+    (movement.floorBumpTolerance !== undefined && typeof movement.floorBumpTolerance !== "number") ||
+    (movement.floorHeightSmoothing !== undefined && typeof movement.floorHeightSmoothing !== "number") ||
     typeof movement.lookSensitivityX !== "number" ||
     typeof movement.lookSensitivityY !== "number" ||
     typeof movement.clickMoveThresholdPx !== "number"

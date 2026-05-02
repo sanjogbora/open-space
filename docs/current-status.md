@@ -14,6 +14,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer movement stabilizes floor height so tiny ridges and threshold geometry do not make the camera bounce as aggressively.
 - Viewer movement resolves bounded step-up/step-down floor changes so thresholds and simple stairs are smoother while larger vertical jumps are blocked.
 - Viewer navigation failures now distinguish oversized step/level changes from ordinary wall or route blocks.
+- Viewer exposes height-glide and floor-bump controls so imported models with ridges or raised thresholds can be tuned without code changes.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
 - Predefined room/view buttons move the camera to saved views.
@@ -37,6 +38,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio has a Controls tab for enabling/disabling WASD, click-to-move, drag-look, speed, step thresholds, sensitivity, and click threshold.
 - Studio navigation repair now shows a recommended plain-English fix from the viewer failure reason.
 - Studio navigation zones now default to readable walk/pass/block cards with raw coordinates hidden under Advanced.
+- Studio now starts navigation repair with a guided setup card before the detailed zone editor.
 - Studio zone map now has paint tools for adding walk areas, door passes, and blockers visually.
 - Viewer supports runtime material variant controls from the scene manifest.
 - Viewer supports hotspot, link, video texture, material variant, object-toggle, and object-pick interactions.
@@ -68,7 +70,6 @@ The viewer currently supports the core walkthrough navigation loop:
 Current limitations:
 
 - Collision is box-based, not a full navmesh/capsule controller.
-- No stair/level transition logic yet.
 - Floor-plan authoring is still basic: zones can be painted and dragged, but not yet drawn as polygons.
 - Pathfinding is still an internal generated grid/waypoint fallback, not an authored production navmesh.
 - No polygon navmesh editor yet.

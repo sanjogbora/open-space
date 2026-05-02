@@ -122,6 +122,8 @@ export class WalkthroughViewer {
     clickMoveSpeed: 1.2,
     maxStepUp: 0.42,
     maxStepDown: 0.78,
+    floorBumpTolerance: 0.24,
+    floorHeightSmoothing: 1.65,
     lookSensitivityX: 0.004,
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8
@@ -1606,8 +1608,11 @@ export class WalkthroughViewer {
       return;
     }
     const target = this.moveTarget.clone();
-    const distance = this.camera.position.distanceTo(target);
-    if (distance < 0.035) {
+    const verticalDistance = Math.abs(this.camera.position.y - target.y);
+    const flatCompletionDelta = target.clone().sub(this.camera.position);
+    flatCompletionDelta.y = 0;
+    const flatCompletionDistance = flatCompletionDelta.length();
+    if (flatCompletionDistance < 0.035 && verticalDistance < 0.12) {
       this.camera.position.copy(target);
       this.stableFloorY = target.y - this.cameraHeight;
       this.clickMoveVelocity = 0;
@@ -1743,7 +1748,8 @@ export class WalkthroughViewer {
     const bumpTolerance = this.floorBumpTolerance();
     const targetFloorY = Math.abs(heightDelta) <= bumpTolerance ? originFloorY : floorY;
     const targetY = targetFloorY + this.cameraHeight;
-    const smoothing = Math.abs(heightDelta) <= bumpTolerance ? 6.5 : 2.4;
+    const floorHeightSmoothing = this.floorHeightSmoothing();
+    const smoothing = Math.abs(heightDelta) <= bumpTolerance ? floorHeightSmoothing * 2.8 : floorHeightSmoothing;
     next.y = damp(position.y, targetY, smoothing, delta);
     return next;
   }
@@ -2254,7 +2260,8 @@ export class WalkthroughViewer {
     const nextY = targetFloorY + this.cameraHeight;
     const difference = Math.abs(nextY - this.camera.position.y);
     if (difference <= Math.max(0.62, this.cameraHeight * 0.38)) {
-      const smoothing = Math.abs(levelDelta) <= bumpTolerance ? 6.5 : 2.4;
+      const floorHeightSmoothing = this.floorHeightSmoothing();
+      const smoothing = Math.abs(levelDelta) <= bumpTolerance ? floorHeightSmoothing * 2.8 : floorHeightSmoothing;
       this.camera.position.y = damp(this.camera.position.y, nextY, smoothing, delta);
       this.stableFloorY = damp(previousFloorY, targetFloorY, smoothing, delta);
     } else {
@@ -2263,7 +2270,15 @@ export class WalkthroughViewer {
   }
 
   private floorBumpTolerance(): number {
-    return Math.max(0.24, this.cameraHeight * 0.14);
+    return THREE.MathUtils.clamp(
+      this.controls.floorBumpTolerance ?? Math.max(0.24, this.cameraHeight * 0.14),
+      0.02,
+      0.8
+    );
+  }
+
+  private floorHeightSmoothing(): number {
+    return THREE.MathUtils.clamp(this.controls.floorHeightSmoothing ?? 1.65, 0.5, 8);
   }
 
   private sampleGeometryFloorY(

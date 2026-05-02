@@ -5742,6 +5742,32 @@ function App() {
                       }
                     />
                     <NumberField
+                      label="Height Glide"
+                      min={0.5}
+                      max={8}
+                      step={0.05}
+                      value={controlsDoc.movement.floorHeightSmoothing ?? 1.65}
+                      onChange={(value) =>
+                        updateControls((current) => ({
+                          ...current,
+                          movement: { ...current.movement, floorHeightSmoothing: value }
+                        }))
+                      }
+                    />
+                    <NumberField
+                      label="Floor Bump Ignore"
+                      min={0.02}
+                      max={0.8}
+                      step={0.01}
+                      value={controlsDoc.movement.floorBumpTolerance ?? 0.24}
+                      onChange={(value) =>
+                        updateControls((current) => ({
+                          ...current,
+                          movement: { ...current.movement, floorBumpTolerance: value }
+                        }))
+                      }
+                    />
+                    <NumberField
                       label="Horizontal Look"
                       min={0.001}
                       max={0.02}
@@ -5786,6 +5812,51 @@ function App() {
                     <div className="panel-heading compact-heading">
                       <Wrench size={18} aria-hidden="true" />
                       <h2>Navigation Repair</h2>
+                    </div>
+                    <div className="navigation-guide-card">
+                      <div>
+                        <strong>Guided setup</strong>
+                        <p>
+                          Start with Auto Fix, then test the viewer. If a doorway blocks movement, use Fix in Studio
+                          from the viewer and apply the recommended repair here.
+                        </p>
+                      </div>
+                      <div className="navigation-guide-actions">
+                        <button
+                          type="button"
+                          className="button primary"
+                          disabled={!sceneGraph && !manifest.navigation.bounds && manifest.views.filter((view) => view.kind === "walk").length === 0}
+                          onClick={autoRepairNavigation}
+                        >
+                          <Wrench size={16} aria-hidden="true" />
+                          Auto Fix
+                        </button>
+                        <a
+                          className="button secondary"
+                          href={navigationDebugViewerUrl(activeProjectId)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink size={16} aria-hidden="true" />
+                          Test
+                        </a>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          disabled={!navigationRepairDraft?.point}
+                          onClick={() => addNavigationRepairZone("pass")}
+                        >
+                          <Plus size={16} aria-hidden="true" />
+                          Door Pass
+                        </button>
+                      </div>
+                      {navigationCoverageSummary && (
+                        <div className="navigation-guide-summary">
+                          <span>{navigationCoverageSummary.walkZones} walk area(s)</span>
+                          <span>{navigationCoverageSummary.passZones} door pass(es)</span>
+                          <span>{navigationCoverageSummary.routeComponents} route island(s)</span>
+                        </div>
+                      )}
                     </div>
                     {navigationRepairDraft && (
                       <div className="repair-card">

@@ -189,6 +189,8 @@ export interface SceneControlsDocument {
     clickMoveSpeed?: number;
     maxStepUp?: number;
     maxStepDown?: number;
+    floorBumpTolerance?: number;
+    floorHeightSmoothing?: number;
     lookSensitivityX: number;
     lookSensitivityY: number;
     clickMoveThresholdPx: number;

@@ -1225,6 +1225,52 @@ button.list-row {
   color: #17415d;
 }
 
+.navigation-guide-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #bfd7e8;
+  border-radius: 8px;
+  background: #f5faff;
+}
+
+.navigation-guide-card strong,
+.navigation-guide-card p {
+  margin: 0;
+  color: #17415d;
+}
+
+.navigation-guide-card p {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.navigation-guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.navigation-guide-summary {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.navigation-guide-summary span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #315466;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(191, 215, 232, 0.45);
+}
+
 .repair-recommendation {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
