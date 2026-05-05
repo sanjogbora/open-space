@@ -16,6 +16,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer movement resolves bounded step-up/step-down floor changes so thresholds and simple stairs are smoother while larger vertical jumps are blocked.
 - Viewer navigation failures now distinguish oversized step/level changes from ordinary wall or route blocks.
 - Viewer exposes height-glide and floor-bump controls so imported models with ridges or raised thresholds can be tuned without code changes.
+- Click-to-move targets and route waypoints now normalize small floor bumps to the current walking level, reducing camera hop at rugs, slab lips, and minor thresholds.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
 - Grid fallback routes now cache sampled floor height per cell, reject over-height step transitions, and slightly prefer level routes to reduce camera bouncing over ridges or multi-level gaps.

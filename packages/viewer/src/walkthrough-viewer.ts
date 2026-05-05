@@ -2761,7 +2761,7 @@ export class WalkthroughViewer {
   }
 
   private startClickMove(target: THREE.Vector3, markerPoint: THREE.Vector3): void {
-    this.moveTarget = target;
+    this.moveTarget = this.normalizeClickTargetHeight(target, this.camera.position);
     this.movePath = [];
     this.clickMoveVelocity = 0;
     this.cameraTween = undefined;
@@ -2771,7 +2771,7 @@ export class WalkthroughViewer {
   }
 
   private startClickRoute(route: THREE.Vector3[], markerPoint: THREE.Vector3): void {
-    const [firstWaypoint, ...remainingWaypoints] = route;
+    const [firstWaypoint, ...remainingWaypoints] = this.normalizeClickRouteHeights(route);
     if (!firstWaypoint) {
       return;
     }
@@ -2782,6 +2782,36 @@ export class WalkthroughViewer {
     this.moveMarker.visible = true;
     this.moveMarker.position.copy(markerPoint);
     this.moveMarker.position.y += 0.035;
+  }
+
+  private normalizeClickRouteHeights(route: THREE.Vector3[]): THREE.Vector3[] {
+    const normalized: THREE.Vector3[] = [];
+    let origin = this.camera.position;
+    for (const waypoint of route) {
+      const next = this.normalizeClickTargetHeight(waypoint, origin);
+      normalized.push(next);
+      origin = next;
+    }
+    return normalized;
+  }
+
+  private normalizeClickTargetHeight(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3 {
+    if (this.geometryFloorMeshes.length === 0) {
+      return target.clone();
+    }
+    const next = target.clone();
+    const floorY = this.sampleGeometryFloorY(next, {
+      maxDelta: Math.max(
+        this.controls.maxStepDown ?? this.maxStepDown,
+        this.controls.maxStepUp ?? this.maxStepUp,
+        this.cameraHeight * 0.5
+      )
+    });
+    const targetFloorY = typeof floorY === "number" ? floorY : next.y - this.cameraHeight;
+    const originFloorY = this.stableFloorY ?? origin.y - this.cameraHeight;
+    const bumpTolerance = this.floorBumpTolerance();
+    next.y = (Math.abs(targetFloorY - originFloorY) <= bumpTolerance * 1.5 ? originFloorY : targetFloorY) + this.cameraHeight;
+    return next;
   }
 
   private findReachableTargetNear(
