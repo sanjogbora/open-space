@@ -897,6 +897,24 @@ function createBridgePassZone(
   };
 }
 
+function createDoorPassZoneFromCandidate(
+  candidate: DoorPassCandidate,
+  id: string,
+  source: NonNullable<NavigationZone["source"]>
+): NavigationZone {
+  return {
+    id,
+    label: `Pass ${candidate.name}`.slice(0, 80),
+    kind: "pass",
+    center: candidate.center,
+    size: candidate.size,
+    rotationY: 0,
+    enabled: true,
+    source,
+    ...(source === "generated" ? { generatedBy: "door-detection" } : {})
+  };
+}
+
 function navigationQaIssues(manifest: SceneManifest): NavigationQaIssue[] {
   const issues: NavigationQaIssue[] = [];
   const navigation = manifest.navigation;
@@ -2520,7 +2538,8 @@ function App() {
         (zone) =>
           !zone.id.startsWith("boundary-block-") &&
           !zone.id.startsWith("walk-view-") &&
-          !zone.id.startsWith("pass-bridge-")
+          !zone.id.startsWith("pass-bridge-") &&
+          zone.generatedBy !== "door-detection"
       );
       const zones: NavigationZone[] = [...existing];
       const repairedNavigation: SceneManifest["navigation"] = {
@@ -2531,6 +2550,8 @@ function App() {
       let boundaryCount = 0;
       let walkPatchCount = 0;
       let bridgeCount = 0;
+      let detectedDoorPassCount = 0;
+      const usedIds = new Set(zones.map((zone) => zone.id));
 
       if (bounds) {
         const boundaryZones = createBoundaryBlockZoneSet(bounds, navigation.cameraHeight);
@@ -2543,6 +2564,28 @@ function App() {
         walkPatchCount = viewZones.length;
         zones.push(...viewZones);
       }
+
+      doorPassCandidates.slice(0, 8).forEach((candidate) => {
+        const alreadyCovered = zones.some((zone) => {
+          if (zone.kind !== "pass") {
+            return false;
+          }
+          return Math.hypot(zone.center[0] - candidate.center[0], zone.center[2] - candidate.center[2]) < 0.55;
+        });
+        if (alreadyCovered) {
+          return;
+        }
+        const baseId = `pass-door-${candidate.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 72);
+        let nextId = baseId;
+        let suffix = 2;
+        while (usedIds.has(nextId)) {
+          nextId = `${baseId}-${suffix}`;
+          suffix += 1;
+        }
+        usedIds.add(nextId);
+        zones.push(createDoorPassZoneFromCandidate(candidate, nextId, "generated"));
+        detectedDoorPassCount += 1;
+      });
 
       const routeZones = enabledNavigationZones({ ...repairedNavigation, zones }).filter(
         (zone) => zone.kind === "walk" || zone.kind === "pass"
@@ -2565,6 +2608,7 @@ function App() {
         bounds && !navigation.bounds ? "set bounds" : undefined,
         boundaryCount > 0 ? `${boundaryCount} boundary block(s)` : undefined,
         walkPatchCount > 0 ? `${walkPatchCount} walk patch(es)` : undefined,
+        detectedDoorPassCount > 0 ? `${detectedDoorPassCount} detected door pass(es)` : undefined,
         bridgeCount > 0 ? `${bridgeCount} bridge pass zone(s)` : undefined
       ].filter(Boolean);
       setRepairSummary(
@@ -2708,19 +2752,9 @@ function App() {
         nextId = `${id}-${suffix}`;
         suffix += 1;
       }
-      const zone: NavigationZone = {
-        id: nextId,
-        label: `Pass ${candidate.name}`.slice(0, 80),
-        kind: "pass",
-        center: candidate.center,
-        size: candidate.size,
-        rotationY: 0,
-        enabled: true,
-        source: "authored"
-      };
       return {
         ...navigation,
-        zones: [...zones, zone]
+        zones: [...zones, createDoorPassZoneFromCandidate(candidate, nextId, "authored")]
       };
     });
     setNotice("saved");
