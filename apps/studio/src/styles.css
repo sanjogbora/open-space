@@ -1775,6 +1775,22 @@ button.list-row {
   background: #ffffff;
 }
 
+.zone-map-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.zone-shape-tools,
+.zone-draft-actions {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid #d6dde2;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
 .zone-paint-tools button {
   min-height: 32px;
   padding: 0 10px;
@@ -1786,7 +1802,21 @@ button.list-row {
   font-weight: 800;
 }
 
-.zone-paint-tools button:last-child {
+.zone-shape-tools button,
+.zone-draft-actions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid #d6dde2;
+  color: #52636f;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.zone-paint-tools button:last-child,
+.zone-shape-tools button:last-child,
+.zone-draft-actions button:last-child {
   border-right: 0;
 }
 
@@ -1801,6 +1831,16 @@ button.list-row {
 
 .zone-paint-tools button.active.block {
   background: #b74335;
+}
+
+.zone-shape-tools button.active {
+  color: #182026;
+  background: #eaf2f8;
+}
+
+.zone-draft-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
 .zone-map-surface {
@@ -1857,6 +1897,34 @@ button.list-row {
   box-shadow: 0 0 0 3px rgba(255, 191, 47, 0.35), 0 8px 18px rgba(109, 73, 0, 0.24);
   transform: translate(-50%, -50%);
   pointer-events: none;
+}
+
+.zone-map-draft-point {
+  position: absolute;
+  z-index: 5;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #087fe7;
+  box-shadow: 0 0 0 2px rgba(8, 127, 231, 0.24), 0 8px 16px rgba(8, 127, 231, 0.18);
+  font-size: 10px;
+  font-weight: 900;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.zone-map-draft-point.pass {
+  background: #118c5b;
+  box-shadow: 0 0 0 2px rgba(17, 140, 91, 0.24), 0 8px 16px rgba(17, 140, 91, 0.18);
+}
+
+.zone-map-draft-point.block {
+  background: #b74335;
+  box-shadow: 0 0 0 2px rgba(183, 67, 53, 0.24), 0 8px 16px rgba(183, 67, 53, 0.18);
 }
 
 .zone-map-item.block {
@@ -2447,11 +2515,16 @@ code {
     width: 100%;
   }
 
-  .zone-paint-tools {
+  .zone-map-actions,
+  .zone-paint-tools,
+  .zone-shape-tools,
+  .zone-draft-actions {
     width: 100%;
   }
 
-  .zone-paint-tools button {
+  .zone-paint-tools button,
+  .zone-shape-tools button,
+  .zone-draft-actions button {
     flex: 1;
     padding: 0 7px;
   }

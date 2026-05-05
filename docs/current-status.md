@@ -44,6 +44,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio zone map now has paint tools for adding walk areas, door passes, and blockers visually.
 - Imported auto-walk generation now rejects obvious furniture/decor/door/window/ceiling/roof surfaces and labels generic flat surfaces as detected walk surfaces instead of exposing confusing source mesh names.
 - Bundle analysis now warns when existing generated walk zones appear to sit on non-floor objects, so Studio can explain confusing navigation repair results.
+- Studio zone map now supports click-to-add polygon drawing for walk, pass, and block zones before fine-tuning vertices.
 - Studio can drag polygon vertices directly on the zone map, insert points from edge handles, and Advanced zone editing can still edit polygon X/Z points.
 - Navigation zones can now store polygon footprints in addition to rectangles, and the viewer/analyzer/Studio map honor polygon walk/pass/block zones.
 - Viewer route planning now uses polygon zone centroids, inset corners, and edge midpoints as route candidates instead of treating polygon zones like rectangles.
@@ -80,9 +81,9 @@ The viewer currently supports the core walkthrough navigation loop:
 Current limitations:
 
 - Collision is still box-based, but movement now uses swept checks; it is not yet a full navmesh/capsule controller.
-- Floor-plan authoring is still basic: zones can be painted and dragged, but not yet drawn as polygons.
+- Floor-plan authoring is still basic compared with a production navmesh editor, but zones can now be drawn as polygons and fine-tuned on the map.
 - Pathfinding is still an internal generated grid/waypoint fallback, not an authored production navmesh.
-- No polygon navmesh editor yet.
+- No full production navmesh editor yet.
 
 ## Implemented Product Foundation
 
@@ -128,7 +129,7 @@ Current limitations:
 - Material texture maps, normal maps, emissive maps, UV controls, and texture-backed variants.
 - Studio-linked in-viewport object editing and placement tools.
 - Full navmesh/capsule controller with stair and multi-level handling.
-- Polygon-based floor-plan/navigation-zone painting UI.
+- More advanced navmesh authoring tools beyond polygon zone drawing.
 - Robust reimport identity matching across renamed/restructured models.
 - Durable project/account backend.
 - Multi-project API and database persistence.

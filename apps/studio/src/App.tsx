@@ -65,6 +65,12 @@ type BakeState = "idle" | "baking" | "done" | "error";
 type BakePreset = "draft" | "medium" | "high" | "super";
 type HotspotIcon = NonNullable<HotspotInteraction["icon"]>;
 type MovementToggle = "enabled" | "keyboard" | "clickToMove" | "dragLook";
+type NavigationPaintShape = "rectangle" | "polygon";
+
+interface NavigationPolygonDraft {
+  kind: NavigationZone["kind"];
+  points: Vec2[];
+}
 
 const bakePresetDefaults: Record<BakePreset, { resolution: number; samples: number; margin: number }> = {
   draft: { resolution: 512, samples: 32, margin: 8 },
@@ -1469,6 +1475,8 @@ function App() {
   );
   const [expandedNavigationZoneIds, setExpandedNavigationZoneIds] = useState<Set<string>>(new Set());
   const [navigationPaintKind, setNavigationPaintKind] = useState<NavigationZone["kind"] | null>(null);
+  const [navigationPaintShape, setNavigationPaintShape] = useState<NavigationPaintShape>("rectangle");
+  const [navigationPolygonDraft, setNavigationPolygonDraft] = useState<NavigationPolygonDraft | null>(null);
   const [showGeneratedNavigationZones, setShowGeneratedNavigationZones] = useState(false);
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
@@ -2854,6 +2862,26 @@ function App() {
     });
   };
 
+  const navigationMapPointFromClient = (
+    mapElement: HTMLElement,
+    clientX: number,
+    clientY: number
+  ): Vec3 | undefined => {
+    const navigation = manifest?.navigation;
+    const bounds = navigation?.bounds;
+    if (!bounds) {
+      return undefined;
+    }
+    const rect = mapElement.getBoundingClientRect();
+    const ratioX = clampNumber((clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+    const ratioY = clampNumber((clientY - rect.top) / Math.max(1, rect.height), 0, 1);
+    return [
+      Number((bounds.min[0] + ratioX * (bounds.max[0] - bounds.min[0])).toFixed(3)),
+      bounds.min[1],
+      Number((bounds.max[2] - ratioY * (bounds.max[2] - bounds.min[2])).toFixed(3))
+    ];
+  };
+
   const paintNavigationZoneOnMap = (
     kind: NavigationZone["kind"],
     mapElement: HTMLElement,
@@ -2861,18 +2889,10 @@ function App() {
     clientY: number
   ) => {
     const navigation = manifest?.navigation;
-    const bounds = navigation?.bounds;
-    if (!bounds) {
+    const point = navigationMapPointFromClient(mapElement, clientX, clientY);
+    if (!navigation || !point) {
       return;
     }
-    const rect = mapElement.getBoundingClientRect();
-    const ratioX = clampNumber((clientX - rect.left) / Math.max(1, rect.width), 0, 1);
-    const ratioY = clampNumber((clientY - rect.top) / Math.max(1, rect.height), 0, 1);
-    const point: Vec3 = [
-      Number((bounds.min[0] + ratioX * (bounds.max[0] - bounds.min[0])).toFixed(3)),
-      bounds.min[1],
-      Number((bounds.max[2] - ratioY * (bounds.max[2] - bounds.min[2])).toFixed(3))
-    ];
     const zone = createNavigationZoneAtPoint(kind, point, navigation);
     updateNavigation((currentNavigation) => {
       return {
@@ -2882,6 +2902,71 @@ function App() {
     });
     setExpandedNavigationZoneIds((current) => new Set(current).add(zone.id));
     setRepairSummary(`${navigationZoneKindLabel(kind)} added on the map. Save changes, then retry the viewer.`);
+    setNotice("saved");
+  };
+
+  const addNavigationPolygonDraftPoint = (
+    kind: NavigationZone["kind"],
+    mapElement: HTMLElement,
+    clientX: number,
+    clientY: number
+  ) => {
+    const point = navigationMapPointFromClient(mapElement, clientX, clientY);
+    if (!point) {
+      return;
+    }
+    const polygonPoint: Vec2 = [point[0], point[2]];
+    setNavigationPolygonDraft((current) => {
+      if (!current || current.kind !== kind) {
+        return { kind, points: [polygonPoint] };
+      }
+      return { ...current, points: [...current.points, polygonPoint] };
+    });
+  };
+
+  const clearNavigationPolygonDraft = () => {
+    setNavigationPolygonDraft(null);
+  };
+
+  const finishNavigationPolygonDraft = () => {
+    const navigation = manifest?.navigation;
+    const bounds = navigation?.bounds;
+    const draft = navigationPolygonDraft;
+    if (!navigation || !bounds || !draft || draft.points.length < 3) {
+      return;
+    }
+    const minX = Math.min(...draft.points.map(([x]) => x));
+    const maxX = Math.max(...draft.points.map(([x]) => x));
+    const minZ = Math.min(...draft.points.map(([, z]) => z));
+    const maxZ = Math.max(...draft.points.map(([, z]) => z));
+    const centerX = Number(((minX + maxX) / 2).toFixed(3));
+    const centerZ = Number(((minZ + maxZ) / 2).toFixed(3));
+    const idSuffix = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    const zone: NavigationZone = {
+      id: `${draft.kind}-poly-${idSuffix}`,
+      label: `${navigationZoneKindLabel(draft.kind)} polygon`,
+      kind: draft.kind,
+      center: [centerX, bounds.min[1], centerZ],
+      size: [
+        Number(Math.max(0.8, maxX - minX).toFixed(3)),
+        0.08,
+        Number(Math.max(0.8, maxZ - minZ).toFixed(3))
+      ],
+      rotationY: 0,
+      enabled: true,
+      source: "authored",
+      polygon: draft.points.map(([x, z]) => [
+        Number((x - centerX).toFixed(3)),
+        Number((z - centerZ).toFixed(3))
+      ])
+    };
+    updateNavigation((currentNavigation) => ({
+      ...currentNavigation,
+      zones: [...(currentNavigation.zones ?? []), zone]
+    }));
+    setExpandedNavigationZoneIds((current) => new Set(current).add(zone.id));
+    setNavigationPolygonDraft(null);
+    setRepairSummary(`${navigationZoneKindLabel(draft.kind)} polygon added on the map. Save changes, then retry the viewer.`);
     setNotice("saved");
   };
 
@@ -6547,21 +6632,57 @@ function App() {
                             <strong>Zone map</strong>
                             <small>
                               {navigationPaintKind
-                                ? `Click the map to add a ${navigationZoneKindLabel(navigationPaintKind).toLowerCase()}.`
+                                ? navigationPaintShape === "polygon"
+                                  ? `Click points for a ${navigationZoneKindLabel(navigationPaintKind).toLowerCase()} polygon, then finish it.`
+                                  : `Click the map to add a ${navigationZoneKindLabel(navigationPaintKind).toLowerCase()}.`
                                 : "Drag existing zones, or choose a paint tool to add one."}
                             </small>
                           </div>
-                          <div className="zone-paint-tools" aria-label="Paint navigation zone">
-                            {(["walk", "pass", "block"] as const).map((kind) => (
-                              <button
-                                key={kind}
-                                type="button"
-                                className={navigationPaintKind === kind ? `active ${kind}` : kind}
-                                onClick={() => setNavigationPaintKind((current) => (current === kind ? null : kind))}
-                              >
-                                {navigationZoneKindLabel(kind)}
-                              </button>
-                            ))}
+                          <div className="zone-map-actions">
+                            <div className="zone-paint-tools" aria-label="Paint navigation zone">
+                              {(["walk", "pass", "block"] as const).map((kind) => (
+                                <button
+                                  key={kind}
+                                  type="button"
+                                  className={navigationPaintKind === kind ? `active ${kind}` : kind}
+                                  onClick={() => {
+                                    setNavigationPaintKind((current) => (current === kind ? null : kind));
+                                    setNavigationPolygonDraft(null);
+                                  }}
+                                >
+                                  {navigationZoneKindLabel(kind)}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="zone-shape-tools" aria-label="Paint shape">
+                              {(["rectangle", "polygon"] as const).map((shape) => (
+                                <button
+                                  key={shape}
+                                  type="button"
+                                  className={navigationPaintShape === shape ? "active" : ""}
+                                  onClick={() => {
+                                    setNavigationPaintShape(shape);
+                                    setNavigationPolygonDraft(null);
+                                  }}
+                                >
+                                  {shape === "rectangle" ? "Rectangle" : "Polygon"}
+                                </button>
+                              ))}
+                            </div>
+                            {navigationPolygonDraft && (
+                              <div className="zone-draft-actions">
+                                <button
+                                  type="button"
+                                  onClick={finishNavigationPolygonDraft}
+                                  disabled={navigationPolygonDraft.points.length < 3}
+                                >
+                                  Finish
+                                </button>
+                                <button type="button" onClick={clearNavigationPolygonDraft}>
+                                  Clear
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div
@@ -6571,12 +6692,21 @@ function App() {
                               return;
                             }
                             event.preventDefault();
-                            paintNavigationZoneOnMap(
-                              navigationPaintKind,
-                              event.currentTarget,
-                              event.clientX,
-                              event.clientY
-                            );
+                            if (navigationPaintShape === "polygon") {
+                              addNavigationPolygonDraftPoint(
+                                navigationPaintKind,
+                                event.currentTarget,
+                                event.clientX,
+                                event.clientY
+                              );
+                            } else {
+                              paintNavigationZoneOnMap(
+                                navigationPaintKind,
+                                event.currentTarget,
+                                event.clientX,
+                                event.clientY
+                              );
+                            }
                           }}
                         >
                           {navigationRepairDraft?.point && (
@@ -6586,6 +6716,16 @@ function App() {
                               title="Viewer blocked point"
                             />
                           )}
+                          {navigationPolygonDraft?.points.map(([x, z], pointIndex) => (
+                            <span
+                              key={`zone-draft-point-${pointIndex}`}
+                              className={`zone-map-draft-point ${navigationPolygonDraft.kind}`}
+                              style={pointMapStyle([x, manifest.navigation.bounds!.min[1], z], manifest.navigation.bounds!)}
+                              title={`Draft point ${pointIndex + 1}`}
+                            >
+                              {pointIndex + 1}
+                            </span>
+                          ))}
                           {visibleNavigationZones.map((zone) => (
                             <div key={zone.id}>
                               <button
