@@ -2973,6 +2973,11 @@ function createPublishReadiness(manifest, report, optimizationReport) {
   }
 
   const publishWarningDiagnostics = new Set([
+    "dominant-flat-plane",
+    "initial-view-on-dominant-plane",
+    "focused-model-small-in-scene",
+    "no-named-floor-meshes",
+    "no-named-collision-meshes",
     "missing-walk-zones",
     "disconnected-navigation-zones",
     "missing-pass-zones",

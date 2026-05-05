@@ -32,6 +32,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer initial-camera repair avoids likely exterior/grass planes when it can recover to a better navigation surface.
 - Viewer doorway recovery treats named/transparent door panels as portal surfaces, then validates the floor beyond through normal bounds and route checks.
 - Bundle analysis warns when the first camera view appears to start on a dominant exterior/terrain plane.
+- Publish readiness now carries terrain-dominance, poor first-view, focused-bounds, and missing navigation-name diagnostics into the Publish tab.
 - Top views can hide ceiling/roof shell meshes so uploaded apartments are inspectable from above.
 - Movement is constrained by configured scene bounds.
 - Basic collision boxes are generated from configured collision mesh names.
