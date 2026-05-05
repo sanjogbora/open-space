@@ -2796,7 +2796,12 @@ async function handleRequest(request, response) {
     const lightmapBakeProjectId = projectIdFromPathname(url.pathname, "/bake-lightmaps");
     if (request.method === "POST" && lightmapBakeProjectId) {
       const body = await readBody(request);
-      await runLightmapBake(lightmapBakeProjectId, body);
+      try {
+        await runLightmapBake(lightmapBakeProjectId, body);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Lightmap bake failed.";
+        throw apiError(message, 500, { lightmapBakeJob: await lightmapBakeJob(lightmapBakeProjectId) });
+      }
       await runAnalyze(lightmapBakeProjectId);
       const project = await projectPayload(lightmapBakeProjectId);
       sendJson(response, 200, {

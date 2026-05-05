@@ -3319,7 +3319,10 @@ function App() {
         body: JSON.stringify(bakeSettings)
       });
       if (!response.ok) {
-        const error = (await response.json()) as { error?: string };
+        const error = (await response.json()) as { error?: string; lightmapBakeJob?: LightmapBakeJobDocument };
+        if (error.lightmapBakeJob) {
+          setLightmapBakeJob(error.lightmapBakeJob);
+        }
         throw new Error(error.error ?? `Lightmap bake failed with ${response.status}.`);
       }
       const result = (await response.json()) as {
