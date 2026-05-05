@@ -55,6 +55,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio zone map now supports click-to-add polygon drawing for walk, pass, and block zones before fine-tuning vertices.
 - Studio can drag polygon vertices directly on the zone map, insert points from edge handles, and Advanced zone editing can still edit polygon X/Z points.
 - Studio Auto Fix can add detected door/pass zones from likely door, opening, passage, and threshold meshes.
+- Analyzer and Studio now flag one-sided door pass zones that touch only one walk area, which explains the "can reach the doorway but cannot enter the room" failure case.
 - Navigation zones can now store polygon footprints in addition to rectangles, and the viewer/analyzer/Studio map honor polygon walk/pass/block zones.
 - Viewer route planning now uses polygon zone centroids, inset corners, and edge midpoints as route candidates instead of treating polygon zones like rectangles.
 - Viewer prunes routed click-to-move paths after visibility/grid routing so movement glides through fewer unnecessary intermediate waypoints.

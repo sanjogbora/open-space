@@ -1736,6 +1736,10 @@ function navigationTopology(manifest) {
   const orphanPassZones = passZones.filter(
     (zone) => !walkZones.some((walkZone) => navigationZonesOverlap(zone, walkZone))
   );
+  const oneSidedPassZones = passZones.filter((zone) => {
+    const touchingWalkZones = walkZones.filter((walkZone) => navigationZonesOverlap(zone, walkZone));
+    return touchingWalkZones.length === 1 && walkZones.length > 1;
+  });
   const walkViews = (manifest.views ?? []).filter(
     (view) => view.kind === "walk" && Array.isArray(view.position) && view.position.length >= 3
   );
@@ -1756,6 +1760,7 @@ function navigationTopology(manifest) {
     routeZones,
     routeComponents,
     orphanPassZones,
+    oneSidedPassZones,
     walkViews,
     outOfBoundsWalkViews,
     blockedWalkViews,
@@ -2484,6 +2489,16 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if (topology.oneSidedPassZones.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "one-sided-pass-zones",
+      title: "Door pass zones touch only one room",
+      message: `${topology.oneSidedPassZones.length} pass zone(s) overlap one walk zone but do not reach a second walk zone.`,
+      action: "Extend each door pass through the opening, or add a walk patch inside the target room so routing can cross the doorway."
+    });
+  }
+
   if (topology.outOfBoundsWalkViews.length > 0) {
     diagnostics.push({
       severity: "error",
@@ -2982,6 +2997,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "disconnected-navigation-zones",
     "missing-pass-zones",
     "orphan-pass-zones",
+    "one-sided-pass-zones",
     "walk-views-inside-block-zones",
     "walk-views-outside-walk-zones",
     "some-lightmap-secondary-uvs-missing",

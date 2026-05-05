@@ -1044,14 +1044,22 @@ function navigationQaIssues(manifest: SceneManifest): NavigationQaIssue[] {
   }
 
   passZones.forEach((zone) => {
-    const touchesWalkZone = walkZones.some((walkZone) => navigationZonesOverlap(zone, walkZone));
-    if (!touchesWalkZone) {
+    const touchingWalkZones = walkZones.filter((walkZone) => navigationZonesOverlap(zone, walkZone));
+    if (touchingWalkZones.length === 0) {
       issues.push({
         id: `orphan-pass-${zone.id}`,
         severity: "warning",
         title: `Pass zone is isolated: ${zone.label}`,
         detail: "This doorway pass does not overlap any walk zone, so pathfinding cannot use it.",
         action: "Move or resize the pass zone so it overlaps the room floor walk zones on both sides."
+      });
+    } else if (walkZones.length > 1 && touchingWalkZones.length === 1) {
+      issues.push({
+        id: `one-sided-pass-${zone.id}`,
+        severity: "warning",
+        title: `Pass zone reaches only one room: ${zone.label}`,
+        detail: "This doorway pass overlaps one walk area but does not reach a second walk area.",
+        action: "Extend the pass through the doorway, or add a walk patch inside the target room."
       });
     }
   });
@@ -1148,7 +1156,8 @@ function navigationQuickFixForIssue(issue: NavigationQaIssue | undefined): Navig
   if (
     issue.id === "missing-pass-zones" ||
     issue.id === "disconnected-route-zones" ||
-    issue.id.startsWith("orphan-pass-")
+    issue.id.startsWith("orphan-pass-") ||
+    issue.id.startsWith("one-sided-pass-")
   ) {
     return {
       title: "Connect rooms through doors",
@@ -8131,6 +8140,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "missing-pass-zones",
       "disconnected-navigation-zones",
       "orphan-pass-zones",
+      "one-sided-pass-zones",
       "walk-views-outside-navigation-bounds",
       "walk-views-inside-block-zones",
       "walk-views-outside-walk-zones"
