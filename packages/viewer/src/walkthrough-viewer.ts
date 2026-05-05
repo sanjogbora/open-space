@@ -2304,6 +2304,9 @@ export class WalkthroughViewer {
         if (floorDelta > maxStepUp || floorDelta < -maxStepDown) {
           continue;
         }
+        if (this.navigationRouteFailureDetail(nextCell.point, currentCell.point)) {
+          continue;
+        }
         const nextKey = keyFor(nextX, nextZ);
         const nextCost = current.cost + step * multiplier + Math.abs(floorDelta) * 1.8;
         const existing = nodes.get(nextKey);
