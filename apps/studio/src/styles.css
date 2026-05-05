@@ -725,6 +725,10 @@ button.list-row {
   border-color: #c9e1f4;
 }
 
+.import-next-step.navigation {
+  border-color: #badde8;
+}
+
 .import-next-step.optimize {
   border-color: #f1d5a6;
 }

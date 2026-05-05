@@ -4311,6 +4311,7 @@ function App() {
                 onRepair={() => void repairImport()}
                 onOptimize={() => void optimizeProject()}
                 onBake={() => void bakeLightmaps()}
+                onNavigation={() => setSelectedTab("controls")}
               />
             </div>
 
@@ -7772,7 +7773,7 @@ function DiagnosticList({
   );
 }
 
-type ImportNextStepAction = "repair" | "optimize" | "bake" | "review" | "test";
+type ImportNextStepAction = "repair" | "navigation" | "optimize" | "bake" | "review" | "test";
 
 interface ImportNextStep {
   action: ImportNextStepAction;
@@ -7791,6 +7792,12 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "missing-model-resources",
       "relocatable-texture-resources",
       "loose-textures-not-referenced",
+    ].includes(code)
+  ) {
+    return "repair";
+  }
+  if (
+    [
       "no-named-floor-meshes",
       "no-named-collision-meshes",
       "missing-walk-zones",
@@ -7802,7 +7809,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "walk-views-outside-walk-zones"
     ].includes(code)
   ) {
-    return "repair";
+    return "navigation";
   }
   if (
     [
@@ -7870,6 +7877,14 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
       button: "Review Diagnostics"
     };
   }
+  if (action === "navigation") {
+    return {
+      action,
+      title: "Fix navigation",
+      detail: "Open the guided Controls tools to inspect walk areas, door passes, blockers, and generated zones.",
+      button: "Open Controls"
+    };
+  }
   return {
     action,
     title: "Test in viewer",
@@ -7887,7 +7902,8 @@ function ImportNextSteps({
   bakeState,
   onRepair,
   onOptimize,
-  onBake
+  onBake,
+  onNavigation
 }: {
   stats: BundleStats | null;
   apiConnected: boolean;
@@ -7898,6 +7914,7 @@ function ImportNextSteps({
   onRepair: () => void;
   onOptimize: () => void;
   onBake: () => void;
+  onNavigation: () => void;
 }) {
   const diagnostics = stats?.diagnostics ?? [];
   const priority = diagnostics.filter((diagnostic) => diagnostic.severity !== "info");
@@ -7917,15 +7934,14 @@ function ImportNextSteps({
       </div>
       {steps.map((step) => {
         const disabled =
-          step.action === "test"
-            ? false
-            : !apiConnected ||
-              (step.action === "repair" && repairState === "repairing") ||
-              (step.action === "optimize" && optimizeState === "optimizing") ||
-              (step.action === "bake" && bakeState === "baking");
+          (step.action === "repair" && (!apiConnected || repairState === "repairing")) ||
+          (step.action === "optimize" && (!apiConnected || optimizeState === "optimizing")) ||
+          (step.action === "bake" && (!apiConnected || bakeState === "baking"));
         const onClick =
           step.action === "repair"
             ? onRepair
+            : step.action === "navigation"
+              ? onNavigation
             : step.action === "optimize"
               ? onOptimize
               : step.action === "bake"
@@ -7941,6 +7957,7 @@ function ImportNextSteps({
             </div>
             <button type="button" className="button secondary" disabled={disabled} onClick={onClick}>
               {step.action === "repair" && <Wrench size={15} aria-hidden="true" />}
+              {step.action === "navigation" && <MapPin size={15} aria-hidden="true" />}
               {step.action === "optimize" && <Activity size={15} aria-hidden="true" />}
               {step.action === "bake" && <Palette size={15} aria-hidden="true" />}
               {step.action === "review" && <AlertTriangle size={15} aria-hidden="true" />}

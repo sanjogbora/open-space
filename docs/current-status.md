@@ -86,6 +86,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - API texture repair scores duplicate loose texture candidates by relative path and texture-folder context before copying.
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
+- Studio Import now routes navigation-specific diagnostics directly to the guided Controls editor instead of hiding them behind the generic repair action.
 - Studio/API expose Blender/Cycles lightmap bake jobs with quality presets, UV2 generation, generated lightmap assets, and material assignment.
 - Failed Blender/Cycles bakes return the bake job in the API error response so Studio can show the failed stage and job steps.
 
