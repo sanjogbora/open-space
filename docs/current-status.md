@@ -92,6 +92,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - API publishes versioned static scene bundles.
 - Studio has a Publish tab with draft URL, published URLs, embed snippets, and version history.
 - Published bundles include copy-ready S3/R2 deploy commands, including an opt-in per-asset cache-header pass for CDN-friendly immutable GLB/texture assets and revalidated manifests.
+- Published `deployment.json` now carries the analyzed publish quality gate, including readiness warnings and diagnostics used when the version was created.
 - Reimport analysis preserves material edits and object visibility by stable material/object names.
 - Viewer supports in-viewport object picking with object/material details.
 - Studio Interactions can create and edit hotspots, external scene links, and object toggles.

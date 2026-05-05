@@ -2579,6 +2579,26 @@ function publishBlockersFromStats(stats) {
   ].filter(Boolean);
 }
 
+function publishQualityGate(stats) {
+  const diagnostics = stats.diagnostics ?? [];
+  return {
+    status: stats.publishReadiness?.status ?? "ready",
+    analyzedAt: stats.generatedAt,
+    blockerCount: stats.publishReadiness?.blockers?.length ?? diagnostics.filter((item) => item.severity === "error").length,
+    warningCount: stats.publishReadiness?.warnings?.length ?? diagnostics.filter((item) => item.severity === "warning").length,
+    diagnosticCount: diagnostics.length,
+    blockers: stats.publishReadiness?.blockers ?? [],
+    warnings: stats.publishReadiness?.warnings ?? [],
+    diagnostics: diagnostics.map((diagnostic) => ({
+      severity: diagnostic.severity,
+      code: diagnostic.code,
+      title: diagnostic.title,
+      message: diagnostic.message,
+      ...(diagnostic.action ? { action: diagnostic.action } : {})
+    }))
+  };
+}
+
 async function publishProject(projectId) {
   await runAnalyze(projectId);
   const publishedAt = new Date().toISOString();
@@ -2608,6 +2628,7 @@ async function publishProject(projectId) {
     cdnBasePath: `/published/${projectId}/${version}/`,
     assetCount: assets.length,
     totalBytes,
+    qualityGate: publishQualityGate(stats),
     assets,
     headers: [
       {
