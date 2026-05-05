@@ -3403,7 +3403,7 @@ function App() {
     const isConvertible = /\.(dae|fbx|obj)$/i.test(lowerName);
     if (!isGlb && !isGltf && !isZip && !isConvertible) {
       setUploadState("error");
-      setUploadError("Upload GLB, GLTF, FBX, OBJ, DAE, or a ZIP containing a GLB/GLTF plus textures.");
+      setUploadError("Upload GLB, GLTF, FBX, OBJ, DAE, or a ZIP containing GLB/GLTF/FBX/OBJ/DAE plus textures.");
       return;
     }
 

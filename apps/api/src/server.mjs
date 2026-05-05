@@ -553,17 +553,51 @@ function archiveSceneUrl(entries) {
   return ranked[0]?.entry.filename;
 }
 
+function archiveConvertibleModelUrl(entries) {
+  const sourceHints = /\b(scene|model|main|export|house|apartment|residence|interior)\b/i;
+  const candidates = entries
+    .filter((entry) => convertibleModelExtensions.has(path.extname(entry.filename).toLowerCase()))
+    .map((entry) => {
+      const extension = path.extname(entry.filename).toLowerCase();
+      const baseName = path.basename(entry.filename, extension);
+      const folder = path.posix.dirname(entry.filename.replace(/\\/g, "/"));
+      const siblingAssetCount = entries.filter((candidate) => {
+        const candidateFolder = path.posix.dirname(candidate.filename.replace(/\\/g, "/"));
+        const candidateExtension = path.extname(candidate.filename).toLowerCase();
+        return (
+          candidateFolder === folder &&
+          [".bin", ".jpg", ".jpeg", ".png", ".webp", ".mtl"].includes(candidateExtension)
+        );
+      }).length;
+      return {
+        entry,
+        score:
+          (baseName.toLowerCase() === "scene" ? 10 : 0) +
+          (sourceHints.test(baseName) ? 4 : 0) +
+          (extension === ".fbx" ? 2 : 0) +
+          (extension === ".obj" ? 1 : 0) +
+          Math.min(4, siblingAssetCount) -
+          entry.filename.split("/").length
+      };
+    })
+    .sort((a, b) => b.score - a.score || a.entry.filename.localeCompare(b.entry.filename));
+  return candidates[0]?.entry.filename;
+}
+
 async function writeProjectArchive(projectId, body) {
   const entries = extractZipEntries(body);
   const sceneUrl = archiveSceneUrl(entries);
-  if (!sceneUrl) {
-    throw badRequest("ZIP uploads must contain a GLB or GLTF scene file.");
+  const sourceRelative = sceneUrl ? undefined : archiveConvertibleModelUrl(entries);
+  if (!sceneUrl && !sourceRelative) {
+    throw badRequest("ZIP uploads must contain a GLB/GLTF scene file, or an FBX/OBJ/DAE source model.");
   }
-  const sceneEntry = entries.find((entry) => entry.filename === sceneUrl);
-  if (sceneUrl.toLowerCase().endsWith(".gltf")) {
-    validateGltfBuffer(sceneEntry.data);
-  } else {
-    validateGlbBuffer(sceneEntry.data);
+  if (sceneUrl) {
+    const sceneEntry = entries.find((entry) => entry.filename === sceneUrl);
+    if (sceneUrl.toLowerCase().endsWith(".gltf")) {
+      validateGltfBuffer(sceneEntry.data);
+    } else {
+      validateGlbBuffer(sceneEntry.data);
+    }
   }
 
   await Promise.all(
@@ -580,7 +614,10 @@ async function writeProjectArchive(projectId, body) {
     )
   );
 
-  return sceneUrl;
+  return {
+    sceneUrl: sceneUrl ?? "scene.glb",
+    sourceRelative
+  };
 }
 
 async function listProjectImages(root, dir = root, files = []) {
@@ -2620,23 +2657,23 @@ async function handleRequest(request, response) {
       const isGltfUpload = filename.endsWith(".gltf");
       const sourceExtension = path.extname(filename);
       const isConvertibleUpload = convertibleModelExtensions.has(sourceExtension);
-      const sceneUrl = filename.endsWith(".zip") || isZipBuffer(body)
-        ? await writeProjectArchive(modelProjectId, body)
-        : isConvertibleUpload
-          ? "scene.glb"
-        : isGltfUpload
-          ? "scene.gltf"
-        : "scene.glb";
-      if (isConvertibleUpload) {
+      const isArchiveUpload = filename.endsWith(".zip") || isZipBuffer(body);
+      const archiveUpload = isArchiveUpload ? await writeProjectArchive(modelProjectId, body) : undefined;
+      const sceneUrl = archiveUpload?.sceneUrl ?? (isConvertibleUpload ? "scene.glb" : isGltfUpload ? "scene.gltf" : "scene.glb");
+      if (archiveUpload?.sourceRelative) {
+        await runModelConversion(modelProjectId, archiveUpload.sourceRelative);
+        const output = await readFile(path.join(targetDirs(modelProjectId)[0], "scene.glb"));
+        validateGlbBuffer(output);
+      } else if (isConvertibleUpload) {
         const sourceRelative = safeSourceModelPath(filename);
         await writeProjectFileBinary(modelProjectId, sourceRelative, body);
         await runModelConversion(modelProjectId, sourceRelative);
         const output = await readFile(path.join(targetDirs(modelProjectId)[0], "scene.glb"));
         validateGlbBuffer(output);
-      } else if (sceneUrl === "scene.gltf") {
+      } else if (!isArchiveUpload && sceneUrl === "scene.gltf") {
         validateGltfBuffer(body);
         await writeProjectAllBinary(modelProjectId, "scene.gltf", body);
-      } else if (sceneUrl === "scene.glb") {
+      } else if (!isArchiveUpload && sceneUrl === "scene.glb") {
         validateGlbBuffer(body);
         await writeProjectAllBinary(modelProjectId, "scene.glb", body);
       }

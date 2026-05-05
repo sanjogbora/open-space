@@ -56,6 +56,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio has environment presets for interior walkthroughs, exterior grass context, and neutral model review.
 - Studio can upload a replacement GLB through the local API and rerun bundle analysis.
 - Studio/API can upload direct FBX, OBJ, or DAE files and convert them to GLB through Blender when `BLENDER_PATH` is available.
+- Studio/API can upload ZIP archives containing FBX, OBJ, or DAE source models with sidecar texture/material folders and convert the selected source scene to GLB through Blender.
 - Analyzer now generates `optimization.json` with mobile, balanced, and desktop budget profiles.
 - Optimizer now emits `scene.optimized.glb` and `optimization-job.json`.
 - Optimizer now keeps `optimization-history.json` for recent job history.
@@ -120,11 +121,10 @@ Current limitations:
 - Runtime object inspection panel.
 - Visual smoke tests for desktop/mobile viewer and Studio.
 - Automatic Blender lightmap bake job and manual lightmap/material texture upload workflows.
-- Blender-backed FBX/OBJ/DAE conversion job scaffold.
+- Blender-backed FBX/OBJ/DAE conversion jobs for direct source uploads and ZIP source archives.
 
 ## Major Work Remaining
 
-- ZIP-based FBX/OBJ/DAE conversion with sidecar texture/material folder preservation.
 - SketchUp/Revit/3ds Max exporters.
 - More texture quality controls.
 - Draco compression as an optional alternative to Meshopt.
