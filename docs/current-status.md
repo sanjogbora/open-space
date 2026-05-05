@@ -64,6 +64,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer mouse-wheel forward/back movement now decays blocked impulses quickly instead of repeatedly pushing into walls or invalid floor.
 - Viewer collision now uses swept segment checks against inflated blocker bounds so movement and route validation cannot skip through thin walls between sampled positions.
 - Viewer blocker checks now use a vertical body/capsule range instead of only an eye-level sphere, so low partitions and half-height boundaries are less likely to be crossed.
+- Click-to-move now falls back to axis sliding for each movement step, so a path that grazes a wall can keep gliding along the obstacle instead of canceling immediately.
 - Viewer supports runtime material variant controls from the scene manifest.
 - Viewer supports hotspot, link, video texture, material variant, object-toggle, and object-pick interactions.
 - Viewer has share, copy-embed, fullscreen, and screenshot controls.

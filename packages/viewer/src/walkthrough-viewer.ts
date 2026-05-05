@@ -1769,11 +1769,12 @@ export class WalkthroughViewer {
     if (this.geometryFloorMeshes.length === 0) {
       nextPosition.y = damp(nextPosition.y, target.y, 5.5, delta);
     }
-    const steppedPosition = this.resolveSteppedMovementPosition(nextPosition, this.camera.position, delta);
-    if (steppedPosition && this.canOccupyPosition(steppedPosition, this.camera.position)) {
-      this.camera.position.copy(steppedPosition);
-      this.snapCameraToFloor(delta);
-      this.clampCamera();
+    const origin = this.camera.position.clone();
+    if (this.commitCameraPosition(nextPosition, origin, delta)) {
+      return;
+    }
+    const slideDelta = nextPosition.clone().sub(origin);
+    if (this.slideCameraBy(slideDelta, delta)) {
       return;
     }
     this.moveTarget = undefined;
@@ -1815,37 +1816,35 @@ export class WalkthroughViewer {
   }
 
   private moveCameraBy(delta: THREE.Vector3): boolean {
-    const direct = this.resolveSteppedMovementPosition(this.camera.position.clone().add(delta), this.camera.position);
-    if (direct && this.canOccupyPosition(direct, this.camera.position)) {
-      this.camera.position.copy(direct);
-      this.snapCameraToFloor();
-      this.clampCamera();
+    if (this.commitCameraPosition(this.camera.position.clone().add(delta), this.camera.position)) {
       return true;
     }
+    return this.slideCameraBy(delta);
+  }
 
+  private slideCameraBy(delta: THREE.Vector3, frameDelta = 1 / 60): boolean {
     let moved = false;
-    const slideX = this.resolveSteppedMovementPosition(
-      this.camera.position.clone().add(new THREE.Vector3(delta.x, 0, 0)),
-      this.camera.position
-    );
-    if (slideX && this.canOccupyPosition(slideX, this.camera.position)) {
-      this.camera.position.copy(slideX);
-      this.snapCameraToFloor();
-      this.clampCamera();
+    const slideXTarget = this.camera.position.clone().add(new THREE.Vector3(delta.x, 0, 0));
+    if (Math.abs(delta.x) > 0.0001 && this.commitCameraPosition(slideXTarget, this.camera.position, frameDelta)) {
       moved = true;
     }
 
-    const slideZ = this.resolveSteppedMovementPosition(
-      this.camera.position.clone().add(new THREE.Vector3(0, 0, delta.z)),
-      this.camera.position
-    );
-    if (slideZ && this.canOccupyPosition(slideZ, this.camera.position)) {
-      this.camera.position.copy(slideZ);
-      this.snapCameraToFloor();
-      this.clampCamera();
+    const slideZTarget = this.camera.position.clone().add(new THREE.Vector3(0, 0, delta.z));
+    if (Math.abs(delta.z) > 0.0001 && this.commitCameraPosition(slideZTarget, this.camera.position, frameDelta)) {
       moved = true;
     }
     return moved;
+  }
+
+  private commitCameraPosition(position: THREE.Vector3, origin: THREE.Vector3, delta = 1 / 60): boolean {
+    const resolved = this.resolveSteppedMovementPosition(position, origin, delta);
+    if (!resolved || !this.canOccupyPosition(resolved, origin)) {
+      return false;
+    }
+    this.camera.position.copy(resolved);
+    this.snapCameraToFloor(delta);
+    this.clampCamera();
+    return true;
   }
 
   private resolveSteppedMovementPosition(
