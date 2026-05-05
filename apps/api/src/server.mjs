@@ -2689,6 +2689,7 @@ async function handleRequest(request, response) {
         controls: project.controls,
         stats: project.stats,
         optimization: project.optimization,
+        conversionJob: project.conversionJob,
         repairedExternalResources: externalResourceRepair.copied,
         externalResourceRepair
       });

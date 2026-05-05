@@ -292,6 +292,25 @@ interface LightmapBakeJobDocument {
   }[];
 }
 
+interface ConversionJobDocument {
+  schemaVersion: "0.1";
+  id: string;
+  status: "idle" | "running" | "completed" | "blocked" | "failed";
+  engine: string;
+  source?: string;
+  outputSceneUrl?: string;
+  outputBytes?: number;
+  message?: string;
+  startedAt?: string;
+  completedAt?: string;
+  steps: readonly {
+    id: string;
+    label: string;
+    status: "completed" | "pending" | "failed" | "skipped" | "blocked";
+    note?: string;
+  }[];
+}
+
 interface ProjectSummary {
   id: string;
   title: string;
@@ -1446,6 +1465,7 @@ function App() {
   const [optimizationJob, setOptimizationJob] = useState<OptimizationJobDocument | null>(null);
   const [optimizationHistory, setOptimizationHistory] = useState<OptimizationHistoryDocument | null>(null);
   const [lightmapBakeJob, setLightmapBakeJob] = useState<LightmapBakeJobDocument | null>(null);
+  const [conversionJob, setConversionJob] = useState<ConversionJobDocument | null>(null);
   const [publishHistory, setPublishHistory] = useState<PublishHistoryDocument | null>(null);
   const [sceneGraph, setSceneGraph] = useState<SceneGraphDocument | null>(null);
   const [materialsDoc, setMaterialsDoc] = useState<MaterialsDocument | null>(null);
@@ -1543,6 +1563,7 @@ function App() {
               optimizationJob: OptimizationJobDocument;
               optimizationHistory: OptimizationHistoryDocument;
               lightmapBakeJob: LightmapBakeJobDocument;
+              conversionJob: ConversionJobDocument;
               publishHistory: PublishHistoryDocument;
             };
             if (!cancelled) {
@@ -1558,6 +1579,7 @@ function App() {
               setOptimizationJob(project.optimizationJob);
               setOptimizationHistory(project.optimizationHistory);
               setLightmapBakeJob(project.lightmapBakeJob);
+              setConversionJob(project.conversionJob);
               setPublishHistory(project.publishHistory);
               setSelectedViewId(project.manifest.views[0]?.id ?? "");
               setSelectedInteractionId(
@@ -3433,6 +3455,7 @@ function App() {
         controls?: SceneControlsDocument;
         stats?: BundleStats;
         optimization?: OptimizationDocument;
+        conversionJob?: ConversionJobDocument;
         repairedExternalResources?: number;
       };
       if (result.manifest) {
@@ -3449,6 +3472,9 @@ function App() {
       }
       if (result.optimization) {
         setOptimizationDoc(result.optimization);
+      }
+      if (result.conversionJob) {
+        setConversionJob(result.conversionJob);
       }
       setUploadState("done");
       setNotice("saved");
@@ -4201,6 +4227,28 @@ function App() {
               </div>
               {repairError && <p className="error-note">{repairError}</p>}
               {repairSummary && <p className="success-note">{repairSummary}</p>}
+              {conversionJob && conversionJob.status !== "idle" && (
+                <div className="job-step-list">
+                  <div className={`job-step-row ${conversionJob.status === "completed" ? "completed" : conversionJob.status === "running" ? "pending" : "failed"}`}>
+                    <div className="job-step-main">
+                      <span>Source conversion</span>
+                      {conversionJob.source && <small>{conversionJob.source}</small>}
+                      {conversionJob.message && <small>{conversionJob.message}</small>}
+                      {conversionJob.outputBytes && <small>{formatBytes(conversionJob.outputBytes)}</small>}
+                    </div>
+                    <strong>{conversionJob.status}</strong>
+                  </div>
+                  {conversionJob.steps.map((step) => (
+                    <div key={step.id} className={`job-step-row ${step.status}`}>
+                      <div className="job-step-main">
+                        <span>{step.label}</span>
+                        {step.note && <small>{step.note}</small>}
+                      </div>
+                      <strong>{step.status}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
               <ImportNextSteps
                 stats={bundleStats}
                 apiConnected={apiConnected}
