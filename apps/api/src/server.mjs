@@ -86,6 +86,15 @@ function badRequest(message) {
   return error;
 }
 
+function apiError(message, status = 500, details) {
+  const error = new Error(message);
+  error.status = status;
+  if (details && typeof details === "object") {
+    error.details = details;
+  }
+  return error;
+}
+
 async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
 }
@@ -2661,13 +2670,23 @@ async function handleRequest(request, response) {
       const archiveUpload = isArchiveUpload ? await writeProjectArchive(modelProjectId, body) : undefined;
       const sceneUrl = archiveUpload?.sceneUrl ?? (isConvertibleUpload ? "scene.glb" : isGltfUpload ? "scene.gltf" : "scene.glb");
       if (archiveUpload?.sourceRelative) {
-        await runModelConversion(modelProjectId, archiveUpload.sourceRelative);
+        try {
+          await runModelConversion(modelProjectId, archiveUpload.sourceRelative);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Model conversion failed.";
+          throw apiError(message, 500, { conversionJob: await conversionJob(modelProjectId) });
+        }
         const output = await readFile(path.join(targetDirs(modelProjectId)[0], "scene.glb"));
         validateGlbBuffer(output);
       } else if (isConvertibleUpload) {
         const sourceRelative = safeSourceModelPath(filename);
         await writeProjectFileBinary(modelProjectId, sourceRelative, body);
-        await runModelConversion(modelProjectId, sourceRelative);
+        try {
+          await runModelConversion(modelProjectId, sourceRelative);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Model conversion failed.";
+          throw apiError(message, 500, { conversionJob: await conversionJob(modelProjectId) });
+        }
         const output = await readFile(path.join(targetDirs(modelProjectId)[0], "scene.glb"));
         validateGlbBuffer(output);
       } else if (!isArchiveUpload && sceneUrl === "scene.gltf") {
@@ -2831,7 +2850,8 @@ async function handleRequest(request, response) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown API error.";
     const status = typeof error?.status === "number" ? error.status : 500;
-    sendJson(response, status, { error: message });
+    const details = error?.details && typeof error.details === "object" ? error.details : {};
+    sendJson(response, status, { error: message, ...details });
   }
 }
 

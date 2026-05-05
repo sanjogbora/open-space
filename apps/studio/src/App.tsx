@@ -3481,7 +3481,10 @@ function App() {
         body: file
       });
       if (!response.ok) {
-        const error = (await response.json()) as { error?: string };
+        const error = (await response.json()) as { error?: string; conversionJob?: ConversionJobDocument };
+        if (error.conversionJob) {
+          setConversionJob(error.conversionJob);
+        }
         throw new Error(error.error ?? `Upload failed with ${response.status}.`);
       }
       const result = (await response.json()) as {

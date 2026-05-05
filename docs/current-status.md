@@ -61,6 +61,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio/API can upload direct FBX, OBJ, or DAE files and convert them to GLB through Blender when `BLENDER_PATH` is available.
 - Studio/API can upload ZIP archives containing FBX, OBJ, or DAE source models with sidecar texture/material folders and convert the selected source scene to GLB through Blender.
 - Studio Import shows source-conversion job status, selected source file, Blender failure messages, and conversion steps.
+- Failed source conversions return the conversion job in the API error response so Studio can show the Blender/setup failure instead of only a generic upload error.
 - Analyzer now generates `optimization.json` with mobile, balanced, and desktop budget profiles.
 - Optimizer now emits `scene.optimized.glb` and `optimization-job.json`.
 - Optimizer now keeps `optimization-history.json` for recent job history.
