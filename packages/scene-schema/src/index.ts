@@ -221,6 +221,9 @@ export interface MaterialOverride {
   normalMapUrl?: string;
   emissiveMapUrl?: string;
   emissiveIntensity?: number;
+  textureRepeat?: Vec2;
+  textureOffset?: Vec2;
+  textureRotation?: number;
   roughness?: number;
   metalness?: number;
   opacity?: number;

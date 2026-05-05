@@ -935,7 +935,12 @@ export class WalkthroughViewer {
 
     if (override.mapUrl && "map" in material) {
       const texturedMaterial = material as THREE.MeshBasicMaterial | THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
-      texturedMaterial.map = this.loadMaterialTexture(override.mapUrl, `${material.name || override.name}-map`, THREE.SRGBColorSpace);
+      texturedMaterial.map = this.loadMaterialTexture(
+        override.mapUrl,
+        `${material.name || override.name}-map`,
+        THREE.SRGBColorSpace,
+        override
+      );
       texturedMaterial.needsUpdate = true;
     }
 
@@ -948,7 +953,8 @@ export class WalkthroughViewer {
       normalMappedMaterial.normalMap = this.loadMaterialTexture(
         override.normalMapUrl,
         `${material.name || override.name}-normal`,
-        THREE.NoColorSpace
+        THREE.NoColorSpace,
+        override
       );
       normalMappedMaterial.needsUpdate = true;
     }
@@ -958,7 +964,8 @@ export class WalkthroughViewer {
       emissiveMaterial.emissiveMap = this.loadMaterialTexture(
         override.emissiveMapUrl,
         `${material.name || override.name}-emissive`,
-        THREE.SRGBColorSpace
+        THREE.SRGBColorSpace,
+        override
       );
       emissiveMaterial.emissiveIntensity = override.emissiveIntensity ?? emissiveMaterial.emissiveIntensity ?? 1;
       if (emissiveMaterial.emissive instanceof THREE.Color) {
@@ -1001,7 +1008,12 @@ export class WalkthroughViewer {
     }
   }
 
-  private loadMaterialTexture(source: string, name: string, colorSpace: THREE.ColorSpace): THREE.Texture {
+  private loadMaterialTexture(
+    source: string,
+    name: string,
+    colorSpace: THREE.ColorSpace,
+    override?: MaterialOverride
+  ): THREE.Texture {
     const textureUrl = this.resolveMaterialAssetUrl(source);
     const texture = this.textureLoader.load(textureUrl, () => {
       texture.needsUpdate = true;
@@ -1009,8 +1021,29 @@ export class WalkthroughViewer {
     texture.name = name;
     texture.colorSpace = colorSpace;
     texture.flipY = false;
+    if (override) {
+      this.applyMaterialTextureTransform(texture, override);
+    }
     this.materialTextures.push(texture);
     return texture;
+  }
+
+  private applyMaterialTextureTransform(texture: THREE.Texture, override: MaterialOverride): void {
+    if (override.textureRepeat) {
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(
+        Math.max(0.001, override.textureRepeat[0] ?? 1),
+        Math.max(0.001, override.textureRepeat[1] ?? 1)
+      );
+    }
+    if (override.textureOffset) {
+      texture.offset.set(override.textureOffset[0] ?? 0, override.textureOffset[1] ?? 0);
+    }
+    if (typeof override.textureRotation === "number") {
+      texture.center.set(0.5, 0.5);
+      texture.rotation = override.textureRotation;
+    }
   }
 
   private resolveMaterialAssetUrl(source: string): string {

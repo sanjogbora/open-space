@@ -5831,6 +5831,83 @@ function App() {
                         }))
                       }
                     />
+                    <NumberField
+                      label="Repeat X"
+                      min={0.01}
+                      max={64}
+                      step={0.05}
+                      value={selectedMaterial.textureRepeat?.[0] ?? 1}
+                      onChange={(value) =>
+                        updateMaterial(selectedMaterial.id, (material) => ({
+                          ...material,
+                          textureRepeat: [
+                            Number(Math.max(0.01, value).toFixed(3)),
+                            material.textureRepeat?.[1] ?? 1
+                          ]
+                        }))
+                      }
+                    />
+                    <NumberField
+                      label="Repeat Y"
+                      min={0.01}
+                      max={64}
+                      step={0.05}
+                      value={selectedMaterial.textureRepeat?.[1] ?? 1}
+                      onChange={(value) =>
+                        updateMaterial(selectedMaterial.id, (material) => ({
+                          ...material,
+                          textureRepeat: [
+                            material.textureRepeat?.[0] ?? 1,
+                            Number(Math.max(0.01, value).toFixed(3))
+                          ]
+                        }))
+                      }
+                    />
+                    <NumberField
+                      label="Offset X"
+                      min={-10}
+                      max={10}
+                      step={0.01}
+                      value={selectedMaterial.textureOffset?.[0] ?? 0}
+                      onChange={(value) =>
+                        updateMaterial(selectedMaterial.id, (material) => ({
+                          ...material,
+                          textureOffset: [
+                            Number(value.toFixed(3)),
+                            material.textureOffset?.[1] ?? 0
+                          ]
+                        }))
+                      }
+                    />
+                    <NumberField
+                      label="Offset Y"
+                      min={-10}
+                      max={10}
+                      step={0.01}
+                      value={selectedMaterial.textureOffset?.[1] ?? 0}
+                      onChange={(value) =>
+                        updateMaterial(selectedMaterial.id, (material) => ({
+                          ...material,
+                          textureOffset: [
+                            material.textureOffset?.[0] ?? 0,
+                            Number(value.toFixed(3))
+                          ]
+                        }))
+                      }
+                    />
+                    <NumberField
+                      label="Texture Rotation"
+                      min={-6.283}
+                      max={6.283}
+                      step={0.01}
+                      value={selectedMaterial.textureRotation ?? 0}
+                      onChange={(value) =>
+                        updateMaterial(selectedMaterial.id, (material) => ({
+                          ...material,
+                          textureRotation: Number(value.toFixed(3))
+                        }))
+                      }
+                    />
                   </div>
                 </div>
 
