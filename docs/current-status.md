@@ -43,6 +43,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio navigation repair now shows a recommended plain-English fix from the viewer failure reason.
 - Studio navigation zones now default to readable walk/pass/block cards with raw coordinates hidden under Advanced.
 - Studio now starts navigation repair with a guided setup card before the detailed zone editor.
+- Studio Controls now surfaces one primary navigation fix at a time, such as setting bounds, drawing a walk area, drawing a door pass, or testing the viewer.
 - Studio zone map now has paint tools for adding walk areas, door passes, and blockers visually.
 - Imported auto-walk generation now rejects obvious furniture/decor/door/window/ceiling/roof surfaces and labels generic flat surfaces as detected walk surfaces instead of exposing confusing source mesh names.
 - Bundle analysis now warns when existing generated walk zones appear to sit on non-floor objects, so Studio can explain confusing navigation repair results.

@@ -1289,6 +1289,39 @@ button.list-row {
   gap: 8px;
 }
 
+.navigation-quick-fix {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #b7dfe3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.navigation-quick-fix.error {
+  border-color: #ecc0c5;
+}
+
+.navigation-quick-fix.warning {
+  border-color: #ead4a5;
+}
+
+.navigation-quick-fix span {
+  display: block;
+  margin-bottom: 3px;
+  color: #60717c;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.navigation-quick-fix p {
+  color: #52636f;
+}
+
 .navigation-guide-summary {
   grid-column: 1 / -1;
   display: flex;

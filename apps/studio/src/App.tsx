@@ -123,6 +123,15 @@ interface NavigationCoverage {
   coveredWalkViews: number;
 }
 
+type NavigationQuickFixAction = "auto" | "bounds" | "paint-walk" | "paint-pass" | "test";
+
+interface NavigationQuickFix {
+  title: string;
+  detail: string;
+  button: string;
+  action: NavigationQuickFixAction;
+}
+
 interface MaterialsDocument {
   schemaVersion: "0.1";
   generator: string;
@@ -1038,6 +1047,51 @@ function navigationCoverage(manifest: SceneManifest): NavigationCoverage {
     routeComponents: countNavigationComponents(routeZones),
     walkViews: walkViews.length,
     coveredWalkViews: coveredWalkViews.length
+  };
+}
+
+function navigationQuickFixForIssue(issue: NavigationQaIssue | undefined): NavigationQuickFix {
+  if (!issue || issue.severity === "info") {
+    return {
+      title: "Navigation is ready to test",
+      detail: "Open the viewer and check walking, click movement, doors, and room buttons.",
+      button: "Test Viewer",
+      action: "test"
+    };
+  }
+  if (issue.id === "missing-bounds" || issue.id.startsWith("view-bounds-")) {
+    return {
+      title: "Set movement boundary",
+      detail: "Use the detected model bounds so users cannot drift into empty exterior space.",
+      button: "Use Bounds",
+      action: "bounds"
+    };
+  }
+  if (issue.id === "missing-walk-zones" || issue.id.startsWith("view-walk-zone-")) {
+    return {
+      title: "Draw clickable floor",
+      detail: "Add a blue walk area over the floor where a person should be allowed to stand.",
+      button: "Draw Walk Area",
+      action: "paint-walk"
+    };
+  }
+  if (
+    issue.id === "missing-pass-zones" ||
+    issue.id === "disconnected-route-zones" ||
+    issue.id.startsWith("orphan-pass-")
+  ) {
+    return {
+      title: "Connect rooms through doors",
+      detail: "Add a green door pass where two walk areas should connect through an opening.",
+      button: "Draw Door Pass",
+      action: "paint-pass"
+    };
+  }
+  return {
+    title: "Run automatic repair",
+    detail: "Let Studio rebuild bounds, view walk patches, boundary blockers, and likely door passes.",
+    button: "Auto Fix",
+    action: "auto"
   };
 }
 
@@ -1997,6 +2051,14 @@ function App() {
     () => (navigationRepairDraft ? navigationRepairRecommendation(navigationRepairDraft) : null),
     [navigationRepairDraft]
   );
+  const primaryNavigationIssue = useMemo(
+    () => navigationIssues.find((issue) => issue.severity !== "info"),
+    [navigationIssues]
+  );
+  const navigationQuickFix = useMemo(
+    () => navigationQuickFixForIssue(primaryNavigationIssue),
+    [primaryNavigationIssue]
+  );
   const publishChecks = useMemo<PublishCheck[]>(() => {
     const errorDiagnostics = bundleStats?.diagnostics?.filter((diagnostic) => diagnostic.severity === "error") ?? [];
     const publishBlockers = bundleStats?.publishReadiness?.blockers ?? [];
@@ -2512,6 +2574,33 @@ function App() {
       };
     });
     setNotice("saved");
+  };
+
+  const openNavigationPaintTool = (kind: NavigationZone["kind"]) => {
+    setNavigationPaintKind(kind);
+    setNavigationPaintShape("rectangle");
+    setNavigationPolygonDraft(null);
+    window.setTimeout(() => document.querySelector(".zone-map")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+  };
+
+  const runNavigationQuickFix = () => {
+    if (navigationQuickFix.action === "bounds") {
+      applyBoundsFromGraph();
+      return;
+    }
+    if (navigationQuickFix.action === "paint-walk") {
+      openNavigationPaintTool("walk");
+      return;
+    }
+    if (navigationQuickFix.action === "paint-pass") {
+      openNavigationPaintTool("pass");
+      return;
+    }
+    if (navigationQuickFix.action === "auto") {
+      autoRepairNavigation();
+      return;
+    }
+    window.open(navigationDebugViewerUrl(activeProjectId), "_blank", "noopener,noreferrer");
   };
 
   const disableGeneratedNavigationZones = () => {
@@ -6483,6 +6572,23 @@ function App() {
                           Start with Auto Fix, then test the viewer. If a doorway blocks movement, use Fix in Studio
                           from the viewer and apply the recommended repair here.
                         </p>
+                      </div>
+                      <div className={`navigation-quick-fix ${primaryNavigationIssue?.severity ?? "info"}`}>
+                        <div>
+                          <span>Next fix</span>
+                          <strong>{navigationQuickFix.title}</strong>
+                          <p>{navigationQuickFix.detail}</p>
+                        </div>
+                        <button type="button" className="button primary" onClick={runNavigationQuickFix}>
+                          {navigationQuickFix.action === "test" ? (
+                            <ExternalLink size={16} aria-hidden="true" />
+                          ) : navigationQuickFix.action === "paint-walk" || navigationQuickFix.action === "paint-pass" ? (
+                            <MapPin size={16} aria-hidden="true" />
+                          ) : (
+                            <Wrench size={16} aria-hidden="true" />
+                          )}
+                          {navigationQuickFix.button}
+                        </button>
                       </div>
                       <div className="navigation-guide-actions">
                         <button
