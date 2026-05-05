@@ -1393,6 +1393,28 @@ function createRoomFromView(view: SceneView, index: number): RoomDefinition {
   };
 }
 
+function createRoomFromNavigationZone(
+  zone: NavigationZone,
+  index: number,
+  views: readonly SceneView[]
+): RoomDefinition {
+  const aabb = navigationZoneAabb(zone);
+  const linkedView = views.find((view) => view.kind === "walk" && pointInNavigationZone(zone, view.position, 0.35));
+  const width = Math.max(0.01, aabb.maxX - aabb.minX);
+  const depth = Math.max(0.01, aabb.maxZ - aabb.minZ);
+  return {
+    id: `room-zone-${zone.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 72),
+    label: zone.label || `Room ${index}`,
+    ...(linkedView ? { viewId: linkedView.id } : {}),
+    center: zone.center,
+    dimensions: `${width.toFixed(1)}m x ${depth.toFixed(1)}m`,
+    bounds: {
+      min: [aabb.minX, zone.center[1] - zone.size[1] / 2, aabb.minZ],
+      max: [aabb.maxX, zone.center[1] + zone.size[1] / 2, aabb.maxZ]
+    }
+  };
+}
+
 function createNavigationZone(
   index: number,
   kind: NavigationZone["kind"],
@@ -3945,6 +3967,64 @@ function App() {
     setNotice("saved");
   };
 
+  const syncRoomsFromWalkZones = () => {
+    updateManifest((current) => {
+      const walkZones = enabledNavigationZones(current.navigation, "walk").filter((zone) => zone.source !== "generated");
+      if (walkZones.length === 0) {
+        setRepairSummary("No authored walk areas found. Draw walk areas in Controls first.");
+        return current;
+      }
+      const existingRooms = current.rooms ?? [];
+      const usedRoomIds = new Set(existingRooms.map((room) => room.id));
+      const nextRooms = [...existingRooms];
+      walkZones.forEach((zone, index) => {
+        const room = createRoomFromNavigationZone(zone, index + 1, current.views);
+        const existingIndex = nextRooms.findIndex((item) => item.id === room.id);
+        if (existingIndex >= 0) {
+          const existingRoom = nextRooms[existingIndex];
+          if (!existingRoom) {
+            return;
+          }
+          const updatedRoom: RoomDefinition = {
+            ...existingRoom,
+            label: existingRoom.label || room.label
+          };
+          const center = existingRoom.center ?? room.center;
+          if (center) {
+            updatedRoom.center = center;
+          }
+          if (room.bounds) {
+            updatedRoom.bounds = room.bounds;
+          }
+          const dimensions = existingRoom.dimensions ?? room.dimensions;
+          if (dimensions) {
+            updatedRoom.dimensions = dimensions;
+          }
+          if (!updatedRoom.viewId && room.viewId) {
+            updatedRoom.viewId = room.viewId;
+          }
+          nextRooms[existingIndex] = updatedRoom;
+          return;
+        }
+        let roomId = room.id;
+        let suffix = 2;
+        while (usedRoomIds.has(roomId)) {
+          roomId = `${room.id}-${suffix}`;
+          suffix += 1;
+        }
+        usedRoomIds.add(roomId);
+        nextRooms.push({ ...room, id: roomId });
+      });
+      window.setTimeout(() => setSelectedRoomId(nextRooms[0]?.id ?? ""), 0);
+      setRepairSummary(`Synced ${walkZones.length} authored walk area(s) into room map regions.`);
+      return {
+        ...current,
+        rooms: nextRooms
+      };
+    });
+    setNotice("saved");
+  };
+
   const addHotspot = () => {
     updateManifest((current) => {
       const nextHotspot = createHotspot(hotspotInteractions.length + 1);
@@ -4980,6 +5060,15 @@ function App() {
                   <button type="button" className="icon-action" title="Sync rooms from views" onClick={syncRoomsFromViews}>
                     <MapPin size={17} aria-hidden="true" />
                   </button>
+                  <button
+                    type="button"
+                    className="icon-action"
+                    title="Sync rooms from walk areas"
+                    disabled={enabledNavigationZones(manifest.navigation, "walk").filter((zone) => zone.source !== "generated").length === 0}
+                    onClick={syncRoomsFromWalkZones}
+                  >
+                    <Layers3 size={17} aria-hidden="true" />
+                  </button>
                   <button type="button" className="icon-action" title="Add room" onClick={addRoom}>
                     <Plus size={17} aria-hidden="true" />
                   </button>
@@ -4996,6 +5085,15 @@ function App() {
                   <button type="button" className="button secondary compact-button" onClick={syncRoomsFromViews}>
                     <MapPin size={16} aria-hidden="true" />
                     Sync
+                  </button>
+                  <button
+                    type="button"
+                    className="button secondary compact-button"
+                    disabled={enabledNavigationZones(manifest.navigation, "walk").filter((zone) => zone.source !== "generated").length === 0}
+                    onClick={syncRoomsFromWalkZones}
+                  >
+                    <Layers3 size={16} aria-hidden="true" />
+                    From Walks
                   </button>
                   <button type="button" className="button secondary compact-button" onClick={addRoom}>
                     <Plus size={16} aria-hidden="true" />
@@ -5115,6 +5213,15 @@ function App() {
                   <button type="button" className="button secondary" onClick={syncRoomsFromViews}>
                     <MapPin size={16} aria-hidden="true" />
                     Sync from views
+                  </button>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    disabled={enabledNavigationZones(manifest.navigation, "walk").filter((zone) => zone.source !== "generated").length === 0}
+                    onClick={syncRoomsFromWalkZones}
+                  >
+                    <Layers3 size={16} aria-hidden="true" />
+                    Sync from walk areas
                   </button>
                 </div>
                 <div className="field-grid">
