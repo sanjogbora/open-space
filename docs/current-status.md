@@ -59,6 +59,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer grid fallback now validates each neighbor movement segment, so fallback routes do not pass through thin walls between legal sample points.
 - Viewer mouse-wheel forward/back movement now decays blocked impulses quickly instead of repeatedly pushing into walls or invalid floor.
 - Viewer collision now uses swept segment checks against inflated blocker bounds so movement and route validation cannot skip through thin walls between sampled positions.
+- Viewer blocker checks now use a vertical body/capsule range instead of only an eye-level sphere, so low partitions and half-height boundaries are less likely to be crossed.
 - Viewer supports runtime material variant controls from the scene manifest.
 - Viewer supports hotspot, link, video texture, material variant, object-toggle, and object-pick interactions.
 - Viewer has share, copy-embed, fullscreen, and screenshot controls.
@@ -97,7 +98,7 @@ The viewer currently supports the core walkthrough navigation loop:
 
 Current limitations:
 
-- Collision is still box-based, but movement now uses swept checks; it is not yet a full navmesh/capsule controller.
+- Collision is still box-based, but movement now uses swept body checks; it is not yet a full navmesh/capsule controller.
 - Floor-plan authoring is still basic compared with a production navmesh editor, but zones can now be drawn as polygons and fine-tuned on the map.
 - Pathfinding is still an internal generated grid/waypoint fallback, not an authored production navmesh.
 - No full production navmesh editor yet.

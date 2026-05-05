@@ -1904,7 +1904,6 @@ export class WalkthroughViewer {
       clampToBounds(candidate, this.minBounds, this.maxBounds);
     }
 
-    const cameraSphere = new THREE.Sphere(candidate, this.collisionRadius);
     const insidePassZone = this.isInsidePassZone(candidate);
     if (
       this.walkZoneMeshes.length > 0 &&
@@ -1918,14 +1917,11 @@ export class WalkthroughViewer {
     }
 
     const originProbe = origin ? this.navigationProbePosition(origin) : undefined;
-    const originSphere = originProbe ? new THREE.Sphere(originProbe, this.collisionRadius) : undefined;
-    const originBlockedBlockers = originSphere
-      ? this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(originSphere))
-      : [];
+    const originBlockedBlockers = originProbe ? this.collisionBlockersAtPosition(originProbe) : [];
     const bridgePassesInferredBlockers = Boolean(
       originProbe && this.isPassZoneBridgeSegment(originProbe, candidate)
     );
-    const blockedBlockers = this.collisionBlockers.filter((blocker) => blocker.box.intersectsSphere(cameraSphere));
+    const blockedBlockers = this.collisionBlockersAtPosition(candidate);
     const effectiveBlockers = insidePassZone
       ? blockedBlockers.filter((blocker) => blocker.kind === "authored")
       : blockedBlockers;
@@ -1978,8 +1974,10 @@ export class WalkthroughViewer {
       return undefined;
     }
     const ignored = new Set(options.ignoreBlockers ?? []);
-    const minY = Math.min(origin.y, target.y) - this.collisionRadius;
-    const maxY = Math.max(origin.y, target.y) + this.collisionRadius;
+    const originVertical = this.bodyVerticalRangeAt(origin);
+    const targetVertical = this.bodyVerticalRangeAt(target);
+    const minY = Math.min(originVertical.min, targetVertical.min);
+    const maxY = Math.max(originVertical.max, targetVertical.max);
     return this.collisionBlockers.find((blocker) => {
       if (ignored.has(blocker)) {
         return false;
@@ -1995,6 +1993,26 @@ export class WalkthroughViewer {
       }
       return segmentIntersectsInflatedBox2D(origin, target, blocker.box, this.collisionRadius);
     });
+  }
+
+  private collisionBlockersAtPosition(position: THREE.Vector3): CollisionBlocker[] {
+    return this.collisionBlockers.filter((blocker) => this.blockerIntersectsBodyAtPosition(blocker, position));
+  }
+
+  private blockerIntersectsBodyAtPosition(blocker: CollisionBlocker, position: THREE.Vector3): boolean {
+    const vertical = this.bodyVerticalRangeAt(position);
+    if (vertical.max < blocker.box.min.y || vertical.min > blocker.box.max.y) {
+      return false;
+    }
+    return pointInsideInflatedBox2D(position, blocker.box, this.collisionRadius);
+  }
+
+  private bodyVerticalRangeAt(position: THREE.Vector3): { min: number; max: number } {
+    const floorY = position.y - this.cameraHeight;
+    return {
+      min: floorY + Math.max(0.08, this.cameraHeight * 0.06),
+      max: position.y + Math.max(0.08, this.cameraHeight * 0.06)
+    };
   }
 
   private navigationProbePosition(position: THREE.Vector3): THREE.Vector3 {
@@ -3204,6 +3222,15 @@ function segmentIntersectsInflatedBox2D(
   };
 
   return clipAxis(start.x, end.x, minX, maxX) && clipAxis(start.z, end.z, minZ, maxZ);
+}
+
+function pointInsideInflatedBox2D(point: THREE.Vector3, box: THREE.Box3, padding: number): boolean {
+  return (
+    point.x >= box.min.x - padding &&
+    point.x <= box.max.x + padding &&
+    point.z >= box.min.z - padding &&
+    point.z <= box.max.z + padding
+  );
 }
 
 function pointToSegmentDistance(point: THREE.Vector2, start: THREE.Vector2, end: THREE.Vector2): number {
