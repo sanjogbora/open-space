@@ -5682,6 +5682,85 @@ function App() {
                 {lightmapUploadError && <p className="error-note">{lightmapUploadError}</p>}
 
                 <div className="object-detail">
+                  <h3>Texture Maps</h3>
+                  <div className="field-grid">
+                    <label>
+                      <span>Base Texture URL</span>
+                      <input
+                        value={selectedMaterial.mapUrl ?? ""}
+                        placeholder="textures/wall-color.webp"
+                        onChange={(event) =>
+                          updateMaterial(selectedMaterial.id, (material) => {
+                            const nextUrl = event.target.value.trim();
+                            if (!nextUrl) {
+                              const { mapUrl, ...rest } = material;
+                              return rest;
+                            }
+                            return {
+                              ...material,
+                              mapUrl: nextUrl
+                            };
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Normal Map URL</span>
+                      <input
+                        value={selectedMaterial.normalMapUrl ?? ""}
+                        placeholder="textures/wall-normal.webp"
+                        onChange={(event) =>
+                          updateMaterial(selectedMaterial.id, (material) => {
+                            const nextUrl = event.target.value.trim();
+                            if (!nextUrl) {
+                              const { normalMapUrl, ...rest } = material;
+                              return rest;
+                            }
+                            return {
+                              ...material,
+                              normalMapUrl: nextUrl
+                            };
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Emissive Map URL</span>
+                      <input
+                        value={selectedMaterial.emissiveMapUrl ?? ""}
+                        placeholder="textures/screen-emissive.webp"
+                        onChange={(event) =>
+                          updateMaterial(selectedMaterial.id, (material) => {
+                            const nextUrl = event.target.value.trim();
+                            if (!nextUrl) {
+                              const { emissiveMapUrl, ...rest } = material;
+                              return rest;
+                            }
+                            return {
+                              ...material,
+                              emissiveMapUrl: nextUrl
+                            };
+                          })
+                        }
+                      />
+                    </label>
+                    <NumberField
+                      label="Emissive Intensity"
+                      min={0}
+                      max={16}
+                      step={0.05}
+                      value={selectedMaterial.emissiveIntensity ?? 1}
+                      onChange={(value) =>
+                        updateMaterial(selectedMaterial.id, (material) => ({
+                          ...material,
+                          emissiveIntensity: value
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="object-detail">
                   <h3>Used By</h3>
                   <div className="chip-row">
                     {sceneGraph?.nodes

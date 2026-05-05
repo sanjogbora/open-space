@@ -217,6 +217,10 @@ export interface MaterialOverride {
   id: string;
   name: string;
   baseColor?: string;
+  mapUrl?: string;
+  normalMapUrl?: string;
+  emissiveMapUrl?: string;
+  emissiveIntensity?: number;
   roughness?: number;
   metalness?: number;
   opacity?: number;

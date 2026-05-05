@@ -115,6 +115,7 @@ export class WalkthroughViewer {
   private readonly maxStepDown = 0.78;
   private readonly materialOverrides = new Map<string, MaterialOverride>();
   private readonly materialLightMaps: THREE.Texture[] = [];
+  private readonly materialTextures: THREE.Texture[] = [];
   private readonly objectOverrides = new Map<string, ObjectOverride>();
   private readonly objectToggleStates = new Map<string, boolean>();
   private readonly topViewHiddenObjects: TopViewHiddenObject[] = [];
@@ -228,6 +229,7 @@ export class WalkthroughViewer {
     cancelAnimationFrame(this.frameId);
     this.managedTextures.forEach((item) => item.destroy?.());
     this.materialLightMaps.forEach((texture) => texture.dispose());
+    this.materialTextures.forEach((texture) => texture.dispose());
     this.skyTexture?.dispose();
     this.groundTexture?.dispose();
     this.enclosureTexture?.dispose();
@@ -931,8 +933,41 @@ export class WalkthroughViewer {
       return;
     }
 
+    if (override.mapUrl && "map" in material) {
+      const texturedMaterial = material as THREE.MeshBasicMaterial | THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+      texturedMaterial.map = this.loadMaterialTexture(override.mapUrl, `${material.name || override.name}-map`, THREE.SRGBColorSpace);
+      texturedMaterial.needsUpdate = true;
+    }
+
     if ("color" in material && material.color instanceof THREE.Color && override.baseColor) {
       material.color.set(override.baseColor);
+    }
+
+    if (override.normalMapUrl && "normalMap" in material) {
+      const normalMappedMaterial = material as THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+      normalMappedMaterial.normalMap = this.loadMaterialTexture(
+        override.normalMapUrl,
+        `${material.name || override.name}-normal`,
+        THREE.NoColorSpace
+      );
+      normalMappedMaterial.needsUpdate = true;
+    }
+
+    if (override.emissiveMapUrl && "emissiveMap" in material) {
+      const emissiveMaterial = material as THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+      emissiveMaterial.emissiveMap = this.loadMaterialTexture(
+        override.emissiveMapUrl,
+        `${material.name || override.name}-emissive`,
+        THREE.SRGBColorSpace
+      );
+      emissiveMaterial.emissiveIntensity = override.emissiveIntensity ?? emissiveMaterial.emissiveIntensity ?? 1;
+      if (emissiveMaterial.emissive instanceof THREE.Color) {
+        emissiveMaterial.emissive.set("#ffffff");
+      }
+      emissiveMaterial.needsUpdate = true;
+    } else if (typeof override.emissiveIntensity === "number" && "emissiveIntensity" in material) {
+      const emissiveMaterial = material as THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+      emissiveMaterial.emissiveIntensity = override.emissiveIntensity;
     }
 
     if ("roughness" in material && typeof override.roughness === "number") {
@@ -964,6 +999,18 @@ export class WalkthroughViewer {
       lightMappedMaterial.lightMapIntensity = override.lightMapIntensity ?? 1;
       this.materialLightMaps.push(lightMap);
     }
+  }
+
+  private loadMaterialTexture(source: string, name: string, colorSpace: THREE.ColorSpace): THREE.Texture {
+    const textureUrl = this.resolveMaterialAssetUrl(source);
+    const texture = this.textureLoader.load(textureUrl, () => {
+      texture.needsUpdate = true;
+    });
+    texture.name = name;
+    texture.colorSpace = colorSpace;
+    texture.flipY = false;
+    this.materialTextures.push(texture);
+    return texture;
   }
 
   private resolveMaterialAssetUrl(source: string): string {

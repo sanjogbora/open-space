@@ -112,6 +112,7 @@ Current limitations:
 - Viewer registers the KTX2 loader so `KHR_texture_basisu` optimized textures can load in-browser.
 - Hotspot, link, object-toggle, and video texture support.
 - Runtime material override loading.
+- Runtime material overrides can now apply base color, base texture, normal map, emissive map, emissive intensity, roughness, metalness, opacity, and lightmaps.
 - Runtime material variant switching.
 - Viewer can relight unlit/flat GLTF materials as standard lit materials, with a Studio toggle to disable it when a source intentionally uses flat rendering.
 - Viewer generates runtime vertex normals for meshes that lack normal attributes, improving lighting on rough exports.
@@ -127,7 +128,7 @@ Current limitations:
 - Draco compression as an optional alternative to Meshopt.
 - More aggressive draw-call optimization and safe mesh merging controls.
 - Production-grade bake farm scheduling, denoise/artifact repair, and light editing.
-- Material texture maps, normal maps, emissive maps, UV controls, and texture-backed variants.
+- UV controls, richer material map upload workflows, and texture-backed variants.
 - Studio-linked in-viewport object editing and placement tools.
 - Full navmesh/capsule controller with stair and multi-level handling.
 - More advanced navmesh authoring tools beyond polygon zone drawing.
