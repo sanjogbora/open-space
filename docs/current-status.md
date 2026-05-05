@@ -150,8 +150,8 @@ Current limitations:
 - Production-grade bake farm scheduling, denoise/artifact repair, and light editing.
 - Variant texture upload shortcuts and richer finish-option previews.
 - Studio-linked in-viewport object editing and placement tools.
-- Full navmesh/capsule controller with stair and multi-level handling.
-- More advanced navmesh authoring tools beyond polygon zone drawing.
+- Full authored navmesh/capsule controller with stair and multi-level handling beyond the current swept body checks and grid fallback.
+- More advanced navmesh authoring tools beyond polygon zone drawing and walk-zone-to-room sync.
 - Robust reimport identity matching across renamed/restructured models.
 - Durable project/account backend.
 - Multi-project API and database persistence.
