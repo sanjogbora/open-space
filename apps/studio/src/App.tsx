@@ -1585,6 +1585,11 @@ function publishedBucketDeployCommand(entry: PublishEntry): string {
   return `node scripts/deploy-published-bundle.mjs ${shellQuote(entry.deploymentPath)} --s3=s3://your-bucket/open-space/${entry.version} --viewer-base=https://viewer.example.com --public-base=https://cdn.example.com/open-space/${entry.version}/`;
 }
 
+function publishedBucketDeployWithCacheCommand(entry: PublishEntry): string {
+  const command = publishedBucketDeployCommand(entry);
+  return command ? `${command} --apply-cache-control` : "";
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -4930,6 +4935,18 @@ function App() {
                               </button>
                             </div>
                             <code>{publishedBucketDeployCommand(entry)}</code>
+                            <div className="publish-row">
+                              <span>S3/R2 deploy with cache headers</span>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => void copyText(publishedBucketDeployWithCacheCommand(entry))}
+                              >
+                                <Copy size={16} aria-hidden="true" />
+                                Copy
+                              </button>
+                            </div>
+                            <code>{publishedBucketDeployWithCacheCommand(entry)}</code>
                           </div>
                         )}
                         {!entry.deploymentPath && (

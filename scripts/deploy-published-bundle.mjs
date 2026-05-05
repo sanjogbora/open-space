@@ -10,10 +10,11 @@ const s3Arg = args.find((arg) => arg.startsWith("--s3="))?.slice("--s3=".length)
 const viewerBaseArg = args.find((arg) => arg.startsWith("--viewer-base="))?.slice("--viewer-base=".length);
 const publicBaseArg = args.find((arg) => arg.startsWith("--public-base="))?.slice("--public-base=".length);
 const dryRun = args.includes("--dry-run");
+const applyCacheControl = args.includes("--apply-cache-control");
 
 if (!deploymentArg) {
   throw new Error(
-    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--dry-run]"
+    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--apply-cache-control] [--dry-run]"
   );
 }
 
@@ -160,6 +161,47 @@ function normalizeUrlBase(value, label) {
   return parsed.href.replace(/\/+$/, "");
 }
 
+function joinS3Uri(baseUri, relativePath) {
+  return `${baseUri.replace(/\/+$/, "")}/${safeDeploymentAssetPath(relativePath)}`;
+}
+
+function contentTypeForAssetPath(relativePath) {
+  const extension = path.extname(safeDeploymentAssetPath(relativePath)).toLowerCase();
+  switch (extension) {
+    case ".html":
+      return "text/html; charset=utf-8";
+    case ".json":
+    case ".webmanifest":
+      return "application/json; charset=utf-8";
+    case ".js":
+    case ".mjs":
+      return "text/javascript; charset=utf-8";
+    case ".css":
+      return "text/css; charset=utf-8";
+    case ".glb":
+      return "model/gltf-binary";
+    case ".gltf":
+      return "model/gltf+json";
+    case ".bin":
+      return "application/octet-stream";
+    case ".ktx2":
+      return "image/ktx2";
+    case ".webp":
+      return "image/webp";
+    case ".png":
+      return "image/png";
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".mp4":
+      return "video/mp4";
+    case ".webm":
+      return "video/webm";
+    default:
+      return "application/octet-stream";
+  }
+}
+
 function launchIndexHtml(viewerBase, publicBase) {
   const sceneUrl = `${publicBase}/scene.manifest.json`;
   const viewerUrl = `${viewerBase}/?scene=${encodeURIComponent(sceneUrl)}`;
@@ -196,7 +238,7 @@ function embedSnippetHtml(viewerBase, publicBase) {
 `;
 }
 
-async function writeDeployReport(mode, target, checks, reportDir = sourceDir) {
+async function writeDeployReport(mode, target, checks, reportDir = sourceDir, extra = {}) {
   const viewerBase = normalizeUrlBase(viewerBaseArg, "--viewer-base");
   const publicBase = normalizeUrlBase(publicBaseArg, "--public-base");
   const report = {
@@ -213,6 +255,7 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir) {
     checkedAssetCount: checks.length,
     totalBytes: deployment.totalBytes,
     cachePolicy: cachePolicySummary(),
+    ...extra,
     ...(viewerBase ? { viewerBase } : {}),
     ...(publicBase ? { publicBase } : {}),
     ...(viewerBase && publicBase
@@ -261,7 +304,32 @@ async function deployToS3(targetUri) {
     args.push("--dryrun");
   }
   await run(process.env.AWS_CLI_PATH || "aws", args);
-  await writeDeployReport("s3", targetUri, checks);
+  let cacheControlApplied = 0;
+  if (applyCacheControl && !dryRun) {
+    for (const asset of deployment.assets ?? []) {
+      if (!asset.cacheControl) {
+        continue;
+      }
+      const assetUri = joinS3Uri(targetUri, asset.path);
+      await run(process.env.AWS_CLI_PATH || "aws", [
+        "s3",
+        "cp",
+        assetUri,
+        assetUri,
+        "--metadata-directive",
+        "REPLACE",
+        "--cache-control",
+        asset.cacheControl,
+        "--content-type",
+        contentTypeForAssetPath(asset.path)
+      ]);
+      cacheControlApplied += 1;
+    }
+  }
+  await writeDeployReport("s3", targetUri, checks, sourceDir, {
+    cacheControlMode: applyCacheControl ? "per-asset" : "sync-default",
+    cacheControlApplied
+  });
 }
 
 if (s3Arg) {

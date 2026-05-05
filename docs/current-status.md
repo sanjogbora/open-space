@@ -86,6 +86,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio sidebar can switch between project bundles.
 - API publishes versioned static scene bundles.
 - Studio has a Publish tab with draft URL, published URLs, embed snippets, and version history.
+- Published bundles include copy-ready S3/R2 deploy commands, including an opt-in per-asset cache-header pass for CDN-friendly immutable GLB/texture assets and revalidated manifests.
 - Reimport analysis preserves material edits and object visibility by stable material/object names.
 - Viewer supports in-viewport object picking with object/material details.
 - Studio Interactions can create and edit hotspots, external scene links, and object toggles.
@@ -156,6 +157,6 @@ Current limitations:
 - Durable project/account backend.
 - Multi-project API and database persistence.
 - Cloud storage and production publish hosting.
-- CDN hosting and custom domains.
+- Fully managed CDN hosting and custom domains.
 - Analytics.
 - Collaboration and 3D meetings.
