@@ -44,6 +44,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Movement behavior is now driven by `controls.json`.
 - Studio has a Controls tab for enabling/disabling WASD, click-to-move, drag-look, speed, step thresholds, sensitivity, and click threshold.
 - Studio navigation repair now shows a recommended plain-English fix from the viewer failure reason.
+- Viewer repair links now pass blocker type to Studio, so repairs can distinguish authored blockers, named collision meshes, and inferred walls.
 - Studio navigation zones now default to readable walk/pass/block cards with raw coordinates hidden under Advanced.
 - Studio now starts navigation repair with a guided setup card before the detailed zone editor.
 - Studio Controls now surfaces one primary navigation fix at a time, such as setting bounds, drawing a walk area, drawing a door pass, or testing the viewer.

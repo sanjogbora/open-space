@@ -46,6 +46,7 @@ export interface NavigationFailure {
   cameraPosition?: [number, number, number];
   objectName?: string;
   blockerName?: string;
+  blockerKind?: "authored" | "named" | "inferred";
   screen: {
     x: number;
     y: number;

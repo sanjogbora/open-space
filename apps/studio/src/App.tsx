@@ -91,6 +91,7 @@ const materialTextureFieldLabels: Record<MaterialTextureField, string> = {
 interface NavigationRepairDraft {
   reason: string;
   blockerName: string;
+  blockerKind?: "authored" | "named" | "inferred";
   point?: Vec3;
   from?: Vec3;
 }
@@ -478,6 +479,11 @@ function parsePointParam(value: string | null): Vec3 | undefined {
 function initialNavigationRepairDraft(): NavigationRepairDraft | null {
   const params = new URLSearchParams(window.location.search);
   const blockerName = params.get("blocker") ?? "";
+  const blockerKindParam = params.get("blockerKind");
+  const blockerKind =
+    blockerKindParam === "authored" || blockerKindParam === "named" || blockerKindParam === "inferred"
+      ? blockerKindParam
+      : undefined;
   const reason = params.get("reason") ?? "";
   const point = parsePointParam(params.get("point"));
   const from = parsePointParam(params.get("from"));
@@ -487,6 +493,7 @@ function initialNavigationRepairDraft(): NavigationRepairDraft | null {
   return {
     reason,
     blockerName,
+    ...(blockerKind ? { blockerKind } : {}),
     ...(point ? { point } : {}),
     ...(from ? { from } : {})
   };
@@ -632,6 +639,26 @@ function navigationRepairRecommendation(draft: NavigationRepairDraft): Navigatio
   }
 
   if (draft.reason === "blocked-collision") {
+    if (draft.blockerKind === "authored") {
+      return {
+        title: "Recommended fix: adjust the blocker",
+        detail:
+          "The viewer hit a blocker that was authored in Studio. Resize or split that block zone around the doorway, or delete it if it was added by mistake.",
+        primaryLabel: "Add Door Pass",
+        action: "pass",
+        requiresPoint: true
+      };
+    }
+    if (draft.blockerKind === "inferred" && draft.blockerName) {
+      return {
+        title: "Recommended fix: confirm the detected wall",
+        detail:
+          "The viewer inferred this object as a wall or partition. Add a door pass if it is a real opening; ignore the blocker only if the object is not meant to stop movement.",
+        primaryLabel: "Add Door Pass",
+        action: "pass",
+        requiresPoint: true
+      };
+    }
     if (draft.point) {
       return {
         title: "Recommended fix: add a doorway connector",
@@ -6710,6 +6737,12 @@ function App() {
                             <div>
                               <dt>Blocker</dt>
                               <dd>{navigationRepairDraft.blockerName}</dd>
+                            </div>
+                          )}
+                          {navigationRepairDraft.blockerKind && (
+                            <div>
+                              <dt>Blocker Type</dt>
+                              <dd>{navigationRepairDraft.blockerKind}</dd>
                             </div>
                           )}
                           {navigationRepairDraft.point && (
