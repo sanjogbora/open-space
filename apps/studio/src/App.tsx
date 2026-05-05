@@ -66,6 +66,7 @@ type BakePreset = "draft" | "medium" | "high" | "super";
 type HotspotIcon = NonNullable<HotspotInteraction["icon"]>;
 type MovementToggle = "enabled" | "keyboard" | "clickToMove" | "dragLook";
 type NavigationPaintShape = "rectangle" | "polygon";
+type MaterialTextureField = "mapUrl" | "normalMapUrl" | "emissiveMapUrl" | "lightMapUrl";
 
 interface NavigationPolygonDraft {
   kind: NavigationZone["kind"];
@@ -77,6 +78,14 @@ const bakePresetDefaults: Record<BakePreset, { resolution: number; samples: numb
   medium: { resolution: 1024, samples: 96, margin: 16 },
   high: { resolution: 2048, samples: 192, margin: 24 },
   super: { resolution: 4096, samples: 384, margin: 32 }
+};
+
+const materialTextureAccept = ".avif,.jpg,.jpeg,.ktx2,.png,.webp,image/avif,image/jpeg,image/png,image/webp";
+const materialTextureFieldLabels: Record<MaterialTextureField, string> = {
+  mapUrl: "base texture",
+  normalMapUrl: "normal map",
+  emissiveMapUrl: "emissive map",
+  lightMapUrl: "lightmap"
 };
 
 interface NavigationRepairDraft {
@@ -3442,7 +3451,11 @@ function App() {
     }
   };
 
-  const uploadMaterialLightmap = async (materialId: string, file: File | undefined) => {
+  const uploadMaterialTexture = async (
+    materialId: string,
+    field: MaterialTextureField,
+    file: File | undefined
+  ) => {
     if (!file) {
       return;
     }
@@ -3453,7 +3466,7 @@ function App() {
     }
     if (!/\.(avif|jpe?g|ktx2|png|webp)$/i.test(file.name)) {
       setLightmapUploadState("error");
-      setLightmapUploadError("Upload a PNG, JPEG, WebP, AVIF, or KTX2 lightmap.");
+      setLightmapUploadError(`Upload a PNG, JPEG, WebP, AVIF, or KTX2 ${materialTextureFieldLabels[field]}.`);
       return;
     }
 
@@ -3481,12 +3494,20 @@ function App() {
         throw new Error("Upload did not return an asset path.");
       }
       const assetPath = result.assetPath;
-      updateMaterial(materialId, (material) => ({
-        ...material,
-        lightMapUrl: assetPath,
-        lightMapIntensity: material.lightMapIntensity ?? 1,
-        lightMapUvSet: material.lightMapUvSet ?? 1
-      }));
+      updateMaterial(materialId, (material) => {
+        const next: MaterialOverride = {
+          ...material,
+          [field]: assetPath
+        };
+        if (field === "lightMapUrl") {
+          next.lightMapIntensity = material.lightMapIntensity ?? 1;
+          next.lightMapUvSet = material.lightMapUvSet ?? 1;
+        }
+        if (field === "emissiveMapUrl") {
+          next.emissiveIntensity = material.emissiveIntensity ?? 1;
+        }
+        return next;
+      });
       if (result.stats) {
         setBundleStats(result.stats);
       }
@@ -3497,7 +3518,7 @@ function App() {
       setNotice("saved");
     } catch (error) {
       setLightmapUploadState("error");
-      setLightmapUploadError(error instanceof Error ? error.message : "Lightmap upload failed.");
+      setLightmapUploadError(error instanceof Error ? error.message : "Material texture upload failed.");
     }
   };
 
@@ -5641,9 +5662,11 @@ function App() {
                     <span>Upload Lightmap</span>
                     <input
                       type="file"
-                      accept=".avif,.jpg,.jpeg,.ktx2,.png,.webp,image/avif,image/jpeg,image/png,image/webp"
+                      accept={materialTextureAccept}
                       disabled={!apiConnected || lightmapUploadState === "uploading"}
-                      onChange={(event) => void uploadMaterialLightmap(selectedMaterial.id, event.target.files?.[0])}
+                      onChange={(event) =>
+                        void uploadMaterialTexture(selectedMaterial.id, "lightMapUrl", event.target.files?.[0])
+                      }
                     />
                     <strong>
                       {lightmapUploadState === "uploading" && "Uploading"}
@@ -5704,6 +5727,23 @@ function App() {
                         }
                       />
                     </label>
+                    <label className="file-inline-control">
+                      <span>Upload Base Texture</span>
+                      <input
+                        type="file"
+                        accept={materialTextureAccept}
+                        disabled={!apiConnected || lightmapUploadState === "uploading"}
+                        onChange={(event) =>
+                          void uploadMaterialTexture(selectedMaterial.id, "mapUrl", event.target.files?.[0])
+                        }
+                      />
+                      <strong>
+                        {lightmapUploadState === "uploading" && "Uploading"}
+                        {lightmapUploadState === "done" && "Uploaded"}
+                        {lightmapUploadState === "error" && "Failed"}
+                        {lightmapUploadState === "idle" && "Choose file"}
+                      </strong>
+                    </label>
                     <label>
                       <span>Normal Map URL</span>
                       <input
@@ -5724,6 +5764,23 @@ function App() {
                         }
                       />
                     </label>
+                    <label className="file-inline-control">
+                      <span>Upload Normal Map</span>
+                      <input
+                        type="file"
+                        accept={materialTextureAccept}
+                        disabled={!apiConnected || lightmapUploadState === "uploading"}
+                        onChange={(event) =>
+                          void uploadMaterialTexture(selectedMaterial.id, "normalMapUrl", event.target.files?.[0])
+                        }
+                      />
+                      <strong>
+                        {lightmapUploadState === "uploading" && "Uploading"}
+                        {lightmapUploadState === "done" && "Uploaded"}
+                        {lightmapUploadState === "error" && "Failed"}
+                        {lightmapUploadState === "idle" && "Choose file"}
+                      </strong>
+                    </label>
                     <label>
                       <span>Emissive Map URL</span>
                       <input
@@ -5743,6 +5800,23 @@ function App() {
                           })
                         }
                       />
+                    </label>
+                    <label className="file-inline-control">
+                      <span>Upload Emissive Map</span>
+                      <input
+                        type="file"
+                        accept={materialTextureAccept}
+                        disabled={!apiConnected || lightmapUploadState === "uploading"}
+                        onChange={(event) =>
+                          void uploadMaterialTexture(selectedMaterial.id, "emissiveMapUrl", event.target.files?.[0])
+                        }
+                      />
+                      <strong>
+                        {lightmapUploadState === "uploading" && "Uploading"}
+                        {lightmapUploadState === "done" && "Uploaded"}
+                        {lightmapUploadState === "error" && "Failed"}
+                        {lightmapUploadState === "idle" && "Choose file"}
+                      </strong>
                     </label>
                     <NumberField
                       label="Emissive Intensity"

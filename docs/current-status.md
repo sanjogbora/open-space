@@ -118,7 +118,7 @@ Current limitations:
 - Viewer generates runtime vertex normals for meshes that lack normal attributes, improving lighting on rough exports.
 - Runtime object inspection panel.
 - Visual smoke tests for desktop/mobile viewer and Studio.
-- Automatic Blender lightmap bake job and manual lightmap upload workflow.
+- Automatic Blender lightmap bake job and manual lightmap/material texture upload workflows.
 
 ## Major Work Remaining
 
@@ -128,7 +128,7 @@ Current limitations:
 - Draco compression as an optional alternative to Meshopt.
 - More aggressive draw-call optimization and safe mesh merging controls.
 - Production-grade bake farm scheduling, denoise/artifact repair, and light editing.
-- UV controls, richer material map upload workflows, and texture-backed variants.
+- UV controls and texture-backed variants.
 - Studio-linked in-viewport object editing and placement tools.
 - Full navmesh/capsule controller with stair and multi-level handling.
 - More advanced navmesh authoring tools beyond polygon zone drawing.
