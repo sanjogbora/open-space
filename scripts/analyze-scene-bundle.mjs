@@ -132,7 +132,8 @@ async function resourceStatus(asset, kind, source, label) {
   try {
     await access(fullPath);
     const info = await stat(fullPath);
-    const metadata = kind === "texture" ? await imageMetadata(fullPath) : undefined;
+    const metadataStatus = kind === "texture" ? await imageMetadataStatus(fullPath) : undefined;
+    const metadata = metadataStatus?.metadata;
     const exactSource = await exactCaseRelativePath(path.dirname(asset.path), localSource);
     const caseMismatch = Boolean(exactSource && exactSource !== localSource.replace(/\\/g, "/"));
     return {
@@ -142,6 +143,7 @@ async function resourceStatus(asset, kind, source, label) {
       exists: true,
       bytes: info.size,
       ...(caseMismatch ? { caseMismatch, actualSource: exactSource } : {}),
+      ...(metadataStatus?.decodeFailed ? { decodeFailed: true } : {}),
       ...(metadata ? { width: metadata.width, height: metadata.height } : {})
     };
   } catch {
@@ -186,21 +188,28 @@ async function exactCaseRelativePath(baseDir, source) {
 }
 
 async function imageMetadata(filePath) {
+  return (await imageMetadataStatus(filePath)).metadata;
+}
+
+async function imageMetadataStatus(filePath) {
   const extension = path.extname(filePath).toLowerCase();
   if (extension === ".ktx2" || extension === ".basis") {
-    return undefined;
+    return { metadata: undefined, decodeFailed: false };
   }
   try {
     const metadata = await sharp(filePath).metadata();
     if (typeof metadata.width !== "number" || typeof metadata.height !== "number") {
-      return undefined;
+      return { metadata: undefined, decodeFailed: true };
     }
     return {
-      width: metadata.width,
-      height: metadata.height
+      metadata: {
+        width: metadata.width,
+        height: metadata.height
+      },
+      decodeFailed: false
     };
   } catch {
-    return undefined;
+    return { metadata: undefined, decodeFailed: true };
   }
 }
 
@@ -255,10 +264,12 @@ async function listBundleImageFiles(dir = bundleDir, files = []) {
     }
     if (entry.isFile() && imageExtensions.has(path.extname(entry.name).toLowerCase())) {
       const info = await stat(fullPath);
-      const metadata = await imageMetadata(fullPath);
+      const metadataStatus = await imageMetadataStatus(fullPath);
+      const metadata = metadataStatus.metadata;
       files.push({
         source: relativePath,
         bytes: info.size,
+        ...(metadataStatus.decodeFailed ? { decodeFailed: true } : {}),
         ...(metadata ? { width: metadata.width, height: metadata.height } : {})
       });
     }
@@ -1858,6 +1869,12 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.embeddedImageDecodeFailureCount ?? 0),
     0
   );
+  const sidecarTextureDecodeFailureCount = [
+    ...report.looseImages,
+    ...report.models
+      .flatMap((model) => model.externalResources ?? [])
+      .filter((resource) => resource.kind === "texture" && resource.exists)
+  ].filter((resource) => resource.decodeFailed).length;
   const unsupportedImageMimeCount = report.models.reduce(
     (sum, model) => sum + (model.unsupportedImageMimeCount ?? 0),
     0
@@ -2092,6 +2109,16 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Embedded textures could not be decoded",
       message: `${embeddedImageDecodeFailureCount} embedded texture image(s) could not be read by the analyzer.`,
       action: "Re-export the GLB with valid PNG, JPEG, WebP, or AVIF images, or upload the original GLTF ZIP with intact texture files."
+    });
+  }
+
+  if (sidecarTextureDecodeFailureCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "sidecar-texture-decode-failed",
+      title: "Texture files could not be decoded",
+      message: `${sidecarTextureDecodeFailureCount} texture file(s) exist in the bundle but could not be read as valid image data.`,
+      action: "Replace those files from the source export, or re-upload a ZIP with intact PNG, JPEG, WebP, or AVIF textures."
     });
   }
 

@@ -8187,6 +8187,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "invalid-default-scene",
       "default-scene-has-no-renderable-meshes",
       "embedded-texture-decode-failed",
+      "sidecar-texture-decode-failed",
       "unsupported-required-extensions"
     ].includes(code)
   ) {
