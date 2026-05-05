@@ -22,6 +22,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Predefined room/view buttons move the camera to saved views.
 - A floorplan/minimap overlay tracks camera position and can jump to saved views.
 - Studio hides generated navigation zones by default so normal repairs focus on manual walk/pass/block patches.
+- Studio can disable all generated navigation zones from the hidden-auto-zone warning when automatic detection creates bad walk areas.
 - Studio has an Auto Fix navigation action that can set graph bounds, add boundary blocks, add walk patches from saved views, and bridge close navigation islands.
 - Studio surfaces TV/video screen planning in Interactions with mapped candidate counts and one-click likely screen mapping.
 - Bundle analysis and publish readiness warn when planned video screens have no source or no valid target surface.

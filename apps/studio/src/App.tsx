@@ -2514,6 +2514,18 @@ function App() {
     setNotice("saved");
   };
 
+  const disableGeneratedNavigationZones = () => {
+    updateNavigation((navigation) => ({
+      ...navigation,
+      zones: (navigation.zones ?? []).map((zone) =>
+        zone.source === "generated" ? { ...zone, enabled: false } : zone
+      )
+    }));
+    setShowGeneratedNavigationZones(true);
+    setRepairSummary("Disabled auto-detected navigation zones. Add manual walk/pass/block zones, save, then retry the viewer.");
+    setNotice("saved");
+  };
+
   const createWalkZonesFromViews = () => {
     const walkViews = manifest?.views.filter((view) => view.kind === "walk") ?? [];
     if (walkViews.length === 0) {
@@ -6969,6 +6981,22 @@ function App() {
                       <div className="zone-helper-strip">
                         <strong>{generatedNavigationZoneCount} auto-detected zone(s) are active but hidden.</strong>
                         <span>Keep this off for normal repairs; turn it on only when you need to inspect detection.</span>
+                        <div className="inline-actions">
+                          <button
+                            type="button"
+                            className="button secondary compact-button"
+                            onClick={() => setShowGeneratedNavigationZones(true)}
+                          >
+                            Inspect
+                          </button>
+                          <button
+                            type="button"
+                            className="button secondary compact-button"
+                            onClick={disableGeneratedNavigationZones}
+                          >
+                            Disable Auto
+                          </button>
+                        </div>
                       </div>
                     )}
                     {manifest.navigation.bounds && (
