@@ -4565,6 +4565,7 @@ function App() {
                 onOptimize={() => void optimizeProject()}
                 onBake={() => void bakeLightmaps()}
                 onNavigation={() => setSelectedTab("controls")}
+                onRooms={() => setSelectedTab("rooms")}
               />
             </div>
 
@@ -8110,7 +8111,7 @@ function DiagnosticList({
   );
 }
 
-type ImportNextStepAction = "repair" | "navigation" | "optimize" | "bake" | "review" | "test";
+type ImportNextStepAction = "repair" | "navigation" | "rooms" | "optimize" | "bake" | "review" | "test";
 
 interface ImportNextStep {
   action: ImportNextStepAction;
@@ -8147,6 +8148,16 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
     ].includes(code)
   ) {
     return "navigation";
+  }
+  if (
+    [
+      "missing-room-map",
+      "room-map-missing-bounds",
+      "partial-room-map",
+      "rooms-not-linked-to-views"
+    ].includes(code)
+  ) {
+    return "rooms";
   }
   if (
     [
@@ -8224,6 +8235,14 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
       button: "Open Controls"
     };
   }
+  if (action === "rooms") {
+    return {
+      action,
+      title: "Map rooms",
+      detail: "Open Rooms to create room labels, floorplan areas, and links from room buttons to saved walk views.",
+      button: "Open Rooms"
+    };
+  }
   return {
     action,
     title: "Test in viewer",
@@ -8242,7 +8261,8 @@ function ImportNextSteps({
   onRepair,
   onOptimize,
   onBake,
-  onNavigation
+  onNavigation,
+  onRooms
 }: {
   stats: BundleStats | null;
   apiConnected: boolean;
@@ -8254,6 +8274,7 @@ function ImportNextSteps({
   onOptimize: () => void;
   onBake: () => void;
   onNavigation: () => void;
+  onRooms: () => void;
 }) {
   const diagnostics = stats?.diagnostics ?? [];
   const priority = diagnostics.filter((diagnostic) => diagnostic.severity !== "info");
@@ -8281,6 +8302,8 @@ function ImportNextSteps({
             ? onRepair
             : step.action === "navigation"
               ? onNavigation
+              : step.action === "rooms"
+                ? onRooms
             : step.action === "optimize"
               ? onOptimize
               : step.action === "bake"
@@ -8297,6 +8320,7 @@ function ImportNextSteps({
             <button type="button" className="button secondary" disabled={disabled} onClick={onClick}>
               {step.action === "repair" && <Wrench size={15} aria-hidden="true" />}
               {step.action === "navigation" && <MapPin size={15} aria-hidden="true" />}
+              {step.action === "rooms" && <Layers3 size={15} aria-hidden="true" />}
               {step.action === "optimize" && <Activity size={15} aria-hidden="true" />}
               {step.action === "bake" && <Palette size={15} aria-hidden="true" />}
               {step.action === "review" && <AlertTriangle size={15} aria-hidden="true" />}

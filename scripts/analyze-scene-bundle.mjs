@@ -1884,6 +1884,10 @@ function createDiagnostics(manifest, report, graphs) {
   const hasWalkZones = navigationZones.some((zone) => zone.kind === "walk" && zone.enabled !== false);
   const hasBlockZones = navigationZones.some((zone) => zone.kind === "block" && zone.enabled !== false);
   const topology = navigationTopology(manifest);
+  const rooms = Array.isArray(manifest.rooms) ? manifest.rooms : [];
+  const roomsWithBounds = rooms.filter((room) => room?.bounds);
+  const linkedRoomViewIds = new Set(rooms.map((room) => room?.viewId).filter(Boolean));
+  const linkedWalkRoomCount = topology.walkViews.filter((view) => linkedRoomViewIds.has(view.id)).length;
   const videoTextures = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "video-texture");
   const graphNodeNames = new Set((graph?.nodes ?? []).map((node) => node.name).filter(Boolean));
   const graphMaterialNames = new Set((graph?.materials ?? []).map((material) => material.name).filter(Boolean));
@@ -2529,6 +2533,42 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if (topology.walkZones.length > 0 && rooms.length === 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "missing-room-map",
+      title: "No room map configured",
+      message: "Walk zones exist, but the scene has no room/floorplan entries for room buttons or client-facing area labels.",
+      action: "Open Rooms and sync from walk areas or saved views, then rename the generated room entries."
+    });
+  } else if (rooms.length > 0 && roomsWithBounds.length === 0 && topology.walkZones.length > 0) {
+    diagnostics.push({
+      severity: "info",
+      code: "room-map-missing-bounds",
+      title: "Rooms need floorplan areas",
+      message: `${rooms.length} room entry(s) exist, but none have bounds for the floorplan map.`,
+      action: "Use Rooms > From Walks to create draggable room areas from authored walk zones."
+    });
+  } else if (roomsWithBounds.length > 0 && roomsWithBounds.length < Math.min(topology.walkZones.length, 3)) {
+    diagnostics.push({
+      severity: "info",
+      code: "partial-room-map",
+      title: "Room map covers only part of navigation",
+      message: `${roomsWithBounds.length} room area(s) are mapped for ${topology.walkZones.length} walk zone(s).`,
+      action: "Sync rooms from walk areas, then remove or merge any extra areas that are not actual rooms."
+    });
+  }
+
+  if (rooms.length > 0 && topology.walkViews.length > 0 && linkedWalkRoomCount === 0) {
+    diagnostics.push({
+      severity: "info",
+      code: "rooms-not-linked-to-views",
+      title: "Rooms are not linked to camera views",
+      message: `${rooms.length} room entry(s) exist, but none link to a saved walk view.`,
+      action: "Link each room to its closest saved walk view so floorplan clicks and room buttons land in useful positions."
+    });
+  }
+
   if (videoTexturesMissingSource.length > 0) {
     diagnostics.push({
       severity: "warning",
@@ -3000,6 +3040,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "one-sided-pass-zones",
     "walk-views-inside-block-zones",
     "walk-views-outside-walk-zones",
+    "missing-room-map",
     "some-lightmap-secondary-uvs-missing",
     "video-textures-missing-source",
     "video-textures-missing-target",

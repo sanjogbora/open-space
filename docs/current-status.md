@@ -31,6 +31,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Bundle analysis and publish readiness warn when planned video screens have no source or no valid target surface.
 - Studio surfaces room/floorplan mapping status with room counts, linked walk views, and one-click room sync.
 - Studio Rooms can now sync authored walk areas into room map regions, so floorplan areas can be generated from the navigation zones users draw.
+- Analyzer now reports missing or partial room maps and routes the import next step directly to Rooms when room labels, floorplan areas, or view links need setup.
 - Bundle analysis warns about duplicate object/material names that can make interaction targeting ambiguous after import.
 - Viewer initial-camera repair avoids likely exterior/grass planes when it can recover to a better navigation surface.
 - Viewer doorway recovery treats named/transparent door panels as portal surfaces, then validates the floor beyond through normal bounds and route checks.
