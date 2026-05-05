@@ -2047,7 +2047,15 @@ export class WalkthroughViewer {
   }
 
   private findNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
-    return this.findVisibilityNavigationRoute(target, origin) ?? this.findGridNavigationRoute(target, origin);
+    const route = this.findVisibilityNavigationRoute(target, origin) ?? this.findGridNavigationRoute(target, origin);
+    return route ? this.smoothNavigationRoute(route, origin) ?? route : undefined;
+  }
+
+  private smoothNavigationRoute(route: THREE.Vector3[], origin: THREE.Vector3): THREE.Vector3[] | undefined {
+    if (route.length <= 1) {
+      return route;
+    }
+    return this.simplifyNavigationRoute([origin.clone(), ...route.map((point) => point.clone())]);
   }
 
   private findVisibilityNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
