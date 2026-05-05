@@ -7,6 +7,7 @@ import { ALL_EXTENSIONS, EXTMeshoptCompression, KHRTextureBasisu } from "@gltf-t
 import {
   dedup,
   getGLPrimitiveCount,
+  join,
   meshopt,
   prune,
   reorder,
@@ -184,6 +185,7 @@ async function optimizeGlb(sourcePath, outputPath, profile) {
     weld({ overwrite: false }),
     resample()
   );
+  const drawCallOptimizationStep = await applyDrawCallOptimization(document, profile);
   const meshSimplificationStep = await applyMeshSimplification(document, profile);
   await document.transform(
     textureCompress({
@@ -201,7 +203,7 @@ async function optimizeGlb(sourcePath, outputPath, profile) {
     meshopt({ encoder: MeshoptEncoder, level })
   );
   await io.write(outputPath, document);
-  return { meshSimplificationStep, gpuTextureStep };
+  return { drawCallOptimizationStep, meshSimplificationStep, gpuTextureStep };
 }
 
 function countDocumentTriangles(document) {
@@ -216,6 +218,67 @@ function countDocumentTriangles(document) {
     }
   }
   return total;
+}
+
+function countDocumentDrawCalls(document) {
+  let total = 0;
+  for (const mesh of document.getRoot().listMeshes()) {
+    total += mesh.listPrimitives().length;
+  }
+  return total;
+}
+
+async function applyDrawCallOptimization(document, profile) {
+  if (profile === "desktop") {
+    return {
+      id: "draw-call-join",
+      label: "Join compatible unnamed primitives",
+      status: "skipped",
+      note: "Desktop profile preserves source scene structure."
+    };
+  }
+
+  const beforeDrawCalls = countDocumentDrawCalls(document);
+  const minimumDrawCalls = profile === "mobile" ? 64 : 128;
+  if (beforeDrawCalls < minimumDrawCalls) {
+    return {
+      id: "draw-call-join",
+      label: "Join compatible unnamed primitives",
+      status: "skipped",
+      beforeDrawCalls,
+      afterDrawCalls: beforeDrawCalls,
+      note: `Scene has ${formatCount(beforeDrawCalls)} draw primitive(s), below the ${formatCount(minimumDrawCalls)} ${profile} join threshold.`
+    };
+  }
+
+  try {
+    await document.transform(
+      join({ keepNamed: true }),
+      prune()
+    );
+  } catch (error) {
+    return {
+      id: "draw-call-join",
+      label: "Join compatible unnamed primitives",
+      status: "failed",
+      beforeDrawCalls,
+      afterDrawCalls: beforeDrawCalls,
+      note: error instanceof Error ? error.message : "glTF Transform join failed."
+    };
+  }
+
+  const afterDrawCalls = countDocumentDrawCalls(document);
+  return {
+    id: "draw-call-join",
+    label: "Join compatible unnamed primitives",
+    status: afterDrawCalls < beforeDrawCalls ? "completed" : "skipped",
+    beforeDrawCalls,
+    afterDrawCalls,
+    note:
+      afterDrawCalls < beforeDrawCalls
+        ? `Reduced draw primitives from ${formatCount(beforeDrawCalls)} to ${formatCount(afterDrawCalls)} while preserving named nodes and meshes.`
+        : "No compatible unnamed primitives were found for safe joining."
+  };
 }
 
 async function applyMeshSimplification(document, profile) {
@@ -479,7 +542,7 @@ if (sourcePath.toLowerCase().endsWith(".glb")) {
   const compactBytes = compactGlbJson(sourceBytes);
   await writeFile(outputPath, compactBytes);
 }
-const { meshSimplificationStep, gpuTextureStep } = await optimizeGlb(sourcePath, outputPath, profile);
+const { drawCallOptimizationStep, meshSimplificationStep, gpuTextureStep } = await optimizeGlb(sourcePath, outputPath, profile);
 const afterInfo = await stat(outputPath);
 
 if (applyOptimized) {
@@ -531,6 +594,7 @@ const job = {
       label: "Weld vertices and resample animation data",
       status: "completed"
     },
+    drawCallOptimizationStep,
     meshSimplificationStep,
     {
       id: "mesh-reorder",

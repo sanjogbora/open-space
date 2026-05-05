@@ -59,6 +59,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Optimizer now emits `scene.optimized.glb` and `optimization-job.json`.
 - Optimizer now keeps `optimization-history.json` for recent job history.
 - Optimizer now runs glTF Transform cleanup plus `EXT_meshopt_compression`.
+- Optimizer can safely join compatible unnamed primitives for mobile/balanced profiles to reduce draw calls while preserving named objects for targeting.
 - Optimizer can simplify heavy geometry for mobile and balanced profiles while preserving desktop source geometry.
 - Optimizer now creates WebP transfer textures and can create KTX2/Basis textures when `toktx` is installed, including high-quality UASTC compression for normal/alpha maps.
 - API can run optimization jobs and apply the optimized model to the manifest.
@@ -124,7 +125,7 @@ Current limitations:
 - SketchUp/Revit/3ds Max exporters.
 - More texture quality controls.
 - Draco compression as an optional alternative to Meshopt.
-- Draw-call optimization and safe mesh merging.
+- More aggressive draw-call optimization and safe mesh merging controls.
 - Production-grade bake farm scheduling, denoise/artifact repair, and light editing.
 - Material texture maps, normal maps, emissive maps, UV controls, and texture-backed variants.
 - Studio-linked in-viewport object editing and placement tools.
