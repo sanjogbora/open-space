@@ -1499,6 +1499,39 @@ function importedModelViews(bounds, cameraHeight, roomCandidates = []) {
   ];
 }
 
+function roomCandidateDistanceToView(candidate, view) {
+  const point = view?.position;
+  if (!candidate || !Array.isArray(point) || point.length < 3) {
+    return Number.POSITIVE_INFINITY;
+  }
+  if (candidate.bounds) {
+    const dx =
+      point[0] < candidate.bounds.min[0]
+        ? candidate.bounds.min[0] - point[0]
+        : point[0] > candidate.bounds.max[0]
+          ? point[0] - candidate.bounds.max[0]
+          : 0;
+    const dz =
+      point[2] < candidate.bounds.min[2]
+        ? candidate.bounds.min[2] - point[2]
+        : point[2] > candidate.bounds.max[2]
+          ? point[2] - candidate.bounds.max[2]
+          : 0;
+    return Math.hypot(dx, dz);
+  }
+  if (!Array.isArray(candidate.center) || candidate.center.length < 3) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return Math.hypot(candidate.center[0] - point[0], candidate.center[2] - point[2]);
+}
+
+function nearestRoomView(candidate, views) {
+  return [...views]
+    .filter((view) => view.kind !== "top")
+    .map((view) => ({ view, distance: roomCandidateDistanceToView(candidate, view) }))
+    .sort((a, b) => a.distance - b.distance)[0]?.view;
+}
+
 function importedRooms(views, roomCandidates, existingRooms = []) {
   const hasCustomRooms =
     Array.isArray(existingRooms) &&
@@ -1509,19 +1542,44 @@ function importedRooms(views, roomCandidates, existingRooms = []) {
   if (hasCustomRooms) {
     return existingRooms;
   }
-  return views
-    .filter((view) => view.kind !== "top")
-    .map((view, index) => {
-      const candidate = roomCandidates[index];
+  const walkViews = views.filter((view) => view.kind !== "top");
+  const usedCandidateIds = new Set();
+  const rooms = walkViews.map((view, index) => {
+    const candidate =
+      roomCandidates[index] ??
+      roomCandidates
+        .filter((item) => !usedCandidateIds.has(item.id))
+        .map((item) => ({ item, distance: roomCandidateDistanceToView(item, view) }))
+        .filter((entry) => entry.distance <= 0.75)
+        .sort((a, b) => a.distance - b.distance)[0]?.item;
+    if (candidate?.id) {
+      usedCandidateIds.add(candidate.id);
+    }
+    return {
+      id: candidate?.id ?? `room-${view.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 72),
+      label: candidate?.label ?? view.label,
+      viewId: view.id,
+      center: candidate?.center ?? view.position,
+      ...(candidate?.dimensions ? { dimensions: candidate.dimensions } : {}),
+      ...(candidate?.bounds ? { bounds: candidate.bounds } : {})
+    };
+  });
+
+  const extraRooms = roomCandidates
+    .filter((candidate) => candidate?.id && !usedCandidateIds.has(candidate.id))
+    .map((candidate) => {
+      const nearestView = nearestRoomView(candidate, walkViews);
       return {
-        id: candidate?.id ?? `room-${view.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 72),
-        label: view.label,
-        viewId: view.id,
-        center: view.position,
+        id: candidate.id,
+        label: candidate.label,
+        ...(nearestView ? { viewId: nearestView.id } : {}),
+        center: candidate.center ?? nearestView?.position ?? [0, 0, 0],
         ...(candidate?.dimensions ? { dimensions: candidate.dimensions } : {}),
         ...(candidate?.bounds ? { bounds: candidate.bounds } : {})
       };
     });
+
+  return [...rooms, ...extraRooms].slice(0, 14);
 }
 
 function graphWalkZoneCandidates(graph, modelScale) {
@@ -2338,6 +2396,18 @@ async function resetManifestForUploadedModel(
         ]
       }
     : manifest.navigation?.bounds;
+  const navigationZones = importedNavigationZones(bounds, manifest.navigation?.zones, graph, modelScale, cameraHeight, views);
+  const roomMapCandidates = [
+    ...effectiveRoomCandidates,
+    ...roomCandidatesFromWalkZones(
+      navigationZones.filter((zone) => zone.kind === "walk"),
+      bounds,
+      cameraHeight,
+      effectiveRoomCandidates,
+      graph,
+      modelScale
+    )
+  ].slice(0, 14);
 
   const nextManifest = {
     ...manifest,
@@ -2367,7 +2437,7 @@ async function resetManifestForUploadedModel(
         Math.max(12, (generatedGroundSize ?? manifest.environment?.groundSize ?? 90) * 0.48)
     },
     views,
-    rooms: importedRooms(views, effectiveRoomCandidates, manifest.rooms),
+    rooms: importedRooms(views, roomMapCandidates, manifest.rooms),
     interactions: options.resetInteractions ? [] : manifest.interactions,
     navigation: {
       ...manifest.navigation,
@@ -2395,7 +2465,7 @@ async function resetManifestForUploadedModel(
         "pillar"
       ],
       ignoredCollisionMeshNames: manifest.navigation?.ignoredCollisionMeshNames ?? [],
-      zones: importedNavigationZones(bounds, manifest.navigation?.zones, graph, modelScale, cameraHeight, views),
+      zones: navigationZones,
       ...(navigationBounds ? { bounds: navigationBounds } : {})
     }
   };
