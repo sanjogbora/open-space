@@ -976,6 +976,37 @@ function createBridgePassZone(
   };
 }
 
+function expandedOneSidedPassZone(
+  passZone: NavigationZone,
+  walkZones: readonly NavigationZone[],
+  cameraHeight: number
+): NavigationZone | undefined {
+  const touchingWalkZones = walkZones.filter((walkZone) => navigationZonesOverlap(passZone, walkZone));
+  if (touchingWalkZones.length !== 1 || walkZones.length < 2) {
+    return undefined;
+  }
+  const nearestTarget = walkZones
+    .filter((walkZone) => walkZone.id !== touchingWalkZones[0]!.id)
+    .map((walkZone) => ({ walkZone, gap: zoneBridgeGap(passZone, walkZone) }))
+    .sort((a, b) => a.gap - b.gap)[0];
+  if (!nearestTarget || nearestTarget.gap > Math.max(2.8, cameraHeight * 1.65)) {
+    return undefined;
+  }
+  const bridge = createBridgePassZone(touchingWalkZones[0]!, nearestTarget.walkZone, 0, cameraHeight);
+  const expanded: NavigationZone = {
+    ...bridge,
+    id: passZone.id,
+    label: passZone.label || bridge.label
+  };
+  if (passZone.source) {
+    expanded.source = passZone.source;
+  }
+  if (passZone.generatedBy) {
+    expanded.generatedBy = passZone.generatedBy;
+  }
+  return expanded;
+}
+
 function createDoorPassZoneFromCandidate(
   candidate: DoorPassCandidate,
   id: string,
@@ -2758,6 +2789,7 @@ function App() {
       let walkPatchCount = 0;
       let bridgeCount = 0;
       let detectedDoorPassCount = 0;
+      let expandedPassCount = 0;
       const usedIds = new Set(zones.map((zone) => zone.id));
 
       if (bounds) {
@@ -2794,6 +2826,23 @@ function App() {
         detectedDoorPassCount += 1;
       });
 
+      const walkZonesForPassRepair = enabledNavigationZones({ ...repairedNavigation, zones }, "walk");
+      zones.splice(
+        0,
+        zones.length,
+        ...zones.map((zone) => {
+          if (zone.kind !== "pass") {
+            return zone;
+          }
+          const expanded = expandedOneSidedPassZone(zone, walkZonesForPassRepair, navigation.cameraHeight);
+          if (!expanded) {
+            return zone;
+          }
+          expandedPassCount += 1;
+          return expanded;
+        })
+      );
+
       const routeZones = enabledNavigationZones({ ...repairedNavigation, zones }).filter(
         (zone) => zone.kind === "walk" || zone.kind === "pass"
       );
@@ -2816,6 +2865,7 @@ function App() {
         boundaryCount > 0 ? `${boundaryCount} boundary block(s)` : undefined,
         walkPatchCount > 0 ? `${walkPatchCount} walk patch(es)` : undefined,
         detectedDoorPassCount > 0 ? `${detectedDoorPassCount} detected door pass(es)` : undefined,
+        expandedPassCount > 0 ? `${expandedPassCount} one-sided pass repair(s)` : undefined,
         bridgeCount > 0 ? `${bridgeCount} bridge pass zone(s)` : undefined
       ].filter(Boolean);
       setRepairSummary(
