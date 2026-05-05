@@ -1766,7 +1766,9 @@ export class WalkthroughViewer {
       nextPosition.x += flatDelta.x;
       nextPosition.z += flatDelta.z;
     }
-    nextPosition.y = damp(nextPosition.y, target.y, 5.5, delta);
+    if (this.geometryFloorMeshes.length === 0) {
+      nextPosition.y = damp(nextPosition.y, target.y, 5.5, delta);
+    }
     const steppedPosition = this.resolveSteppedMovementPosition(nextPosition, this.camera.position, delta);
     if (steppedPosition && this.canOccupyPosition(steppedPosition, this.camera.position)) {
       this.camera.position.copy(steppedPosition);
