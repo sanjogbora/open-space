@@ -7995,7 +7995,6 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "missing-scene-bounds",
       "missing-model-resources",
       "relocatable-texture-resources",
-      "loose-textures-not-referenced",
     ].includes(code)
   ) {
     return "repair";
@@ -8037,6 +8036,8 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   if (
     [
       "model-has-no-texture-images",
+      "loose-textures-not-referenced",
+      "case-mismatched-model-resources",
       "malformed-model",
       "invalid-default-scene",
       "default-scene-has-no-renderable-meshes",
