@@ -3400,9 +3400,10 @@ function App() {
     const isZip = lowerName.endsWith(".zip");
     const isGlb = lowerName.endsWith(".glb");
     const isGltf = lowerName.endsWith(".gltf");
-    if (!isGlb && !isGltf && !isZip) {
+    const isConvertible = /\.(dae|fbx|obj)$/i.test(lowerName);
+    if (!isGlb && !isGltf && !isZip && !isConvertible) {
       setUploadState("error");
-      setUploadError("Upload a GLB, GLTF, or a ZIP containing a GLB/GLTF plus its textures.");
+      setUploadError("Upload GLB, GLTF, FBX, OBJ, DAE, or a ZIP containing a GLB/GLTF plus textures.");
       return;
     }
 
@@ -3412,7 +3413,13 @@ function App() {
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/model`, {
         method: "POST",
         headers: {
-          "content-type": isZip ? "application/zip" : isGltf ? "model/gltf+json" : "model/gltf-binary",
+          "content-type": isZip
+            ? "application/zip"
+            : isGltf
+              ? "model/gltf+json"
+              : isConvertible
+                ? "application/octet-stream"
+                : "model/gltf-binary",
           "x-file-name": file.name
         },
         body: file
@@ -4160,7 +4167,7 @@ function App() {
               <label className="file-drop">
                 <input
                   type="file"
-                  accept=".glb,.gltf,.zip,model/gltf-binary,model/gltf+json,application/zip"
+                  accept=".dae,.fbx,.glb,.gltf,.obj,.zip,model/gltf-binary,model/gltf+json,application/zip"
                   disabled={!apiConnected || uploadState === "uploading"}
                   onChange={(event) => void uploadModel(event.target.files?.[0])}
                 />

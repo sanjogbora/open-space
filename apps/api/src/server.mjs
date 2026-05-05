@@ -19,6 +19,7 @@ const sceneRoots = [
 ];
 const publishedRoot = path.join(repoRoot, "apps/viewer-demo/public/published");
 const imageExtensions = new Set([".avif", ".basis", ".jpg", ".jpeg", ".ktx2", ".png", ".webp"]);
+const convertibleModelExtensions = new Set([".dae", ".fbx", ".obj"]);
 const defaultControlsDocument = {
   schemaVersion: "0.1",
   movement: {
@@ -51,6 +52,14 @@ const idleLightmapBakeJob = {
   status: "idle",
   engine: "blender-cycles",
   message: "No lightmap bake job has run for this project.",
+  steps: []
+};
+const idleConversionJob = {
+  schemaVersion: "0.1",
+  id: "",
+  status: "idle",
+  engine: "blender",
+  message: "No model conversion job has run for this project.",
   steps: []
 };
 
@@ -152,6 +161,20 @@ async function writeProjectAllBinary(projectId, filename, body) {
   );
 }
 
+async function writeProjectFileBinary(projectId, filename, body) {
+  await Promise.all(
+    targetDirs(projectId).map(async (target) => {
+      const outputPath = path.join(target, filename);
+      const relative = path.relative(target, outputPath);
+      if (relative.startsWith("..") || path.isAbsolute(relative)) {
+        throw badRequest(`Unsafe project path: ${filename}.`);
+      }
+      await mkdir(path.dirname(outputPath), { recursive: true });
+      await writeFile(outputPath, body);
+    })
+  );
+}
+
 async function clearPreviousModelAssets(projectId) {
   const staleNames = [
     "scene.glb",
@@ -159,6 +182,7 @@ async function clearPreviousModelAssets(projectId) {
     "scene.bin",
     "scene.optimized.glb",
     "scene.lightmapped.glb",
+    "conversion-job.json",
     "source",
     "textures",
     "images",
@@ -201,6 +225,10 @@ async function lightmapBakeJob(projectId) {
   return readJsonDefault(path.join(targetDirs(projectId)[0], "lightmap-bake-job.json"), idleLightmapBakeJob);
 }
 
+async function conversionJob(projectId) {
+  return readJsonDefault(path.join(targetDirs(projectId)[0], "conversion-job.json"), idleConversionJob);
+}
+
 async function fileExists(filePath) {
   try {
     await access(filePath);
@@ -236,7 +264,7 @@ async function localToolStatus() {
     blender: {
       ready: blenderReady,
       command: blenderCommand,
-      purpose: "Cycles lightmap baking",
+      purpose: "FBX/OBJ/DAE conversion and Cycles lightmap baking",
       action: blenderReady ? "Ready" : "Install Blender or set BLENDER_PATH."
     },
     toktx: {
@@ -394,6 +422,15 @@ function safeArchivePath(filename) {
     return undefined;
   }
   return normalized;
+}
+
+function safeSourceModelPath(filename) {
+  const extension = path.extname(filename).toLowerCase();
+  if (!convertibleModelExtensions.has(extension)) {
+    throw badRequest("Unsupported source model. Upload FBX, OBJ, DAE, GLB, GLTF, or ZIP.");
+  }
+  const base = path.basename(filename, extension).replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return `source/${base || "model"}${extension}`;
 }
 
 function findEndOfCentralDirectory(body) {
@@ -898,6 +935,46 @@ function runLightmapBake(projectId = "demo", options = {}) {
   });
 }
 
+function runModelConversion(projectId = "demo", sourceRelative) {
+  return new Promise((resolve, reject) => {
+    const viewerTarget = `apps/viewer-demo/public/scenes/${projectId}`;
+    const studioTarget = `apps/studio/public/scenes/${projectId}`;
+    const args = [`--source=${sourceRelative}`, "--output=scene.glb"];
+    const commands = [viewerTarget, studioTarget].map((target) => ({
+      command: "node",
+      args: ["scripts/convert-model.mjs", target, ...args]
+    }));
+    let stdout = "";
+    let stderr = "";
+    const runNext = (index) => {
+      const command = commands[index];
+      if (!command) {
+        resolve({ stdout, stderr });
+        return;
+      }
+      const child = spawn(command.command, command.args, {
+        cwd: repoRoot,
+        windowsHide: true
+      });
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+      });
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+      child.on("error", reject);
+      child.on("exit", (code) => {
+        if (code === 0) {
+          runNext(index + 1);
+          return;
+        }
+        reject(new Error(stderr || stdout || `Model conversion exited with ${code}.`));
+      });
+    };
+    runNext(0);
+  });
+}
+
 async function projectPayload(projectId = "demo") {
   const target = targetDirs(projectId)[0];
   const [
@@ -911,7 +988,8 @@ async function projectPayload(projectId = "demo") {
     publishHistoryDocument,
     optimizationJobDocument,
     optimizationHistoryDocument,
-    lightmapBakeJobDocument
+    lightmapBakeJobDocument,
+    conversionJobDocument
   ] =
     await Promise.all([
     readJson(path.join(target, "scene.manifest.json")),
@@ -924,7 +1002,8 @@ async function projectPayload(projectId = "demo") {
     publishHistory(projectId),
     optimizationJob(projectId),
     optimizationHistory(projectId),
-    lightmapBakeJob(projectId)
+    lightmapBakeJob(projectId),
+    conversionJob(projectId)
   ]);
   return {
     id: projectId,
@@ -938,7 +1017,8 @@ async function projectPayload(projectId = "demo") {
     publishHistory: publishHistoryDocument,
     optimizationJob: optimizationJobDocument,
     optimizationHistory: optimizationHistoryDocument,
-    lightmapBakeJob: lightmapBakeJobDocument
+    lightmapBakeJob: lightmapBakeJobDocument,
+    conversionJob: conversionJobDocument
   };
 }
 
@@ -2305,7 +2385,8 @@ async function resetOptimizationState(projectId) {
         path.join(target, "optimization-history.json"),
         `${JSON.stringify({ schemaVersion: "0.1", jobs: [] }, null, 2)}\n`
       ),
-      writeFile(path.join(target, "lightmap-bake-job.json"), `${JSON.stringify(idleLightmapBakeJob, null, 2)}\n`)
+      writeFile(path.join(target, "lightmap-bake-job.json"), `${JSON.stringify(idleLightmapBakeJob, null, 2)}\n`),
+      writeFile(path.join(target, "conversion-job.json"), `${JSON.stringify(idleConversionJob, null, 2)}\n`)
     ])
   );
 }
@@ -2345,6 +2426,9 @@ async function removePublishOnlyTemporaryFiles(root) {
     rm(path.join(root, "optimization-job.json"), { force: true }),
     rm(path.join(root, "optimization-history.json"), { force: true }),
     rm(path.join(root, "lightmap-bake-job.json"), { force: true }),
+    rm(path.join(root, "conversion-job.json"), { force: true }),
+    rm(path.join(root, ".convert-model.py"), { force: true }),
+    rm(path.join(root, ".convert-model-config.json"), { force: true }),
     rm(path.join(root, "publish-history.json"), { force: true }),
     rm(path.join(root, "stats.json"), { force: true })
   ]);
@@ -2532,20 +2616,30 @@ async function handleRequest(request, response) {
       }
       const filename = String(request.headers["x-file-name"] ?? "").toLowerCase();
       await clearPreviousModelAssets(modelProjectId);
+      await resetOptimizationState(modelProjectId);
       const isGltfUpload = filename.endsWith(".gltf");
+      const sourceExtension = path.extname(filename);
+      const isConvertibleUpload = convertibleModelExtensions.has(sourceExtension);
       const sceneUrl = filename.endsWith(".zip") || isZipBuffer(body)
         ? await writeProjectArchive(modelProjectId, body)
+        : isConvertibleUpload
+          ? "scene.glb"
         : isGltfUpload
           ? "scene.gltf"
         : "scene.glb";
-      if (sceneUrl === "scene.gltf") {
+      if (isConvertibleUpload) {
+        const sourceRelative = safeSourceModelPath(filename);
+        await writeProjectFileBinary(modelProjectId, sourceRelative, body);
+        await runModelConversion(modelProjectId, sourceRelative);
+        const output = await readFile(path.join(targetDirs(modelProjectId)[0], "scene.glb"));
+        validateGlbBuffer(output);
+      } else if (sceneUrl === "scene.gltf") {
         validateGltfBuffer(body);
         await writeProjectAllBinary(modelProjectId, "scene.gltf", body);
       } else if (sceneUrl === "scene.glb") {
         validateGlbBuffer(body);
         await writeProjectAllBinary(modelProjectId, "scene.glb", body);
       }
-      await resetOptimizationState(modelProjectId);
       await setManifestSceneUrl(modelProjectId, sceneUrl);
       const externalResourceRepair = await repairExternalTexturePaths(modelProjectId);
       await runAnalyze(modelProjectId);
