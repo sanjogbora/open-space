@@ -113,7 +113,7 @@ Current limitations:
 - Hotspot, link, object-toggle, and video texture support.
 - Runtime material override loading.
 - Runtime material overrides can now apply base color, base texture, normal map, emissive map, emissive intensity, UV repeat/offset/rotation, roughness, metalness, opacity, and lightmaps.
-- Runtime material variant switching.
+- Runtime material variant switching can swap color and base texture options.
 - Viewer can relight unlit/flat GLTF materials as standard lit materials, with a Studio toggle to disable it when a source intentionally uses flat rendering.
 - Viewer generates runtime vertex normals for meshes that lack normal attributes, improving lighting on rough exports.
 - Runtime object inspection panel.
@@ -128,7 +128,7 @@ Current limitations:
 - Draco compression as an optional alternative to Meshopt.
 - More aggressive draw-call optimization and safe mesh merging controls.
 - Production-grade bake farm scheduling, denoise/artifact repair, and light editing.
-- Texture-backed variants.
+- Variant texture upload shortcuts and richer finish-option previews.
 - Studio-linked in-viewport object editing and placement tools.
 - Full navmesh/capsule controller with stair and multi-level handling.
 - More advanced navmesh authoring tools beyond polygon zone drawing.

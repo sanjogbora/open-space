@@ -6077,6 +6077,27 @@ function App() {
                           />
                         </div>
                       </label>
+                      <label>
+                        <span>Texture URL</span>
+                        <input
+                          value={variant.texture ?? ""}
+                          placeholder="textures/finish-option.webp"
+                          onChange={(event) =>
+                            updateMaterialVariantOption(
+                              selectedVariantInteraction.id,
+                              variant.id,
+                              (current) => {
+                                const texture = event.target.value.trim();
+                                if (!texture) {
+                                  const { texture: _texture, ...rest } = current;
+                                  return rest;
+                                }
+                                return { ...current, texture };
+                              }
+                            )
+                          }
+                        />
+                      </label>
                       <button
                         type="button"
                         className="icon-action danger"

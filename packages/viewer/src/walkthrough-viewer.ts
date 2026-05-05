@@ -324,6 +324,14 @@ export class WalkthroughViewer {
       if ("color" in nextMaterial && nextMaterial.color instanceof THREE.Color && variant.color) {
         nextMaterial.color.set(variant.color);
       }
+      if ("map" in nextMaterial && variant.texture) {
+        const texturedMaterial = nextMaterial as THREE.MeshBasicMaterial | THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+        texturedMaterial.map = this.loadMaterialTexture(
+          variant.texture,
+          `${nextMaterial.name || variant.label}-variant-map`,
+          THREE.SRGBColorSpace
+        );
+      }
       nextMaterial.needsUpdate = true;
       if (Array.isArray(target.mesh.material)) {
         target.mesh.material = target.mesh.material.map((material, index) =>
