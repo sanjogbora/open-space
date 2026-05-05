@@ -79,6 +79,11 @@ interface GridRouteNode {
   closed: boolean;
 }
 
+interface GridRouteCell {
+  point: THREE.Vector3;
+  floorY?: number;
+}
+
 interface RecoveredNavigationTarget {
   target: THREE.Vector3;
   route?: THREE.Vector3[];
@@ -2070,25 +2075,39 @@ export class WalkthroughViewer {
     maxX = minX + (columns - 1) * step;
     maxZ = minZ + (rows - 1) * step;
 
+    const maxStepUp = this.controls.maxStepUp ?? this.maxStepUp;
+    const maxStepDown = this.controls.maxStepDown ?? this.maxStepDown;
+    const floorSampleMaxDelta = Math.max(maxStepDown, maxStepUp, this.cameraHeight * 0.5);
     const keyFor = (x: number, z: number) => `${x}:${z}`;
     const pointFor = (x: number, z: number) =>
       this.navigationProbePosition(new THREE.Vector3(minX + x * step, target.y, minZ + z * step));
-    const passableCache = new Map<string, boolean>();
-    const isPassable = (x: number, z: number): boolean => {
+    const cellCache = new Map<string, GridRouteCell | undefined>();
+    const cellFor = (x: number, z: number): GridRouteCell | undefined => {
       if (x < 0 || z < 0 || x >= columns || z >= rows) {
-        return false;
+        return undefined;
       }
       const key = keyFor(x, z);
-      const cached = passableCache.get(key);
-      if (typeof cached === "boolean") {
-        return cached;
+      if (cellCache.has(key)) {
+        return cellCache.get(key);
       }
       const point = pointFor(x, z);
+      const floorY = this.sampleGeometryFloorY(point, { maxDelta: floorSampleMaxDelta });
+      if (typeof floorY === "number") {
+        point.y = floorY + this.cameraHeight;
+      }
       const hasExplicitWalkZones = this.walkZoneMeshes.length > 0;
-      const onDetectedFloor = !hasExplicitWalkZones && this.geometryFloorMeshes.length > 0 && this.canStandOnGeometryFloor(point);
-      const passable = (hasExplicitWalkZones || onDetectedFloor) && !this.navigationFailureDetail(point);
-      passableCache.set(key, passable);
-      return passable;
+      const onDetectedFloor = !hasExplicitWalkZones && typeof floorY === "number";
+      const cell: GridRouteCell | undefined = (hasExplicitWalkZones || onDetectedFloor) && !this.navigationFailureDetail(point)
+        ? {
+            point,
+            ...(typeof floorY === "number" ? { floorY } : {})
+          }
+        : undefined;
+      cellCache.set(key, cell);
+      return cell;
+    };
+    const isPassable = (x: number, z: number): boolean => {
+      return Boolean(cellFor(x, z));
     };
     const nearestPassableCell = (point: THREE.Vector3): { x: number; z: number } | undefined => {
       const baseX = THREE.MathUtils.clamp(Math.round((point.x - minX) / step), 0, columns - 1);
@@ -2168,14 +2187,23 @@ export class WalkthroughViewer {
       for (const [dx, dz, multiplier] of offsets) {
         const nextX = current.x + dx;
         const nextZ = current.z + dz;
-        if (!isPassable(nextX, nextZ)) {
+        const currentCell = cellFor(current.x, current.z);
+        const nextCell = cellFor(nextX, nextZ);
+        if (!currentCell || !nextCell) {
           continue;
         }
         if (dx !== 0 && dz !== 0 && (!isPassable(current.x + dx, current.z) || !isPassable(current.x, current.z + dz))) {
           continue;
         }
+        const floorDelta =
+          typeof currentCell.floorY === "number" && typeof nextCell.floorY === "number"
+            ? nextCell.floorY - currentCell.floorY
+            : 0;
+        if (floorDelta > maxStepUp || floorDelta < -maxStepDown) {
+          continue;
+        }
         const nextKey = keyFor(nextX, nextZ);
-        const nextCost = current.cost + step * multiplier;
+        const nextCost = current.cost + step * multiplier + Math.abs(floorDelta) * 1.8;
         const existing = nodes.get(nextKey);
         if (existing && (existing.closed || existing.cost <= nextCost)) {
           continue;
@@ -2203,7 +2231,8 @@ export class WalkthroughViewer {
       if (!node) {
         return undefined;
       }
-      points.unshift(pointFor(node.x, node.z));
+      const cell = cellFor(node.x, node.z);
+      points.unshift(cell?.point.clone() ?? pointFor(node.x, node.z));
       currentKey = node.previous;
     }
     points.unshift(origin.clone());

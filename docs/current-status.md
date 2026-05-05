@@ -18,6 +18,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer exposes height-glide and floor-bump controls so imported models with ridges or raised thresholds can be tuned without code changes.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
+- Grid fallback routes now cache sampled floor height per cell, reject over-height step transitions, and slightly prefer level routes to reduce camera bouncing over ridges or multi-level gaps.
 - Predefined room/view buttons move the camera to saved views.
 - A floorplan/minimap overlay tracks camera position and can jump to saved views.
 - Studio hides generated navigation zones by default so normal repairs focus on manual walk/pass/block patches.
