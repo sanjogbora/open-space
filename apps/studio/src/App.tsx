@@ -410,6 +410,49 @@ const movementToggles: readonly { field: MovementToggle; label: string }[] = [
   { field: "clickToMove", label: "Click to move" },
   { field: "dragLook", label: "Mouse drag look" }
 ];
+const movementPresets: readonly {
+  id: string;
+  label: string;
+  detail: string;
+  movement: Partial<SceneControlsDocument["movement"]>;
+}[] = [
+  {
+    id: "smooth-interior",
+    label: "Smooth Interior",
+    detail: "Slower glide, stronger tiny-bump ignore.",
+    movement: {
+      clickMoveSpeed: 1.05,
+      maxStepUp: 0.38,
+      maxStepDown: 0.72,
+      floorHeightSmoothing: 1.05,
+      floorBumpTolerance: 0.36
+    }
+  },
+  {
+    id: "steps",
+    label: "Steps",
+    detail: "More forgiving for thresholds and simple stairs.",
+    movement: {
+      clickMoveSpeed: 1.15,
+      maxStepUp: 0.62,
+      maxStepDown: 1.15,
+      floorHeightSmoothing: 1.35,
+      floorBumpTolerance: 0.24
+    }
+  },
+  {
+    id: "precise",
+    label: "Precise",
+    detail: "Stricter floor following for clean navmesh-style floors.",
+    movement: {
+      clickMoveSpeed: 1.25,
+      maxStepUp: 0.28,
+      maxStepDown: 0.55,
+      floorHeightSmoothing: 2.15,
+      floorBumpTolerance: 0.08
+    }
+  }
+];
 
 function initialProjectId(): string {
   return new URLSearchParams(window.location.search).get("project") ?? "demo";
@@ -6424,6 +6467,28 @@ function App() {
                         />
                         <span>{label}</span>
                       </label>
+                    ))}
+                  </div>
+
+                  <div className="movement-preset-grid" aria-label="Movement presets">
+                    {movementPresets.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        className="movement-preset-button"
+                        onClick={() =>
+                          updateControls((current) => ({
+                            ...current,
+                            movement: {
+                              ...current.movement,
+                              ...preset.movement
+                            }
+                          }))
+                        }
+                      >
+                        <strong>{preset.label}</strong>
+                        <small>{preset.detail}</small>
+                      </button>
                     ))}
                   </div>
 

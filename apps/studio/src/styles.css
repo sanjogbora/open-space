@@ -376,6 +376,39 @@ textarea:focus {
   color: #24313a;
 }
 
+.movement-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.movement-preset-button {
+  display: grid;
+  gap: 4px;
+  min-height: 62px;
+  padding: 10px;
+  border: 1px solid #d8e3e9;
+  border-radius: 8px;
+  color: #26343d;
+  text-align: left;
+  background: #fbfcfd;
+}
+
+.movement-preset-button:hover {
+  border-color: #b8d8e8;
+  background: #f4faff;
+}
+
+.movement-preset-button strong {
+  font-size: 13px;
+}
+
+.movement-preset-button small {
+  color: #60717c;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .compact-toggle {
   min-height: 38px;
   align-self: end;
@@ -2538,6 +2571,7 @@ code {
   .repair-recommendation,
   .repair-followup,
   .toggle-grid,
+  .movement-preset-grid,
   .vector-field {
     grid-template-columns: 1fr;
   }
