@@ -111,8 +111,8 @@ export class WalkthroughViewer {
   private readonly managedTextures: ManagedTexture[] = [];
   private readonly keys = new Set<string>();
   private readonly collisionRadius = 0.28;
-  private readonly maxStepUp = 0.42;
-  private readonly maxStepDown = 0.78;
+  private readonly maxStepUp = 0.38;
+  private readonly maxStepDown = 0.72;
   private readonly materialOverrides = new Map<string, MaterialOverride>();
   private readonly materialLightMaps: THREE.Texture[] = [];
   private readonly materialTextures: THREE.Texture[] = [];
@@ -125,11 +125,11 @@ export class WalkthroughViewer {
     keyboard: true,
     dragLook: true,
     moveSpeed: 3.8,
-    clickMoveSpeed: 1.2,
-    maxStepUp: 0.42,
-    maxStepDown: 0.78,
-    floorBumpTolerance: 0.24,
-    floorHeightSmoothing: 1.65,
+    clickMoveSpeed: 1.05,
+    maxStepUp: 0.38,
+    maxStepDown: 0.72,
+    floorBumpTolerance: 0.36,
+    floorHeightSmoothing: 1.05,
     lookSensitivityX: 0.004,
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8
@@ -1752,7 +1752,7 @@ export class WalkthroughViewer {
     const flatDelta = target.clone().sub(this.camera.position);
     flatDelta.y = 0;
     const flatDistance = flatDelta.length();
-    const clickMoveSpeed = this.controls.clickMoveSpeed ?? 1.2;
+    const clickMoveSpeed = this.controls.clickMoveSpeed ?? 1.05;
     if (flatDistance > 0.001) {
       if (!this.draggingLook && flatDistance > 0.15) {
         this.yaw = dampAngle(this.yaw, Math.atan2(flatDelta.x, -flatDelta.z), 2.7, delta);
@@ -2545,14 +2545,14 @@ export class WalkthroughViewer {
 
   private floorBumpTolerance(): number {
     return THREE.MathUtils.clamp(
-      this.controls.floorBumpTolerance ?? Math.max(0.24, this.cameraHeight * 0.14),
+      this.controls.floorBumpTolerance ?? Math.max(0.36, this.cameraHeight * 0.14),
       0.02,
       0.8
     );
   }
 
   private floorHeightSmoothing(): number {
-    return THREE.MathUtils.clamp(this.controls.floorHeightSmoothing ?? 1.65, 0.5, 8);
+    return THREE.MathUtils.clamp(this.controls.floorHeightSmoothing ?? 1.05, 0.5, 8);
   }
 
   private sampleGeometryFloorY(

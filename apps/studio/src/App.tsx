@@ -6524,7 +6524,7 @@ function App() {
                       min={0.4}
                       max={6}
                       step={0.1}
-                      value={controlsDoc.movement.clickMoveSpeed ?? 1.2}
+                      value={controlsDoc.movement.clickMoveSpeed ?? 1.05}
                       onChange={(value) =>
                         updateControls((current) => ({
                           ...current,
@@ -6537,7 +6537,7 @@ function App() {
                       min={0.05}
                       max={1.2}
                       step={0.01}
-                      value={controlsDoc.movement.maxStepUp ?? 0.42}
+                      value={controlsDoc.movement.maxStepUp ?? 0.38}
                       onChange={(value) =>
                         updateControls((current) => ({
                           ...current,
@@ -6550,7 +6550,7 @@ function App() {
                       min={0.05}
                       max={2}
                       step={0.01}
-                      value={controlsDoc.movement.maxStepDown ?? 0.78}
+                      value={controlsDoc.movement.maxStepDown ?? 0.72}
                       onChange={(value) =>
                         updateControls((current) => ({
                           ...current,
@@ -6563,7 +6563,7 @@ function App() {
                       min={0.5}
                       max={8}
                       step={0.05}
-                      value={controlsDoc.movement.floorHeightSmoothing ?? 1.65}
+                      value={controlsDoc.movement.floorHeightSmoothing ?? 1.05}
                       onChange={(value) =>
                         updateControls((current) => ({
                           ...current,
@@ -6576,7 +6576,7 @@ function App() {
                       min={0.02}
                       max={0.8}
                       step={0.01}
-                      value={controlsDoc.movement.floorBumpTolerance ?? 0.24}
+                      value={controlsDoc.movement.floorBumpTolerance ?? 0.36}
                       onChange={(value) =>
                         updateControls((current) => ({
                           ...current,
