@@ -1702,8 +1702,8 @@ export class WalkthroughViewer {
       return;
     }
     forward.normalize().multiplyScalar(this.wheelVelocity * delta);
-    this.moveCameraBy(forward);
-    this.wheelVelocity *= Math.exp(-7 * delta);
+    const moved = this.moveCameraBy(forward);
+    this.wheelVelocity *= moved ? Math.exp(-7 * delta) : Math.exp(-22 * delta);
   }
 
   private updateTweens(delta: number): void {
@@ -1814,15 +1814,16 @@ export class WalkthroughViewer {
     this.camera.position.y = Math.max(0.2, this.camera.position.y);
   }
 
-  private moveCameraBy(delta: THREE.Vector3): void {
+  private moveCameraBy(delta: THREE.Vector3): boolean {
     const direct = this.resolveSteppedMovementPosition(this.camera.position.clone().add(delta), this.camera.position);
     if (direct && this.canOccupyPosition(direct, this.camera.position)) {
       this.camera.position.copy(direct);
       this.snapCameraToFloor();
       this.clampCamera();
-      return;
+      return true;
     }
 
+    let moved = false;
     const slideX = this.resolveSteppedMovementPosition(
       this.camera.position.clone().add(new THREE.Vector3(delta.x, 0, 0)),
       this.camera.position
@@ -1831,6 +1832,7 @@ export class WalkthroughViewer {
       this.camera.position.copy(slideX);
       this.snapCameraToFloor();
       this.clampCamera();
+      moved = true;
     }
 
     const slideZ = this.resolveSteppedMovementPosition(
@@ -1841,7 +1843,9 @@ export class WalkthroughViewer {
       this.camera.position.copy(slideZ);
       this.snapCameraToFloor();
       this.clampCamera();
+      moved = true;
     }
+    return moved;
   }
 
   private resolveSteppedMovementPosition(
