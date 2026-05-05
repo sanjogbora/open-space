@@ -95,6 +95,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Analyzer inspects embedded GLB image payloads for dimensions, invalid buffer references, and unsupported MIME types.
 - API upload validation rejects malformed GLB containers with broken lengths, truncated chunks, invalid JSON chunks, or non-glTF 2.0 assets.
 - API texture repair scores duplicate loose texture candidates by relative path and texture-folder context before copying.
+- Analyzer now flags embedded GLB textures that cannot be decoded, so broken image payloads are reported instead of only showing flat or strange-colored surfaces in the viewer.
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
 - Studio Import now treats disconnected loose texture folders as a source-export review issue instead of implying generic repair can always attach them.

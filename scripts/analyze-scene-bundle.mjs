@@ -584,6 +584,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   let undersizedBufferCount = 0;
   let texturesMissingImageCount = 0;
   let invalidImageReferenceCount = 0;
+  let embeddedImageDecodeFailureCount = 0;
   let unsupportedImageMimeCount = 0;
   let nonTrianglePrimitiveCount = 0;
   let vertexColorPrimitiveCount = 0;
@@ -800,6 +801,9 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     }
     const resolvedMimeType = payload.mimeType ?? mimeType;
     const metadataImage = await imageMetadataFromBuffer(payload.bytes, resolvedMimeType);
+    if (!metadataImage && isInspectableRasterMimeType(resolvedMimeType)) {
+      embeddedImageDecodeFailureCount += 1;
+    }
     embeddedImages.push({
       source: image.uri?.startsWith("data:") ? `data:${label}` : `bufferView:${image.bufferView}`,
       label,
@@ -846,6 +850,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     undersizedBufferCount,
     texturesMissingImageCount,
     invalidImageReferenceCount,
+    embeddedImageDecodeFailureCount,
     unsupportedImageMimeCount,
     embeddedImageCount: embeddedImages.length,
     nonTrianglePrimitiveCount,
@@ -867,6 +872,10 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     externalResources,
     embeddedImages
   };
+}
+
+function isInspectableRasterMimeType(mimeType) {
+  return ["image/avif", "image/jpeg", "image/png", "image/webp"].includes(String(mimeType ?? "").toLowerCase());
 }
 
 function materialUsesTexture(material) {
@@ -1845,6 +1854,10 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.invalidImageReferenceCount ?? 0),
     0
   );
+  const embeddedImageDecodeFailureCount = report.models.reduce(
+    (sum, model) => sum + (model.embeddedImageDecodeFailureCount ?? 0),
+    0
+  );
   const unsupportedImageMimeCount = report.models.reduce(
     (sum, model) => sum + (model.unsupportedImageMimeCount ?? 0),
     0
@@ -2069,6 +2082,16 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Invalid embedded image data",
       message: `${invalidImageReferenceCount} embedded image reference(s) point at missing or incomplete GLB image buffer data.`,
       action: "Re-export the GLB with embedded textures, or upload the original GLTF ZIP with valid image files."
+    });
+  }
+
+  if (embeddedImageDecodeFailureCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "embedded-texture-decode-failed",
+      title: "Embedded textures could not be decoded",
+      message: `${embeddedImageDecodeFailureCount} embedded texture image(s) could not be read by the analyzer.`,
+      action: "Re-export the GLB with valid PNG, JPEG, WebP, or AVIF images, or upload the original GLTF ZIP with intact texture files."
     });
   }
 
