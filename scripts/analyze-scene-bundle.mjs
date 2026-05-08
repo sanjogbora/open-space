@@ -1315,6 +1315,95 @@ function mergeMaterialEdits(generated, existing) {
   };
 }
 
+function normalizeTextureMatchName(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function inferMaterialTextureField(source) {
+  const normalized = normalizeTextureMatchName(source);
+  if (/\b(lightmap|light map|bake|baked|shadow)\b/.test(normalized)) {
+    return "lightMapUrl";
+  }
+  if (/\b(normal|nrm|bump)\b/.test(normalized)) {
+    return "normalMapUrl";
+  }
+  if (/\b(emissive|emission|emit|glow|screen|display)\b/.test(normalized)) {
+    return "emissiveMapUrl";
+  }
+  return "mapUrl";
+}
+
+function materialTextureCandidateScore(materialName, source) {
+  const material = normalizeTextureMatchName(materialName);
+  const texture = normalizeTextureMatchName(path.posix.basename(String(source ?? "").replace(/\\/g, "/")));
+  const pathName = normalizeTextureMatchName(source);
+  const materialTokens = material.split(" ").filter((token) => token.length >= 3);
+  let score = 0;
+  if (!material || !texture) {
+    return score;
+  }
+  if (texture === material || pathName.endsWith(material)) {
+    score += 42;
+  }
+  for (const token of materialTokens) {
+    if (texture.includes(token)) {
+      score += 8;
+    } else if (pathName.includes(token)) {
+      score += 3;
+    }
+  }
+  if (/\b(base|basecolor|color|diffuse|albedo|map|texture)\b/.test(texture)) {
+    score += 4;
+  }
+  if (/\b(texture|textures|material|materials|maps)\b/.test(pathName)) {
+    score += 2;
+  }
+  return score;
+}
+
+function applyLooseTextureSuggestions(materialsDocument, looseImages, existingMaterials) {
+  if (!Array.isArray(looseImages) || looseImages.length === 0) {
+    return materialsDocument;
+  }
+  const existingByName = new Map((existingMaterials?.materials ?? []).map((material) => [material.name, material]));
+  return {
+    ...materialsDocument,
+    materials: materialsDocument.materials.map((material) => {
+      const previous = existingByName.get(material.name);
+      const next = { ...material };
+      const candidates = looseImages
+        .map((image) => ({
+          source: image.source,
+          field: inferMaterialTextureField(image.source),
+          score: materialTextureCandidateScore(material.name, image.source)
+        }))
+        .filter((candidate) => candidate.score >= 14)
+        .sort((a, b) => b.score - a.score || a.source.localeCompare(b.source));
+      for (const candidate of candidates) {
+        if (previous?.[candidate.field] || next[candidate.field]) {
+          continue;
+        }
+        const tied = candidates.some(
+          (other) =>
+            other !== candidate &&
+            other.field === candidate.field &&
+            other.score === candidate.score
+        );
+        if (tied && candidate.score < 28) {
+          continue;
+        }
+        next[candidate.field] = candidate.source;
+      }
+      return next;
+    })
+  };
+}
+
 function mergeObjectEdits(generated, existing) {
   if (!existing?.objects) {
     return generated;
@@ -3310,7 +3399,11 @@ if (writeStats) {
   }
   if (materialDocs[0]) {
     const existingMaterials = await readJsonIfExists(path.resolve(bundleDir, "materials.json"));
-    const materialsDocument = mergeMaterialEdits(materialDocs[0], existingMaterials);
+    const materialsDocument = applyLooseTextureSuggestions(
+      mergeMaterialEdits(materialDocs[0], existingMaterials),
+      looseImages,
+      existingMaterials
+    );
     await writeFile(
       path.resolve(bundleDir, "materials.json"),
       `${JSON.stringify(materialsDocument, null, 2)}\n`
