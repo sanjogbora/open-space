@@ -41,6 +41,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Publish readiness now carries terrain-dominance, poor first-view, focused-bounds, and missing navigation-name diagnostics into the Publish tab.
 - Top views can hide ceiling/roof shell meshes so uploaded apartments are inspectable from above.
 - Object overrides now include a per-object `hideInTopView` flag, and Studio exposes it so ceiling/roof/helper objects can be hidden only in floor-plan/top views.
+- Object overrides now include a per-object navigation behavior, and Studio can mark objects as default-detected, walkable, collision, or ignored for viewer navigation.
 - Movement is constrained by configured scene bounds.
 - Basic collision boxes are generated from configured collision mesh names.
 - Keyboard movement works with WASD/arrow keys.

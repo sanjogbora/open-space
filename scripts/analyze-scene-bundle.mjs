@@ -1333,10 +1333,17 @@ function mergeObjectEdits(generated, existing) {
         ...object,
         visible: previous.visible,
         ...(typeof previous.hideInTopView === "boolean" ? { hideInTopView: previous.hideInTopView } : {}),
+        ...(isObjectNavigationBehavior(previous.navigationBehavior)
+          ? { navigationBehavior: previous.navigationBehavior }
+          : {}),
         ...(typeof previous.locked === "boolean" ? { locked: previous.locked } : {})
       };
     })
   };
+}
+
+function isObjectNavigationBehavior(value) {
+  return value === "default" || value === "walk" || value === "collision" || value === "ignore";
 }
 
 async function modelStats(asset) {

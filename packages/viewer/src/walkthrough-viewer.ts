@@ -1123,6 +1123,13 @@ export class WalkthroughViewer {
     node.visible = override.visible;
   }
 
+  private objectNavigationBehavior(node: THREE.Object3D): ObjectOverride["navigationBehavior"] {
+    const override = this.objectOverrides.get(node.name);
+    return override?.navigationBehavior && override.navigationBehavior !== "default"
+      ? override.navigationBehavior
+      : undefined;
+  }
+
   private isLikelyExteriorSurfaceName(name: string): boolean {
     return [
       "terrain",
@@ -1157,6 +1164,14 @@ export class WalkthroughViewer {
       const center = box.getCenter(new THREE.Vector3());
       const area = size.x * size.z;
       const name = `${node.name} ${node.parent?.name ?? ""} ${node.userData["name"] ?? ""}`.toLowerCase();
+      const navigationBehavior = this.objectNavigationBehavior(node);
+      if (navigationBehavior === "ignore" || navigationBehavior === "collision") {
+        return;
+      }
+      if (navigationBehavior === "walk") {
+        meshes.push(node);
+        return;
+      }
       const exteriorName = this.isLikelyExteriorSurfaceName(name);
       const nonWalkName = isLikelyNonWalkSurfaceName(name);
       const hugeExteriorPlane = exteriorName && area > sceneFootprint * 0.25;
@@ -1218,6 +1233,10 @@ export class WalkthroughViewer {
       if (!(node instanceof THREE.Mesh)) {
         return;
       }
+      const navigationBehavior = this.objectNavigationBehavior(node);
+      if (navigationBehavior === "ignore" || navigationBehavior === "walk") {
+        return;
+      }
       const name = node.name.toLowerCase();
       if (floorNames.some((floorName) => name.includes(floorName))) {
         return;
@@ -1231,6 +1250,14 @@ export class WalkthroughViewer {
       }
       const box = new THREE.Box3().setFromObject(node);
       if (box.isEmpty()) {
+        return;
+      }
+      if (navigationBehavior === "collision") {
+        blockers.push({
+          box,
+          name: node.name || node.parent?.name || "Authored collision",
+          kind: "authored"
+        });
         return;
       }
       const isCollisionMesh = collisionNames.some((collisionName) => name.includes(collisionName));

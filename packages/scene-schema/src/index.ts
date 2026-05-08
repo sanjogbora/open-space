@@ -204,6 +204,7 @@ export interface ObjectOverride {
   name: string;
   visible: boolean;
   hideInTopView?: boolean;
+  navigationBehavior?: "default" | "walk" | "collision" | "ignore";
   locked?: boolean;
 }
 

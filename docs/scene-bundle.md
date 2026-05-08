@@ -84,6 +84,7 @@ node scripts/deploy-published-bundle.mjs apps/viewer-demo/public/published/<proj
 - `material-variant` interactions can target a mesh or material and expose color finish buttons in the viewer.
 - `object-toggle` interactions can target an object by generated object id and stable object name.
 - `objects.json` entries can set `hideInTopView` to hide ceilings, roofs, or helper covers only while a top/floor-plan view is active.
+- `objects.json` entries can set `navigationBehavior` to `walk`, `collision`, or `ignore` when automatic floor/wall detection needs an explicit object-level override.
 - `navigation.bounds` drives the viewer minimap scale when present.
 - `navigation` defines camera height, floor mesh naming, collision mesh naming, and optional movement bounds.
 - `qualityProfiles` define runtime pixel ratio, shadow, and antialiasing settings.

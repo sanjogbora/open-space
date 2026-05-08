@@ -6652,6 +6652,10 @@ function App() {
                     label="Top View"
                     value={selectedObjectOverride?.hideInTopView ? "Hidden" : "Visible"}
                   />
+                  <Stat
+                    label="Navigation"
+                    value={selectedObjectOverride?.navigationBehavior ?? "default"}
+                  />
                 </div>
 
                 {selectedObjectOverride && (
@@ -6672,6 +6676,29 @@ function App() {
                         <span>Hide in top view</span>
                       </label>
                     </div>
+                  </div>
+                )}
+
+                {selectedObjectOverride && (
+                  <div className="object-detail">
+                    <h3>Navigation Behavior</h3>
+                    <label>
+                      <span>Object role</span>
+                      <select
+                        value={selectedObjectOverride.navigationBehavior ?? "default"}
+                        onChange={(event) =>
+                          updateObject(selectedObjectOverride.id, (object) => ({
+                            ...object,
+                            navigationBehavior: event.target.value as NonNullable<ObjectOverride["navigationBehavior"]>
+                          }))
+                        }
+                      >
+                        <option value="default">Default detection</option>
+                        <option value="walk">Walk on</option>
+                        <option value="collision">Collision</option>
+                        <option value="ignore">Ignore navigation</option>
+                      </select>
+                    </label>
                   </div>
                 )}
 
