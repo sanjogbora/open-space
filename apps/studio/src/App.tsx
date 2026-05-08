@@ -5362,8 +5362,12 @@ function App() {
                   <AssetHealth
                     stats={bundleStats}
                     projectId={activeProjectId}
+                    apiConnected={apiConnected}
+                    repairState={repairState}
                     pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
                     onApplyTextureSuggestions={applyMaterialTextureSuggestions}
+                    onRepair={() => void repairImport()}
+                    onMaterials={() => setSelectedTab("materials")}
                   />
                   <DiagnosticList diagnostics={bundleStats.diagnostics ?? []} />
                 </>
@@ -9460,19 +9464,30 @@ function ImportNextSteps({
 function AssetHealth({
   stats,
   projectId,
+  apiConnected,
+  repairState,
   pendingTextureSuggestionCount = 0,
-  onApplyTextureSuggestions
+  onApplyTextureSuggestions,
+  onRepair,
+  onMaterials
 }: {
   stats: BundleStats;
   projectId: string;
+  apiConnected: boolean;
+  repairState: RepairState;
   pendingTextureSuggestionCount?: number;
   onApplyTextureSuggestions?: () => void;
+  onRepair?: () => void;
+  onMaterials?: () => void;
 }) {
   const missingAssets = (stats.assets ?? []).filter((asset) => !asset.exists);
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
   const looseImages = stats.looseImages ?? [];
   const textureSuggestions = stats.materialTextureSuggestions ?? [];
+  const canRunRepair = Boolean(onRepair) && apiConnected && repairState !== "repairing";
+  const hasTextureRepairWork = missingResources.length > 0 || missingAssets.length > 0;
+  const hasLooseUnmappedTextures = looseImages.length > 0 && textureSuggestions.length === 0;
   const hasDetails =
     missingAssets.length > 0 ||
     missingResources.length > 0 ||
@@ -9492,6 +9507,48 @@ function AssetHealth({
   return (
     <div className="asset-health-card">
       <strong>Asset health</strong>
+      {(hasTextureRepairWork || textureSuggestions.length > 0 || hasLooseUnmappedTextures) && (
+        <div className="asset-repair-plan">
+          {hasTextureRepairWork && (
+            <p>
+              Some referenced texture files are missing from the paths stored in the model. Run repair after importing
+              the model ZIP or texture folder so matching files can be copied into place.
+            </p>
+          )}
+          {!hasTextureRepairWork && textureSuggestions.length > 0 && (
+            <p>
+              Loose texture files were found and matched to likely materials. Apply the mappings, then review the
+              material previews.
+            </p>
+          )}
+          {!hasTextureRepairWork && textureSuggestions.length === 0 && hasLooseUnmappedTextures && (
+            <p>
+              Texture files are present, but the model does not reference them clearly. Open Materials and assign the
+              right image to each material.
+            </p>
+          )}
+          <div className="asset-health-actions">
+            {hasTextureRepairWork && onRepair && (
+              <button type="button" className="button secondary compact-button" disabled={!canRunRepair} onClick={onRepair}>
+                <Wrench size={15} aria-hidden="true" />
+                {repairState === "repairing" ? "Repairing" : "Repair Paths"}
+              </button>
+            )}
+            {pendingTextureSuggestionCount > 0 && onApplyTextureSuggestions && (
+              <button type="button" className="button secondary compact-button" onClick={onApplyTextureSuggestions}>
+                <Palette size={15} aria-hidden="true" />
+                Apply {pendingTextureSuggestionCount}
+              </button>
+            )}
+            {onMaterials && (
+              <button type="button" className="button secondary compact-button" onClick={onMaterials}>
+                <Palette size={15} aria-hidden="true" />
+                Open Materials
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       {missingAssets.length > 0 && (
         <div className="asset-health-section">
           <span>Missing manifest assets</span>
@@ -9517,7 +9574,7 @@ function AssetHealth({
                 <img src={projectAssetPath(projectId, image.source)} alt="" loading="lazy" />
               )}
               <code>
-                {image.source} · {formatBytes(image.bytes)}
+                {image.source} - {formatBytes(image.bytes)}
               </code>
             </div>
           ))}
@@ -9526,11 +9583,6 @@ function AssetHealth({
       {textureSuggestions.length > 0 && (
         <div className="asset-health-section">
           <span>Auto texture mappings</span>
-          {pendingTextureSuggestionCount > 0 && onApplyTextureSuggestions && (
-            <button type="button" className="button secondary compact-button" onClick={onApplyTextureSuggestions}>
-              Apply {pendingTextureSuggestionCount}
-            </button>
-          )}
           {textureSuggestions.slice(0, 5).map((suggestion) => (
             <code key={`${suggestion.materialName}-${suggestion.field}-${suggestion.source}`}>
               {suggestion.materialName}: {materialTextureFieldLabels[suggestion.field]} - {suggestion.source}
