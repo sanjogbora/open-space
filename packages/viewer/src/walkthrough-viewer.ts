@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
@@ -101,6 +102,7 @@ export class WalkthroughViewer {
   private readonly lightRig = new THREE.Group();
   private readonly renderer: THREE.WebGLRenderer;
   private readonly loader = new GLTFLoader();
+  private readonly dracoLoader = new DRACOLoader();
   private readonly ktx2Loader = new KTX2Loader();
   private readonly textureLoader = new THREE.TextureLoader();
   private readonly moveMarker = createMoveMarker();
@@ -200,6 +202,9 @@ export class WalkthroughViewer {
     this.renderer.domElement.setAttribute("aria-label", "3D walkthrough viewport");
     this.renderer.domElement.className = "walkthrough-canvas";
     this.container.appendChild(this.renderer.domElement);
+    this.dracoLoader.setDecoderPath("/draco/");
+    this.dracoLoader.preload();
+    this.loader.setDRACOLoader(this.dracoLoader);
     this.loader.setMeshoptDecoder(MeshoptDecoder);
     this.ktx2Loader.setTranscoderPath("/basis/");
     this.ktx2Loader.detectSupport(this.renderer);
@@ -251,6 +256,7 @@ export class WalkthroughViewer {
     });
     this.environmentTexture?.dispose();
     this.pmremGenerator?.dispose();
+    this.dracoLoader.dispose();
     this.ktx2Loader.dispose();
     this.uninstallEvents();
     this.renderer.dispose();

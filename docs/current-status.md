@@ -140,6 +140,7 @@ Current limitations:
 - Local API endpoint for replacing the demo GLB model and regenerating stats.
 - Local API endpoint for running and applying optimization jobs.
 - Viewer registers the Meshopt decoder so optimized GLBs load in-browser.
+- Viewer registers the Draco decoder and ships local decoder assets so third-party Draco-compressed GLBs can load in-browser.
 - Viewer registers the KTX2 loader so `KHR_texture_basisu` optimized textures can load in-browser.
 - Hotspot, link, object-toggle, and video texture support.
 - Runtime material override loading.
