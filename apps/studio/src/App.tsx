@@ -4396,9 +4396,9 @@ function App() {
 
   const syncRoomsFromWalkZones = () => {
     updateManifest((current) => {
-      const walkZones = enabledNavigationZones(current.navigation, "walk").filter((zone) => zone.source !== "generated");
+      const walkZones = enabledNavigationZones(current.navigation, "walk");
       if (walkZones.length === 0) {
-        setRepairSummary("No authored walk areas found. Draw walk areas in Controls first.");
+        setRepairSummary("No walk areas found. Run Controls > Auto Fix or draw walk areas first.");
         return current;
       }
       const existingRooms = current.rooms ?? [];
@@ -4443,7 +4443,7 @@ function App() {
         nextRooms.push({ ...room, id: roomId });
       });
       window.setTimeout(() => setSelectedRoomId(nextRooms[0]?.id ?? ""), 0);
-      setRepairSummary(`Synced ${walkZones.length} authored walk area(s) into room map regions.`);
+      setRepairSummary(`Synced ${walkZones.length} walk area(s) into room map regions.`);
       return {
         ...current,
         rooms: nextRooms
@@ -5504,7 +5504,7 @@ function App() {
                     type="button"
                     className="icon-action"
                     title="Sync rooms from walk areas"
-                    disabled={enabledNavigationZones(manifest.navigation, "walk").filter((zone) => zone.source !== "generated").length === 0}
+                    disabled={enabledNavigationZones(manifest.navigation, "walk").length === 0}
                     onClick={syncRoomsFromWalkZones}
                   >
                     <Layers3 size={17} aria-hidden="true" />
@@ -5529,7 +5529,7 @@ function App() {
                   <button
                     type="button"
                     className="button secondary compact-button"
-                    disabled={enabledNavigationZones(manifest.navigation, "walk").filter((zone) => zone.source !== "generated").length === 0}
+                    disabled={enabledNavigationZones(manifest.navigation, "walk").length === 0}
                     onClick={syncRoomsFromWalkZones}
                   >
                     <Layers3 size={16} aria-hidden="true" />
@@ -5657,7 +5657,7 @@ function App() {
                   <button
                     type="button"
                     className="button secondary"
-                    disabled={enabledNavigationZones(manifest.navigation, "walk").filter((zone) => zone.source !== "generated").length === 0}
+                    disabled={enabledNavigationZones(manifest.navigation, "walk").length === 0}
                     onClick={syncRoomsFromWalkZones}
                   >
                     <Layers3 size={16} aria-hidden="true" />
