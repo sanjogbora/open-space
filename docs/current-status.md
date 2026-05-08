@@ -29,6 +29,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio has an Auto Fix navigation action that can set graph bounds, add boundary blocks, add walk patches from saved views, and bridge close navigation islands.
 - Studio surfaces TV/video screen planning in Interactions with mapped candidate counts and one-click likely screen mapping.
 - Bundle analysis and publish readiness warn when planned video screens have no source or no valid target surface.
+- Viewer video textures can now target material slots inside multi-material meshes and pause distance-triggered videos while the camera is outside the configured trigger range.
 - Studio surfaces room/floorplan mapping status with room counts, linked walk views, and one-click room sync.
 - Studio Rooms can now sync authored walk areas into room map regions, so floorplan areas can be generated from the navigation zones users draw.
 - Analyzer now reports missing or partial room maps and routes the import next step directly to Rooms when room labels, floorplan areas, or view links need setup.

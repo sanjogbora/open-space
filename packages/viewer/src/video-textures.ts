@@ -4,6 +4,7 @@ import type { VideoTextureInteraction } from "@walkthrough/scene-schema";
 export interface ManagedTexture {
   texture: THREE.Texture;
   update?: (elapsed: number) => void;
+  setActive?: (active: boolean) => void;
   destroy?: () => void;
 }
 
@@ -56,6 +57,7 @@ export function createManagedVideoTexture(interaction: VideoTextureInteraction):
   video.muted = interaction.muted ?? true;
   video.playsInline = true;
   video.preload = "metadata";
+  let desiredActive = interaction.autoplay !== false;
 
   const texture = new THREE.VideoTexture(video);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -63,7 +65,7 @@ export function createManagedVideoTexture(interaction: VideoTextureInteraction):
   texture.magFilter = THREE.LinearFilter;
 
   const tryPlay = () => {
-    if (interaction.autoplay === false) {
+    if (!desiredActive) {
       return;
     }
     void video.play().catch(() => {
@@ -75,6 +77,14 @@ export function createManagedVideoTexture(interaction: VideoTextureInteraction):
 
   return {
     texture,
+    setActive: (active) => {
+      desiredActive = active && interaction.autoplay !== false;
+      if (desiredActive) {
+        tryPlay();
+        return;
+      }
+      video.pause();
+    },
     destroy: () => {
       video.pause();
       video.removeAttribute("src");
@@ -82,4 +92,3 @@ export function createManagedVideoTexture(interaction: VideoTextureInteraction):
     }
   };
 }
-

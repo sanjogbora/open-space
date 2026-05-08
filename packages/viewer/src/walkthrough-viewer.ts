@@ -1320,27 +1320,61 @@ export class WalkthroughViewer {
 
   private addVideoTexture(interaction: VideoTextureInteraction): void {
     const managed = createManagedVideoTexture(interaction);
-    this.managedTextures.push(managed);
     const material = new THREE.MeshBasicMaterial({ map: managed.texture });
-    const matches: THREE.Mesh[] = [];
+    const matches: { mesh: THREE.Mesh; materialIndex?: number }[] = [];
 
     this.scene.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) {
         return;
       }
       const meshNameMatches = interaction.targetMeshName && node.name === interaction.targetMeshName;
-      const materialNameMatches =
-        interaction.targetMaterialName &&
-        !Array.isArray(node.material) &&
-        node.material.name === interaction.targetMaterialName;
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      const materialIndex = interaction.targetMaterialName
+        ? materials.findIndex((sourceMaterial) => sourceMaterial.name === interaction.targetMaterialName)
+        : -1;
+      const materialNameMatches = materialIndex >= 0;
       const markedDemoTarget = node.userData["videoTarget"] === true && !interaction.targetMeshName;
-      if (meshNameMatches || materialNameMatches || markedDemoTarget) {
-        matches.push(node);
+      if (meshNameMatches || markedDemoTarget) {
+        matches.push({ mesh: node });
+      } else if (materialNameMatches) {
+        matches.push({ mesh: node, materialIndex });
       }
     });
 
-    matches.forEach((mesh) => {
+    if (matches.length === 0) {
+      managed.destroy?.();
+      return;
+    }
+
+    const targetBox = new THREE.Box3();
+    matches.forEach(({ mesh, materialIndex }) => {
+      targetBox.union(new THREE.Box3().setFromObject(mesh));
+      if (typeof materialIndex === "number" && Array.isArray(mesh.material)) {
+        const nextMaterials = [...mesh.material];
+        nextMaterials[materialIndex] = material;
+        mesh.material = nextMaterials;
+        return;
+      }
       mesh.material = material;
+    });
+
+    const triggerDistance =
+      typeof interaction.triggerDistance === "number" && interaction.triggerDistance > 0
+        ? interaction.triggerDistance * this.manifestScale
+        : undefined;
+    if (!triggerDistance || targetBox.isEmpty()) {
+      this.managedTextures.push(managed);
+      return;
+    }
+
+    const targetCenter = targetBox.getCenter(new THREE.Vector3());
+    managed.setActive?.(false);
+    this.managedTextures.push({
+      ...managed,
+      update: (elapsed) => {
+        managed.update?.(elapsed);
+        managed.setActive?.(this.camera.position.distanceTo(targetCenter) <= triggerDistance);
+      }
     });
   }
 
