@@ -71,6 +71,7 @@ node scripts/deploy-published-bundle.mjs apps/viewer-demo/public/published/<proj
 
 - `--viewer-base` is the hosted viewer application origin.
 - `--public-base` is the final public URL of the deployed scene folder.
+- The deploy script blocks bundles whose saved `qualityGate` is `blocked`; use `--allow-blocked` only for internal testing deployments.
 - The deploy script writes `_headers`, `vercel.json`, `index.html`, `embed.html`, and `deploy-report.json` for static hosts.
 
 ## Manifest Rules

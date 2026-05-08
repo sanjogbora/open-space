@@ -11,10 +11,11 @@ const viewerBaseArg = args.find((arg) => arg.startsWith("--viewer-base="))?.slic
 const publicBaseArg = args.find((arg) => arg.startsWith("--public-base="))?.slice("--public-base=".length);
 const dryRun = args.includes("--dry-run");
 const applyCacheControl = args.includes("--apply-cache-control");
+const allowBlockedQualityGate = args.includes("--allow-blocked");
 
 if (!deploymentArg) {
   throw new Error(
-    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--apply-cache-control] [--dry-run]"
+    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--apply-cache-control] [--allow-blocked] [--dry-run]"
   );
 }
 
@@ -102,7 +103,33 @@ async function validateDeployment() {
         .join("; ")
     );
   }
+  validateQualityGate();
   return checks;
+}
+
+function validateQualityGate() {
+  const qualityGate = deployment.qualityGate;
+  if (!qualityGate) {
+    console.warn("Deployment manifest has no qualityGate; deploy will continue with asset validation only.");
+    return;
+  }
+  const blockerCount = Number(qualityGate.blockerCount ?? 0);
+  if (qualityGate.status !== "blocked" && blockerCount <= 0) {
+    return;
+  }
+  const blockers = Array.isArray(qualityGate.blockers)
+    ? qualityGate.blockers
+        .slice(0, 6)
+        .map((blocker) => blocker.title || blocker.code || blocker.message)
+        .filter(Boolean)
+    : [];
+  const detail = blockers.length > 0 ? `: ${blockers.join("; ")}` : "";
+  const message = `Deployment quality gate is blocked${detail}.`;
+  if (allowBlockedQualityGate) {
+    console.warn(`${message} Continuing because --allow-blocked was provided.`);
+    return;
+  }
+  throw new Error(`${message} Fix the bundle or pass --allow-blocked for internal testing only.`);
 }
 
 function cachePolicySummary() {
@@ -255,6 +282,8 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir, ex
     checkedAssetCount: checks.length,
     totalBytes: deployment.totalBytes,
     cachePolicy: cachePolicySummary(),
+    qualityGate: deployment.qualityGate ?? null,
+    qualityGateOverride: allowBlockedQualityGate,
     ...extra,
     ...(viewerBase ? { viewerBase } : {}),
     ...(publicBase ? { publicBase } : {}),
