@@ -124,7 +124,7 @@ interface NavigationCoverage {
   coveredWalkViews: number;
 }
 
-type NavigationQuickFixAction = "auto" | "bounds" | "paint-walk" | "paint-pass" | "test";
+type NavigationQuickFixAction = "auto" | "bounds" | "paint-walk" | "paint-pass" | "review-zones" | "test";
 
 interface NavigationQuickFix {
   title: string;
@@ -1076,6 +1076,7 @@ function navigationQaIssues(manifest: SceneManifest): NavigationQaIssue[] {
 
   passZones.forEach((zone) => {
     const touchingWalkZones = walkZones.filter((walkZone) => navigationZonesOverlap(zone, walkZone));
+    const touchingBlockZones = blockZones.filter((blockZone) => navigationZonesOverlap(zone, blockZone, 0.05));
     if (touchingWalkZones.length === 0) {
       issues.push({
         id: `orphan-pass-${zone.id}`,
@@ -1091,6 +1092,19 @@ function navigationQaIssues(manifest: SceneManifest): NavigationQaIssue[] {
         title: `Pass zone reaches only one room: ${zone.label}`,
         detail: "This doorway pass overlaps one walk area but does not reach a second walk area.",
         action: "Extend the pass through the doorway, or add a walk patch inside the target room."
+      });
+    }
+    if (touchingBlockZones.length > 0) {
+      const blockerNames = touchingBlockZones
+        .slice(0, 3)
+        .map((blockZone) => blockZone.label || blockZone.id)
+        .join(", ");
+      issues.push({
+        id: `blocked-pass-${zone.id}`,
+        severity: "warning",
+        title: `Pass zone crosses a blocker: ${zone.label}`,
+        detail: `This doorway pass overlaps ${blockerNames || "a block zone"}, so routing may still stop at the opening even though the pass exists.`,
+        action: "Split, shrink, or move the block zone around the doorway pass so the green connector can create a real opening."
       });
     }
   });
@@ -1195,6 +1209,14 @@ function navigationQuickFixForIssue(issue: NavigationQaIssue | undefined): Navig
       detail: "Add a green door pass where two walk areas should connect through an opening.",
       button: "Draw Door Pass",
       action: "paint-pass"
+    };
+  }
+  if (issue.id.startsWith("blocked-pass-")) {
+    return {
+      title: "Open the blocker at the door",
+      detail: "A door pass exists, but a block zone still overlaps it. Use the zone map to split, shrink, or move the blocker around the opening.",
+      button: "Review Blockers",
+      action: "review-zones"
     };
   }
   return {
@@ -2735,6 +2757,10 @@ function App() {
     }
     if (navigationQuickFix.action === "auto") {
       autoRepairNavigation();
+      return;
+    }
+    if (navigationQuickFix.action === "review-zones") {
+      window.setTimeout(() => document.querySelector(".zone-map")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
       return;
     }
     window.open(navigationDebugViewerUrl(activeProjectId), "_blank", "noopener,noreferrer");
@@ -6858,7 +6884,9 @@ function App() {
                         <button type="button" className="button primary" onClick={runNavigationQuickFix}>
                           {navigationQuickFix.action === "test" ? (
                             <ExternalLink size={16} aria-hidden="true" />
-                          ) : navigationQuickFix.action === "paint-walk" || navigationQuickFix.action === "paint-pass" ? (
+                          ) : navigationQuickFix.action === "paint-walk" ||
+                            navigationQuickFix.action === "paint-pass" ||
+                            navigationQuickFix.action === "review-zones" ? (
                             <MapPin size={16} aria-hidden="true" />
                           ) : (
                             <Wrench size={16} aria-hidden="true" />
@@ -8192,6 +8220,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "disconnected-navigation-zones",
       "orphan-pass-zones",
       "one-sided-pass-zones",
+      "pass-zones-overlap-block-zones",
       "walk-views-outside-navigation-bounds",
       "walk-views-inside-block-zones",
       "walk-views-outside-walk-zones"

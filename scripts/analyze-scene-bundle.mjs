@@ -1760,6 +1760,9 @@ function navigationTopology(manifest) {
     const touchingWalkZones = walkZones.filter((walkZone) => navigationZonesOverlap(zone, walkZone));
     return touchingWalkZones.length === 1 && walkZones.length > 1;
   });
+  const blockedPassZones = passZones.filter((zone) =>
+    blockZones.some((blockZone) => navigationZonesOverlap(zone, blockZone, 0.05))
+  );
   const walkViews = (manifest.views ?? []).filter(
     (view) => view.kind === "walk" && Array.isArray(view.position) && view.position.length >= 3
   );
@@ -1781,6 +1784,7 @@ function navigationTopology(manifest) {
     routeComponents,
     orphanPassZones,
     oneSidedPassZones,
+    blockedPassZones,
     walkViews,
     outOfBoundsWalkViews,
     blockedWalkViews,
@@ -2553,6 +2557,16 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if (topology.blockedPassZones.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "pass-zones-overlap-block-zones",
+      title: "Door pass zones overlap blockers",
+      message: `${topology.blockedPassZones.length} pass zone(s) overlap a wall or boundary block zone, so the door connector may still be blocked.`,
+      action: "Split, shrink, or move the block zone around each doorway pass; the pass should bridge walk areas without sitting inside a blocker."
+    });
+  }
+
   if (topology.outOfBoundsWalkViews.length > 0) {
     diagnostics.push({
       severity: "error",
@@ -3088,6 +3102,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "missing-pass-zones",
     "orphan-pass-zones",
     "one-sided-pass-zones",
+    "pass-zones-overlap-block-zones",
     "walk-views-inside-block-zones",
     "walk-views-outside-walk-zones",
     "missing-room-map",
