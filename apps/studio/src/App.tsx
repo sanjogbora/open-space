@@ -5309,6 +5309,7 @@ function App() {
                 onRepair={() => void repairImport()}
                 onOptimize={() => void optimizeProject()}
                 onBake={() => void bakeLightmaps()}
+                onEnvironment={() => setSelectedTab("environment")}
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
               />
@@ -9095,7 +9096,15 @@ function DiagnosticList({
   );
 }
 
-type ImportNextStepAction = "repair" | "navigation" | "rooms" | "optimize" | "bake" | "review" | "test";
+type ImportNextStepAction =
+  | "repair"
+  | "environment"
+  | "navigation"
+  | "rooms"
+  | "optimize"
+  | "bake"
+  | "review"
+  | "test";
 
 interface ImportNextStep {
   action: ImportNextStepAction;
@@ -9108,6 +9117,14 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   if (
     [
       "dominant-flat-plane",
+      "dominant-green-placeholder-material",
+      "initial-view-on-dominant-plane",
+    ].includes(code)
+  ) {
+    return "environment";
+  }
+  if (
+    [
       "focused-model-small-in-scene",
       "large-coordinate-units",
       "missing-scene-bounds",
@@ -9219,6 +9236,14 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
       button: "Review Diagnostics"
     };
   }
+  if (action === "environment") {
+    return {
+      action,
+      title: "Fix exterior context",
+      detail: "Open Environment to disable generated ground/enclosure or choose a neutral review preset when the scene opens on grass, terrain, or empty exterior space.",
+      button: "Open Environment"
+    };
+  }
   if (action === "navigation") {
     return {
       action,
@@ -9253,6 +9278,7 @@ function ImportNextSteps({
   onRepair,
   onOptimize,
   onBake,
+  onEnvironment,
   onNavigation,
   onRooms
 }: {
@@ -9265,6 +9291,7 @@ function ImportNextSteps({
   onRepair: () => void;
   onOptimize: () => void;
   onBake: () => void;
+  onEnvironment: () => void;
   onNavigation: () => void;
   onRooms: () => void;
 }) {
@@ -9292,6 +9319,8 @@ function ImportNextSteps({
         const onClick =
           step.action === "repair"
             ? onRepair
+            : step.action === "environment"
+              ? onEnvironment
             : step.action === "navigation"
               ? onNavigation
               : step.action === "rooms"
@@ -9311,6 +9340,7 @@ function ImportNextSteps({
             </div>
             <button type="button" className="button secondary" disabled={disabled} onClick={onClick}>
               {step.action === "repair" && <Wrench size={15} aria-hidden="true" />}
+              {step.action === "environment" && <Globe2 size={15} aria-hidden="true" />}
               {step.action === "navigation" && <MapPin size={15} aria-hidden="true" />}
               {step.action === "rooms" && <Layers3 size={15} aria-hidden="true" />}
               {step.action === "optimize" && <Activity size={15} aria-hidden="true" />}
