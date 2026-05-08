@@ -1879,6 +1879,24 @@ function createRoomsFromNavigationZones(
     .map((component, index) => createRoomFromNavigationZoneGroup(component, index + 1, views, graph, modelScale));
 }
 
+function uniqueRoomLabels(rooms: readonly RoomDefinition[]): RoomDefinition[] {
+  const counts = new Map<string, number>();
+  rooms.forEach((room) => counts.set(room.label, (counts.get(room.label) ?? 0) + 1));
+  const seen = new Map<string, number>();
+  return rooms.map((room) => {
+    const total = counts.get(room.label) ?? 0;
+    if (total <= 1) {
+      return room;
+    }
+    const index = (seen.get(room.label) ?? 0) + 1;
+    seen.set(room.label, index);
+    return {
+      ...room,
+      label: `${room.label} ${index}`
+    };
+  });
+}
+
 function createNavigationZone(
   index: number,
   kind: NavigationZone["kind"],
@@ -4687,11 +4705,12 @@ function App() {
           }
           usedRoomIds.add(roomId);
           nextRooms.push({ ...room, id: roomId });
-        });
-      window.setTimeout(() => setSelectedRoomId(nextRooms[0]?.id ?? ""), 0);
+      });
+      const rooms = uniqueRoomLabels(nextRooms);
+      window.setTimeout(() => setSelectedRoomId(rooms[0]?.id ?? ""), 0);
       return {
         ...current,
-        rooms: nextRooms
+        rooms
       };
     });
     setNotice("saved");
@@ -4754,11 +4773,12 @@ function App() {
         usedRoomIds.add(roomId);
         nextRooms.push({ ...room, id: roomId });
       });
-      window.setTimeout(() => setSelectedRoomId(nextRooms[0]?.id ?? ""), 0);
+      const rooms = uniqueRoomLabels(nextRooms);
+      window.setTimeout(() => setSelectedRoomId(rooms[0]?.id ?? ""), 0);
       setRepairSummary(`Synced ${walkZones.length} walk area(s) into ${generatedRooms.length} room region(s).`);
       return {
         ...current,
-        rooms: nextRooms
+        rooms
       };
     });
     setNotice("saved");
