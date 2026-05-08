@@ -54,6 +54,7 @@ export interface NavigationFailure {
   point?: [number, number, number];
   targetPoint?: [number, number, number];
   cameraPosition?: [number, number, number];
+  bodyRadius?: number;
   objectName?: string;
   blockerName?: string;
   blockerKind?: "authored" | "named" | "inferred";

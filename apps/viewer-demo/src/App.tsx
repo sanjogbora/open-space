@@ -126,6 +126,9 @@ function studioRepairUrl(manifestUrl: string, failure: NavigationFailure): strin
   if (failure.cameraPosition) {
     url.searchParams.set("from", failure.cameraPosition.map((value) => value.toFixed(3)).join(","));
   }
+  if (typeof failure.bodyRadius === "number") {
+    url.searchParams.set("bodyRadius", failure.bodyRadius.toFixed(3));
+  }
   return url.href;
 }
 

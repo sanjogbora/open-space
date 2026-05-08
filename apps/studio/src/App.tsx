@@ -203,6 +203,7 @@ interface NavigationRepairDraft {
   point?: Vec3;
   target?: Vec3;
   from?: Vec3;
+  bodyRadius?: number;
 }
 
 type NavigationRepairAction = "pass" | "walk" | "ignore";
@@ -622,7 +623,10 @@ function initialNavigationRepairDraft(): NavigationRepairDraft | null {
   const point = parsePointParam(params.get("point"));
   const target = parsePointParam(params.get("target"));
   const from = parsePointParam(params.get("from"));
-  if (!blockerName && !reason && !action && !hint && !point && !target && !from) {
+  const bodyRadiusRaw = params.get("bodyRadius");
+  const bodyRadiusParam = bodyRadiusRaw ? Number(bodyRadiusRaw) : Number.NaN;
+  const bodyRadius = Number.isFinite(bodyRadiusParam) ? bodyRadiusParam : undefined;
+  if (!blockerName && !reason && !action && !hint && !point && !target && !from && bodyRadius === undefined) {
     return null;
   }
   return {
@@ -633,7 +637,8 @@ function initialNavigationRepairDraft(): NavigationRepairDraft | null {
     ...(hint ? { hint } : {}),
     ...(point ? { point } : {}),
     ...(target ? { target } : {}),
-    ...(from ? { from } : {})
+    ...(from ? { from } : {}),
+    ...(bodyRadius !== undefined ? { bodyRadius } : {})
   };
 }
 
@@ -829,7 +834,7 @@ function navigationRepairRecommendation(draft: NavigationRepairDraft): Navigatio
       return {
         title: "Recommended fix: confirm the detected wall",
         detail:
-          "The viewer inferred this object as a wall or partition. Add a door pass if it is a real opening; ignore the blocker only if the object is not meant to stop movement.",
+          `The viewer inferred this object as a wall or partition. Add a door pass if it is a real opening; if the doorway is just narrow, try reducing Body Radius${draft.bodyRadius ? ` from ${draft.bodyRadius.toFixed(2)}` : ""}. Ignore the blocker only if the object is not meant to stop movement.`,
         primaryLabel: "Add Door Pass",
         action: "pass",
         requiresPoint: true
@@ -839,7 +844,7 @@ function navigationRepairRecommendation(draft: NavigationRepairDraft): Navigatio
       return {
         title: "Recommended fix: add a doorway connector",
         detail:
-          "Something is acting like a wall at the clicked point. If this is a door or opening, add a green pass zone first; Studio will add a target walk patch if that side is missing one.",
+          `Something is acting like a wall at the clicked point. If this is a door or opening, add a green pass zone first; if the opening is narrow, try lowering Body Radius${draft.bodyRadius ? ` from ${draft.bodyRadius.toFixed(2)}` : ""}. Studio will add a target walk patch if that side is missing one.`,
         primaryLabel: "Add Door Pass",
         action: "pass",
         requiresPoint: true
@@ -8011,6 +8016,12 @@ function App() {
                               <div>
                                 <dt>From</dt>
                                 <dd>{navigationRepairDraft.from.map((value) => value.toFixed(2)).join(", ")}</dd>
+                              </div>
+                            )}
+                            {typeof navigationRepairDraft.bodyRadius === "number" && (
+                              <div>
+                                <dt>Body Radius</dt>
+                                <dd>{navigationRepairDraft.bodyRadius.toFixed(2)}</dd>
                               </div>
                             )}
                           </dl>

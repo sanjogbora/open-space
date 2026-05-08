@@ -3496,7 +3496,8 @@ export class WalkthroughViewer {
 
   private navigationRepairHint(
     reason: NavigationFailureReason,
-    blockerKind?: CollisionBlocker["kind"]
+    blockerKind?: CollisionBlocker["kind"],
+    bodyRadius = this.collisionBodyRadius()
   ): string {
     if (reason === "outside-bounds") {
       return "In Studio, expand the navigation bounds or add a closer view before testing this click.";
@@ -3515,9 +3516,9 @@ export class WalkthroughViewer {
         return "Resize, split, or remove the Studio block zone around the opening.";
       }
       if (blockerKind === "named") {
-        return "Change the matched object role, or add a door pass if the opening is valid.";
+        return `Change the matched object role, add a door pass if the opening is valid, or reduce Body Radius from ${bodyRadius.toFixed(2)} if the doorway is narrow.`;
       }
-      return "Add a door pass through the opening, or mark the detected object as ignored if it is not a wall.";
+      return `Add a door pass through the opening, reduce Body Radius from ${bodyRadius.toFixed(2)} if the doorway is narrow, or mark the detected object as ignored if it is not a wall.`;
     }
     return "Click an exposed floor surface, or add a walk patch in Studio if the floor is not detected.";
   }
@@ -3539,6 +3540,7 @@ export class WalkthroughViewer {
       ...(point ? { point: [point.x, point.y, point.z] } : {}),
       ...(targetPoint ? { targetPoint: [targetPoint.x, targetPoint.y, targetPoint.z] } : {}),
       cameraPosition: [this.camera.position.x, this.camera.position.y, this.camera.position.z],
+      bodyRadius: this.collisionBodyRadius(),
       ...(objectName ? { objectName } : {}),
       ...(blockerName ? { blockerName } : {}),
       ...(blockerKind ? { blockerKind } : {}),
