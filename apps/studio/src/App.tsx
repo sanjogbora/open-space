@@ -1457,10 +1457,18 @@ function videoSurfaceScore(name: string): number {
   if (normalized.includes("display") || normalized.includes("monitor")) {
     score += 6;
   }
-  if (normalized.includes("video") || normalized.includes("media")) {
+  if (normalized.includes("lcd") || normalized.includes("led") || normalized.includes("panel")) {
     score += 5;
   }
-  if (normalized.includes("rendertexture") || normalized.includes("emissive")) {
+  if (normalized.includes("video") || normalized.includes("media") || normalized.includes("movie")) {
+    score += 5;
+  }
+  if (
+    normalized.includes("rendertexture") ||
+    normalized.includes("rendertotexture") ||
+    normalized.includes("render to texture") ||
+    normalized.includes("emissive")
+  ) {
     score += 4;
   }
   if (normalized.includes("glass") || normalized.includes("black")) {
