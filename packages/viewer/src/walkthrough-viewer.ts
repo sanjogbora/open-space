@@ -1963,7 +1963,10 @@ export class WalkthroughViewer {
     }
     const next = position.clone();
     const bumpTolerance = this.floorBumpTolerance();
-    const targetFloorY = Math.abs(heightDelta) <= bumpTolerance ? originFloorY : floorY;
+    const supportedStep =
+      heightDelta <= bumpTolerance ||
+      this.isSupportedFloorHeight(position, floorY, { referenceFloorY: originFloorY });
+    const targetFloorY = Math.abs(heightDelta) <= bumpTolerance || !supportedStep ? originFloorY : floorY;
     const targetY = targetFloorY + this.cameraHeight;
     const floorHeightSmoothing = this.floorHeightSmoothing();
     const smoothing = Math.abs(heightDelta) <= bumpTolerance ? floorHeightSmoothing * 2.8 : floorHeightSmoothing;
@@ -2664,7 +2667,11 @@ export class WalkthroughViewer {
     const previousFloorY = this.stableFloorY ?? currentFloorY;
     const bumpTolerance = this.floorBumpTolerance();
     const levelDelta = floorY - previousFloorY;
-    const targetFloorY = Math.abs(levelDelta) <= bumpTolerance ? previousFloorY : floorY;
+    const maxStepUp = this.controls.maxStepUp ?? this.maxStepUp;
+    const supportedStep =
+      levelDelta <= bumpTolerance ||
+      this.isSupportedFloorHeight(this.camera.position, floorY, { referenceFloorY: previousFloorY });
+    const targetFloorY = Math.abs(levelDelta) <= bumpTolerance || !supportedStep ? previousFloorY : floorY;
     const nextY = targetFloorY + this.cameraHeight;
     const difference = Math.abs(nextY - this.camera.position.y);
     if (difference <= Math.max(0.62, this.cameraHeight * 0.38)) {
@@ -2718,6 +2725,43 @@ export class WalkthroughViewer {
       )[0];
     const hit = stableHit ?? (options.allowFallbackHit ? hits[0] : undefined);
     return hit?.point.y;
+  }
+
+  private isSupportedFloorHeight(
+    position: THREE.Vector3,
+    floorY: number,
+    options: { referenceFloorY?: number } = {}
+  ): boolean {
+    const supportRadius = THREE.MathUtils.clamp(this.collisionRadius * 1.6, 0.22, 0.55);
+    const tolerance = Math.max(0.08, this.floorBumpTolerance() * 0.55);
+    const offsets = [
+      [supportRadius, 0],
+      [-supportRadius, 0],
+      [0, supportRadius],
+      [0, -supportRadius]
+    ] as const;
+    let supported = 0;
+    let referenceMatches = 0;
+    for (const [x, z] of offsets) {
+      const probe = new THREE.Vector3(position.x + x, floorY + this.cameraHeight, position.z + z);
+      const sampleY = this.sampleGeometryFloorY(probe, { maxDelta: Math.max(0.35, this.cameraHeight * 0.24) });
+      if (typeof sampleY !== "number") {
+        continue;
+      }
+      if (Math.abs(sampleY - floorY) <= tolerance) {
+        supported += 1;
+      }
+      if (
+        typeof options.referenceFloorY === "number" &&
+        Math.abs(sampleY - options.referenceFloorY) <= tolerance
+      ) {
+        referenceMatches += 1;
+      }
+    }
+    if (supported >= 3) {
+      return true;
+    }
+    return supported >= 2 && referenceMatches <= 1;
   }
 
   private isWalkableHit(hit: THREE.Intersection): boolean {
