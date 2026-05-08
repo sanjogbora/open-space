@@ -1475,6 +1475,31 @@ button.list-row {
   line-height: 1.45;
 }
 
+.repair-object-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #cbd8e3;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.repair-object-card p,
+.repair-object-card small {
+  display: block;
+  margin: 4px 0 0;
+  color: #315466;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.repair-object-card small {
+  color: #5e6d76;
+  font-weight: 800;
+}
+
 .repair-followup {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -2597,6 +2622,7 @@ code {
   .zone-editor-heading,
   .zone-simple-heading,
   .repair-recommendation,
+  .repair-object-card,
   .repair-followup,
   .toggle-grid,
   .movement-preset-grid,

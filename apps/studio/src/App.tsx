@@ -617,6 +617,31 @@ function objectNavigationBehaviorLabel(behavior: ObjectOverride["navigationBehav
   return "Auto";
 }
 
+function normalizedObjectMatchName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[_\-.]+/g, " ")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function objectMatchesBlockerName(object: ObjectOverride, blockerName: string): boolean {
+  const objectName = normalizedObjectMatchName(object.name);
+  const objectId = normalizedObjectMatchName(object.id);
+  const blocker = normalizedObjectMatchName(blockerName);
+  if (!objectName || !blocker) {
+    return false;
+  }
+  if (objectName === blocker || objectId === blocker) {
+    return true;
+  }
+  return (
+    (objectName.length >= 4 && blocker.includes(objectName)) ||
+    (blocker.length >= 4 && objectName.includes(blocker))
+  );
+}
+
 function navigationRepairRecommendation(draft: NavigationRepairDraft): NavigationRepairRecommendation {
   if (draft.reason === "route-not-found") {
     return {
@@ -2223,6 +2248,28 @@ function App() {
     () => (navigationRepairDraft ? navigationRepairRecommendation(navigationRepairDraft) : null),
     [navigationRepairDraft]
   );
+  const navigationRepairObjectMatch = useMemo(() => {
+    if (!navigationRepairDraft?.blockerName || !objectsDoc) {
+      return null;
+    }
+    const blockerName = navigationRepairDraft.blockerName;
+    const blocker = normalizedObjectMatchName(blockerName);
+    const sceneNode = sceneGraph?.nodes.find((node) => {
+      const names = [node.id, node.name, node.meshName ?? ""].map(normalizedObjectMatchName);
+      return names.some(
+        (name) =>
+          name === blocker ||
+          (name.length >= 4 && blocker.includes(name)) ||
+          (blocker.length >= 4 && name.includes(blocker))
+      );
+    });
+    const objectBySceneNode = sceneNode
+      ? objectsDoc.objects.find((object) => object.id === sceneNode.id || object.name === sceneNode.name)
+      : undefined;
+    const objectByName = objectsDoc.objects.find((object) => objectMatchesBlockerName(object, blockerName));
+    const object = objectBySceneNode ?? objectByName;
+    return object ? { object, sceneNode } : null;
+  }, [navigationRepairDraft?.blockerName, objectsDoc, sceneGraph]);
   const primaryNavigationIssue = useMemo(
     () => navigationIssues.find((issue) => issue.severity !== "info"),
     [navigationIssues]
@@ -3109,6 +3156,44 @@ function App() {
     });
     setBlockerNameDraft("");
     setRepairSummary(`Ignored ${trimmed} as navigation collision. Save changes, then retry the click in the viewer.`);
+    setNotice("saved");
+  };
+
+  const setNavigationRepairObjectBehavior = (
+    behavior: NonNullable<ObjectOverride["navigationBehavior"]>
+  ) => {
+    const match = navigationRepairObjectMatch;
+    if (!match) {
+      return;
+    }
+    const blockerName = navigationRepairDraft?.blockerName?.trim();
+    updateObject(match.object.id, (object) => ({
+      ...object,
+      navigationBehavior: behavior
+    }));
+    if (behavior === "ignore") {
+      updateNavigation((navigation) => {
+        const existing = navigation.ignoredCollisionMeshNames ?? [];
+        const next = [...existing];
+        [blockerName, match.object.name].filter((name): name is string => Boolean(name)).forEach((name) => {
+          if (!next.some((item) => item.toLowerCase() === name.toLowerCase())) {
+            next.push(name);
+          }
+        });
+        return {
+          ...navigation,
+          ignoredCollisionMeshNames: next
+        };
+      });
+    }
+    setSelectedObjectId(match.object.id);
+    setRepairSummary(
+      behavior === "ignore"
+        ? `Marked ${match.object.name} as ignored for navigation. Save changes, then retry the click in the viewer.`
+        : behavior === "walk"
+          ? `Marked ${match.object.name} as walkable. Save changes, then retry the click in the viewer.`
+          : `Marked ${match.object.name} as a collision object. Save changes, then retry the click in the viewer.`
+    );
     setNotice("saved");
   };
 
@@ -7060,6 +7145,56 @@ function App() {
                               <Wrench size={16} aria-hidden="true" />
                               {repairRecommendation.primaryLabel}
                             </button>
+                          </div>
+                        )}
+                        {navigationRepairObjectMatch && (
+                          <div className="repair-object-card">
+                            <div>
+                              <strong>Matched model object</strong>
+                              <p>
+                                {navigationRepairObjectMatch.object.name} is the likely object stopping movement.
+                                Choose a role here instead of editing coordinates.
+                              </p>
+                              <small>
+                                Current role:{" "}
+                                {objectNavigationBehaviorLabel(
+                                  navigationRepairObjectMatch.object.navigationBehavior
+                                )}
+                              </small>
+                            </div>
+                            <div className="inline-actions">
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => setNavigationRepairObjectBehavior("ignore")}
+                              >
+                                Ignore Object
+                              </button>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => setNavigationRepairObjectBehavior("walk")}
+                              >
+                                Make Walkable
+                              </button>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => setNavigationRepairObjectBehavior("collision")}
+                              >
+                                Keep As Wall
+                              </button>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => {
+                                  setSelectedObjectId(navigationRepairObjectMatch.object.id);
+                                  setSelectedTab("objects");
+                                }}
+                              >
+                                Open Object
+                              </button>
+                            </div>
                           </div>
                         )}
                         <div className="inline-actions">
