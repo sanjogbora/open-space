@@ -1156,6 +1156,9 @@ export class WalkthroughViewer {
       if (!(node instanceof THREE.Mesh)) {
         return;
       }
+      if (!node.visible) {
+        return;
+      }
       const box = new THREE.Box3().setFromObject(node);
       if (box.isEmpty()) {
         return;
@@ -1202,6 +1205,9 @@ export class WalkthroughViewer {
       if (!(node instanceof THREE.Mesh)) {
         return;
       }
+      if (!node.visible) {
+        return;
+      }
       const name = node.name.toLowerCase();
       if (floorNames.some((floorName) => name.includes(floorName))) {
         return;
@@ -1215,6 +1221,9 @@ export class WalkthroughViewer {
     const meshes = new Set<THREE.Object3D>(this.floorMeshes);
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) {
+        return;
+      }
+      if (!node.visible) {
         return;
       }
       const navigationBehavior = this.objectNavigationBehavior(node);
@@ -1236,6 +1245,9 @@ export class WalkthroughViewer {
     const inferredBlockers: { blocker: CollisionBlocker; area: number }[] = [];
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) {
+        return;
+      }
+      if (!node.visible) {
         return;
       }
       const navigationBehavior = this.objectNavigationBehavior(node);

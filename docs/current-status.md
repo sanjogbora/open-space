@@ -46,6 +46,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Object overrides now include a per-object navigation behavior, and Studio can mark objects as default-detected, walkable, collision, or ignored for viewer navigation.
 - Studio Objects now shows navigation-role chips and top-view hiding hints in the object list, making movement-affecting objects easier to audit.
 - Viewer fallback navigation now keeps ignored/collision objects out of walkable click targets and honors forced collision objects even when their names look floor-like.
+- Viewer navigation and picking now ignore globally hidden objects, so hidden geometry no longer acts as an invisible floor or collision blocker.
 - Movement is constrained by configured scene bounds.
 - Basic collision boxes are generated from configured collision mesh names.
 - Keyboard movement works with WASD/arrow keys.
