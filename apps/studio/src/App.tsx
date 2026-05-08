@@ -2076,6 +2076,13 @@ function publishedBucketDeployWithCacheCommand(entry: PublishEntry): string {
   return command ? `${command} --apply-cache-control` : "";
 }
 
+function publishedS3CompatibleDeployCommand(entry: PublishEntry): string {
+  const command = publishedBucketDeployWithCacheCommand(entry);
+  return command
+    ? `${command} --endpoint-url=https://ACCOUNT_ID.r2.cloudflarestorage.com --region=auto --profile=open-space`
+    : "";
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -5708,6 +5715,18 @@ function App() {
                               </button>
                             </div>
                             <code>{publishedBucketDeployWithCacheCommand(entry)}</code>
+                            <div className="publish-row">
+                              <span>S3-compatible endpoint</span>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => void copyText(publishedS3CompatibleDeployCommand(entry))}
+                              >
+                                <Copy size={16} aria-hidden="true" />
+                                Copy
+                              </button>
+                            </div>
+                            <code>{publishedS3CompatibleDeployCommand(entry)}</code>
                           </div>
                         )}
                         {!entry.deploymentPath && (

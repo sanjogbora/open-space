@@ -10,13 +10,16 @@ const outArg = args.find((arg) => arg.startsWith("--out="))?.slice("--out=".leng
 const s3Arg = args.find((arg) => arg.startsWith("--s3="))?.slice("--s3=".length);
 const viewerBaseArg = args.find((arg) => arg.startsWith("--viewer-base="))?.slice("--viewer-base=".length);
 const publicBaseArg = args.find((arg) => arg.startsWith("--public-base="))?.slice("--public-base=".length);
+const endpointUrlArg = args.find((arg) => arg.startsWith("--endpoint-url="))?.slice("--endpoint-url=".length);
+const profileArg = args.find((arg) => arg.startsWith("--profile="))?.slice("--profile=".length);
+const regionArg = args.find((arg) => arg.startsWith("--region="))?.slice("--region=".length);
 const dryRun = args.includes("--dry-run");
 const applyCacheControl = args.includes("--apply-cache-control");
 const allowBlockedQualityGate = args.includes("--allow-blocked");
 
 if (!deploymentArg) {
   throw new Error(
-    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--apply-cache-control] [--allow-blocked] [--dry-run]"
+    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--endpoint-url=https://...] [--profile=name] [--region=auto] [--apply-cache-control] [--allow-blocked] [--dry-run]"
   );
 }
 
@@ -193,6 +196,20 @@ function joinS3Uri(baseUri, relativePath) {
   return `${baseUri.replace(/\/+$/, "")}/${safeDeploymentAssetPath(relativePath)}`;
 }
 
+function awsCliArgs(...commandArgs) {
+  const globalArgs = [];
+  if (endpointUrlArg) {
+    globalArgs.push("--endpoint-url", endpointUrlArg);
+  }
+  if (profileArg) {
+    globalArgs.push("--profile", profileArg);
+  }
+  if (regionArg) {
+    globalArgs.push("--region", regionArg);
+  }
+  return [...globalArgs, ...commandArgs];
+}
+
 function contentTypeForAssetPath(relativePath) {
   const extension = path.extname(safeDeploymentAssetPath(relativePath)).toLowerCase();
   switch (extension) {
@@ -294,6 +311,9 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir, ex
     ...extra,
     ...(viewerBase ? { viewerBase } : {}),
     ...(publicBase ? { publicBase } : {}),
+    ...(endpointUrlArg ? { endpointUrl: endpointUrlArg } : {}),
+    ...(profileArg ? { profile: profileArg } : {}),
+    ...(regionArg ? { region: regionArg } : {}),
     ...(viewerBase && publicBase
       ? {
           launchUrl: `${viewerBase}/?scene=${encodeURIComponent(`${publicBase}/scene.manifest.json`)}`,
@@ -348,7 +368,7 @@ async function deployToS3(targetUri) {
       syncSourceDir = stagingDir;
     }
 
-    const args = ["s3", "sync", syncSourceDir, targetUri, "--delete"];
+    const args = awsCliArgs("s3", "sync", syncSourceDir, targetUri, "--delete");
     if (dryRun) {
       args.push("--dryrun");
     }
@@ -360,7 +380,7 @@ async function deployToS3(targetUri) {
           continue;
         }
         const assetUri = joinS3Uri(targetUri, asset.path);
-        await run(process.env.AWS_CLI_PATH || "aws", [
+        await run(process.env.AWS_CLI_PATH || "aws", awsCliArgs(
           "s3",
           "cp",
           assetUri,
@@ -371,12 +391,12 @@ async function deployToS3(targetUri) {
           asset.cacheControl,
           "--content-type",
           contentTypeForAssetPath(asset.path)
-        ]);
+        ));
         cacheControlApplied += 1;
       }
       for (const page of ["index.html", "embed.html"]) {
         const pageUri = joinS3Uri(targetUri, page);
-        await run(process.env.AWS_CLI_PATH || "aws", [
+        await run(process.env.AWS_CLI_PATH || "aws", awsCliArgs(
           "s3",
           "cp",
           pageUri,
@@ -387,7 +407,7 @@ async function deployToS3(targetUri) {
           "public, max-age=300, must-revalidate",
           "--content-type",
           "text/html; charset=utf-8"
-        ]);
+        ));
       }
     }
     await writeDeployReport("s3", targetUri, checks, sourceDir, {
