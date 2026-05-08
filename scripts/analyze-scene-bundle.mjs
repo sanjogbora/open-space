@@ -2001,6 +2001,18 @@ function navigationTopology(manifest) {
   };
 }
 
+function hexColorLooksGreen(value) {
+  const match = /^#?([a-f0-9]{6})$/i.exec(String(value ?? "").trim());
+  if (!match) {
+    return false;
+  }
+  const hex = match[1];
+  const red = Number.parseInt(hex.slice(0, 2), 16);
+  const green = Number.parseInt(hex.slice(2, 4), 16);
+  const blue = Number.parseInt(hex.slice(4, 6), 16);
+  return green > 70 && green > red * 1.15 && green > blue * 1.12;
+}
+
 function createDiagnostics(manifest, report, graphs) {
   const diagnostics = [];
   const graph = graphs[0];
@@ -2187,6 +2199,9 @@ function createDiagnostics(manifest, report, graphs) {
       model.dominantMaterial.triangleShare >= 0.68 &&
       !model.dominantMaterial.textured &&
       (model.triangleCount ?? 0) > 100
+  );
+  const dominantGreenMaterials = dominantUntexturedMaterials.filter((model) =>
+    hexColorLooksGreen(model.dominantMaterial?.baseColor)
   );
 
   if (parseFailures.length > 0) {
@@ -2656,6 +2671,16 @@ function createDiagnostics(manifest, report, graphs) {
       title: "One plain material dominates the model",
       message: `${dominant.name} covers ${Math.round(dominant.triangleShare * 100)}% of analyzed triangles without an image texture${dominant.baseColor ? ` (${dominant.baseColor})` : ""}.`,
       action: "If the online/reference viewer looks detailed, upload the original texture folder or re-export with embedded textures; otherwise map loose textures in Materials before publishing."
+    });
+  }
+  if (dominantGreenMaterials.length > 0) {
+    const dominant = dominantGreenMaterials[0].dominantMaterial;
+    diagnostics.push({
+      severity: "warning",
+      code: "dominant-green-placeholder-material",
+      title: "Green/plain surface dominates the model",
+      message: `${dominant.name} is a plain green-like material covering ${Math.round(dominant.triangleShare * 100)}% of analyzed triangles.`,
+      action: "If this should be only exterior grass/terrain, disable the generated ground and move the first view to the building. If the model should be detailed, re-export with textures or map the loose texture images in Materials."
     });
   }
 
@@ -3416,6 +3441,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "model-has-no-texture-images",
     "loose-texture-files",
     "dominant-untextured-material",
+    "dominant-green-placeholder-material",
     "oversized-texture-dimensions",
     "many-large-textures",
     "missing-texture-compression",
