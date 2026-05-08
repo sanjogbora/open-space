@@ -3205,6 +3205,13 @@ export class WalkthroughViewer {
     }
     const failureDetail = this.navigationFailureDetail(nextTarget, this.camera.position);
     if (failureDetail) {
+      if (failureDetail.reason === "blocked-collision" || failureDetail.reason === "blocked-step") {
+        const navigationRoute = this.findNavigationRoute(nextTarget, this.camera.position);
+        if (navigationRoute) {
+          this.startClickRoute(navigationRoute, floorHit.point);
+          return true;
+        }
+      }
       const recoveredTarget = this.findReachableTargetNear(nextTarget, this.camera.position);
       if (recoveredTarget) {
         if (recoveredTarget.route) {
