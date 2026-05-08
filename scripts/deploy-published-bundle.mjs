@@ -211,8 +211,14 @@ function contentTypeForAssetPath(relativePath) {
       return "model/gltf+json";
     case ".bin":
       return "application/octet-stream";
+    case ".wasm":
+      return "application/wasm";
+    case ".basis":
+      return "image/basis";
     case ".ktx2":
       return "image/ktx2";
+    case ".avif":
+      return "image/avif";
     case ".webp":
       return "image/webp";
     case ".png":
