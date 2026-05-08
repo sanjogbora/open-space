@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 const args = process.argv.slice(2);
@@ -331,40 +332,74 @@ async function deployToDirectory(outputRoot) {
 
 async function deployToS3(targetUri) {
   const checks = await validateDeployment();
-  if ((viewerBaseArg && !publicBaseArg) || (!viewerBaseArg && publicBaseArg)) {
+  const viewerBase = normalizeUrlBase(viewerBaseArg, "--viewer-base");
+  const publicBase = normalizeUrlBase(publicBaseArg, "--public-base");
+  if ((viewerBase && !publicBase) || (!viewerBase && publicBase)) {
     throw new Error("--viewer-base and --public-base must be provided together.");
   }
-  const args = ["s3", "sync", sourceDir, targetUri, "--delete"];
-  if (dryRun) {
-    args.push("--dryrun");
-  }
-  await run(process.env.AWS_CLI_PATH || "aws", args);
-  let cacheControlApplied = 0;
-  if (applyCacheControl && !dryRun) {
-    for (const asset of deployment.assets ?? []) {
-      if (!asset.cacheControl) {
-        continue;
+  let syncSourceDir = sourceDir;
+  let stagingDir;
+  try {
+    if (viewerBase && publicBase && !dryRun) {
+      stagingDir = await mkdtemp(path.join(os.tmpdir(), "open-space-publish-"));
+      await cp(sourceDir, stagingDir, { recursive: true, force: true });
+      await writeFile(path.join(stagingDir, "index.html"), launchIndexHtml(viewerBase, publicBase));
+      await writeFile(path.join(stagingDir, "embed.html"), embedSnippetHtml(viewerBase, publicBase));
+      syncSourceDir = stagingDir;
+    }
+
+    const args = ["s3", "sync", syncSourceDir, targetUri, "--delete"];
+    if (dryRun) {
+      args.push("--dryrun");
+    }
+    await run(process.env.AWS_CLI_PATH || "aws", args);
+    let cacheControlApplied = 0;
+    if (applyCacheControl && !dryRun) {
+      for (const asset of deployment.assets ?? []) {
+        if (!asset.cacheControl) {
+          continue;
+        }
+        const assetUri = joinS3Uri(targetUri, asset.path);
+        await run(process.env.AWS_CLI_PATH || "aws", [
+          "s3",
+          "cp",
+          assetUri,
+          assetUri,
+          "--metadata-directive",
+          "REPLACE",
+          "--cache-control",
+          asset.cacheControl,
+          "--content-type",
+          contentTypeForAssetPath(asset.path)
+        ]);
+        cacheControlApplied += 1;
       }
-      const assetUri = joinS3Uri(targetUri, asset.path);
-      await run(process.env.AWS_CLI_PATH || "aws", [
-        "s3",
-        "cp",
-        assetUri,
-        assetUri,
-        "--metadata-directive",
-        "REPLACE",
-        "--cache-control",
-        asset.cacheControl,
-        "--content-type",
-        contentTypeForAssetPath(asset.path)
-      ]);
-      cacheControlApplied += 1;
+      for (const page of ["index.html", "embed.html"]) {
+        const pageUri = joinS3Uri(targetUri, page);
+        await run(process.env.AWS_CLI_PATH || "aws", [
+          "s3",
+          "cp",
+          pageUri,
+          pageUri,
+          "--metadata-directive",
+          "REPLACE",
+          "--cache-control",
+          "public, max-age=300, must-revalidate",
+          "--content-type",
+          "text/html; charset=utf-8"
+        ]);
+      }
+    }
+    await writeDeployReport("s3", targetUri, checks, sourceDir, {
+      cacheControlMode: applyCacheControl ? "per-asset" : "sync-default",
+      cacheControlApplied,
+      launchFilesRewritten: Boolean(viewerBase && publicBase && !dryRun)
+    });
+  } finally {
+    if (stagingDir) {
+      await rm(stagingDir, { recursive: true, force: true });
     }
   }
-  await writeDeployReport("s3", targetUri, checks, sourceDir, {
-    cacheControlMode: applyCacheControl ? "per-asset" : "sync-default",
-    cacheControlApplied
-  });
 }
 
 if (s3Arg) {
