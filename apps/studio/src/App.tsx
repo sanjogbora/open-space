@@ -2641,11 +2641,18 @@ function App() {
   const blenderTool = toolStatus?.tools.blender;
   const materialCountForBake = bundleStats?.materialCount ?? materialsDoc?.materials.length ?? 0;
   const bakeMaterialLimitExceeded = materialCountForBake > bakeSettings.maxMaterials;
-  const canRunLightmapBake =
-    apiConnected &&
-    bakeState !== "baking" &&
-    blenderTool?.ready !== false &&
-    !bakeMaterialLimitExceeded;
+  const lightmapBakeBlockedReason = !apiConnected
+    ? "API is not connected."
+    : bakeState === "baking"
+      ? "Bake is already running."
+      : !blenderTool
+        ? "Checking Blender availability."
+        : !blenderTool.ready
+          ? blenderTool.action
+          : bakeMaterialLimitExceeded
+            ? `This scene has ${materialCountForBake} materials, above the current bake limit of ${bakeSettings.maxMaterials}.`
+            : "";
+  const canRunLightmapBake = !lightmapBakeBlockedReason;
 
   const selectedHotspot = useMemo(
     () => hotspotInteractions.find((interaction) => interaction.id === selectedInteractionId),
@@ -6436,6 +6443,11 @@ function App() {
                   <p className="error-note">
                     This scene has {materialCountForBake} materials, above the current bake limit of{" "}
                     {bakeSettings.maxMaterials}. Increase the limit for testing, or optimize/merge materials first.
+                  </p>
+                )}
+                {!canRunLightmapBake && lightmapBakeBlockedReason && bakeState !== "baking" && !bakeMaterialLimitExceeded && (
+                  <p className={blenderTool && !blenderTool.ready ? "error-note" : "quiet-note"}>
+                    {lightmapBakeBlockedReason}
                   </p>
                 )}
                 <div className="field-grid">
