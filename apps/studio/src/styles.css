@@ -1612,6 +1612,8 @@ button.list-row {
 
 .navigation-qa-card {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 4px;
   padding: 11px 12px;
   border: 1px solid #c7d5df;
@@ -1654,6 +1656,10 @@ button.list-row {
 
 .navigation-qa-card small {
   opacity: 0.82;
+}
+
+.navigation-qa-card .button {
+  justify-self: end;
 }
 
 .navigation-coverage-grid {
@@ -2727,6 +2733,7 @@ code {
   .zone-editor-heading,
   .zone-simple-heading,
   .repair-card-heading,
+  .navigation-qa-card,
   .repair-recommendation,
   .repair-object-card,
   .repair-followup,
@@ -2742,6 +2749,7 @@ code {
   }
 
   .zone-simple-actions,
+  .navigation-qa-card .button,
   .repair-recommendation .button {
     width: 100%;
   }

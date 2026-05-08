@@ -3151,29 +3151,31 @@ function App() {
     window.setTimeout(() => document.querySelector(".zone-map")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
   };
 
-  const runNavigationQuickFix = () => {
-    if (navigationQuickFix.action === "bounds") {
+  const runNavigationQuickFixAction = (quickFix: NavigationQuickFix) => {
+    if (quickFix.action === "bounds") {
       applyBoundsFromGraph();
       return;
     }
-    if (navigationQuickFix.action === "paint-walk") {
+    if (quickFix.action === "paint-walk") {
       openNavigationPaintTool("walk");
       return;
     }
-    if (navigationQuickFix.action === "paint-pass") {
+    if (quickFix.action === "paint-pass") {
       openNavigationPaintTool("pass");
       return;
     }
-    if (navigationQuickFix.action === "auto") {
+    if (quickFix.action === "auto") {
       autoRepairNavigation();
       return;
     }
-    if (navigationQuickFix.action === "review-zones") {
+    if (quickFix.action === "review-zones") {
       window.setTimeout(() => document.querySelector(".zone-map")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
       return;
     }
     window.open(navigationDebugViewerUrl(activeProjectId), "_blank", "noopener,noreferrer");
   };
+
+  const runNavigationQuickFix = () => runNavigationQuickFixAction(navigationQuickFix);
 
   const disableGeneratedNavigationZones = () => {
     updateNavigation((navigation) => ({
@@ -7758,15 +7760,36 @@ function App() {
                       </div>
                     )}
                     <div className="navigation-qa-list" aria-label="Navigation QA">
-                      {navigationIssues.map((issue) => (
-                        <div key={issue.id} className={`navigation-qa-card ${issue.severity}`}>
-                          <div>
-                            <strong>{issue.title}</strong>
-                            <p>{issue.detail}</p>
-                            {issue.action && <small>{issue.action}</small>}
+                      {navigationIssues.map((issue) => {
+                        const issueFix = navigationQuickFixForIssue(issue);
+                        return (
+                          <div key={issue.id} className={`navigation-qa-card ${issue.severity}`}>
+                            <div>
+                              <strong>{issue.title}</strong>
+                              <p>{issue.detail}</p>
+                              {issue.action && <small>{issue.action}</small>}
+                            </div>
+                            {issue.severity !== "info" && (
+                              <button
+                                type="button"
+                                className="button secondary compact-button"
+                                onClick={() => runNavigationQuickFixAction(issueFix)}
+                              >
+                                {issueFix.action === "test" ? (
+                                  <ExternalLink size={16} aria-hidden="true" />
+                                ) : issueFix.action === "paint-walk" ||
+                                  issueFix.action === "paint-pass" ||
+                                  issueFix.action === "review-zones" ? (
+                                  <MapPin size={16} aria-hidden="true" />
+                                ) : (
+                                  <Wrench size={16} aria-hidden="true" />
+                                )}
+                                {issueFix.button}
+                              </button>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     {navigationCoverageSummary && (
                       <div className="navigation-coverage-grid" aria-label="Navigation coverage summary">
