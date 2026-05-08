@@ -79,6 +79,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer blocker checks now use a vertical body/capsule range instead of only an eye-level sphere, so low partitions and half-height boundaries are less likely to be crossed.
 - Viewer now infers low furniture, plinths, and short obstacle meshes as collision blockers instead of allowing the camera to climb them like walkable steps.
 - Click-to-move now falls back to axis sliding for each movement step, so a path that grazes a wall can keep gliding along the obstacle instead of canceling immediately.
+- Viewer navigation failures now include current body radius in Fix in Studio links, and Studio uses it to explain narrow-door/body-radius repair options.
 - Viewer supports runtime material variant controls from the scene manifest.
 - Viewer supports hotspot, link, video texture, material variant, object-toggle, and object-pick interactions.
 - Viewer has share, copy-embed, fullscreen, and screenshot controls.
@@ -125,6 +126,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import now routes exterior/terrain context diagnostics directly to Environment and visual/texture diagnostics directly to Materials.
 - Studio/API expose Blender/Cycles lightmap bake jobs with quality presets, UV2 generation, generated lightmap assets, and material assignment.
 - Lightmap bake jobs now report generated lightmap URLs, resolutions, byte sizes, total lightmap bytes, and the exported lightmapped scene artifact in Studio.
+- Studio now shows lightmap bake QA checks and thumbnails for generated lightmaps so empty, tiny, incomplete, or low-quality bakes are visible before publish.
 - Failed Blender/Cycles bakes return the bake job in the API error response so Studio can show the failed stage and job steps.
 
 Current limitations:
