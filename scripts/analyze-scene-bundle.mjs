@@ -244,6 +244,10 @@ function normalizeBundlePath(source) {
   return stripLocalResourceUri(source).replace(/^\.?\//, "").toLowerCase();
 }
 
+function displayBundlePath(source) {
+  return stripLocalResourceUri(String(source ?? "").replace(/\\/g, "/")).replace(/^\.?\//, "");
+}
+
 async function listBundleImageFiles(dir = bundleDir, files = []) {
   let entries = [];
   try {
@@ -254,7 +258,6 @@ async function listBundleImageFiles(dir = bundleDir, files = []) {
 
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
-    const relativePath = normalizeBundlePath(path.relative(bundleDir, fullPath));
     if (entry.isDirectory()) {
       if (["dist", "node_modules", ".git"].includes(entry.name)) {
         continue;
@@ -267,7 +270,7 @@ async function listBundleImageFiles(dir = bundleDir, files = []) {
       const metadataStatus = await imageMetadataStatus(fullPath);
       const metadata = metadataStatus.metadata;
       files.push({
-        source: relativePath,
+        source: displayBundlePath(path.relative(bundleDir, fullPath)),
         bytes: info.size,
         ...(metadataStatus.decodeFailed ? { decodeFailed: true } : {}),
         ...(metadata ? { width: metadata.width, height: metadata.height } : {})
@@ -1367,11 +1370,61 @@ function inferMaterialTextureField(source) {
   return "mapUrl";
 }
 
+const genericMaterialTextureTokens = new Set([
+  "mat",
+  "material",
+  "materials",
+  "texture",
+  "textures",
+  "map",
+  "maps",
+  "base",
+  "basecolor",
+  "color",
+  "colour",
+  "diffuse",
+  "albedo",
+  "image",
+  "gltf",
+  "embedded"
+]);
+
+const materialTextureSemanticGroups = [
+  ["wood", "timber", "oak", "walnut", "veneer", "plywood"],
+  ["brick", "stone", "concrete", "cement", "plaster", "stucco", "marble", "granite", "tile", "tiles"],
+  ["grass", "lawn", "terrain", "ground", "soil", "garden"],
+  ["glass", "window", "mirror", "glazing"],
+  ["fabric", "cloth", "sofa", "cushion", "carpet", "rug", "curtain"],
+  ["metal", "steel", "aluminium", "aluminum", "chrome", "iron"],
+  ["wall", "paint", "wallpaper"],
+  ["floor", "flooring", "parquet"],
+  ["screen", "tv", "display", "emissive", "emission"]
+];
+
+function usefulTextureTokens(value) {
+  return normalizeTextureMatchName(value)
+    .split(" ")
+    .filter((token) => token.length >= 3 && !genericMaterialTextureTokens.has(token));
+}
+
+function semanticTextureScore(materialTokens, textureTokens) {
+  let score = 0;
+  for (const group of materialTextureSemanticGroups) {
+    const materialHit = group.some((token) => materialTokens.includes(token));
+    const textureHit = group.some((token) => textureTokens.includes(token));
+    if (materialHit && textureHit) {
+      score += 10;
+    }
+  }
+  return score;
+}
+
 function materialTextureCandidateScore(materialName, source) {
   const material = normalizeTextureMatchName(materialName);
   const texture = normalizeTextureMatchName(path.posix.basename(String(source ?? "").replace(/\\/g, "/")));
   const pathName = normalizeTextureMatchName(source);
-  const materialTokens = material.split(" ").filter((token) => token.length >= 3);
+  const materialTokens = usefulTextureTokens(materialName);
+  const textureTokens = usefulTextureTokens(source);
   let score = 0;
   if (!material || !texture) {
     return score;
@@ -1386,6 +1439,7 @@ function materialTextureCandidateScore(materialName, source) {
       score += 3;
     }
   }
+  score += semanticTextureScore(materialTokens, textureTokens);
   if (/\b(base|basecolor|color|diffuse|albedo|map|texture)\b/.test(texture)) {
     score += 4;
   }

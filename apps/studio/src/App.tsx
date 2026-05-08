@@ -118,11 +118,61 @@ function inferTextureField(source: string): MaterialTextureField {
   return "mapUrl";
 }
 
+const genericMaterialTextureTokens = new Set([
+  "mat",
+  "material",
+  "materials",
+  "texture",
+  "textures",
+  "map",
+  "maps",
+  "base",
+  "basecolor",
+  "color",
+  "colour",
+  "diffuse",
+  "albedo",
+  "image",
+  "gltf",
+  "embedded"
+]);
+
+const materialTextureSemanticGroups = [
+  ["wood", "timber", "oak", "walnut", "veneer", "plywood"],
+  ["brick", "stone", "concrete", "cement", "plaster", "stucco", "marble", "granite", "tile", "tiles"],
+  ["grass", "lawn", "terrain", "ground", "soil", "garden"],
+  ["glass", "window", "mirror", "glazing"],
+  ["fabric", "cloth", "sofa", "cushion", "carpet", "rug", "curtain"],
+  ["metal", "steel", "aluminium", "aluminum", "chrome", "iron"],
+  ["wall", "paint", "wallpaper"],
+  ["floor", "flooring", "parquet"],
+  ["screen", "tv", "display", "emissive", "emission"]
+];
+
+function usefulTextureTokens(value: string): string[] {
+  return normalizeTextureMatchName(value)
+    .split(" ")
+    .filter((token) => token.length >= 3 && !genericMaterialTextureTokens.has(token));
+}
+
+function semanticTextureScore(materialTokens: string[], textureTokens: string[]): number {
+  let score = 0;
+  for (const group of materialTextureSemanticGroups) {
+    const materialHit = group.some((token) => materialTokens.includes(token));
+    const textureHit = group.some((token) => textureTokens.includes(token));
+    if (materialHit && textureHit) {
+      score += 10;
+    }
+  }
+  return score;
+}
+
 function materialTextureCandidateScore(materialName: string, source: string): number {
   const material = normalizeTextureMatchName(materialName);
   const texture = normalizeTextureMatchName(source.split(/[\\/]/).pop() ?? source);
   const pathName = normalizeTextureMatchName(source);
-  const materialTokens = material.split(" ").filter((token) => token.length >= 3);
+  const materialTokens = usefulTextureTokens(materialName);
+  const textureTokens = usefulTextureTokens(source);
   let score = 0;
   if (texture === material || pathName.endsWith(material)) {
     score += 40;
@@ -134,6 +184,7 @@ function materialTextureCandidateScore(materialName: string, source: string): nu
       score += 3;
     }
   }
+  score += semanticTextureScore(materialTokens, textureTokens);
   if (/\b(base|basecolor|color|diffuse|albedo|map|texture)\b/.test(texture)) {
     score += 4;
   }
@@ -2850,6 +2901,16 @@ function App() {
       .sort((a, b) => b.score - a.score || a.source.localeCompare(b.source))
       .slice(0, 10);
   }, [bundleStats?.looseImages, selectedMaterial]);
+  const pendingMaterialTextureSuggestionCount = useMemo(() => {
+    if (!materialsDoc || !bundleStats?.materialTextureSuggestions) {
+      return 0;
+    }
+    const materialsByName = new Map(materialsDoc.materials.map((material) => [material.name, material]));
+    return bundleStats.materialTextureSuggestions.filter((suggestion) => {
+      const material = materialsByName.get(suggestion.materialName);
+      return material && !material[suggestion.field];
+    }).length;
+  }, [bundleStats?.materialTextureSuggestions, materialsDoc]);
 
   const updateManifest = (updater: (manifest: SceneManifest) => SceneManifest) => {
     setManifest((current) => (current ? updater(current) : current));
@@ -4409,6 +4470,50 @@ function App() {
     setNotice("saved");
   };
 
+  const applyMaterialTextureSuggestions = () => {
+    const suggestions = bundleStats?.materialTextureSuggestions ?? [];
+    if (suggestions.length === 0) {
+      return;
+    }
+    const suggestionsByMaterial = new Map<string, typeof suggestions>();
+    for (const suggestion of suggestions) {
+      suggestionsByMaterial.set(suggestion.materialName, [
+        ...(suggestionsByMaterial.get(suggestion.materialName) ?? []),
+        suggestion
+      ]);
+    }
+    setMaterialsDoc((current) => {
+      if (!current) {
+        return current;
+      }
+      return {
+        ...current,
+        materials: current.materials.map((material) => {
+          const materialSuggestions = suggestionsByMaterial.get(material.name) ?? [];
+          let next = material;
+          for (const suggestion of materialSuggestions) {
+            if (next[suggestion.field]) {
+              continue;
+            }
+            next = {
+              ...next,
+              [suggestion.field]: suggestion.source
+            };
+            if (suggestion.field === "lightMapUrl") {
+              next.lightMapIntensity = next.lightMapIntensity ?? 1;
+              next.lightMapUvSet = next.lightMapUvSet ?? 1;
+            }
+            if (suggestion.field === "emissiveMapUrl") {
+              next.emissiveIntensity = next.emissiveIntensity ?? 1;
+            }
+          }
+          return next;
+        })
+      };
+    });
+    setNotice("saved");
+  };
+
   const uploadVideoMedia = async (interactionId: string, file: File | undefined) => {
     if (!file) {
       return;
@@ -5204,7 +5309,11 @@ function App() {
                     <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
                     <Stat label="Texture compression" value={textureCompressionLabel(bundleStats)} />
                   </div>
-                  <AssetHealth stats={bundleStats} />
+                  <AssetHealth
+                    stats={bundleStats}
+                    pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
+                    onApplyTextureSuggestions={applyMaterialTextureSuggestions}
+                  />
                   <DiagnosticList diagnostics={bundleStats.diagnostics ?? []} />
                 </>
               ) : (
@@ -6774,7 +6883,8 @@ function App() {
                           >
                             <span>{candidate.source}</span>
                             <small>
-                              Use as {materialTextureFieldLabels[candidate.field]} / {formatBytes(candidate.bytes)}
+                              Use as {materialTextureFieldLabels[candidate.field]} / {formatBytes(candidate.bytes)} / score{" "}
+                              {candidate.score}
                             </small>
                           </button>
                         ))}
@@ -9183,7 +9293,15 @@ function ImportNextSteps({
   );
 }
 
-function AssetHealth({ stats }: { stats: BundleStats }) {
+function AssetHealth({
+  stats,
+  pendingTextureSuggestionCount = 0,
+  onApplyTextureSuggestions
+}: {
+  stats: BundleStats;
+  pendingTextureSuggestionCount?: number;
+  onApplyTextureSuggestions?: () => void;
+}) {
   const missingAssets = (stats.assets ?? []).filter((asset) => !asset.exists);
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
@@ -9237,6 +9355,11 @@ function AssetHealth({ stats }: { stats: BundleStats }) {
       {textureSuggestions.length > 0 && (
         <div className="asset-health-section">
           <span>Auto texture mappings</span>
+          {pendingTextureSuggestionCount > 0 && onApplyTextureSuggestions && (
+            <button type="button" className="button secondary compact-button" onClick={onApplyTextureSuggestions}>
+              Apply {pendingTextureSuggestionCount}
+            </button>
+          )}
           {textureSuggestions.slice(0, 5).map((suggestion) => (
             <code key={`${suggestion.materialName}-${suggestion.field}-${suggestion.source}`}>
               {suggestion.materialName}: {materialTextureFieldLabels[suggestion.field]} - {suggestion.source}
