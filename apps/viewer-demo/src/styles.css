@@ -609,6 +609,14 @@ button {
   line-height: 1.35;
 }
 
+.navigation-toast small {
+  display: block;
+  margin-top: 6px;
+  color: rgba(255, 245, 228, 0.66);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .navigation-toast-actions {
   display: flex;
   flex-wrap: wrap;

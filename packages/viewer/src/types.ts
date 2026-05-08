@@ -39,9 +39,18 @@ export type NavigationFailureReason =
   | "blocked-step"
   | "blocked-collision";
 
+export type NavigationRepairAction =
+  | "add-walk-zone"
+  | "add-door-pass"
+  | "adjust-blocker"
+  | "tune-steps"
+  | "inspect-click";
+
 export interface NavigationFailure {
   reason: NavigationFailureReason;
   message: string;
+  repairHint: string;
+  repairAction: NavigationRepairAction;
   point?: [number, number, number];
   cameraPosition?: [number, number, number];
   objectName?: string;

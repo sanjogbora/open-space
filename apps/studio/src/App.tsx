@@ -147,6 +147,8 @@ interface NavigationRepairDraft {
   reason: string;
   blockerName: string;
   blockerKind?: "authored" | "named" | "inferred";
+  action?: string;
+  hint?: string;
   point?: Vec3;
   from?: Vec3;
 }
@@ -540,15 +542,19 @@ function initialNavigationRepairDraft(): NavigationRepairDraft | null {
       ? blockerKindParam
       : undefined;
   const reason = params.get("reason") ?? "";
+  const action = params.get("action") ?? "";
+  const hint = params.get("hint") ?? "";
   const point = parsePointParam(params.get("point"));
   const from = parsePointParam(params.get("from"));
-  if (!blockerName && !reason && !point && !from) {
+  if (!blockerName && !reason && !action && !hint && !point && !from) {
     return null;
   }
   return {
     reason,
     blockerName,
     ...(blockerKind ? { blockerKind } : {}),
+    ...(action ? { action } : {}),
+    ...(hint ? { hint } : {}),
     ...(point ? { point } : {}),
     ...(from ? { from } : {})
   };
@@ -7359,8 +7365,8 @@ function App() {
                         <div>
                           <strong>Viewer navigation repair</strong>
                           <p className="quiet-note">
-                            This came from the viewer block toast. Add a pass zone for a doorway/opening, add a walk
-                            patch when the floor is missing from the walkable area, or ignore a wrongly detected blocker.
+                            {navigationRepairDraft.hint ||
+                              "This came from the viewer block toast. Add a pass zone for a doorway/opening, add a walk patch when the floor is missing from the walkable area, or ignore a wrongly detected blocker."}
                           </p>
                         </div>
                         <dl className="repair-details">
@@ -7378,6 +7384,12 @@ function App() {
                             <div>
                               <dt>Blocker Type</dt>
                               <dd>{navigationRepairDraft.blockerKind}</dd>
+                            </div>
+                          )}
+                          {navigationRepairDraft.action && (
+                            <div>
+                              <dt>Suggested Action</dt>
+                              <dd>{navigationRepairDraft.action.replace(/-/g, " ")}</dd>
                             </div>
                           )}
                           {navigationRepairDraft.point && (

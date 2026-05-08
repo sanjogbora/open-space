@@ -25,6 +25,7 @@ import { createMoveMarker } from "./marker";
 import type {
   LoadingProgress,
   NavigationFailureReason,
+  NavigationRepairAction,
   ViewerCameraPose,
   ViewerOptions,
   ViewerQuality
@@ -156,6 +157,7 @@ export class WalkthroughViewer {
   private clickMoveVelocity = 0;
   private cameraTween: CameraTween | undefined;
   private stableFloorY: number | undefined;
+  private routeSearchFailureDetail: NavigationFailureDetail | undefined;
   private activeView: SceneView | undefined;
   private pointerDown: { x: number; y: number; time: number } | undefined;
   private yaw = 0;
@@ -2159,7 +2161,26 @@ export class WalkthroughViewer {
     return undefined;
   }
 
+  private rememberRouteFailureDetail(detail: NavigationFailureDetail | undefined): void {
+    if (!detail) {
+      return;
+    }
+    const priority: Record<NavigationFailureReason, number> = {
+      "blocked-collision": 5,
+      "blocked-step": 4,
+      "route-not-found": 3,
+      "outside-walk-zone": 2,
+      "outside-bounds": 1,
+      "no-walkable-hit": 1
+    };
+    const current = this.routeSearchFailureDetail;
+    if (!current || priority[detail.reason] > priority[current.reason]) {
+      this.routeSearchFailureDetail = detail;
+    }
+  }
+
   private findNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
+    this.routeSearchFailureDetail = undefined;
     const route = this.findVisibilityNavigationRoute(target, origin) ?? this.findGridNavigationRoute(target, origin);
     return route ? this.smoothNavigationRoute(route, origin) ?? route : undefined;
   }
@@ -2222,7 +2243,9 @@ export class WalkthroughViewer {
         if (!node || node.visited || index === currentIndex) {
           continue;
         }
-        if (this.navigationRouteFailureDetail(node.point, current.point)) {
+        const failure = this.navigationRouteFailureDetail(node.point, current.point);
+        if (failure) {
+          this.rememberRouteFailureDetail(failure);
           continue;
         }
         const nextCost = current.cost + current.point.distanceTo(node.point);
@@ -2413,7 +2436,9 @@ export class WalkthroughViewer {
         if (floorDelta > maxStepUp || floorDelta < -maxStepDown) {
           continue;
         }
-        if (this.navigationRouteFailureDetail(nextCell.point, currentCell.point)) {
+        const failure = this.navigationRouteFailureDetail(nextCell.point, currentCell.point);
+        if (failure) {
+          this.rememberRouteFailureDetail(failure);
           continue;
         }
         const nextKey = keyFor(nextX, nextZ);
@@ -2857,13 +2882,18 @@ export class WalkthroughViewer {
         this.startClickRoute(navigationRoute, floorHit.point);
         return true;
       }
+      const bestFailureDetail = this.routeSearchFailureDetail ?? routeFailureDetail;
+      const reason =
+        bestFailureDetail.reason === "blocked-step" || bestFailureDetail.reason === "blocked-collision"
+          ? bestFailureDetail.reason
+          : "route-not-found";
       this.emitNavigationFailure(
-        routeFailureDetail.reason === "blocked-step" ? "blocked-step" : "route-not-found",
+        reason,
         event,
-        routeFailureDetail.point ?? floorHit.point,
+        bestFailureDetail.point ?? floorHit.point,
         undefined,
-        routeFailureDetail.blockerName,
-        routeFailureDetail.blockerKind
+        bestFailureDetail.blockerName,
+        bestFailureDetail.blockerKind
       );
       return true;
     }
@@ -2982,7 +3012,8 @@ export class WalkthroughViewer {
   private navigationFailureMessage(
     reason: NavigationFailureReason,
     objectName?: string,
-    blockerName?: string
+    blockerName?: string,
+    blockerKind?: CollisionBlocker["kind"]
   ): string {
     if (reason === "outside-bounds") {
       return "Move target is outside the navigation bounds.";
@@ -2999,13 +3030,69 @@ export class WalkthroughViewer {
       return "The route crosses a height change larger than the configured step limits.";
     }
     if (reason === "blocked-collision") {
+      if (blockerName && blockerKind === "authored") {
+        return `The route hits a Studio block zone: ${blockerName}.`;
+      }
+      if (blockerName && blockerKind === "named") {
+        return `The route hits a model object marked as collision: ${blockerName}.`;
+      }
+      if (blockerName && blockerKind === "inferred") {
+        return `The route hits a wall-like model object: ${blockerName}.`;
+      }
       return blockerName
-        ? `Move target is blocked by collision geometry: ${blockerName}.`
-        : "Move target is blocked by collision geometry near the route.";
+        ? `The route is blocked by collision geometry: ${blockerName}.`
+        : "The route is blocked by collision geometry near the clicked spot.";
     }
     return objectName
       ? `Clicked ${objectName}, but no walkable floor was found there.`
       : "No walkable floor was found at the clicked point.";
+  }
+
+  private navigationRepairAction(
+    reason: NavigationFailureReason,
+    blockerKind?: CollisionBlocker["kind"]
+  ): NavigationRepairAction {
+    if (reason === "outside-walk-zone" || reason === "no-walkable-hit") {
+      return "add-walk-zone";
+    }
+    if (reason === "route-not-found") {
+      return "add-door-pass";
+    }
+    if (reason === "blocked-step") {
+      return "tune-steps";
+    }
+    if (reason === "blocked-collision") {
+      return blockerKind === "authored" ? "adjust-blocker" : "add-door-pass";
+    }
+    return "inspect-click";
+  }
+
+  private navigationRepairHint(
+    reason: NavigationFailureReason,
+    blockerKind?: CollisionBlocker["kind"]
+  ): string {
+    if (reason === "outside-bounds") {
+      return "In Studio, expand the navigation bounds or add a closer view before testing this click.";
+    }
+    if (reason === "outside-walk-zone") {
+      return "Add a walk patch on this floor area if users should be allowed to stand there.";
+    }
+    if (reason === "route-not-found") {
+      return "Add or expand a door pass between the current walk island and the clicked room.";
+    }
+    if (reason === "blocked-step") {
+      return "If this is a stair or threshold, tune Step Up and Step Down or add a cleaner stair walk patch.";
+    }
+    if (reason === "blocked-collision") {
+      if (blockerKind === "authored") {
+        return "Resize, split, or remove the Studio block zone around the opening.";
+      }
+      if (blockerKind === "named") {
+        return "Change the matched object role, or add a door pass if the opening is valid.";
+      }
+      return "Add a door pass through the opening, or mark the detected object as ignored if it is not a wall.";
+    }
+    return "Click an exposed floor surface, or add a walk patch in Studio if the floor is not detected.";
   }
 
   private emitNavigationFailure(
@@ -3018,7 +3105,9 @@ export class WalkthroughViewer {
   ): void {
     this.options.onNavigationFailure?.({
       reason,
-      message: this.navigationFailureMessage(reason, objectName, blockerName),
+      message: this.navigationFailureMessage(reason, objectName, blockerName, blockerKind),
+      repairHint: this.navigationRepairHint(reason, blockerKind),
+      repairAction: this.navigationRepairAction(reason, blockerKind),
       ...(point ? { point: [point.x, point.y, point.z] } : {}),
       cameraPosition: [this.camera.position.x, this.camera.position.y, this.camera.position.z],
       ...(objectName ? { objectName } : {}),

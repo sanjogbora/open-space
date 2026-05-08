@@ -115,6 +115,8 @@ function studioRepairUrl(manifestUrl: string, failure: NavigationFailure): strin
   if (failure.blockerKind) {
     url.searchParams.set("blockerKind", failure.blockerKind);
   }
+  url.searchParams.set("action", failure.repairAction);
+  url.searchParams.set("hint", failure.repairHint);
   if (failure.point) {
     url.searchParams.set("point", failure.point.map((value) => value.toFixed(3)).join(","));
   }
@@ -658,6 +660,7 @@ function App() {
             <div>
               <strong>Navigation blocked</strong>
               <span>{navigationFailure.message}</span>
+              <small>{navigationFailure.repairHint}</small>
             </div>
             <div className="navigation-toast-actions">
               <button type="button" onClick={() => setDebugZones(true)}>
