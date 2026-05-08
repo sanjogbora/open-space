@@ -115,7 +115,7 @@ async function assetSize(reference) {
   }
 }
 
-function isLocalGltfUri(uri) {
+function isPotentialLocalGltfUri(uri) {
   return (
     typeof uri === "string" &&
     uri.trim().length > 0 &&
@@ -124,6 +124,22 @@ function isLocalGltfUri(uri) {
     !uri.startsWith("http://") &&
     !uri.startsWith("https://")
   );
+}
+
+function isSafeLocalResourcePath(source) {
+  const clean = stripLocalResourceUri(source);
+  if (!clean || clean.startsWith("/") || /^[a-zA-Z]:/.test(clean)) {
+    return false;
+  }
+  return clean.split("/").every((part) => part && part !== "." && part !== "..");
+}
+
+function isUnsafeLocalGltfUri(uri) {
+  return isPotentialLocalGltfUri(uri) && !isSafeLocalResourcePath(uri);
+}
+
+function isLocalGltfUri(uri) {
+  return isPotentialLocalGltfUri(uri) && isSafeLocalResourcePath(uri);
 }
 
 async function resourceStatus(asset, kind, source, label) {
@@ -712,6 +728,22 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       }))
       .filter((reference) => isLocalGltfUri(reference.source))
   ];
+  const unsafeLocalResourceRefs = [
+    ...(document.images ?? [])
+      .map((image, index) => ({
+        kind: "texture",
+        source: image.uri,
+        label: image.name || `Image ${index}`
+      }))
+      .filter((reference) => isUnsafeLocalGltfUri(reference.source)),
+    ...(document.buffers ?? [])
+      .map((buffer, index) => ({
+        kind: "buffer",
+        source: buffer.uri,
+        label: buffer.name || `Buffer ${index}`
+      }))
+      .filter((reference) => isUnsafeLocalGltfUri(reference.source))
+  ];
   const externalResources = await Promise.all(
     externalResourceRefs.map((reference) =>
       resourceStatus(asset, reference.kind, reference.source, reference.label)
@@ -910,6 +942,12 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     invalidImageReferenceCount,
     embeddedImageDecodeFailureCount,
     unsupportedImageMimeCount,
+    unsafeLocalResourceCount: unsafeLocalResourceRefs.length,
+    unsafeLocalResources: unsafeLocalResourceRefs.map((reference) => ({
+      kind: reference.kind,
+      source: stripLocalResourceUri(reference.source),
+      label: reference.label
+    })),
     embeddedImageCount: embeddedImages.length,
     nonTrianglePrimitiveCount,
     vertexColorPrimitiveCount,
@@ -2104,6 +2142,10 @@ function createDiagnostics(manifest, report, graphs) {
     (sum, model) => sum + (model.unsupportedImageMimeCount ?? 0),
     0
   );
+  const unsafeLocalResourceCount = report.models.reduce(
+    (sum, model) => sum + (model.unsafeLocalResourceCount ?? 0),
+    0
+  );
   const undersizedBufferCount = report.models.reduce(
     (sum, model) => sum + (model.undersizedBufferCount ?? 0),
     0
@@ -2406,6 +2448,16 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Unsupported image formats detected",
       message: `${unsupportedImageMimeCount} image definition(s) use a MIME type outside PNG, JPEG, WebP, AVIF, Basis, or KTX2.`,
       action: "Convert those textures to a web-supported format before publishing."
+    });
+  }
+
+  if (unsafeLocalResourceCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "unsafe-gltf-resource-paths",
+      title: "Unsafe GLTF resource paths",
+      message: `${unsafeLocalResourceCount} texture or buffer URI(s) point outside the uploaded scene folder or use absolute paths.`,
+      action: "Re-export or ZIP the model so every texture and .bin file is referenced with a bundle-local relative path such as textures/wall.png."
     });
   }
 

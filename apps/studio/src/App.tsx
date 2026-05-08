@@ -9260,6 +9260,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "invalid-node-mesh-references",
       "stale-object-overrides",
       "invalid-object-navigation-behavior",
+      "unsafe-gltf-resource-paths",
       "unsupported-required-extensions"
     ].includes(code)
   ) {
