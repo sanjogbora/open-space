@@ -128,10 +128,17 @@ function isPotentialLocalGltfUri(uri) {
 
 function isSafeLocalResourcePath(source) {
   const clean = stripLocalResourceUri(source);
-  if (!clean || clean.startsWith("/") || /^[a-zA-Z]:/.test(clean)) {
+  if (!clean || /^[a-zA-Z]:/.test(clean)) {
     return false;
   }
-  return clean.split("/").every((part) => part && part !== "." && part !== "..");
+  const normalized = path.posix.normalize(clean);
+  return (
+    normalized !== "." &&
+    !normalized.startsWith("/") &&
+    !normalized.startsWith("../") &&
+    normalized !== ".." &&
+    !/^[a-zA-Z]:/.test(normalized)
+  );
 }
 
 function isUnsafeLocalGltfUri(uri) {
