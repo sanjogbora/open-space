@@ -1174,6 +1174,27 @@ function likelyExteriorPlaneName(name) {
   ].some((keyword) => normalized.includes(keyword));
 }
 
+function graphHasExteriorGroundPlane(graph) {
+  const rawBounds = combineGraphBounds(graph);
+  if (!rawBounds) {
+    return false;
+  }
+  const fullArea = Math.max(1, boundsArea(rawBounds));
+  return (graph.nodes ?? []).some((node) => {
+    if (!node.bounds) {
+      return false;
+    }
+    const name = `${node.name} ${node.meshName ?? ""}`;
+    if (!likelyExteriorPlaneName(name)) {
+      return false;
+    }
+    const [width, height, depth] = boundsSize(node.bounds);
+    const area = width * depth;
+    const flat = height <= Math.max(0.12, Math.min(width, depth) * 0.08);
+    return flat && area > fullArea * 0.18;
+  });
+}
+
 function likelyNonWalkSurfaceName(name) {
   const normalized = String(name || "").toLowerCase();
   return [
@@ -2408,6 +2429,7 @@ async function resetManifestForUploadedModel(
     ? Math.max(30, (bounds.max[0] - bounds.min[0]) * 1.8, (bounds.max[2] - bounds.min[2]) * 1.8)
     : undefined;
   const generatedGroundY = bounds ? bounds.min[1] - 0.04 : undefined;
+  const modelHasExteriorGround = graphHasExteriorGroundPlane(graph);
   const navigationBounds = bounds
     ? {
         min: [bounds.min[0] - margin, Math.min(0.2, bounds.min[1] - 0.1), bounds.min[2] - margin],
@@ -2447,7 +2469,7 @@ async function resetManifestForUploadedModel(
       skyBackdropEnabled: manifest.environment?.skyBackdropEnabled ?? true,
       skyTopColor: manifest.environment?.skyTopColor ?? "#d8e7f5",
       skyHorizonColor: manifest.environment?.skyHorizonColor ?? "#f3f6f8",
-      groundEnabled: manifest.environment?.groundEnabled ?? true,
+      groundEnabled: manifest.environment?.groundEnabled ?? !modelHasExteriorGround,
       groundColor: manifest.environment?.groundColor ?? "#6f8f5a",
       groundSize: generatedGroundSize ?? manifest.environment?.groundSize ?? 90,
       groundY: generatedGroundY ?? manifest.environment?.groundY ?? -0.04,
