@@ -100,6 +100,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Interactions can create and edit hotspots, external scene links, and object toggles.
 - Analyzer inspects embedded GLB image payloads for dimensions, invalid buffer references, and unsupported MIME types.
 - API upload validation rejects malformed GLB containers with broken lengths, truncated chunks, invalid JSON chunks, or non-glTF 2.0 assets.
+- Analyzer now flags invalid default-scene node links, node child links, and node mesh references that can make an otherwise uploadable GLB appear blank or partial.
 - API texture repair scores duplicate loose texture candidates by relative path and texture-folder context before copying.
 - Analyzer now flags embedded GLB textures and sidecar texture files that cannot be decoded, so broken image payloads are reported instead of only showing flat or strange-colored surfaces in the viewer.
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.

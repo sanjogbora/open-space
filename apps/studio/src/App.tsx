@@ -8265,6 +8265,9 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "malformed-model",
       "invalid-default-scene",
       "default-scene-has-no-renderable-meshes",
+      "invalid-scene-node-references",
+      "invalid-node-child-references",
+      "invalid-node-mesh-references",
       "embedded-texture-decode-failed",
       "sidecar-texture-decode-failed",
       "unsupported-required-extensions"

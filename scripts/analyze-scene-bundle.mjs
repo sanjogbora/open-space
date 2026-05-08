@@ -448,9 +448,22 @@ function defaultSceneStats(document) {
       ? scenes[defaultSceneIndex]
       : undefined;
   const invalidDefaultScene = explicitDefaultScene && !defaultScene;
+  const rootNodeReferences = Array.isArray(defaultScene?.nodes) ? defaultScene.nodes : [];
+  const invalidRootNodeReferenceCount = rootNodeReferences.filter(
+    (index) => typeof index !== "number" || index < 0 || index >= nodes.length
+  ).length;
   const rootNodeIndices = Array.isArray(defaultScene?.nodes)
     ? defaultScene.nodes.filter((index) => typeof index === "number" && index >= 0 && index < nodes.length)
     : [];
+  const invalidNodeChildReferenceCount = nodes.reduce(
+    (sum, node) =>
+      sum +
+      (node.children ?? []).filter((index) => typeof index !== "number" || index < 0 || index >= nodes.length).length,
+    0
+  );
+  const invalidNodeMeshReferenceCount = nodes.filter(
+    (node) => typeof node.mesh === "number" && (node.mesh < 0 || node.mesh >= meshes.length)
+  ).length;
   const reachableNodes = new Set();
   const visitNode = (nodeIndex) => {
     if (reachableNodes.has(nodeIndex) || nodeIndex < 0 || nodeIndex >= nodes.length) {
@@ -487,6 +500,9 @@ function defaultSceneStats(document) {
     sceneCount: scenes.length,
     defaultSceneIndex,
     invalidDefaultScene,
+    invalidRootNodeReferenceCount,
+    invalidNodeChildReferenceCount,
+    invalidNodeMeshReferenceCount,
     defaultSceneRootNodeCount: rootNodeIndices.length,
     defaultSceneReachableNodeCount: reachableNodes.size,
     renderableNodeCount,
@@ -1955,6 +1971,18 @@ function createDiagnostics(manifest, report, graphs) {
   const missingSceneDefinitionModels = report.models.filter(
     (model) => (model.meshCount ?? 0) > 0 && (model.sceneCount ?? 0) === 0
   );
+  const invalidRootNodeReferenceCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidRootNodeReferenceCount ?? 0),
+    0
+  );
+  const invalidNodeChildReferenceCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidNodeChildReferenceCount ?? 0),
+    0
+  );
+  const invalidNodeMeshReferenceCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidNodeMeshReferenceCount ?? 0),
+    0
+  );
   const unreferencedDefaultSceneMeshCount = report.models.reduce(
     (sum, model) => sum + (model.unreferencedDefaultSceneMeshCount ?? 0),
     0
@@ -1998,6 +2026,36 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Scene definitions are missing",
       message: `${missingSceneDefinitionModels.length} model file(s) contain meshes but no glTF scene list.`,
       action: "Re-export with a valid default scene so browsers, optimizers, and publishing builds load the same objects consistently."
+    });
+  }
+
+  if (invalidRootNodeReferenceCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-scene-node-references",
+      title: "Scene references missing nodes",
+      message: `${invalidRootNodeReferenceCount} default-scene node reference(s) point outside the node list.`,
+      action: "Repair or re-export the GLB/GLTF so the default scene points only to existing building nodes."
+    });
+  }
+
+  if (invalidNodeChildReferenceCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-node-child-references",
+      title: "Node hierarchy references missing children",
+      message: `${invalidNodeChildReferenceCount} node child reference(s) point outside the node list.`,
+      action: "Repair or re-export the model; broken hierarchy links can make rooms or objects disappear from the viewer."
+    });
+  }
+
+  if (invalidNodeMeshReferenceCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-node-mesh-references",
+      title: "Nodes reference missing meshes",
+      message: `${invalidNodeMeshReferenceCount} node mesh reference(s) point outside the mesh list.`,
+      action: "Repair or re-export the model; invalid mesh references can produce blank, partial, or incorrectly framed imports."
     });
   }
 
