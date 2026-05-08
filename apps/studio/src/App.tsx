@@ -4077,6 +4077,9 @@ function App() {
           copied?: number;
           skippedAmbiguous?: number;
           missing?: number;
+          copiedPaths?: readonly { target: string; source: string }[];
+          ambiguousPaths?: readonly { target: string; candidates: readonly string[] }[];
+          missingPaths?: readonly string[];
         };
       };
       setManifest(result.manifest);
@@ -4087,7 +4090,11 @@ function App() {
       const repair = result.externalResourceRepair;
       const repairNotes = [
         repair?.copied ? `Copied ${repair.copied} missing texture resource(s).` : "",
+        repair?.copiedPaths?.[0] ? `Example: ${repair.copiedPaths[0].source} -> ${repair.copiedPaths[0].target}.` : "",
         repair?.skippedAmbiguous ? `Skipped ${repair.skippedAmbiguous} ambiguous same-name texture match(es).` : "",
+        repair?.ambiguousPaths?.[0]
+          ? `Ambiguous: ${repair.ambiguousPaths[0].target} matched ${repair.ambiguousPaths[0].candidates.slice(0, 3).join(", ")}.`
+          : "",
         repair?.missing ? `${repair.missing} referenced texture resource(s) are still missing.` : ""
       ].filter(Boolean);
       setRepairSummary(

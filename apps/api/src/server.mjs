@@ -710,7 +710,10 @@ async function repairExternalTexturePaths(projectId) {
   const result = {
     copied: 0,
     skippedAmbiguous: 0,
-    missing: 0
+    missing: 0,
+    copiedPaths: [],
+    ambiguousPaths: [],
+    missingPaths: []
   };
   await Promise.all(
     targetDirs(projectId).map(async (target) => {
@@ -748,6 +751,7 @@ async function repairExternalTexturePaths(projectId) {
           );
           if (sourcePaths.length === 0) {
             result.missing += 1;
+            result.missingPaths.push(uri);
             return;
           }
           const rankedSources = sourcePaths
@@ -759,12 +763,20 @@ async function repairExternalTexturePaths(projectId) {
           const [bestSource, nextSource] = rankedSources;
           if (!bestSource || (nextSource && nextSource.score === bestSource.score)) {
             result.skippedAmbiguous += 1;
+            result.ambiguousPaths.push({
+              target: uri,
+              candidates: rankedSources.slice(0, 5).map((entry) => normalizedRelativePath(target, entry.sourcePath))
+            });
             return;
           }
           const sourcePath = bestSource.sourcePath;
           await mkdir(path.dirname(expectedPath), { recursive: true });
           await cp(sourcePath, expectedPath);
           result.copied += 1;
+          result.copiedPaths.push({
+            target: uri,
+            source: normalizedRelativePath(target, sourcePath)
+          });
         })
       );
     })
