@@ -2431,10 +2431,12 @@ export class WalkthroughViewer {
           continue;
         }
         const bridgePoint = this.navigationMeshBridgePoint(current.mesh, next.mesh, target.y);
+        const passZoneBias = this.navigationMeshIsPass(next.mesh) ? -0.2 : 0;
         const nextCost =
           current.cost +
           Math.hypot(current.center.x - bridgePoint.x, current.center.z - bridgePoint.z) +
-          Math.hypot(bridgePoint.x - next.center.x, bridgePoint.z - next.center.z);
+          Math.hypot(bridgePoint.x - next.center.x, bridgePoint.z - next.center.z) +
+          passZoneBias;
         if (nextCost >= next.cost) {
           continue;
         }
@@ -2472,6 +2474,9 @@ export class WalkthroughViewer {
       }
       if (next) {
         points.push(this.navigationMeshBridgePoint(current.mesh, next.mesh, target.y));
+        if (this.navigationMeshIsPass(next.mesh)) {
+          points.push(next.center.clone());
+        }
         continue;
       }
       if (!targetMeshes.has(current.mesh)) {
@@ -2507,6 +2512,10 @@ export class WalkthroughViewer {
       boxA.minZ - padding <= boxB.maxZ &&
       boxA.maxZ + padding >= boxB.minZ
     );
+  }
+
+  private navigationMeshIsPass(mesh: THREE.Mesh): boolean {
+    return mesh.userData["navigationZoneKind"] === "pass";
   }
 
   private navigationMeshBridgePoint(a: THREE.Mesh, b: THREE.Mesh, y: number): THREE.Vector3 {
