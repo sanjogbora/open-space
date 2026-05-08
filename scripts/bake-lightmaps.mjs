@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const args = process.argv.slice(2);
@@ -402,6 +402,24 @@ function failureStepsForStage(stageName) {
 try {
   await runBlender(scriptPath, configPath);
   const report = JSON.parse(await readFile(reportPath, "utf8"));
+  const lightmapAssets = await Promise.all(
+    (report.lightmaps ?? []).map(async (lightmap) => {
+      const assetPath = path.join(bundleDir, lightmap.url);
+      let bytes = 0;
+      try {
+        bytes = (await stat(assetPath)).size;
+      } catch {
+        bytes = 0;
+      }
+      return {
+        materialName: lightmap.materialName,
+        url: lightmap.url,
+        resolution: lightmap.resolution,
+        bytes
+      };
+    })
+  );
+  const totalLightmapBytes = lightmapAssets.reduce((sum, asset) => sum + asset.bytes, 0);
   const existingMaterials = JSON.parse(await readFile(materialsPath, "utf8"));
   const byName = new Map((existingMaterials.materials ?? []).map((material) => [material.name, material]));
   for (const lightmap of report.lightmaps ?? []) {
@@ -456,6 +474,8 @@ try {
     message: `Baked ${report.lightmaps?.length ?? 0} lightmap texture(s) and exported ${outputSceneUrl}.`,
     outputSceneUrl,
     lightmapCount: report.lightmaps?.length ?? 0,
+    lightmaps: lightmapAssets,
+    totalLightmapBytes,
     resolution,
     samples,
     margin,

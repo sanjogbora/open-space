@@ -408,6 +408,19 @@ interface LightmapBakeJobDocument {
   bakeMode?: "lighting" | "combined";
   preset?: BakePreset;
   message?: string;
+  outputSceneUrl?: string;
+  lightmapCount?: number;
+  totalLightmapBytes?: number;
+  resolution?: number;
+  samples?: number;
+  margin?: number;
+  maxMaterials?: number;
+  lightmaps?: readonly {
+    materialName: string;
+    url: string;
+    resolution?: number;
+    bytes?: number;
+  }[];
   startedAt?: string;
   completedAt?: string;
   steps: readonly {
@@ -6753,9 +6766,34 @@ function App() {
                         {lightmapBakeJob.message && <small>{lightmapBakeJob.message}</small>}
                         {lightmapBakeJob.bakeMode && <small>{lightmapBakeJob.bakeMode} bake</small>}
                         {lightmapBakeJob.preset && <small>{lightmapBakeJob.preset} quality</small>}
+                        {lightmapBakeJob.outputSceneUrl && <small>{lightmapBakeJob.outputSceneUrl}</small>}
                       </div>
                       <strong>{lightmapBakeJob.status}</strong>
                     </div>
+                    {lightmapBakeJob.status === "completed" && (
+                      <div className="stat-grid compact-stat-grid">
+                        <Stat label="Lightmaps" value={String(lightmapBakeJob.lightmapCount ?? lightmapBakeJob.lightmaps?.length ?? 0)} />
+                        <Stat label="Total" value={formatBytes(lightmapBakeJob.totalLightmapBytes ?? 0)} />
+                        <Stat label="Max px" value={String(lightmapBakeJob.resolution ?? bakeSettings.resolution)} />
+                        <Stat label="Samples" value={String(lightmapBakeJob.samples ?? bakeSettings.samples)} />
+                      </div>
+                    )}
+                    {lightmapBakeJob.lightmaps && lightmapBakeJob.lightmaps.length > 0 && (
+                      <div className="job-history-list">
+                        {lightmapBakeJob.lightmaps.slice(0, 8).map((lightmap) => (
+                          <div key={`${lightmap.materialName}-${lightmap.url}`} className="job-history-row">
+                            <div>
+                              <strong>{lightmap.materialName}</strong>
+                              <span>{lightmap.url}</span>
+                            </div>
+                            <small>
+                              {lightmap.resolution ? `${lightmap.resolution}px / ` : ""}
+                              {formatBytes(lightmap.bytes ?? 0)}
+                            </small>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {lightmapBakeJob.steps.map((step) => (
                       <div key={step.id} className={`job-step-row ${step.status}`}>
                         <div className="job-step-main">
