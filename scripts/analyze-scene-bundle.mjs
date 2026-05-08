@@ -1961,6 +1961,15 @@ function navigationZoneAabb(zone) {
   };
 }
 
+function navigationZoneNarrowestSpan(zone) {
+  if (Array.isArray(zone.polygon) && zone.polygon.length >= 3) {
+    const xs = zone.polygon.map(([x]) => x);
+    const zs = zone.polygon.map(([, z]) => z);
+    return Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs));
+  }
+  return Math.min(Math.abs(zone.size[0]), Math.abs(zone.size[2]));
+}
+
 function navigationZonesOverlap(a, b, padding = 0.2) {
   const boxA = navigationZoneAabb(a);
   const boxB = navigationZoneAabb(b);
@@ -2000,7 +2009,7 @@ function navigationComponents(zones) {
   return components;
 }
 
-function navigationTopology(manifest) {
+function navigationTopology(manifest, bodyRadius = 0.28) {
   const navigation = manifest.navigation ?? {};
   const walkZones = enabledNavigationZones(navigation, "walk");
   const passZones = enabledNavigationZones(navigation, "pass");
@@ -2016,6 +2025,9 @@ function navigationTopology(manifest) {
   });
   const blockedPassZones = passZones.filter((zone) =>
     blockZones.some((blockZone) => navigationZonesOverlap(zone, blockZone, 0.05))
+  );
+  const narrowPassZones = passZones.filter(
+    (zone) => navigationZoneNarrowestSpan(zone) < Math.max(0.42, bodyRadius * 2)
   );
   const walkViews = (manifest.views ?? []).filter(
     (view) => view.kind === "walk" && Array.isArray(view.position) && view.position.length >= 3
@@ -2039,6 +2051,7 @@ function navigationTopology(manifest) {
     orphanPassZones,
     oneSidedPassZones,
     blockedPassZones,
+    narrowPassZones,
     walkViews,
     outOfBoundsWalkViews,
     blockedWalkViews,
@@ -2058,7 +2071,7 @@ function hexColorLooksGreen(value) {
   return green > 70 && green > red * 1.15 && green > blue * 1.12;
 }
 
-function createDiagnostics(manifest, report, graphs) {
+function createDiagnostics(manifest, report, graphs, controls) {
   const diagnostics = [];
   const graph = graphs[0];
   const bounds = graphBounds(graph);
@@ -2187,7 +2200,10 @@ function createDiagnostics(manifest, report, graphs) {
   const navigationZones = Array.isArray(manifest.navigation?.zones) ? manifest.navigation.zones : [];
   const hasWalkZones = navigationZones.some((zone) => zone.kind === "walk" && zone.enabled !== false);
   const hasBlockZones = navigationZones.some((zone) => zone.kind === "block" && zone.enabled !== false);
-  const topology = navigationTopology(manifest);
+  const bodyRadius = Number.isFinite(Number(controls?.movement?.collisionRadius))
+    ? Math.min(0.6, Math.max(0.12, Number(controls.movement.collisionRadius)))
+    : 0.28;
+  const topology = navigationTopology(manifest, bodyRadius);
   const rooms = Array.isArray(manifest.rooms) ? manifest.rooms : [];
   const roomsWithBounds = rooms.filter((room) => room?.bounds);
   const linkedRoomViewIds = new Set(rooms.map((room) => room?.viewId).filter(Boolean));
@@ -2940,6 +2956,17 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if (topology.narrowPassZones.length > 0) {
+    const requiredSpan = Math.max(0.42, bodyRadius * 2);
+    diagnostics.push({
+      severity: "warning",
+      code: "narrow-pass-zones",
+      title: "Door pass zones may be too narrow",
+      message: `${topology.narrowPassZones.length} pass zone(s) are narrower than the ${requiredSpan.toFixed(2)}m clearance needed by the current Body Radius.`,
+      action: "Widen the pass zones or reduce Body Radius in Controls before relying on these doorways."
+    });
+  }
+
   if (topology.outOfBoundsWalkViews.length > 0) {
     diagnostics.push({
       severity: "error",
@@ -3079,7 +3106,7 @@ function createDiagnostics(manifest, report, graphs) {
   return diagnostics;
 }
 
-function summarize(manifest, assets, models, graphs, looseImages, materialOverrides, objectOverrides) {
+function summarize(manifest, assets, models, graphs, looseImages, materialOverrides, objectOverrides, controls) {
   const totalBytes = assets.reduce((sum, asset) => sum + asset.bytes, 0);
   const missingAssetCount = assets.filter((asset) => !asset.exists).length;
   const modelBytes = assets
@@ -3213,7 +3240,7 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
   };
   return {
     ...report,
-    diagnostics: createDiagnostics(manifest, report, graphs)
+    diagnostics: createDiagnostics(manifest, report, graphs, controls)
   };
 }
 
@@ -3487,6 +3514,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "disconnected-navigation-zones",
     "missing-pass-zones",
     "orphan-pass-zones",
+    "narrow-pass-zones",
     "one-sided-pass-zones",
     "pass-zones-overlap-block-zones",
     "walk-views-inside-block-zones",
@@ -3564,6 +3592,7 @@ const materialDocs = (await Promise.all(assets.map(modelMaterials))).filter(Bool
 const looseImages = await looseBundleImages(assets, models);
 const materialOverrides = await readJsonIfExists(path.resolve(bundleDir, "materials.json"));
 const objectOverrides = await readJsonIfExists(path.resolve(bundleDir, "objects.json"));
+const controls = await readJsonIfExists(path.resolve(bundleDir, "controls.json"));
 const materialTextureSuggestions = [];
 const materialsDocument = materialDocs[0]
   ? applyLooseTextureSuggestions(
@@ -3573,7 +3602,7 @@ const materialsDocument = materialDocs[0]
       materialTextureSuggestions
     )
   : undefined;
-const report = summarize(manifest, assets, models, graphs, looseImages, materialOverrides, objectOverrides);
+const report = summarize(manifest, assets, models, graphs, looseImages, materialOverrides, objectOverrides, controls);
 const optimizationReport = createOptimizationReport(report);
 const finalReport = {
   ...report,

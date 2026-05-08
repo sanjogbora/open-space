@@ -1052,6 +1052,15 @@ function navigationZoneAabb(zone: NavigationZone) {
   };
 }
 
+function navigationZoneNarrowestSpan(zone: NavigationZone): number {
+  if (zone.polygon && zone.polygon.length >= 3) {
+    const xs = zone.polygon.map(([x]) => x);
+    const zs = zone.polygon.map(([, z]) => z);
+    return Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs));
+  }
+  return Math.min(Math.abs(zone.size[0]), Math.abs(zone.size[2]));
+}
+
 function navigationZonesOverlap(a: NavigationZone, b: NavigationZone, padding = 0.2): boolean {
   const boxA = navigationZoneAabb(a);
   const boxB = navigationZoneAabb(b);
@@ -1303,7 +1312,7 @@ function createDoorPassZoneFromCandidate(
   };
 }
 
-function navigationQaIssues(manifest: SceneManifest): NavigationQaIssue[] {
+function navigationQaIssues(manifest: SceneManifest, bodyRadius = 0.28): NavigationQaIssue[] {
   const issues: NavigationQaIssue[] = [];
   const navigation = manifest.navigation;
   const walkZones = enabledNavigationZones(navigation, "walk");
@@ -1355,6 +1364,17 @@ function navigationQaIssues(manifest: SceneManifest): NavigationQaIssue[] {
   passZones.forEach((zone) => {
     const touchingWalkZones = walkZones.filter((walkZone) => navigationZonesOverlap(zone, walkZone));
     const touchingBlockZones = blockZones.filter((blockZone) => navigationZonesOverlap(zone, blockZone, 0.05));
+    const narrowestSpan = navigationZoneNarrowestSpan(zone);
+    const requiredSpan = Math.max(0.42, bodyRadius * 2);
+    if (narrowestSpan < requiredSpan) {
+      issues.push({
+        id: `narrow-pass-${zone.id}`,
+        severity: "warning",
+        title: `Door pass may be too narrow: ${zone.label}`,
+        detail: `This pass is ${narrowestSpan.toFixed(2)}m wide, below the ${requiredSpan.toFixed(2)}m body clearance needed for the current Body Radius.`,
+        action: "Widen the pass zone or reduce Body Radius before relying on this doorway."
+      });
+    }
     if (touchingWalkZones.length === 0) {
       issues.push({
         id: `orphan-pass-${zone.id}`,
@@ -1480,6 +1500,7 @@ function navigationQuickFixForIssue(issue: NavigationQaIssue | undefined): Navig
     issue.id === "missing-pass-zones" ||
     issue.id === "disconnected-route-zones" ||
     issue.id.startsWith("orphan-pass-") ||
+    issue.id.startsWith("narrow-pass-") ||
     issue.id.startsWith("one-sided-pass-")
   ) {
     return {
@@ -2651,7 +2672,10 @@ function App() {
     () => manifest?.interactions.filter(isMaterialVariantInteraction) ?? [],
     [manifest]
   );
-  const navigationIssues = useMemo(() => (manifest ? navigationQaIssues(manifest) : []), [manifest]);
+  const navigationIssues = useMemo(
+    () => (manifest ? navigationQaIssues(manifest, controlsDoc?.movement.collisionRadius ?? 0.28) : []),
+    [controlsDoc?.movement.collisionRadius, manifest]
+  );
   const navigationCoverageSummary = useMemo(() => (manifest ? navigationCoverage(manifest) : null), [manifest]);
   const navigationZones = useMemo(() => manifest?.navigation.zones ?? [], [manifest]);
   const generatedNavigationZoneCount = useMemo(
@@ -9309,6 +9333,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "missing-pass-zones",
       "disconnected-navigation-zones",
       "orphan-pass-zones",
+      "narrow-pass-zones",
       "one-sided-pass-zones",
       "pass-zones-overlap-block-zones",
       "walk-views-outside-navigation-bounds",
