@@ -1395,7 +1395,7 @@ function materialTextureCandidateScore(materialName, source) {
   return score;
 }
 
-function applyLooseTextureSuggestions(materialsDocument, looseImages, existingMaterials) {
+function applyLooseTextureSuggestions(materialsDocument, looseImages, existingMaterials, suggestions = []) {
   if (!Array.isArray(looseImages) || looseImages.length === 0) {
     return materialsDocument;
   }
@@ -1427,6 +1427,12 @@ function applyLooseTextureSuggestions(materialsDocument, looseImages, existingMa
           continue;
         }
         next[candidate.field] = candidate.source;
+        suggestions.push({
+          materialName: material.name,
+          field: candidate.field,
+          source: candidate.source,
+          score: candidate.score
+        });
       }
       return next;
     })
@@ -3419,10 +3425,21 @@ const materialDocs = (await Promise.all(assets.map(modelMaterials))).filter(Bool
 const looseImages = await looseBundleImages(assets, models);
 const materialOverrides = await readJsonIfExists(path.resolve(bundleDir, "materials.json"));
 const objectOverrides = await readJsonIfExists(path.resolve(bundleDir, "objects.json"));
+const materialTextureSuggestions = [];
+const materialsDocument = materialDocs[0]
+  ? applyLooseTextureSuggestions(
+      mergeMaterialEdits(materialDocs[0], materialOverrides),
+      looseImages,
+      materialOverrides,
+      materialTextureSuggestions
+    )
+  : undefined;
 const report = summarize(manifest, assets, models, graphs, looseImages, materialOverrides, objectOverrides);
 const optimizationReport = createOptimizationReport(report);
 const finalReport = {
   ...report,
+  materialTextureSuggestionCount: materialTextureSuggestions.length,
+  materialTextureSuggestions: materialTextureSuggestions.slice(0, 40),
   publishReadiness: createPublishReadiness(manifest, report, optimizationReport)
 };
 
@@ -3444,13 +3461,7 @@ if (writeStats) {
       `${JSON.stringify(objectsDocument, null, 2)}\n`
     );
   }
-  if (materialDocs[0]) {
-    const existingMaterials = await readJsonIfExists(path.resolve(bundleDir, "materials.json"));
-    const materialsDocument = applyLooseTextureSuggestions(
-      mergeMaterialEdits(materialDocs[0], existingMaterials),
-      looseImages,
-      existingMaterials
-    );
+  if (materialsDocument) {
     await writeFile(
       path.resolve(bundleDir, "materials.json"),
       `${JSON.stringify(materialsDocument, null, 2)}\n`

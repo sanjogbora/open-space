@@ -256,6 +256,13 @@ interface BundleStats {
     source: string;
     bytes: number;
   }[];
+  materialTextureSuggestionCount?: number;
+  materialTextureSuggestions?: readonly {
+    materialName: string;
+    field: MaterialTextureField;
+    source: string;
+    score: number;
+  }[];
   models?: readonly {
     format: string;
     embeddedImageCount?: number;
@@ -4209,6 +4216,9 @@ function App() {
       const repairNotes = [
         repair?.copied ? `Copied ${repair.copied} missing texture resource(s).` : "",
         repair?.copiedPaths?.[0] ? `Example: ${repair.copiedPaths[0].source} -> ${repair.copiedPaths[0].target}.` : "",
+        result.stats.materialTextureSuggestionCount
+          ? `Mapped ${result.stats.materialTextureSuggestionCount} loose texture(s) to material fields.`
+          : "",
         repair?.skippedAmbiguous ? `Skipped ${repair.skippedAmbiguous} ambiguous same-name texture match(es).` : "",
         repair?.ambiguousPaths?.[0]
           ? `Ambiguous: ${repair.ambiguousPaths[0].target} matched ${repair.ambiguousPaths[0].candidates.slice(0, 3).join(", ")}.`
@@ -9178,8 +9188,13 @@ function AssetHealth({ stats }: { stats: BundleStats }) {
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
   const looseImages = stats.looseImages ?? [];
+  const textureSuggestions = stats.materialTextureSuggestions ?? [];
   const hasDetails =
-    missingAssets.length > 0 || missingResources.length > 0 || looseImages.length > 0 || externalResources.length > 0;
+    missingAssets.length > 0 ||
+    missingResources.length > 0 ||
+    looseImages.length > 0 ||
+    textureSuggestions.length > 0 ||
+    externalResources.length > 0;
 
   if (!hasDetails) {
     return (
@@ -9215,6 +9230,16 @@ function AssetHealth({ stats }: { stats: BundleStats }) {
           {looseImages.slice(0, 5).map((image) => (
             <code key={image.source}>
               {image.source} · {formatBytes(image.bytes)}
+            </code>
+          ))}
+        </div>
+      )}
+      {textureSuggestions.length > 0 && (
+        <div className="asset-health-section">
+          <span>Auto texture mappings</span>
+          {textureSuggestions.slice(0, 5).map((suggestion) => (
+            <code key={`${suggestion.materialName}-${suggestion.field}-${suggestion.source}`}>
+              {suggestion.materialName}: {materialTextureFieldLabels[suggestion.field]} - {suggestion.source}
             </code>
           ))}
         </div>
