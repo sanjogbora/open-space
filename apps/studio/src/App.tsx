@@ -3379,43 +3379,70 @@ function App() {
         ? Number(clampNumber(routeDistance * 0.36, 1.35, 2.6).toFixed(3))
         : 1.35;
       const passCenterOffset = !isWalk && hasDirection ? Math.min(0.65, routeDistance * 0.22) : 0;
+      const targetPoint: Vec3 = [point[0], floorY, point[2]];
+      const sourcePoint: Vec3 | undefined = from ? [from[0], floorY, from[2]] : undefined;
+      const existingWalkZones = enabledNavigationZones(navigation, "walk");
+      const sourceWalkZone = sourcePoint
+        ? existingWalkZones.find((walkZone) => pointInNavigationZone(walkZone, sourcePoint, 0.4))
+        : undefined;
+      const targetWalkZone = existingWalkZones.find((walkZone) => pointInNavigationZone(walkZone, targetPoint, 0.4));
+      const targetWalkPatch: NavigationZone | undefined =
+        kind === "pass" && !targetWalkZone
+          ? {
+              id: `walk-repair-${idSuffix}`,
+              label: "Target walk repair",
+              kind: "walk",
+              center: [Number(point[0].toFixed(3)), Number(floorY.toFixed(3)), Number(point[2].toFixed(3))],
+              size: [2.2, 0.08, 2.2],
+              rotationY: 0,
+              enabled: true,
+              source: "authored"
+            }
+          : undefined;
+      const sourceWalkPatch: NavigationZone | undefined =
+        kind === "pass" && sourcePoint && !sourceWalkZone && routeDistance > 1.2
+          ? {
+              id: `walk-source-repair-${idSuffix}`,
+              label: "Source walk repair",
+              kind: "walk",
+              center: [Number(sourcePoint[0].toFixed(3)), Number(floorY.toFixed(3)), Number(sourcePoint[2].toFixed(3))],
+              size: [2.2, 0.08, 2.2],
+              rotationY: 0,
+              enabled: true,
+              source: "authored"
+            }
+          : undefined;
+      const bridgeFrom = sourceWalkZone ?? sourceWalkPatch;
+      const bridgeTo = targetWalkZone ?? targetWalkPatch;
       const zoneCenter: Vec3 = [
         Number((point[0] - unitX * passCenterOffset).toFixed(3)),
         isWalk ? Number(floorY.toFixed(3)) : Math.max(0.8, navigation.cameraHeight * 0.55),
         Number((point[2] - unitZ * passCenterOffset).toFixed(3))
       ];
-      const zone: NavigationZone = {
-        id: `${kind}-repair-${idSuffix}`,
-        label: isWalk ? "Walk repair" : "Door pass repair",
-        kind,
-        center: zoneCenter,
-        size: isWalk
-          ? [2.2, 0.08, 2.2]
-          : [0.9, Math.max(1.8, navigation.cameraHeight + 0.6), passLength],
-        rotationY,
-        enabled: true,
-        source: "authored"
-      };
-      const needsTargetWalkPatch =
-        kind === "pass" &&
-        !enabledNavigationZones(navigation, "walk").some((walkZone) =>
-          pointInNavigationZone(walkZone, [point[0], floorY, point[2]], 0.35)
-        );
-      const targetWalkPatch: NavigationZone | undefined = needsTargetWalkPatch
-        ? {
-            id: `walk-repair-${idSuffix}`,
-            label: "Target walk repair",
-            kind: "walk",
-            center: [Number(point[0].toFixed(3)), Number(floorY.toFixed(3)), Number(point[2].toFixed(3))],
-            size: [2.2, 0.08, 2.2],
-            rotationY: 0,
-            enabled: true,
-            source: "authored"
-          }
-        : undefined;
+      const zone: NavigationZone =
+        kind === "pass" && bridgeFrom && bridgeTo && bridgeFrom.id !== bridgeTo.id
+          ? {
+              ...createBridgePassZone(bridgeFrom, bridgeTo, Number(idSuffix), navigation.cameraHeight),
+              id: `pass-repair-${idSuffix}`,
+              label: "Door pass repair",
+              source: "authored"
+            }
+          : {
+              id: `${kind}-repair-${idSuffix}`,
+              label: isWalk ? "Walk repair" : "Door pass repair",
+              kind,
+              center: zoneCenter,
+              size: isWalk
+                ? [2.2, 0.08, 2.2]
+                : [0.9, Math.max(1.8, navigation.cameraHeight + 0.6), passLength],
+              rotationY,
+              enabled: true,
+              source: "authored"
+            };
+      const patches = [sourceWalkPatch, targetWalkPatch].filter((patch): patch is NavigationZone => Boolean(patch));
       return {
         ...navigation,
-        zones: targetWalkPatch ? [...zones, zone, targetWalkPatch] : [...zones, zone]
+        zones: [...zones, ...patches, zone]
       };
     });
     setRepairSummary(
