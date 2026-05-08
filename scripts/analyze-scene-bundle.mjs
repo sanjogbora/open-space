@@ -1306,12 +1306,10 @@ function mergeMaterialEdits(generated, existing) {
       if (!previous) {
         return material;
       }
+      const { id: _previousId, name: _previousName, ...previousEdits } = previous;
       return {
         ...material,
-        ...(previous.baseColor ? { baseColor: previous.baseColor } : {}),
-        ...(typeof previous.roughness === "number" ? { roughness: previous.roughness } : {}),
-        ...(typeof previous.metalness === "number" ? { metalness: previous.metalness } : {}),
-        ...(typeof previous.opacity === "number" ? { opacity: previous.opacity } : {})
+        ...previousEdits
       };
     })
   };
