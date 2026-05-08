@@ -2004,7 +2004,7 @@ export class WalkthroughViewer {
 
     const originProbe = origin ? this.navigationProbePosition(origin) : undefined;
     const originBlockedBlockers = originProbe ? this.collisionBlockersAtPosition(originProbe) : [];
-    const bridgePassesInferredBlockers = Boolean(
+    const bridgePassesObjectBlockers = Boolean(
       originProbe && this.isPassZoneBridgeSegment(originProbe, candidate)
     );
     const blockedBlockers = this.collisionBlockersAtPosition(candidate);
@@ -2014,7 +2014,8 @@ export class WalkthroughViewer {
     if (originProbe) {
       const sweptBlocker = this.navigationSegmentBlocker(originProbe, candidate, {
         ignoreBlockers: originBlockedBlockers,
-        ignoreInferredBlockers: bridgePassesInferredBlockers,
+        ignoreInferredBlockers: bridgePassesObjectBlockers,
+        ignoreNonAuthoredBlockers: bridgePassesObjectBlockers,
         authoredOnly: insidePassZone
       });
       if (sweptBlocker) {
@@ -2036,8 +2037,8 @@ export class WalkthroughViewer {
         : { reason: "blocked-collision", point: candidate.clone() };
     }
     if (
-      effectiveBlockers.every((blocker) => blocker.kind === "inferred") &&
-      bridgePassesInferredBlockers
+      effectiveBlockers.every((blocker) => blocker.kind !== "authored") &&
+      bridgePassesObjectBlockers
     ) {
       return undefined;
     }
@@ -2053,6 +2054,7 @@ export class WalkthroughViewer {
     options: {
       ignoreBlockers?: readonly CollisionBlocker[];
       ignoreInferredBlockers?: boolean;
+      ignoreNonAuthoredBlockers?: boolean;
       authoredOnly?: boolean;
     } = {}
   ): CollisionBlocker | undefined {
@@ -2069,6 +2071,9 @@ export class WalkthroughViewer {
         return false;
       }
       if (options.authoredOnly && blocker.kind !== "authored") {
+        return false;
+      }
+      if (options.ignoreNonAuthoredBlockers && blocker.kind !== "authored") {
         return false;
       }
       if (options.ignoreInferredBlockers && blocker.kind === "inferred") {
