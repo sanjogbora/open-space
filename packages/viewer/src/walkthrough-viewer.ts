@@ -3151,6 +3151,7 @@ export class WalkthroughViewer {
     ];
     const direction = new THREE.Vector3(0, -1, 0);
     const raycaster = new THREE.Raycaster(undefined, direction, 0, Math.max(4, this.cameraHeight + 3));
+    let fallbackFloorHit: THREE.Intersection | undefined;
     for (const offset of probes) {
       const origin = hit.point.clone().add(offset);
       origin.y = Math.max(hit.point.y + 1.1, this.camera.position.y + 0.25);
@@ -3159,10 +3160,33 @@ export class WalkthroughViewer {
         .intersectObjects(this.walkableMeshes, true)
         .find((candidate) => this.isWalkableHit(candidate));
       if (floorHit) {
-        return floorHit;
+        fallbackFloorHit ??= floorHit;
+        if (this.floorHitHasReachableTarget(floorHit)) {
+          return floorHit;
+        }
       }
     }
-    return undefined;
+    return fallbackFloorHit;
+  }
+
+  private floorHitHasReachableTarget(floorHit: THREE.Intersection): boolean {
+    const target = floorHit.point.clone();
+    target.y = floorHit.point.y + this.cameraHeight;
+    if (this.minBounds && this.maxBounds) {
+      clampToBounds(target, this.minBounds, this.maxBounds);
+    }
+    const failure = this.navigationFailureDetail(target, this.camera.position);
+    if (failure) {
+      if (
+        (failure.reason === "blocked-collision" || failure.reason === "blocked-step") &&
+        this.findNavigationRoute(target, this.camera.position)
+      ) {
+        return true;
+      }
+      return Boolean(this.findReachableTargetNear(target, this.camera.position));
+    }
+    return !this.navigationRouteFailureDetail(target, this.camera.position) ||
+      Boolean(this.findNavigationRoute(target, this.camera.position));
   }
 
   private findWalkableHitBeyondPortalObject(
