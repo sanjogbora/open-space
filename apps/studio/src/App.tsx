@@ -1674,26 +1674,70 @@ function createRoomFromView(view: SceneView, index: number): RoomDefinition {
   };
 }
 
-function createRoomFromNavigationZone(
-  zone: NavigationZone,
+function navigationZoneArea(zone: NavigationZone): number {
+  const aabb = navigationZoneAabb(zone);
+  return Math.max(0.01, aabb.maxX - aabb.minX) * Math.max(0.01, aabb.maxZ - aabb.minZ);
+}
+
+function mergeNavigationAabbs(zones: readonly NavigationZone[]) {
+  const boxes = zones.map(navigationZoneAabb);
+  return {
+    minX: Math.min(...boxes.map((box) => box.minX)),
+    maxX: Math.max(...boxes.map((box) => box.maxX)),
+    minZ: Math.min(...boxes.map((box) => box.minZ)),
+    maxZ: Math.max(...boxes.map((box) => box.maxZ))
+  };
+}
+
+function createRoomFromNavigationZoneGroup(
+  zones: readonly NavigationZone[],
   index: number,
   views: readonly SceneView[]
 ): RoomDefinition {
-  const aabb = navigationZoneAabb(zone);
-  const linkedView = views.find((view) => view.kind === "walk" && pointInNavigationZone(zone, view.position, 0.35));
+  const sortedZones = [...zones].sort((a, b) => a.id.localeCompare(b.id));
+  const aabb = mergeNavigationAabbs(sortedZones);
+  const center: Vec3 = [
+    (aabb.minX + aabb.maxX) / 2,
+    sortedZones.reduce((sum, zone) => sum + zone.center[1], 0) / sortedZones.length,
+    (aabb.minZ + aabb.maxZ) / 2
+  ];
+  const linkedView = views.find((view) =>
+    view.kind === "walk" && sortedZones.some((zone) => pointInNavigationZone(zone, view.position, 0.35))
+  );
+  const namedZone = sortedZones.find((zone) => zone.label && !/^walk/i.test(zone.label));
   const width = Math.max(0.01, aabb.maxX - aabb.minX);
   const depth = Math.max(0.01, aabb.maxZ - aabb.minZ);
+  const idSource = sortedZones.map((zone) => zone.id).join("-");
   return {
-    id: `room-zone-${zone.id}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 72),
-    label: zone.label || `Room ${index}`,
+    id: `room-walk-${idSource}`.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 72),
+    label: linkedView?.label ?? namedZone?.label ?? `Room ${index}`,
     ...(linkedView ? { viewId: linkedView.id } : {}),
-    center: zone.center,
+    center,
     dimensions: `${width.toFixed(1)}m x ${depth.toFixed(1)}m`,
     bounds: {
-      min: [aabb.minX, zone.center[1] - zone.size[1] / 2, aabb.minZ],
-      max: [aabb.maxX, zone.center[1] + zone.size[1] / 2, aabb.maxZ]
+      min: [aabb.minX, Math.min(...sortedZones.map((zone) => zone.center[1] - zone.size[1] / 2)), aabb.minZ],
+      max: [aabb.maxX, Math.max(...sortedZones.map((zone) => zone.center[1] + zone.size[1] / 2)), aabb.maxZ]
     }
   };
+}
+
+function createRoomsFromNavigationZones(
+  zones: readonly NavigationZone[],
+  views: readonly SceneView[]
+): RoomDefinition[] {
+  const walkViews = views.filter((view) => view.kind === "walk");
+  const roomZones = zones.filter(
+    (zone) =>
+      navigationZoneArea(zone) >= 0.9 ||
+      walkViews.some((view) => pointInNavigationZone(zone, view.position, 0.35))
+  );
+  return navigationComponents(roomZones)
+    .sort((a, b) => {
+      const boxA = mergeNavigationAabbs(a);
+      const boxB = mergeNavigationAabbs(b);
+      return boxA.minZ - boxB.minZ || boxA.minX - boxB.minX;
+    })
+    .map((component, index) => createRoomFromNavigationZoneGroup(component, index + 1, views));
 }
 
 function createNavigationZone(
@@ -4410,8 +4454,12 @@ function App() {
       const existingRooms = current.rooms ?? [];
       const usedRoomIds = new Set(existingRooms.map((room) => room.id));
       const nextRooms = [...existingRooms];
-      walkZones.forEach((zone, index) => {
-        const room = createRoomFromNavigationZone(zone, index + 1, current.views);
+      const generatedRooms = createRoomsFromNavigationZones(walkZones, current.views);
+      if (generatedRooms.length === 0) {
+        setRepairSummary("No room-sized walk areas found. Add a walk view or draw a larger walk patch first.");
+        return current;
+      }
+      generatedRooms.forEach((room) => {
         const existingIndex = nextRooms.findIndex((item) => item.id === room.id);
         if (existingIndex >= 0) {
           const existingRoom = nextRooms[existingIndex];
@@ -4449,7 +4497,7 @@ function App() {
         nextRooms.push({ ...room, id: roomId });
       });
       window.setTimeout(() => setSelectedRoomId(nextRooms[0]?.id ?? ""), 0);
-      setRepairSummary(`Synced ${walkZones.length} walk area(s) into room map regions.`);
+      setRepairSummary(`Synced ${walkZones.length} walk area(s) into ${generatedRooms.length} room region(s).`);
       return {
         ...current,
         rooms: nextRooms
