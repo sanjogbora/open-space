@@ -5317,6 +5317,7 @@ function App() {
                 onOptimize={() => void optimizeProject()}
                 onBake={() => void bakeLightmaps()}
                 onEnvironment={() => setSelectedTab("environment")}
+                onMaterials={() => setSelectedTab("materials")}
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
               />
@@ -9118,6 +9119,7 @@ function DiagnosticList({
 type ImportNextStepAction =
   | "repair"
   | "environment"
+  | "materials"
   | "navigation"
   | "rooms"
   | "optimize"
@@ -9136,11 +9138,22 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   if (
     [
       "dominant-flat-plane",
-      "dominant-green-placeholder-material",
       "initial-view-on-dominant-plane",
     ].includes(code)
   ) {
     return "environment";
+  }
+  if (
+    [
+      "dominant-green-placeholder-material",
+      "model-has-no-texture-images",
+      "loose-textures-not-referenced",
+      "case-mismatched-model-resources",
+      "embedded-texture-decode-failed",
+      "sidecar-texture-decode-failed"
+    ].includes(code)
+  ) {
+    return "materials";
   }
   if (
     [
@@ -9201,9 +9214,6 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   }
   if (
     [
-      "model-has-no-texture-images",
-      "loose-textures-not-referenced",
-      "case-mismatched-model-resources",
       "malformed-model",
       "invalid-default-scene",
       "default-scene-has-no-renderable-meshes",
@@ -9212,8 +9222,6 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "invalid-node-mesh-references",
       "stale-object-overrides",
       "invalid-object-navigation-behavior",
-      "embedded-texture-decode-failed",
-      "sidecar-texture-decode-failed",
       "unsupported-required-extensions"
     ].includes(code)
   ) {
@@ -9263,6 +9271,14 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
       button: "Open Environment"
     };
   }
+  if (action === "materials") {
+    return {
+      action,
+      title: "Repair materials",
+      detail: "Open Materials to inspect missing, loose, broken, or placeholder texture assignments before judging the model quality.",
+      button: "Open Materials"
+    };
+  }
   if (action === "navigation") {
     return {
       action,
@@ -9298,6 +9314,7 @@ function ImportNextSteps({
   onOptimize,
   onBake,
   onEnvironment,
+  onMaterials,
   onNavigation,
   onRooms
 }: {
@@ -9311,6 +9328,7 @@ function ImportNextSteps({
   onOptimize: () => void;
   onBake: () => void;
   onEnvironment: () => void;
+  onMaterials: () => void;
   onNavigation: () => void;
   onRooms: () => void;
 }) {
@@ -9340,6 +9358,8 @@ function ImportNextSteps({
             ? onRepair
             : step.action === "environment"
               ? onEnvironment
+            : step.action === "materials"
+              ? onMaterials
             : step.action === "navigation"
               ? onNavigation
               : step.action === "rooms"
@@ -9360,6 +9380,7 @@ function ImportNextSteps({
             <button type="button" className="button secondary" disabled={disabled} onClick={onClick}>
               {step.action === "repair" && <Wrench size={15} aria-hidden="true" />}
               {step.action === "environment" && <Globe2 size={15} aria-hidden="true" />}
+              {step.action === "materials" && <Palette size={15} aria-hidden="true" />}
               {step.action === "navigation" && <MapPin size={15} aria-hidden="true" />}
               {step.action === "rooms" && <Layers3 size={15} aria-hidden="true" />}
               {step.action === "optimize" && <Activity size={15} aria-hidden="true" />}
