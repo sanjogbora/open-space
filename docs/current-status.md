@@ -35,6 +35,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Analyzer now reports missing or partial room maps and routes the import next step directly to Rooms when room labels, floorplan areas, or view links need setup.
 - Import repair now builds room entries from the final generated walk zones as well as semantic room candidates, giving repaired uploads better room bounds and floorplan areas automatically.
 - Bundle analysis warns about duplicate object/material names that can make interaction targeting ambiguous after import.
+- Bundle analysis now warns when saved object overrides are stale after reimport or contain invalid navigation behavior values.
 - Viewer initial-camera repair avoids likely exterior/grass planes when it can recover to a better navigation surface.
 - Viewer doorway recovery treats named/transparent door panels as portal surfaces, then validates the floor beyond through normal bounds and route checks.
 - Bundle analysis warns when the first camera view appears to start on a dominant exterior/terrain plane.

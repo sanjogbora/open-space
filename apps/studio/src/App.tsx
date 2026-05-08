@@ -8320,6 +8320,8 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "invalid-scene-node-references",
       "invalid-node-child-references",
       "invalid-node-mesh-references",
+      "stale-object-overrides",
+      "invalid-object-navigation-behavior",
       "embedded-texture-decode-failed",
       "sidecar-texture-decode-failed",
       "unsupported-required-extensions"

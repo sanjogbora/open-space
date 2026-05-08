@@ -2237,6 +2237,26 @@ function createDiagnostics(manifest, report, graphs) {
     });
   }
 
+  if ((report.staleObjectOverrideCount ?? 0) > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "stale-object-overrides",
+      title: "Object edits reference missing model objects",
+      message: `${report.staleObjectOverrideCount} object override(s) no longer match the current model graph by id or name.`,
+      action: "Re-run analysis with write enabled to prune stale object edits, then reapply any intended visibility or navigation behavior changes."
+    });
+  }
+
+  if ((report.invalidObjectNavigationBehaviorCount ?? 0) > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "invalid-object-navigation-behavior",
+      title: "Object navigation behavior values are invalid",
+      message: `${report.invalidObjectNavigationBehaviorCount} object override(s) use a navigation behavior other than default, walk, collision, or ignore.`,
+      action: "Open Objects and choose a valid navigation role before publishing."
+    });
+  }
+
   if (undersizedBufferCount > 0) {
     diagnostics.push({
       severity: "error",
@@ -2781,7 +2801,7 @@ function createDiagnostics(manifest, report, graphs) {
   return diagnostics;
 }
 
-function summarize(manifest, assets, models, graphs, looseImages, materialOverrides) {
+function summarize(manifest, assets, models, graphs, looseImages, materialOverrides, objectOverrides) {
   const totalBytes = assets.reduce((sum, asset) => sum + asset.bytes, 0);
   const missingAssetCount = assets.filter((asset) => !asset.exists).length;
   const modelBytes = assets
@@ -2798,6 +2818,16 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
   const textureCount = models.reduce((sum, model) => sum + (model.textureCount ?? 0), 0);
   const imageCount = models.reduce((sum, model) => sum + (model.imageCount ?? 0), 0);
   const lightmapMaterials = (materialOverrides?.materials ?? []).filter((material) => material?.lightMapUrl);
+  const objectOverrideList = objectOverrides?.objects ?? [];
+  const graphNodeNames = new Set((graphs[0]?.nodes ?? []).map((node) => node.name).filter(Boolean));
+  const graphNodeIds = new Set((graphs[0]?.nodes ?? []).map((node) => node.id).filter(Boolean));
+  const staleObjectOverrideCount = objectOverrideList.filter(
+    (object) => !graphNodeNames.has(object.name) && !graphNodeIds.has(object.id)
+  ).length;
+  const invalidObjectNavigationBehaviorCount = objectOverrideList.filter(
+    (object) =>
+      object.navigationBehavior !== undefined && !isObjectNavigationBehavior(object.navigationBehavior)
+  ).length;
   const secondaryUvLightmapMaterialCount = lightmapMaterials.filter(
     (material) => material.lightMapUvSet !== 0
   ).length;
@@ -2887,6 +2917,9 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     imageCount,
     lightmapMaterialCount: lightmapMaterials.length,
     secondaryUvLightmapMaterialCount,
+    objectOverrideCount: objectOverrideList.length,
+    staleObjectOverrideCount,
+    invalidObjectNavigationBehaviorCount,
     maxTextureDimension,
     oversizedTextureCount,
     embeddedImageCount: models.reduce((sum, model) => sum + (model.embeddedImageCount ?? 0), 0),
@@ -3186,7 +3219,9 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "video-textures-missing-target",
     "video-textures-target-missing",
     "duplicate-node-names",
-    "duplicate-material-names"
+    "duplicate-material-names",
+    "stale-object-overrides",
+    "invalid-object-navigation-behavior"
   ]);
   for (const diagnostic of diagnostics) {
     if (!publishWarningDiagnostics.has(diagnostic.code)) {
@@ -3238,7 +3273,8 @@ const graphs = (await Promise.all(assets.map(modelGraph))).filter(Boolean);
 const materialDocs = (await Promise.all(assets.map(modelMaterials))).filter(Boolean);
 const looseImages = await looseBundleImages(assets, models);
 const materialOverrides = await readJsonIfExists(path.resolve(bundleDir, "materials.json"));
-const report = summarize(manifest, assets, models, graphs, looseImages, materialOverrides);
+const objectOverrides = await readJsonIfExists(path.resolve(bundleDir, "objects.json"));
+const report = summarize(manifest, assets, models, graphs, looseImages, materialOverrides, objectOverrides);
 const optimizationReport = createOptimizationReport(report);
 const finalReport = {
   ...report,
