@@ -32,6 +32,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer video textures can now target material slots inside multi-material meshes and pause distance-triggered videos while the camera is outside the configured trigger range.
 - Studio surfaces room/floorplan mapping status with room counts, linked walk views, and one-click room sync.
 - Studio Rooms can now sync authored walk areas into room map regions, so floorplan areas can be generated from the navigation zones users draw.
+- Automatic room/floorplan generation now avoids using object labels like plants, fans, screens, and furniture as room names.
 - Viewer room lists now appear as a top-view room index tied to the active top/floor-plan view instead of cluttering walk mode.
 - Analyzer now reports missing or partial room maps and routes the import next step directly to Rooms when room labels, floorplan areas, or view links need setup.
 - Import repair now builds room entries from the final generated walk zones as well as semantic room candidates, giving repaired uploads better room bounds and floorplan areas automatically.
@@ -110,6 +111,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer supports in-viewport object picking with object/material details.
 - Studio Interactions can create and edit hotspots, external scene links, and object toggles.
 - Analyzer inspects embedded GLB image payloads for dimensions, invalid buffer references, and unsupported MIME types.
+- Analyzer now flags unsafe GLTF texture or buffer paths that escape the scene folder or use absolute local paths.
 - API upload validation rejects malformed GLB containers with broken lengths, truncated chunks, invalid JSON chunks, or non-glTF 2.0 assets.
 - Analyzer now flags invalid default-scene node links, node child links, and node mesh references that can make an otherwise uploadable GLB appear blank or partial.
 - API texture repair scores duplicate loose texture candidates by relative path and texture-folder context before copying.
@@ -120,6 +122,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import now routes navigation-specific diagnostics directly to the guided Controls editor instead of hiding them behind the generic repair action.
 - Studio Import now routes exterior/terrain context diagnostics directly to Environment and visual/texture diagnostics directly to Materials.
 - Studio/API expose Blender/Cycles lightmap bake jobs with quality presets, UV2 generation, generated lightmap assets, and material assignment.
+- Lightmap bake jobs now report generated lightmap URLs, resolutions, byte sizes, total lightmap bytes, and the exported lightmapped scene artifact in Studio.
 - Failed Blender/Cycles bakes return the bake job in the API error response so Studio can show the failed stage and job steps.
 
 Current limitations:
