@@ -960,6 +960,103 @@ function zoneBridgeGap(a: NavigationZone, b: NavigationZone): number {
   return Math.hypot(xGap, zGap);
 }
 
+function zoneBoxDistanceToPoint(zone: NavigationZone, point: Vec3): number {
+  const box = navigationZoneAabb(zone);
+  const dx = point[0] < box.minX ? box.minX - point[0] : point[0] > box.maxX ? point[0] - box.maxX : 0;
+  const dz = point[2] < box.minZ ? box.minZ - point[2] : point[2] > box.maxZ ? point[2] - box.maxZ : 0;
+  return Math.hypot(dx, dz);
+}
+
+function expandDoorPassToWalkZones(
+  passZone: NavigationZone,
+  walkZones: readonly NavigationZone[],
+  cameraHeight: number
+): NavigationZone {
+  if (walkZones.length < 2) {
+    return passZone;
+  }
+  const nearby = walkZones
+    .map((zone) => ({ zone, distance: zoneBoxDistanceToPoint(zone, passZone.center) }))
+    .filter((entry) => entry.distance <= Math.max(1.8, cameraHeight * 1.65))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 4)
+    .map((entry) => entry.zone);
+  if (nearby.length < 2) {
+    return passZone;
+  }
+
+  let bestBridge:
+    | {
+        boxA: ReturnType<typeof navigationZoneAabb>;
+        boxB: ReturnType<typeof navigationZoneAabb>;
+        xGap: number;
+        zGap: number;
+        xOverlap: number;
+        zOverlap: number;
+        score: number;
+      }
+    | undefined;
+  for (let aIndex = 0; aIndex < nearby.length; aIndex += 1) {
+    for (let bIndex = aIndex + 1; bIndex < nearby.length; bIndex += 1) {
+      const boxA = navigationZoneAabb(nearby[aIndex]!);
+      const boxB = navigationZoneAabb(nearby[bIndex]!);
+      const xGap = boxA.maxX < boxB.minX ? boxB.minX - boxA.maxX : boxB.maxX < boxA.minX ? boxA.minX - boxB.maxX : 0;
+      const zGap = boxA.maxZ < boxB.minZ ? boxB.minZ - boxA.maxZ : boxB.maxZ < boxA.minZ ? boxA.minZ - boxB.maxZ : 0;
+      const xOverlap = Math.max(0, Math.min(boxA.maxX, boxB.maxX) - Math.max(boxA.minX, boxB.minX));
+      const zOverlap = Math.max(0, Math.min(boxA.maxZ, boxB.maxZ) - Math.max(boxA.minZ, boxB.minZ));
+      const score = Math.min(xGap || 0, zGap || 0) - Math.max(xOverlap, zOverlap) * 0.15;
+      if (!bestBridge || score < bestBridge.score) {
+        bestBridge = { boxA, boxB, xGap, zGap, xOverlap, zOverlap, score };
+      }
+    }
+  }
+  if (!bestBridge || Math.max(bestBridge.xGap, bestBridge.zGap) > Math.max(2.6, cameraHeight * 1.7)) {
+    return passZone;
+  }
+
+  if (bestBridge.xGap > 0 && bestBridge.zOverlap >= 0.25) {
+    const left = bestBridge.boxA.maxX < bestBridge.boxB.minX ? bestBridge.boxA : bestBridge.boxB;
+    const right = left === bestBridge.boxA ? bestBridge.boxB : bestBridge.boxA;
+    const overlapMin = Math.max(bestBridge.boxA.minZ, bestBridge.boxB.minZ);
+    const overlapMax = Math.min(bestBridge.boxA.maxZ, bestBridge.boxB.maxZ);
+    return {
+      ...passZone,
+      center: [
+        Number(((left.maxX + right.minX) / 2).toFixed(3)),
+        Number(Math.max(0.8, cameraHeight * 0.55).toFixed(3)),
+        Number(clampNumber(passZone.center[2], overlapMin, overlapMax).toFixed(3))
+      ],
+      size: [
+        Number(Math.min(3.4, Math.max(passZone.size[0], bestBridge.xGap + 0.9)).toFixed(3)),
+        Number(Math.max(1.8, cameraHeight + 0.65).toFixed(3)),
+        Number(Math.min(2.4, Math.max(passZone.size[2], bestBridge.zOverlap + 0.45)).toFixed(3))
+      ]
+    };
+  }
+
+  if (bestBridge.zGap > 0 && bestBridge.xOverlap >= 0.25) {
+    const near = bestBridge.boxA.maxZ < bestBridge.boxB.minZ ? bestBridge.boxA : bestBridge.boxB;
+    const far = near === bestBridge.boxA ? bestBridge.boxB : bestBridge.boxA;
+    const overlapMin = Math.max(bestBridge.boxA.minX, bestBridge.boxB.minX);
+    const overlapMax = Math.min(bestBridge.boxA.maxX, bestBridge.boxB.maxX);
+    return {
+      ...passZone,
+      center: [
+        Number(clampNumber(passZone.center[0], overlapMin, overlapMax).toFixed(3)),
+        Number(Math.max(0.8, cameraHeight * 0.55).toFixed(3)),
+        Number(((near.maxZ + far.minZ) / 2).toFixed(3))
+      ],
+      size: [
+        Number(Math.min(2.4, Math.max(passZone.size[0], bestBridge.xOverlap + 0.45)).toFixed(3)),
+        Number(Math.max(1.8, cameraHeight + 0.65).toFixed(3)),
+        Number(Math.min(3.4, Math.max(passZone.size[2], bestBridge.zGap + 0.9)).toFixed(3))
+      ]
+    };
+  }
+
+  return passZone;
+}
+
 function nearestNavigationComponentBridge(
   connectedZones: readonly NavigationZone[],
   component: readonly NavigationZone[]
@@ -1357,6 +1454,29 @@ function doorPassScore(name: string): number {
     score -= 5;
   }
   return score;
+}
+
+function doorPassGeometryScore(bounds: NonNullable<SceneGraphDocument["nodes"][number]["bounds"]>, cameraHeight: number): number {
+  const size: Vec3 = [
+    Math.max(0.001, bounds.max[0] - bounds.min[0]),
+    Math.max(0.001, bounds.max[1] - bounds.min[1]),
+    Math.max(0.001, bounds.max[2] - bounds.min[2])
+  ];
+  const width = Math.max(size[0], size[2]);
+  const thickness = Math.min(size[0], size[2]);
+  const height = size[1];
+  const looksLikeDoorLeaf =
+    height >= Math.max(1.1, cameraHeight * 0.72) &&
+    height <= Math.max(3.4, cameraHeight * 2.2) &&
+    width >= 0.45 &&
+    width <= 2.3 &&
+    thickness <= Math.max(0.18, width * 0.18);
+  const looksLikeThreshold =
+    height <= 0.34 &&
+    width >= 0.65 &&
+    width <= 2.6 &&
+    thickness <= Math.max(0.28, width * 0.22);
+  return (looksLikeDoorLeaf ? 4 : 0) + (looksLikeThreshold ? 3 : 0);
 }
 
 function createView(index: number): SceneView {
@@ -2435,20 +2555,33 @@ function App() {
     const cameraHeight = manifest.navigation.cameraHeight;
     return sceneGraph.nodes
       .map((node) => {
-        const score = doorPassScore(`${node.name} ${node.meshName ?? ""}`);
-        if (!node.bounds || score <= 0) {
+        if (!node.bounds) {
           return null;
         }
-        const min: Vec3 = [
-          node.bounds.min[0] * modelScale,
-          node.bounds.min[1] * modelScale,
-          node.bounds.min[2] * modelScale
-        ];
-        const max: Vec3 = [
-          node.bounds.max[0] * modelScale,
-          node.bounds.max[1] * modelScale,
-          node.bounds.max[2] * modelScale
-        ];
+        const scaledBounds = {
+          min: [
+            node.bounds.min[0] * modelScale,
+            node.bounds.min[1] * modelScale,
+            node.bounds.min[2] * modelScale
+          ] as Vec3,
+          max: [
+            node.bounds.max[0] * modelScale,
+            node.bounds.max[1] * modelScale,
+            node.bounds.max[2] * modelScale
+          ] as Vec3
+        };
+        const searchName = `${node.name} ${node.meshName ?? ""}`;
+        const nameScore = doorPassScore(searchName);
+        const normalizedName = searchName.toLowerCase();
+        const geometryScore = /wall|partition|ceiling|roof|window|glass|handle|knob/.test(normalizedName)
+          ? 0
+          : doorPassGeometryScore(scaledBounds, cameraHeight);
+        const score = nameScore + geometryScore;
+        if (score <= 0) {
+          return null;
+        }
+        const min = scaledBounds.min;
+        const max = scaledBounds.max;
         const width = Math.max(0.1, max[0] - min[0]);
         const depth = Math.max(0.1, max[2] - min[2]);
         const center: Vec3 = [
@@ -2908,7 +3041,14 @@ function App() {
           suffix += 1;
         }
         usedIds.add(nextId);
-        zones.push(createDoorPassZoneFromCandidate(candidate, nextId, "generated"));
+        const walkZonesForDoorPass = enabledNavigationZones({ ...repairedNavigation, zones }, "walk");
+        zones.push(
+          expandDoorPassToWalkZones(
+            createDoorPassZoneFromCandidate(candidate, nextId, "generated"),
+            walkZonesForDoorPass,
+            navigation.cameraHeight
+          )
+        );
         detectedDoorPassCount += 1;
       });
 
@@ -3095,9 +3235,17 @@ function App() {
         nextId = `${id}-${suffix}`;
         suffix += 1;
       }
+      const walkZones = enabledNavigationZones(navigation, "walk");
       return {
         ...navigation,
-        zones: [...zones, createDoorPassZoneFromCandidate(candidate, nextId, "authored")]
+        zones: [
+          ...zones,
+          expandDoorPassToWalkZones(
+            createDoorPassZoneFromCandidate(candidate, nextId, "authored"),
+            walkZones,
+            navigation.cameraHeight
+          )
+        ]
       };
     });
     setNotice("saved");

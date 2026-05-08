@@ -1812,6 +1812,32 @@ function doorPassScore(name) {
   return score;
 }
 
+function doorPassGeometryScore(bounds, cameraHeight) {
+  if (!bounds) {
+    return 0;
+  }
+  const size = [
+    Math.max(0.001, bounds.max[0] - bounds.min[0]),
+    Math.max(0.001, bounds.max[1] - bounds.min[1]),
+    Math.max(0.001, bounds.max[2] - bounds.min[2])
+  ];
+  const width = Math.max(size[0], size[2]);
+  const thickness = Math.min(size[0], size[2]);
+  const height = size[1];
+  const looksLikeDoorLeaf =
+    height >= Math.max(1.1, cameraHeight * 0.72) &&
+    height <= Math.max(3.4, cameraHeight * 2.2) &&
+    width >= 0.45 &&
+    width <= 2.3 &&
+    thickness <= Math.max(0.18, width * 0.18);
+  const looksLikeThreshold =
+    height <= 0.34 &&
+    width >= 0.65 &&
+    width <= 2.6 &&
+    thickness <= Math.max(0.28, width * 0.22);
+  return (looksLikeDoorLeaf ? 4 : 0) + (looksLikeThreshold ? 3 : 0);
+}
+
 function zoneBoxDistanceToPoint(zone, point) {
   const box = navigationZoneBox(zone);
   const dx = point[0] < box.minX ? box.minX - point[0] : point[0] > box.maxX ? point[0] - box.maxX : 0;
@@ -1905,7 +1931,13 @@ function graphPassZoneCandidates(graph, modelScale, cameraHeight, walkZones = []
       if (!node.bounds) {
         return undefined;
       }
-      const score = doorPassScore(`${node.name} ${node.meshName ?? ""}`);
+      const searchName = `${node.name} ${node.meshName ?? ""}`;
+      const nameScore = doorPassScore(searchName);
+      const normalizedName = searchName.toLowerCase();
+      const geometryScore = /wall|partition|ceiling|roof|window|glass|handle|knob/.test(normalizedName)
+        ? 0
+        : doorPassGeometryScore(scaleBounds(node.bounds, modelScale), cameraHeight);
+      const score = nameScore + geometryScore;
       if (score <= 0) {
         return undefined;
       }
