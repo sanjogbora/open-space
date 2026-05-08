@@ -615,6 +615,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   let unsupportedImageMimeCount = 0;
   let nonTrianglePrimitiveCount = 0;
   let vertexColorPrimitiveCount = 0;
+  const materialTriangleCounts = new Array(materials.length).fill(0);
   const embeddedImages = [];
   const texturedMaterialIndices = new Set(
     materials
@@ -674,10 +675,20 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       const vertices = positionAccessor?.count ?? 0;
       vertexCount += vertices;
 
+      let primitiveTriangles = 0;
       if (primitive.mode === undefined || primitive.mode === 4) {
-        triangleCount += Math.floor((indexAccessor?.count ?? vertices) / 3);
+        primitiveTriangles = Math.floor((indexAccessor?.count ?? vertices) / 3);
+        triangleCount += primitiveTriangles;
       } else {
         nonTrianglePrimitiveCount += 1;
+      }
+      if (
+        primitiveTriangles > 0 &&
+        typeof primitive.material === "number" &&
+        primitive.material >= 0 &&
+        primitive.material < materialTriangleCounts.length
+      ) {
+        materialTriangleCounts[primitive.material] += primitiveTriangles;
       }
     }
   }
@@ -841,6 +852,23 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   }
 
   const sceneStats = defaultSceneStats(document);
+  const dominantMaterial = materialTriangleCounts
+    .map((count, index) => ({ count, index }))
+    .sort((a, b) => b.count - a.count)[0];
+  const dominantMaterialInfo =
+    dominantMaterial && dominantMaterial.count > 0 && triangleCount > 0
+      ? (() => {
+          const material = materials[dominantMaterial.index] ?? {};
+          return {
+            index: dominantMaterial.index,
+            name: material.name || `Material ${dominantMaterial.index}`,
+            triangleCount: dominantMaterial.count,
+            triangleShare: dominantMaterial.count / triangleCount,
+            textured: materialUsesTexture(material),
+            baseColor: factorToHex(material.pbrMetallicRoughness?.baseColorFactor)
+          };
+        })()
+      : undefined;
 
   return {
     format,
@@ -882,6 +910,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     embeddedImageCount: embeddedImages.length,
     nonTrianglePrimitiveCount,
     vertexColorPrimitiveCount,
+    ...(dominantMaterialInfo ? { dominantMaterial: dominantMaterialInfo } : {}),
     transparentMaterialCount: materials.filter(materialIsTransparent).length,
     doubleSidedMaterialCount: materials.filter((material) => material?.doubleSided === true).length,
     unlitMaterialCount: materials.filter((material) => Boolean(material?.extensions?.KHR_materials_unlit)).length,
@@ -2092,6 +2121,13 @@ function createDiagnostics(manifest, report, graphs) {
     0
   );
   const meshCount = report.models.reduce((sum, model) => sum + (model.meshCount ?? 0), 0);
+  const dominantUntexturedMaterials = report.models.filter(
+    (model) =>
+      model.dominantMaterial &&
+      model.dominantMaterial.triangleShare >= 0.68 &&
+      !model.dominantMaterial.textured &&
+      (model.triangleCount ?? 0) > 100
+  );
 
   if (parseFailures.length > 0) {
     diagnostics.push({
@@ -2550,6 +2586,16 @@ function createDiagnostics(manifest, report, graphs) {
       title: "Loose texture files detected",
       message: `${report.looseImageCount} image file(s) exist in the scene folder but are not referenced by the active model.`,
       action: "If these textures should appear in the model, export/upload the original GLTF with its referenced texture paths, or confirm the GLB already embeds the correct textures."
+    });
+  }
+  if (dominantUntexturedMaterials.length > 0) {
+    const dominant = dominantUntexturedMaterials[0].dominantMaterial;
+    diagnostics.push({
+      severity: "warning",
+      code: "dominant-untextured-material",
+      title: "One plain material dominates the model",
+      message: `${dominant.name} covers ${Math.round(dominant.triangleShare * 100)}% of analyzed triangles without an image texture${dominant.baseColor ? ` (${dominant.baseColor})` : ""}.`,
+      action: "If the online/reference viewer looks detailed, upload the original texture folder or re-export with embedded textures; otherwise map loose textures in Materials before publishing."
     });
   }
 
@@ -3309,6 +3355,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "loose-textures-not-referenced",
     "model-has-no-texture-images",
     "loose-texture-files",
+    "dominant-untextured-material",
     "oversized-texture-dimensions",
     "many-large-textures",
     "missing-texture-compression",
