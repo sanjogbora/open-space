@@ -2669,6 +2669,13 @@ function App() {
     () => (navigationRepairDraft ? navigationRepairRecommendation(navigationRepairDraft) : null),
     [navigationRepairDraft]
   );
+  const narrowBodyRepairRadius = useMemo(() => {
+    const radius = navigationRepairDraft?.bodyRadius ?? controlsDoc?.movement.collisionRadius;
+    if (navigationRepairDraft?.reason !== "blocked-collision" || typeof radius !== "number" || radius <= 0.22) {
+      return null;
+    }
+    return Number(clampNumber(radius - 0.06, 0.18, 0.24).toFixed(2));
+  }, [controlsDoc?.movement.collisionRadius, navigationRepairDraft?.bodyRadius, navigationRepairDraft?.reason]);
   const navigationRepairObjectMatch = useMemo(() => {
     if (!navigationRepairDraft?.blockerName || !objectsDoc) {
       return null;
@@ -3674,6 +3681,23 @@ function App() {
     });
     setBlockerNameDraft("");
     setRepairSummary(`Ignored ${trimmed} as navigation collision. Save changes, then retry the click in the viewer.`);
+    setNotice("saved");
+  };
+
+  const applyNarrowBodyRepair = () => {
+    if (typeof narrowBodyRepairRadius !== "number") {
+      return;
+    }
+    updateControls((current) => ({
+      ...current,
+      movement: {
+        ...current.movement,
+        collisionRadius: narrowBodyRepairRadius
+      }
+    }));
+    setRepairSummary(
+      `Body Radius set to ${narrowBodyRepairRadius.toFixed(2)}. Save changes, then retry the doorway click in the viewer.`
+    );
     setNotice("saved");
   };
 
@@ -7911,6 +7935,17 @@ function App() {
                             <strong>Not A Wall</strong>
                             <small>Use this only when the detected blocker should not stop movement.</small>
                           </button>
+                          {narrowBodyRepairRadius && (
+                            <button
+                              type="button"
+                              className="repair-action-button"
+                              onClick={applyNarrowBodyRepair}
+                            >
+                              <span>Narrow Opening</span>
+                              <strong>Body {narrowBodyRepairRadius.toFixed(2)}</strong>
+                              <small>Try this when a real doorway is valid but the camera body is too wide.</small>
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="repair-action-button"
