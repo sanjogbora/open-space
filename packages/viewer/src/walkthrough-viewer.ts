@@ -3220,7 +3220,8 @@ export class WalkthroughViewer {
         failureDetail.point ?? floorHit.point,
         undefined,
         failureDetail.blockerName,
-        failureDetail.blockerKind
+        failureDetail.blockerKind,
+        nextTarget
       );
       return true;
     }
@@ -3242,7 +3243,8 @@ export class WalkthroughViewer {
         bestFailureDetail.point ?? floorHit.point,
         undefined,
         bestFailureDetail.blockerName,
-        bestFailureDetail.blockerKind
+        bestFailureDetail.blockerKind,
+        nextTarget
       );
       return true;
     }
@@ -3450,7 +3452,8 @@ export class WalkthroughViewer {
     point?: THREE.Vector3,
     objectName?: string,
     blockerName?: string,
-    blockerKind?: CollisionBlocker["kind"]
+    blockerKind?: CollisionBlocker["kind"],
+    targetPoint?: THREE.Vector3
   ): void {
     this.options.onNavigationFailure?.({
       reason,
@@ -3458,6 +3461,7 @@ export class WalkthroughViewer {
       repairHint: this.navigationRepairHint(reason, blockerKind),
       repairAction: this.navigationRepairAction(reason, blockerKind),
       ...(point ? { point: [point.x, point.y, point.z] } : {}),
+      ...(targetPoint ? { targetPoint: [targetPoint.x, targetPoint.y, targetPoint.z] } : {}),
       cameraPosition: [this.camera.position.x, this.camera.position.y, this.camera.position.z],
       ...(objectName ? { objectName } : {}),
       ...(blockerName ? { blockerName } : {}),

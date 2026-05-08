@@ -150,6 +150,7 @@ interface NavigationRepairDraft {
   action?: string;
   hint?: string;
   point?: Vec3;
+  target?: Vec3;
   from?: Vec3;
 }
 
@@ -545,8 +546,9 @@ function initialNavigationRepairDraft(): NavigationRepairDraft | null {
   const action = params.get("action") ?? "";
   const hint = params.get("hint") ?? "";
   const point = parsePointParam(params.get("point"));
+  const target = parsePointParam(params.get("target"));
   const from = parsePointParam(params.get("from"));
-  if (!blockerName && !reason && !action && !hint && !point && !from) {
+  if (!blockerName && !reason && !action && !hint && !point && !target && !from) {
     return null;
   }
   return {
@@ -556,6 +558,7 @@ function initialNavigationRepairDraft(): NavigationRepairDraft | null {
     ...(action ? { action } : {}),
     ...(hint ? { hint } : {}),
     ...(point ? { point } : {}),
+    ...(target ? { target } : {}),
     ...(from ? { from } : {})
   };
 }
@@ -3362,14 +3365,15 @@ function App() {
     if (!point) {
       return;
     }
+    const repairTarget = navigationRepairDraft?.target ?? point;
     updateNavigation((navigation) => {
       const zones = [...(navigation.zones ?? [])];
       const idSuffix = `${Date.now()}`.slice(-6);
       const isWalk = kind === "walk";
       const floorY = navigation.bounds ? navigation.bounds.min[1] + 0.03 : 0.03;
       const from = navigationRepairDraft?.from;
-      const dx = from ? point[0] - from[0] : 0;
-      const dz = from ? point[2] - from[2] : 0;
+      const dx = from ? repairTarget[0] - from[0] : 0;
+      const dz = from ? repairTarget[2] - from[2] : 0;
       const routeDistance = Math.hypot(dx, dz);
       const hasDirection = routeDistance > 0.05;
       const unitX = hasDirection ? dx / routeDistance : 0;
@@ -3379,7 +3383,7 @@ function App() {
         ? Number(clampNumber(routeDistance * 0.36, 1.35, 2.6).toFixed(3))
         : 1.35;
       const passCenterOffset = !isWalk && hasDirection ? Math.min(0.65, routeDistance * 0.22) : 0;
-      const targetPoint: Vec3 = [point[0], floorY, point[2]];
+      const targetPoint: Vec3 = [repairTarget[0], floorY, repairTarget[2]];
       const sourcePoint: Vec3 | undefined = from ? [from[0], floorY, from[2]] : undefined;
       const existingWalkZones = enabledNavigationZones(navigation, "walk");
       const sourceWalkZone = sourcePoint
@@ -3392,7 +3396,7 @@ function App() {
               id: `walk-repair-${idSuffix}`,
               label: "Target walk repair",
               kind: "walk",
-              center: [Number(point[0].toFixed(3)), Number(floorY.toFixed(3)), Number(point[2].toFixed(3))],
+              center: [Number(repairTarget[0].toFixed(3)), Number(floorY.toFixed(3)), Number(repairTarget[2].toFixed(3))],
               size: [2.2, 0.08, 2.2],
               rotationY: 0,
               enabled: true,
@@ -7608,6 +7612,12 @@ function App() {
                             <div>
                               <dt>Point</dt>
                               <dd>{navigationRepairDraft.point.map((value) => value.toFixed(2)).join(", ")}</dd>
+                            </div>
+                          )}
+                          {navigationRepairDraft.target && (
+                            <div>
+                              <dt>Target</dt>
+                              <dd>{navigationRepairDraft.target.map((value) => value.toFixed(2)).join(", ")}</dd>
                             </div>
                           )}
                           {navigationRepairDraft.from && (

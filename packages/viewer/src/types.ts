@@ -52,6 +52,7 @@ export interface NavigationFailure {
   repairHint: string;
   repairAction: NavigationRepairAction;
   point?: [number, number, number];
+  targetPoint?: [number, number, number];
   cameraPosition?: [number, number, number];
   objectName?: string;
   blockerName?: string;

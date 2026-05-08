@@ -120,6 +120,9 @@ function studioRepairUrl(manifestUrl: string, failure: NavigationFailure): strin
   if (failure.point) {
     url.searchParams.set("point", failure.point.map((value) => value.toFixed(3)).join(","));
   }
+  if (failure.targetPoint) {
+    url.searchParams.set("target", failure.targetPoint.map((value) => value.toFixed(3)).join(","));
+  }
   if (failure.cameraPosition) {
     url.searchParams.set("from", failure.cameraPosition.map((value) => value.toFixed(3)).join(","));
   }
