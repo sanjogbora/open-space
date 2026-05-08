@@ -2004,6 +2004,10 @@ function projectAssetPath(projectId: string, asset: string): string {
   return `/scenes/${projectId}/${asset}`;
 }
 
+function canPreviewTextureAsset(source: string): boolean {
+  return /\.(avif|jpe?g|png|webp)$/i.test(source);
+}
+
 function draftKey(projectId: string, document: string): string {
   return `walkthrough-studio.${projectId}-${document}`;
 }
@@ -5311,6 +5315,7 @@ function App() {
                   </div>
                   <AssetHealth
                     stats={bundleStats}
+                    projectId={activeProjectId}
                     pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
                     onApplyTextureSuggestions={applyMaterialTextureSuggestions}
                   />
@@ -6881,6 +6886,14 @@ function App() {
                             }
                             onClick={() => applyMaterialTextureCandidate(selectedMaterial.id, candidate)}
                           >
+                            {canPreviewTextureAsset(candidate.source) && (
+                              <img
+                                className="texture-candidate-thumb"
+                                src={projectAssetPath(activeProjectId, candidate.source)}
+                                alt=""
+                                loading="lazy"
+                              />
+                            )}
                             <span>{candidate.source}</span>
                             <small>
                               Use as {materialTextureFieldLabels[candidate.field]} / {formatBytes(candidate.bytes)} / score{" "}
@@ -9295,10 +9308,12 @@ function ImportNextSteps({
 
 function AssetHealth({
   stats,
+  projectId,
   pendingTextureSuggestionCount = 0,
   onApplyTextureSuggestions
 }: {
   stats: BundleStats;
+  projectId: string;
   pendingTextureSuggestionCount?: number;
   onApplyTextureSuggestions?: () => void;
 }) {
@@ -9346,9 +9361,14 @@ function AssetHealth({
         <div className="asset-health-section">
           <span>Loose texture-folder images</span>
           {looseImages.slice(0, 5).map((image) => (
-            <code key={image.source}>
-              {image.source} · {formatBytes(image.bytes)}
-            </code>
+            <div key={image.source} className="asset-texture-row">
+              {canPreviewTextureAsset(image.source) && (
+                <img src={projectAssetPath(projectId, image.source)} alt="" loading="lazy" />
+              )}
+              <code>
+                {image.source} · {formatBytes(image.bytes)}
+              </code>
+            </div>
           ))}
         </div>
       )}
