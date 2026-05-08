@@ -68,6 +68,13 @@ type MovementToggle = "enabled" | "keyboard" | "clickToMove" | "dragLook";
 type NavigationPaintShape = "rectangle" | "polygon";
 type MaterialTextureField = "mapUrl" | "normalMapUrl" | "emissiveMapUrl" | "lightMapUrl";
 
+interface MaterialTextureCandidate {
+  source: string;
+  bytes: number;
+  field: MaterialTextureField;
+  score: number;
+}
+
 interface NavigationPolygonDraft {
   kind: NavigationZone["kind"];
   points: Vec2[];
@@ -87,6 +94,54 @@ const materialTextureFieldLabels: Record<MaterialTextureField, string> = {
   emissiveMapUrl: "emissive map",
   lightMapUrl: "lightmap"
 };
+
+function normalizeTextureMatchName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function inferTextureField(source: string): MaterialTextureField {
+  const normalized = normalizeTextureMatchName(source);
+  if (/\b(lightmap|light map|bake|baked|shadow)\b/.test(normalized)) {
+    return "lightMapUrl";
+  }
+  if (/\b(normal|nrm|bump)\b/.test(normalized)) {
+    return "normalMapUrl";
+  }
+  if (/\b(emissive|emission|emit|glow|screen|display)\b/.test(normalized)) {
+    return "emissiveMapUrl";
+  }
+  return "mapUrl";
+}
+
+function materialTextureCandidateScore(materialName: string, source: string): number {
+  const material = normalizeTextureMatchName(materialName);
+  const texture = normalizeTextureMatchName(source.split(/[\\/]/).pop() ?? source);
+  const pathName = normalizeTextureMatchName(source);
+  const materialTokens = material.split(" ").filter((token) => token.length >= 3);
+  let score = 0;
+  if (texture === material || pathName.endsWith(material)) {
+    score += 40;
+  }
+  for (const token of materialTokens) {
+    if (texture.includes(token)) {
+      score += 8;
+    } else if (pathName.includes(token)) {
+      score += 3;
+    }
+  }
+  if (/\b(base|basecolor|color|diffuse|albedo|map|texture)\b/.test(texture)) {
+    score += 4;
+  }
+  if (/\b(texture|textures|material|materials|maps)\b/.test(pathName)) {
+    score += 2;
+  }
+  return score;
+}
 
 interface NavigationRepairDraft {
   reason: string;
@@ -2627,6 +2682,20 @@ function App() {
     () => materialsDoc?.materials.find((material) => material.id === selectedMaterialId),
     [materialsDoc, selectedMaterialId]
   );
+  const selectedMaterialTextureCandidates = useMemo<MaterialTextureCandidate[]>(() => {
+    if (!selectedMaterial || !bundleStats?.looseImages) {
+      return [];
+    }
+    return bundleStats.looseImages
+      .map((image) => ({
+        source: image.source,
+        bytes: image.bytes,
+        field: inferTextureField(image.source),
+        score: materialTextureCandidateScore(selectedMaterial.name, image.source)
+      }))
+      .sort((a, b) => b.score - a.score || a.source.localeCompare(b.source))
+      .slice(0, 10);
+  }, [bundleStats?.looseImages, selectedMaterial]);
 
   const updateManifest = (updater: (manifest: SceneManifest) => SceneManifest) => {
     setManifest((current) => (current ? updater(current) : current));
@@ -4122,6 +4191,28 @@ function App() {
       setLightmapUploadState("error");
       setLightmapUploadError(error instanceof Error ? error.message : "Material texture upload failed.");
     }
+  };
+
+  const applyMaterialTextureCandidate = (
+    materialId: string,
+    candidate: MaterialTextureCandidate,
+    field = candidate.field
+  ) => {
+    updateMaterial(materialId, (material) => {
+      const next: MaterialOverride = {
+        ...material,
+        [field]: candidate.source
+      };
+      if (field === "lightMapUrl") {
+        next.lightMapIntensity = material.lightMapIntensity ?? 1;
+        next.lightMapUvSet = material.lightMapUvSet ?? 1;
+      }
+      if (field === "emissiveMapUrl") {
+        next.emissiveIntensity = material.emissiveIntensity ?? 1;
+      }
+      return next;
+    });
+    setNotice("saved");
   };
 
   const uploadVideoMedia = async (interactionId: string, file: File | undefined) => {
@@ -6429,6 +6520,33 @@ function App() {
 
                 <div className="object-detail">
                   <h3>Texture Maps</h3>
+                  {selectedMaterialTextureCandidates.length > 0 && (
+                    <div className="texture-candidate-panel">
+                      <div className="surface-mapper-heading">
+                        <strong>Loose texture candidates</strong>
+                        <small>{selectedMaterialTextureCandidates.length}</small>
+                      </div>
+                      <div className="surface-candidate-list">
+                        {selectedMaterialTextureCandidates.map((candidate) => (
+                          <button
+                            key={`${candidate.field}-${candidate.source}`}
+                            type="button"
+                            className={
+                              selectedMaterial[candidate.field] === candidate.source
+                                ? "surface-candidate active"
+                                : "surface-candidate"
+                            }
+                            onClick={() => applyMaterialTextureCandidate(selectedMaterial.id, candidate)}
+                          >
+                            <span>{candidate.source}</span>
+                            <small>
+                              Use as {materialTextureFieldLabels[candidate.field]} / {formatBytes(candidate.bytes)}
+                            </small>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="field-grid">
                     <label>
                       <span>Base Texture URL</span>
