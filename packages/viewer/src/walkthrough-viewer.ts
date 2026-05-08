@@ -175,6 +175,8 @@ export class WalkthroughViewer {
   private clickMoveVelocity = 0;
   private cameraTween: CameraTween | undefined;
   private stableFloorY: number | undefined;
+  private pendingFloorY: number | undefined;
+  private pendingFloorSamples = 0;
   private routeSearchFailureDetail: NavigationFailureDetail | undefined;
   private activeView: SceneView | undefined;
   private pointerDown: { x: number; y: number; time: number } | undefined;
@@ -294,6 +296,7 @@ export class WalkthroughViewer {
     this.movePath = [];
     this.moveMarker.visible = false;
     this.stableFloorY = undefined;
+    this.resetPendingFloorTransition();
     this.cameraTween = {
       fromPosition: this.camera.position.clone(),
       toPosition: this.toSceneVector(view.position, { preserveMeterY: true }),
@@ -1527,6 +1530,7 @@ export class WalkthroughViewer {
       this.cameraTarget.set(0, 1.35, 0);
     }
     this.stableFloorY = this.camera.position.y - this.cameraHeight;
+    this.resetPendingFloorTransition();
     this.updateAnglesFromTarget();
     this.camera.lookAt(this.cameraTarget);
   }
@@ -1621,6 +1625,7 @@ export class WalkthroughViewer {
         this.updateAnglesFromTarget();
         this.camera.lookAt(this.cameraTarget);
         this.stableFloorY = this.camera.position.y - this.cameraHeight;
+        this.resetPendingFloorTransition();
         return true;
       }
     }
@@ -1677,6 +1682,7 @@ export class WalkthroughViewer {
     this.updateAnglesFromTarget();
     this.camera.lookAt(this.cameraTarget);
     this.stableFloorY = this.camera.position.y - this.cameraHeight;
+    this.resetPendingFloorTransition();
   }
 
   private addLighting(): void {
@@ -1845,6 +1851,7 @@ export class WalkthroughViewer {
     if (flatCompletionDistance < 0.035 && verticalDistance < 0.12) {
       this.camera.position.copy(target);
       this.stableFloorY = target.y - this.cameraHeight;
+      this.resetPendingFloorTransition();
       this.clickMoveVelocity = 0;
       const nextWaypoint = this.movePath.shift();
       if (nextWaypoint) {
@@ -1981,10 +1988,7 @@ export class WalkthroughViewer {
     }
     const next = position.clone();
     const bumpTolerance = this.floorBumpTolerance();
-    const supportedStep =
-      heightDelta <= bumpTolerance ||
-      this.isSupportedFloorHeight(position, floorY, { referenceFloorY: originFloorY });
-    const targetFloorY = Math.abs(heightDelta) <= bumpTolerance || !supportedStep ? originFloorY : floorY;
+    const targetFloorY = this.floorHeightTargetForSample(position, floorY, originFloorY);
     const targetY = targetFloorY + this.cameraHeight;
     const floorHeightSmoothing = this.floorHeightSmoothing();
     const smoothing = Math.abs(heightDelta) <= bumpTolerance ? floorHeightSmoothing * 2.8 : floorHeightSmoothing;
@@ -1994,6 +1998,36 @@ export class WalkthroughViewer {
 
   private canOccupyPosition(position: THREE.Vector3, origin?: THREE.Vector3): boolean {
     return !this.navigationFailureDetail(position, origin);
+  }
+
+  private floorHeightTargetForSample(position: THREE.Vector3, floorY: number, referenceFloorY: number): number {
+    const bumpTolerance = this.floorBumpTolerance();
+    const levelDelta = floorY - referenceFloorY;
+    if (Math.abs(levelDelta) <= bumpTolerance) {
+      this.resetPendingFloorTransition();
+      return referenceFloorY;
+    }
+    if (!this.isSupportedFloorHeight(position, floorY, { referenceFloorY })) {
+      this.resetPendingFloorTransition();
+      return referenceFloorY;
+    }
+    const transitionTolerance = Math.max(0.08, bumpTolerance * 0.55);
+    if (
+      typeof this.pendingFloorY !== "number" ||
+      Math.abs(this.pendingFloorY - floorY) > transitionTolerance
+    ) {
+      this.pendingFloorY = floorY;
+      this.pendingFloorSamples = 1;
+    } else {
+      this.pendingFloorSamples += 1;
+    }
+    const requiredSamples = Math.abs(levelDelta) >= Math.max(0.55, this.cameraHeight * 0.32) ? 1 : 4;
+    return this.pendingFloorSamples >= requiredSamples ? floorY : referenceFloorY;
+  }
+
+  private resetPendingFloorTransition(): void {
+    this.pendingFloorY = undefined;
+    this.pendingFloorSamples = 0;
   }
 
   private navigationFailureDetail(
@@ -2942,11 +2976,7 @@ export class WalkthroughViewer {
     const previousFloorY = this.stableFloorY ?? currentFloorY;
     const bumpTolerance = this.floorBumpTolerance();
     const levelDelta = floorY - previousFloorY;
-    const maxStepUp = this.controls.maxStepUp ?? this.maxStepUp;
-    const supportedStep =
-      levelDelta <= bumpTolerance ||
-      this.isSupportedFloorHeight(this.camera.position, floorY, { referenceFloorY: previousFloorY });
-    const targetFloorY = Math.abs(levelDelta) <= bumpTolerance || !supportedStep ? previousFloorY : floorY;
+    const targetFloorY = this.floorHeightTargetForSample(this.camera.position, floorY, previousFloorY);
     const nextY = targetFloorY + this.cameraHeight;
     const difference = Math.abs(nextY - this.camera.position.y);
     if (difference <= Math.max(0.62, this.cameraHeight * 0.38)) {
