@@ -31,8 +31,8 @@ const defaultControlsDocument = {
     clickMoveSpeed: 1.05,
     maxStepUp: 0.38,
     maxStepDown: 0.72,
-    floorBumpTolerance: 0.36,
-    floorHeightSmoothing: 1.05,
+    floorBumpTolerance: 0.48,
+    floorHeightSmoothing: 0.9,
     lookSensitivityX: 0.004,
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8

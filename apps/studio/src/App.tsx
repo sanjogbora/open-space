@@ -541,8 +541,8 @@ const movementPresets: readonly {
       clickMoveSpeed: 1.05,
       maxStepUp: 0.38,
       maxStepDown: 0.72,
-      floorHeightSmoothing: 1.05,
-      floorBumpTolerance: 0.36
+      floorHeightSmoothing: 0.9,
+      floorBumpTolerance: 0.48
     }
   },
   {
@@ -7567,7 +7567,7 @@ function App() {
                       min={0.5}
                       max={8}
                       step={0.05}
-                      value={controlsDoc.movement.floorHeightSmoothing ?? 1.05}
+                      value={controlsDoc.movement.floorHeightSmoothing ?? 0.9}
                       onChange={(value) =>
                         updateControls((current) => ({
                           ...current,
@@ -7580,7 +7580,7 @@ function App() {
                       min={0.02}
                       max={0.8}
                       step={0.01}
-                      value={controlsDoc.movement.floorBumpTolerance ?? 0.36}
+                      value={controlsDoc.movement.floorBumpTolerance ?? 0.48}
                       onChange={(value) =>
                         updateControls((current) => ({
                           ...current,

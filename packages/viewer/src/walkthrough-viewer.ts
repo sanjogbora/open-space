@@ -149,8 +149,8 @@ export class WalkthroughViewer {
     clickMoveSpeed: 1.05,
     maxStepUp: 0.38,
     maxStepDown: 0.72,
-    floorBumpTolerance: 0.36,
-    floorHeightSmoothing: 1.05,
+    floorBumpTolerance: 0.48,
+    floorHeightSmoothing: 0.9,
     lookSensitivityX: 0.004,
     lookSensitivityY: 0.0035,
     clickMoveThresholdPx: 8
@@ -2007,6 +2007,10 @@ export class WalkthroughViewer {
       this.resetPendingFloorTransition();
       return referenceFloorY;
     }
+    if (Math.abs(levelDelta) <= Math.max(0.48, this.cameraHeight * 0.2)) {
+      this.resetPendingFloorTransition();
+      return referenceFloorY;
+    }
     if (!this.isSupportedFloorHeight(position, floorY, { referenceFloorY })) {
       this.resetPendingFloorTransition();
       return referenceFloorY;
@@ -3000,14 +3004,14 @@ export class WalkthroughViewer {
 
   private floorBumpTolerance(): number {
     return THREE.MathUtils.clamp(
-      this.controls.floorBumpTolerance ?? Math.max(0.36, this.cameraHeight * 0.14),
+      this.controls.floorBumpTolerance ?? Math.max(0.48, this.cameraHeight * 0.18),
       0.02,
       0.8
     );
   }
 
   private floorHeightSmoothing(): number {
-    return THREE.MathUtils.clamp(this.controls.floorHeightSmoothing ?? 1.05, 0.5, 8);
+    return THREE.MathUtils.clamp(this.controls.floorHeightSmoothing ?? 0.9, 0.5, 8);
   }
 
   private sampleGeometryFloorY(
