@@ -9188,7 +9188,12 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "loose-textures-not-referenced",
       "case-mismatched-model-resources",
       "embedded-texture-decode-failed",
-      "sidecar-texture-decode-failed"
+      "sidecar-texture-decode-failed",
+      "textured-primitives-missing-uvs",
+      "missing-uv-attributes",
+      "mostly-unlit-materials",
+      "vertex-colors-detected",
+      "dominant-untextured-material"
     ].includes(code)
   ) {
     return "materials";
