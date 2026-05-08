@@ -104,6 +104,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - API publishes versioned static scene bundles.
 - Studio has a Publish tab with draft URL, published URLs, embed snippets, and version history.
 - Published bundles include copy-ready S3/R2 deploy commands, including an opt-in per-asset cache-header pass for CDN-friendly immutable GLB/texture assets and revalidated manifests.
+- Studio Publish now exposes a copy-ready dry-run validation command before deploy commands, so deployment manifests, hashes, asset sizes, and quality gates can be checked before upload.
 - Published `deployment.json` now carries the analyzed publish quality gate, including readiness warnings and diagnostics used when the version was created.
 - The deploy script now refuses to deploy a bundle whose saved quality gate is blocked unless `--allow-blocked` is passed for internal testing.
 - The deploy script now maps WebAssembly, Basis, KTX2, AVIF, WebP, video, and GLB assets to explicit content types when applying per-asset S3 cache headers.

@@ -2081,6 +2081,11 @@ function publishedLocalDeployCommand(entry: PublishEntry): string {
   return `node scripts/deploy-published-bundle.mjs ${shellQuote(entry.deploymentPath)} --out=dist/published --viewer-base=https://viewer.example.com --public-base=https://cdn.example.com/open-space/${entry.version}/`;
 }
 
+function publishedValidateDeployCommand(entry: PublishEntry): string {
+  const command = publishedLocalDeployCommand(entry);
+  return command ? `${command} --dry-run` : "";
+}
+
 function publishedBucketDeployCommand(entry: PublishEntry): string {
   if (!entry.deploymentPath) {
     return "";
@@ -5701,6 +5706,18 @@ function App() {
                         <code>{publishedEmbedSnippet(entry, manifest.branding.clientName ?? manifest.branding.title)}</code>
                         {entry.deploymentPath && (
                           <div className="deploy-command-list">
+                            <div className="publish-row">
+                              <span>Validate bundle</span>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => void copyText(publishedValidateDeployCommand(entry))}
+                              >
+                                <Copy size={16} aria-hidden="true" />
+                                Copy
+                              </button>
+                            </div>
+                            <code>{publishedValidateDeployCommand(entry)}</code>
                             <div className="publish-row">
                               <span>Local deploy</span>
                               <button
