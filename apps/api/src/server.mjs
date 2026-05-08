@@ -1543,6 +1543,28 @@ function nearestRoomView(candidate, views) {
     .sort((a, b) => a.distance - b.distance)[0]?.view;
 }
 
+function uniqueRoomLabels(rooms) {
+  const counts = new Map();
+  for (const room of rooms) {
+    const label = room.label || "Room";
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  const seen = new Map();
+  return rooms.map((room) => {
+    const label = room.label || "Room";
+    const total = counts.get(label) ?? 0;
+    if (total <= 1) {
+      return { ...room, label };
+    }
+    const nextIndex = (seen.get(label) ?? 0) + 1;
+    seen.set(label, nextIndex);
+    return {
+      ...room,
+      label: `${label} ${nextIndex}`
+    };
+  });
+}
+
 function importedRooms(views, roomCandidates, existingRooms = []) {
   const hasCustomRooms =
     Array.isArray(existingRooms) &&
@@ -1590,7 +1612,7 @@ function importedRooms(views, roomCandidates, existingRooms = []) {
       };
     });
 
-  return [...rooms, ...extraRooms].slice(0, 14);
+  return uniqueRoomLabels([...rooms, ...extraRooms].slice(0, 14));
 }
 
 function graphWalkZoneCandidates(graph, modelScale) {
