@@ -475,7 +475,8 @@ export function extractObjectsDocument(
   const objects = graph.nodes.map((node): ObjectOverride => ({
     id: node.id,
     name: node.name,
-    visible: true
+    visible: true,
+    hideInTopView: objectShouldHideInTopView(node.name)
   }));
 
   return {
@@ -484,4 +485,12 @@ export function extractObjectsDocument(
     source,
     objects
   };
+}
+
+function objectShouldHideInTopView(name: string): boolean {
+  const normalized = name.toLowerCase();
+  return (
+    /(^|[^a-z])(ceiling|false-ceiling|dropped-ceiling|roof|roofing|lid|cover)([^a-z]|$)/.test(normalized) &&
+    !/(^|[^a-z])(fan|light|lamp|fixture|chandelier|downlight|spotlight)([^a-z]|$)/.test(normalized)
+  );
 }

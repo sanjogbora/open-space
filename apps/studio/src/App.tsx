@@ -6648,7 +6648,32 @@ function App() {
                     label="Visible"
                     value={selectedObjectOverride?.visible === false ? "Hidden" : "Visible"}
                   />
+                  <Stat
+                    label="Top View"
+                    value={selectedObjectOverride?.hideInTopView ? "Hidden" : "Visible"}
+                  />
                 </div>
+
+                {selectedObjectOverride && (
+                  <div className="object-detail">
+                    <h3>View Visibility</h3>
+                    <div className="toggle-grid">
+                      <label className="toggle-row">
+                        <input
+                          type="checkbox"
+                          checked={selectedObjectOverride.hideInTopView === true}
+                          onChange={(event) =>
+                            updateObject(selectedObjectOverride.id, (object) => ({
+                              ...object,
+                              hideInTopView: event.target.checked
+                            }))
+                          }
+                        />
+                        <span>Hide in top view</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
 
                 <div className="object-detail">
                   <h3>Material Usage</h3>

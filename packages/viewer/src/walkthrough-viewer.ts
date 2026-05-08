@@ -917,14 +917,17 @@ export class WalkthroughViewer {
   }
 
   private registerTopViewHiddenObject(object: THREE.Object3D): void {
+    const override = this.objectOverrides.get(object.name);
     const materialNames =
       object instanceof THREE.Mesh
         ? (Array.isArray(object.material) ? object.material : [object.material]).map((material) => material.name).join(" ")
         : "";
     const descriptor = `${object.name} ${object.parent?.name ?? ""} ${object.userData["name"] ?? ""} ${materialNames}`.toLowerCase();
     const hideInTopView =
-      /(^|[^a-z])(ceiling|false-ceiling|dropped-ceiling|roof|roofing|lid|cover)([^a-z]|$)/.test(descriptor) &&
-      !/(^|[^a-z])(fan|light|lamp|fixture|chandelier|downlight|spotlight)([^a-z]|$)/.test(descriptor);
+      typeof override?.hideInTopView === "boolean"
+        ? override.hideInTopView
+        : /(^|[^a-z])(ceiling|false-ceiling|dropped-ceiling|roof|roofing|lid|cover)([^a-z]|$)/.test(descriptor) &&
+          !/(^|[^a-z])(fan|light|lamp|fixture|chandelier|downlight|spotlight)([^a-z]|$)/.test(descriptor);
     if (!hideInTopView || this.topViewHiddenObjects.some((entry) => entry.object === object)) {
       return;
     }

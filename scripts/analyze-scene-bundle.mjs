@@ -1272,9 +1272,18 @@ function extractObjectsDocument(graph, source) {
     objects: graph.nodes.map((node) => ({
       id: node.id,
       name: node.name,
-      visible: true
+      visible: true,
+      hideInTopView: objectShouldHideInTopView(node.name)
     }))
   };
+}
+
+function objectShouldHideInTopView(name) {
+  const normalized = String(name ?? "").toLowerCase();
+  return (
+    /(^|[^a-z])(ceiling|false-ceiling|dropped-ceiling|roof|roofing|lid|cover)([^a-z]|$)/.test(normalized) &&
+    !/(^|[^a-z])(fan|light|lamp|fixture|chandelier|downlight|spotlight)([^a-z]|$)/.test(normalized)
+  );
 }
 
 async function readJsonIfExists(filePath) {
@@ -1323,6 +1332,7 @@ function mergeObjectEdits(generated, existing) {
       return {
         ...object,
         visible: previous.visible,
+        ...(typeof previous.hideInTopView === "boolean" ? { hideInTopView: previous.hideInTopView } : {}),
         ...(typeof previous.locked === "boolean" ? { locked: previous.locked } : {})
       };
     })

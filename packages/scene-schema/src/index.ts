@@ -203,6 +203,7 @@ export interface ObjectOverride {
   id: string;
   name: string;
   visible: boolean;
+  hideInTopView?: boolean;
   locked?: boolean;
 }
 
