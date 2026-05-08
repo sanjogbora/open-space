@@ -2510,8 +2510,9 @@ function createDiagnostics(manifest, report, graphs) {
 
   if (flatPlane) {
     const percent = Math.min(100, Math.round((flatPlane.area / flatPlane.sceneArea) * 100));
+    const dominatesScene = flatPlane.area / Math.max(1, flatPlane.sceneArea) > 0.55;
     diagnostics.push({
-      severity: flatPlane.exteriorNamed ? "warning" : "info",
+      severity: flatPlane.exteriorNamed || dominatesScene ? "warning" : "info",
       code: "dominant-flat-plane",
       title: "Large flat plane detected",
       message: `${flatPlane.name} covers about ${percent}% of the scene footprint and can dominate camera framing, top views, and click-floor detection.`,
