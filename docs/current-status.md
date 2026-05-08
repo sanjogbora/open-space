@@ -75,6 +75,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer mouse-wheel forward/back movement now decays blocked impulses quickly instead of repeatedly pushing into walls or invalid floor.
 - Viewer collision now uses swept segment checks against inflated blocker bounds so movement and route validation cannot skip through thin walls between sampled positions.
 - Viewer blocker checks now use a vertical body/capsule range instead of only an eye-level sphere, so low partitions and half-height boundaries are less likely to be crossed.
+- Viewer now infers low furniture, plinths, and short obstacle meshes as collision blockers instead of allowing the camera to climb them like walkable steps.
 - Click-to-move now falls back to axis sliding for each movement step, so a path that grazes a wall can keep gliding along the obstacle instead of canceling immediately.
 - Viewer supports runtime material variant controls from the scene manifest.
 - Viewer supports hotspot, link, video texture, material variant, object-toggle, and object-pick interactions.
@@ -104,6 +105,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Published `deployment.json` now carries the analyzed publish quality gate, including readiness warnings and diagnostics used when the version was created.
 - The deploy script now refuses to deploy a bundle whose saved quality gate is blocked unless `--allow-blocked` is passed for internal testing.
 - The deploy script now maps WebAssembly, Basis, KTX2, AVIF, WebP, video, and GLB assets to explicit content types when applying per-asset S3 cache headers.
+- The deploy script now supports S3-compatible endpoint, profile, and region options for R2/Spaces/MinIO-style hosting, and Studio shows a copy-ready compatible command.
 - Reimport analysis preserves material edits and object visibility by stable material/object names.
 - Viewer supports in-viewport object picking with object/material details.
 - Studio Interactions can create and edit hotspots, external scene links, and object toggles.
@@ -116,6 +118,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
 - Studio Import now treats disconnected loose texture folders as a source-export review issue instead of implying generic repair can always attach them.
 - Studio Import now routes navigation-specific diagnostics directly to the guided Controls editor instead of hiding them behind the generic repair action.
+- Studio Import now routes exterior/terrain context diagnostics directly to Environment and visual/texture diagnostics directly to Materials.
 - Studio/API expose Blender/Cycles lightmap bake jobs with quality presets, UV2 generation, generated lightmap assets, and material assignment.
 - Failed Blender/Cycles bakes return the bake job in the API error response so Studio can show the failed stage and job steps.
 
