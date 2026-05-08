@@ -7578,59 +7578,27 @@ function App() {
                     </div>
                     {navigationRepairDraft && (
                       <div className="repair-card">
-                        <div>
-                          <strong>Viewer navigation repair</strong>
-                          <p className="quiet-note">
-                            {navigationRepairDraft.hint ||
-                              "This came from the viewer block toast. Add a pass zone for a doorway/opening, add a walk patch when the floor is missing from the walkable area, or ignore a wrongly detected blocker."}
-                          </p>
-                        </div>
-                        <dl className="repair-details">
+                        <div className="repair-card-heading">
                           <div>
-                            <dt>Reason</dt>
-                            <dd>{navigationRepairDraft.reason || "Unknown"}</dd>
+                            <span>Viewer repair</span>
+                            <strong>{repairRecommendation?.title ?? "Navigation needs a repair"}</strong>
+                            <p>
+                              {navigationRepairDraft.hint ||
+                                "Choose the action that matches the clicked area, then save and retry the viewer."}
+                            </p>
                           </div>
-                          {navigationRepairDraft.blockerName && (
-                            <div>
-                              <dt>Blocker</dt>
-                              <dd>{navigationRepairDraft.blockerName}</dd>
-                            </div>
-                          )}
-                          {navigationRepairDraft.blockerKind && (
-                            <div>
-                              <dt>Blocker Type</dt>
-                              <dd>{navigationRepairDraft.blockerKind}</dd>
-                            </div>
-                          )}
-                          {navigationRepairDraft.action && (
-                            <div>
-                              <dt>Suggested Action</dt>
-                              <dd>{navigationRepairDraft.action.replace(/-/g, " ")}</dd>
-                            </div>
-                          )}
-                          {navigationRepairDraft.point && (
-                            <div>
-                              <dt>Point</dt>
-                              <dd>{navigationRepairDraft.point.map((value) => value.toFixed(2)).join(", ")}</dd>
-                            </div>
-                          )}
-                          {navigationRepairDraft.target && (
-                            <div>
-                              <dt>Target</dt>
-                              <dd>{navigationRepairDraft.target.map((value) => value.toFixed(2)).join(", ")}</dd>
-                            </div>
-                          )}
-                          {navigationRepairDraft.from && (
-                            <div>
-                              <dt>From</dt>
-                              <dd>{navigationRepairDraft.from.map((value) => value.toFixed(2)).join(", ")}</dd>
-                            </div>
-                          )}
-                        </dl>
+                          <button
+                            type="button"
+                            className="button secondary compact-button"
+                            onClick={() => setNavigationRepairDraft(null)}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
                         {repairRecommendation && (
                           <div className="repair-recommendation">
                             <div>
-                              <strong>{repairRecommendation.title}</strong>
+                              <strong>Recommended</strong>
                               <p>{repairRecommendation.detail}</p>
                             </div>
                             <button
@@ -7647,6 +7615,51 @@ function App() {
                             </button>
                           </div>
                         )}
+                        <div className="repair-action-grid" aria-label="Navigation repair actions">
+                          <button
+                            type="button"
+                            className="repair-action-button primary-action"
+                            disabled={!navigationRepairDraft.point}
+                            onClick={() => addNavigationRepairZone("pass")}
+                          >
+                            <span>Open Doorway</span>
+                            <strong>Add Door Pass</strong>
+                            <small>Connect the current area to the clicked room through a door or opening.</small>
+                          </button>
+                          <button
+                            type="button"
+                            className="repair-action-button"
+                            disabled={!navigationRepairDraft.point}
+                            onClick={() => addNavigationRepairZone("walk")}
+                          >
+                            <span>Add Floor Area</span>
+                            <strong>Walk Patch</strong>
+                            <small>Allow users to stand on the clicked floor when it was not detected.</small>
+                          </button>
+                          <button
+                            type="button"
+                            className="repair-action-button"
+                            disabled={!navigationRepairDraft.blockerName}
+                            onClick={() => ignoreCollisionName(navigationRepairDraft.blockerName)}
+                          >
+                            <span>Ignore Object</span>
+                            <strong>Not A Wall</strong>
+                            <small>Use this only when the detected blocker should not stop movement.</small>
+                          </button>
+                          <button
+                            type="button"
+                            className="repair-action-button"
+                            onClick={() =>
+                              document
+                                .querySelector(".movement-preset-grid")
+                                ?.scrollIntoView({ behavior: "smooth", block: "center" })
+                            }
+                          >
+                            <span>Tune Movement</span>
+                            <strong>Steps / Stairs</strong>
+                            <small>Adjust step limits if the route crosses thresholds, stairs, or level changes.</small>
+                          </button>
+                        </div>
                         {navigationRepairObjectMatch && (
                           <div className="repair-object-card">
                             <div>
@@ -7697,41 +7710,51 @@ function App() {
                             </div>
                           </div>
                         )}
-                        <div className="inline-actions">
-                          <button
-                            type="button"
-                            className="button secondary"
-                            disabled={!navigationRepairDraft.point}
-                            onClick={() => addNavigationRepairZone("pass")}
-                          >
-                            <Plus size={16} aria-hidden="true" />
-                            Door Pass
-                          </button>
-                          <button
-                            type="button"
-                            className="button secondary"
-                            disabled={!navigationRepairDraft.point}
-                            onClick={() => addNavigationRepairZone("walk")}
-                          >
-                            <Plus size={16} aria-hidden="true" />
-                            Walk Patch
-                          </button>
-                          <button
-                            type="button"
-                            className="button secondary"
-                            disabled={!navigationRepairDraft.blockerName}
-                            onClick={() => ignoreCollisionName(navigationRepairDraft.blockerName)}
-                          >
-                            Ignore Blocker
-                          </button>
-                          <button
-                            type="button"
-                            className="button secondary"
-                            onClick={() => setNavigationRepairDraft(null)}
-                          >
-                            Dismiss
-                          </button>
-                        </div>
+                        <details className="repair-debug-details">
+                          <summary>Technical details</summary>
+                          <dl className="repair-details">
+                            <div>
+                              <dt>Reason</dt>
+                              <dd>{navigationRepairDraft.reason || "Unknown"}</dd>
+                            </div>
+                            {navigationRepairDraft.blockerName && (
+                              <div>
+                                <dt>Blocker</dt>
+                                <dd>{navigationRepairDraft.blockerName}</dd>
+                              </div>
+                            )}
+                            {navigationRepairDraft.blockerKind && (
+                              <div>
+                                <dt>Blocker Type</dt>
+                                <dd>{navigationRepairDraft.blockerKind}</dd>
+                              </div>
+                            )}
+                            {navigationRepairDraft.action && (
+                              <div>
+                                <dt>Suggested Action</dt>
+                                <dd>{navigationRepairDraft.action.replace(/-/g, " ")}</dd>
+                              </div>
+                            )}
+                            {navigationRepairDraft.point && (
+                              <div>
+                                <dt>Point</dt>
+                                <dd>{navigationRepairDraft.point.map((value) => value.toFixed(2)).join(", ")}</dd>
+                              </div>
+                            )}
+                            {navigationRepairDraft.target && (
+                              <div>
+                                <dt>Target</dt>
+                                <dd>{navigationRepairDraft.target.map((value) => value.toFixed(2)).join(", ")}</dd>
+                              </div>
+                            )}
+                            {navigationRepairDraft.from && (
+                              <div>
+                                <dt>From</dt>
+                                <dd>{navigationRepairDraft.from.map((value) => value.toFixed(2)).join(", ")}</dd>
+                              </div>
+                            )}
+                          </dl>
+                        </details>
                       </div>
                     )}
                     <div className="navigation-qa-list" aria-label="Navigation QA">

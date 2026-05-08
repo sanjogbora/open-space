@@ -1330,6 +1330,29 @@ button.list-row {
   color: #17415d;
 }
 
+.repair-card-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.repair-card-heading span {
+  display: block;
+  margin-bottom: 3px;
+  color: #60717c;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.repair-card-heading p {
+  margin: 4px 0 0;
+  color: #315466;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .navigation-guide-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1485,6 +1508,60 @@ button.list-row {
   line-height: 1.45;
 }
 
+.repair-action-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.repair-action-button {
+  min-height: 112px;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #cddbe5;
+  border-radius: 8px;
+  color: #24313a;
+  text-align: left;
+  background: #ffffff;
+}
+
+.repair-action-button.primary-action {
+  border-color: rgba(8, 127, 231, 0.42);
+  background: #f6fbff;
+}
+
+.repair-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.repair-action-button:not(:disabled):hover,
+.repair-action-button:not(:disabled):focus-visible {
+  border-color: #087fe7;
+  box-shadow: 0 8px 18px rgba(8, 127, 231, 0.12);
+}
+
+.repair-action-button span {
+  color: #60717c;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.repair-action-button strong {
+  color: #182026;
+  font-size: 14px;
+}
+
+.repair-action-button small {
+  color: #52636f;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .repair-object-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1622,6 +1699,23 @@ button.list-row {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
+}
+
+.repair-debug-details {
+  border-top: 1px solid rgba(23, 65, 93, 0.14);
+  padding-top: 8px;
+}
+
+.repair-debug-details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: #315466;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.repair-debug-details[open] summary {
+  margin-bottom: 8px;
 }
 
 .repair-details div {
@@ -2590,7 +2684,8 @@ code {
   .studio-header,
   .content-grid,
   .editor-layout,
-  .bundle-grid {
+  .bundle-grid,
+  .repair-action-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2631,6 +2726,7 @@ code {
   .variant-editor-row,
   .zone-editor-heading,
   .zone-simple-heading,
+  .repair-card-heading,
   .repair-recommendation,
   .repair-object-card,
   .repair-followup,
