@@ -552,6 +552,7 @@ const movementPresets: readonly {
     detail: "Slower glide, stronger tiny-bump ignore.",
     movement: {
       clickMoveSpeed: 1.05,
+      collisionRadius: 0.26,
       maxStepUp: 0.38,
       maxStepDown: 0.72,
       floorHeightSmoothing: 0.9,
@@ -564,6 +565,7 @@ const movementPresets: readonly {
     detail: "More forgiving for thresholds and simple stairs.",
     movement: {
       clickMoveSpeed: 1.15,
+      collisionRadius: 0.24,
       maxStepUp: 0.62,
       maxStepDown: 1.15,
       floorHeightSmoothing: 1.35,
@@ -576,6 +578,7 @@ const movementPresets: readonly {
     detail: "Stricter floor following for clean navmesh-style floors.",
     movement: {
       clickMoveSpeed: 1.25,
+      collisionRadius: 0.32,
       maxStepUp: 0.28,
       maxStepDown: 0.55,
       floorHeightSmoothing: 2.15,
@@ -7613,6 +7616,19 @@ function App() {
                         updateControls((current) => ({
                           ...current,
                           movement: { ...current.movement, moveSpeed: value }
+                        }))
+                      }
+                    />
+                    <NumberField
+                      label="Body Radius"
+                      min={0.12}
+                      max={0.6}
+                      step={0.01}
+                      value={controlsDoc.movement.collisionRadius ?? 0.28}
+                      onChange={(value) =>
+                        updateControls((current) => ({
+                          ...current,
+                          movement: { ...current.movement, collisionRadius: value }
                         }))
                       }
                     />

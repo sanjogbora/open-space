@@ -131,7 +131,7 @@ export class WalkthroughViewer {
   private readonly hotspots: HotspotBinding[] = [];
   private readonly managedTextures: ManagedTexture[] = [];
   private readonly keys = new Set<string>();
-  private readonly collisionRadius = 0.28;
+  private readonly defaultCollisionRadius = 0.28;
   private readonly maxStepUp = 0.38;
   private readonly maxStepDown = 0.72;
   private readonly materialOverrides = new Map<string, MaterialOverride>();
@@ -147,6 +147,7 @@ export class WalkthroughViewer {
     dragLook: true,
     moveSpeed: 3.8,
     clickMoveSpeed: 1.05,
+    collisionRadius: 0.28,
     maxStepUp: 0.38,
     maxStepDown: 0.72,
     floorBumpTolerance: 0.48,
@@ -2163,7 +2164,7 @@ export class WalkthroughViewer {
       if (maxY < blocker.box.min.y || minY > blocker.box.max.y) {
         return false;
       }
-      return segmentIntersectsInflatedBox2D(origin, target, blocker.box, this.collisionRadius);
+      return segmentIntersectsInflatedBox2D(origin, target, blocker.box, this.collisionBodyRadius());
     });
   }
 
@@ -2176,7 +2177,7 @@ export class WalkthroughViewer {
     if (vertical.max < blocker.box.min.y || vertical.min > blocker.box.max.y) {
       return false;
     }
-    return pointInsideInflatedBox2D(position, blocker.box, this.collisionRadius);
+    return pointInsideInflatedBox2D(position, blocker.box, this.collisionBodyRadius());
   }
 
   private bodyVerticalRangeAt(position: THREE.Vector3): { min: number; max: number } {
@@ -2194,7 +2195,7 @@ export class WalkthroughViewer {
       if (vertical.max < blocker.box.min.y || vertical.min > blocker.box.max.y) {
         continue;
       }
-      clearance = Math.min(clearance, distanceToInflatedBox2D(position, blocker.box, this.collisionRadius));
+      clearance = Math.min(clearance, distanceToInflatedBox2D(position, blocker.box, this.collisionBodyRadius()));
     }
     return clearance;
   }
@@ -2225,7 +2226,7 @@ export class WalkthroughViewer {
     if (distance < 0.001) {
       return undefined;
     }
-    const steps = Math.max(2, Math.ceil(distance / Math.max(0.18, this.collisionRadius * 0.75)));
+    const steps = Math.max(2, Math.ceil(distance / Math.max(0.18, this.collisionBodyRadius() * 0.75)));
     let previous = origin.clone();
     let previousFloorY = this.stableFloorY ?? origin.y - this.cameraHeight;
     const maxStepUp = this.controls.maxStepUp ?? this.maxStepUp;
@@ -2513,14 +2514,14 @@ export class WalkthroughViewer {
 
   private navigationMeshesContainingPoint(meshes: readonly THREE.Mesh[], point: THREE.Vector3): THREE.Mesh[] {
     const containing = meshes.filter((mesh) =>
-      this.isInsideNavigationZoneWithPadding(mesh, point, Math.max(0.18, this.collisionRadius * 1.25))
+      this.isInsideNavigationZoneWithPadding(mesh, point, Math.max(0.18, this.collisionBodyRadius() * 1.25))
     );
     if (containing.length > 0) {
       return containing;
     }
     return meshes
       .map((mesh) => ({ mesh, distance: this.navigationMeshDistanceToPoint(mesh, point) }))
-      .filter((entry) => entry.distance <= Math.max(0.75, this.collisionRadius * 2.5))
+      .filter((entry) => entry.distance <= Math.max(0.75, this.collisionBodyRadius() * 2.5))
       .sort((a, b) => a.distance - b.distance)
       .slice(0, 2)
       .map((entry) => entry.mesh);
@@ -2529,7 +2530,7 @@ export class WalkthroughViewer {
   private navigationMeshesConnect(a: THREE.Mesh, b: THREE.Mesh): boolean {
     const boxA = this.navigationMeshBounds2D(a);
     const boxB = this.navigationMeshBounds2D(b);
-    const padding = Math.max(0.22, this.collisionRadius * 1.35);
+    const padding = Math.max(0.22, this.collisionBodyRadius() * 1.35);
     return (
       boxA.minX - padding <= boxB.maxX &&
       boxA.maxX + padding >= boxB.minX &&
@@ -2632,7 +2633,7 @@ export class WalkthroughViewer {
     let maxX = Math.min(globalMaxX, Math.max(origin.x, target.x) + margin);
     let minZ = Math.max(globalMinZ, Math.min(origin.z, target.z) - margin);
     let maxZ = Math.min(globalMaxZ, Math.max(origin.z, target.z) + margin);
-    let step = Math.max(0.24, this.collisionRadius * 0.9);
+    let step = Math.max(0.24, this.collisionBodyRadius() * 0.9);
     let columns = Math.max(2, Math.ceil((maxX - minX) / step) + 1);
     let rows = Math.max(2, Math.ceil((maxZ - minZ) / step) + 1);
     const maxCells = 14000;
@@ -2782,7 +2783,7 @@ export class WalkthroughViewer {
           continue;
         }
         const nextKey = keyFor(nextX, nextZ);
-        const desiredClearance = Math.max(0.42, this.collisionRadius * 2.2);
+        const desiredClearance = Math.max(0.42, this.collisionBodyRadius() * 2.2);
         const effectiveClearance = Number.isFinite(nextCell.clearance) ? nextCell.clearance : desiredClearance;
         const clearancePenalty = Math.max(0, desiredClearance - effectiveClearance) * 2.4;
         const passZoneBias = nextCell.onPassZone ? step * -0.18 : 0;
@@ -2901,8 +2902,8 @@ export class WalkthroughViewer {
       point.y = y;
       return [point];
     }
-    const x = Math.max(0, halfSize.x - this.collisionRadius * 1.15) * 0.72;
-    const z = Math.max(0, halfSize.z - this.collisionRadius * 1.15) * 0.72;
+    const x = Math.max(0, halfSize.x - this.collisionBodyRadius() * 1.15) * 0.72;
+    const z = Math.max(0, halfSize.z - this.collisionBodyRadius() * 1.15) * 0.72;
     const xs = x > 0.05 ? [-x, 0, x] : [0];
     const zs = z > 0.05 ? [-z, 0, z] : [0];
     const localPoints = xs.flatMap((localX) => zs.map((localZ) => new THREE.Vector3(localX, 0, localZ)));
@@ -2943,13 +2944,13 @@ export class WalkthroughViewer {
     const midpoint = origin.clone().lerp(target, 0.5);
     return [origin, midpoint, target].some((point) =>
       this.passZoneMeshes.some((mesh) =>
-        this.isInsideNavigationZoneWithPadding(mesh, point, Math.max(0.42, this.collisionRadius * 1.75))
+        this.isInsideNavigationZoneWithPadding(mesh, point, Math.max(0.42, this.collisionBodyRadius() * 1.75))
       )
     );
   }
 
   private isInsideNavigationZone(mesh: THREE.Mesh, position: THREE.Vector3): boolean {
-    return this.isInsideNavigationZoneWithPadding(mesh, position, this.collisionRadius);
+    return this.isInsideNavigationZoneWithPadding(mesh, position, this.collisionBodyRadius());
   }
 
   private isInsideNavigationZoneWithPadding(mesh: THREE.Mesh, position: THREE.Vector3, padding: number): boolean {
@@ -3034,6 +3035,10 @@ export class WalkthroughViewer {
     return THREE.MathUtils.clamp(this.controls.floorHeightSmoothing ?? 0.9, 0.5, 8);
   }
 
+  private collisionBodyRadius(): number {
+    return THREE.MathUtils.clamp(this.controls.collisionRadius ?? this.defaultCollisionRadius, 0.12, 0.6);
+  }
+
   private sampleGeometryFloorY(
     position: THREE.Vector3,
     options: { maxDelta?: number; allowFallbackHit?: boolean } = {}
@@ -3070,7 +3075,7 @@ export class WalkthroughViewer {
     floorY: number,
     options: { referenceFloorY?: number } = {}
   ): boolean {
-    const supportRadius = THREE.MathUtils.clamp(this.collisionRadius * 1.6, 0.22, 0.55);
+    const supportRadius = THREE.MathUtils.clamp(this.collisionBodyRadius() * 1.6, 0.22, 0.55);
     const tolerance = Math.max(0.08, this.floorBumpTolerance() * 0.55);
     const offsets = [
       [supportRadius, 0],
