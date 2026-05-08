@@ -86,6 +86,22 @@ interface GridRouteCell {
   floorY?: number;
 }
 
+interface ZoneRouteNode {
+  mesh: THREE.Mesh;
+  center: THREE.Vector3;
+  previous: number;
+  cost: number;
+  estimate: number;
+  closed: boolean;
+}
+
+interface NavigationMeshBounds2D {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
 interface RecoveredNavigationTarget {
   target: THREE.Vector3;
   route?: THREE.Vector3[];
@@ -2184,7 +2200,11 @@ export class WalkthroughViewer {
 
   private findNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
     this.routeSearchFailureDetail = undefined;
-    const route = this.findVisibilityNavigationRoute(target, origin) ?? this.findGridNavigationRoute(target, origin);
+    const zoneRoute = this.findZoneNavigationRoute(target, origin);
+    const route =
+      (zoneRoute && this.navigationRouteSegmentsPass(zoneRoute, origin) ? zoneRoute : undefined) ??
+      this.findVisibilityNavigationRoute(target, origin) ??
+      this.findGridNavigationRoute(target, origin);
     return route ? this.smoothNavigationRoute(route, origin) ?? route : undefined;
   }
 
@@ -2193,6 +2213,19 @@ export class WalkthroughViewer {
       return route;
     }
     return this.simplifyNavigationRoute([origin.clone(), ...route.map((point) => point.clone())]);
+  }
+
+  private navigationRouteSegmentsPass(route: readonly THREE.Vector3[], origin: THREE.Vector3): boolean {
+    let previous = origin;
+    for (const waypoint of route) {
+      const failure = this.navigationRouteFailureDetail(waypoint, previous);
+      if (failure) {
+        this.rememberRouteFailureDetail(failure);
+        return false;
+      }
+      previous = waypoint;
+    }
+    return true;
   }
 
   private findVisibilityNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
@@ -2279,6 +2312,227 @@ export class WalkthroughViewer {
     }
 
     return route;
+  }
+
+  private findZoneNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
+    const routeMeshes = [...this.walkZoneMeshes, ...this.passZoneMeshes];
+    if (routeMeshes.length < 2) {
+      return undefined;
+    }
+    const originMeshes = this.navigationMeshesContainingPoint(routeMeshes, origin);
+    const targetMeshes = this.navigationMeshesContainingPoint(routeMeshes, target);
+    if (originMeshes.length === 0 || targetMeshes.length === 0) {
+      return undefined;
+    }
+    if (originMeshes.some((mesh) => targetMeshes.includes(mesh))) {
+      return undefined;
+    }
+
+    const targetMeshSet = new Set(targetMeshes);
+    const targetCenter = target.clone();
+    const nodes: ZoneRouteNode[] = routeMeshes.map((mesh) => {
+      const center = this.navigationMeshCenter(mesh, target.y);
+      return {
+        mesh,
+        center,
+        previous: -1,
+        cost: Number.POSITIVE_INFINITY,
+        estimate: Number.POSITIVE_INFINITY,
+        closed: false
+      };
+    });
+    const meshIndex = new Map(nodes.map((node, index) => [node.mesh, index]));
+    const targetIndexes = new Set(targetMeshes.map((mesh) => meshIndex.get(mesh)).filter((index): index is number => typeof index === "number"));
+    const heuristic = (point: THREE.Vector3) => Math.hypot(point.x - targetCenter.x, point.z - targetCenter.z);
+    for (const mesh of originMeshes) {
+      const index = meshIndex.get(mesh);
+      const node = typeof index === "number" ? nodes[index] : undefined;
+      if (!node) {
+        continue;
+      }
+      node.cost = Math.hypot(node.center.x - origin.x, node.center.z - origin.z);
+      node.estimate = node.cost + heuristic(node.center);
+    }
+
+    while (true) {
+      let currentIndex = -1;
+      let bestEstimate = Number.POSITIVE_INFINITY;
+      for (let index = 0; index < nodes.length; index += 1) {
+        const node = nodes[index];
+        if (node && !node.closed && node.estimate < bestEstimate) {
+          currentIndex = index;
+          bestEstimate = node.estimate;
+        }
+      }
+      if (currentIndex < 0) {
+        break;
+      }
+      const current = nodes[currentIndex];
+      if (!current) {
+        break;
+      }
+      current.closed = true;
+      if (targetIndexes.has(currentIndex)) {
+        const route = this.zoneRoutePoints(nodes, currentIndex, origin, target, targetMeshSet);
+        return route ? this.simplifyNavigationRoute(route) : undefined;
+      }
+
+      for (let index = 0; index < nodes.length; index += 1) {
+        const next = nodes[index];
+        if (!next || next.closed || index === currentIndex || !this.navigationMeshesConnect(current.mesh, next.mesh)) {
+          continue;
+        }
+        const bridgePoint = this.navigationMeshBridgePoint(current.mesh, next.mesh, target.y);
+        const nextCost =
+          current.cost +
+          Math.hypot(current.center.x - bridgePoint.x, current.center.z - bridgePoint.z) +
+          Math.hypot(bridgePoint.x - next.center.x, bridgePoint.z - next.center.z);
+        if (nextCost >= next.cost) {
+          continue;
+        }
+        next.cost = nextCost;
+        next.estimate = nextCost + heuristic(next.center);
+        next.previous = currentIndex;
+      }
+    }
+    return undefined;
+  }
+
+  private zoneRoutePoints(
+    nodes: readonly ZoneRouteNode[],
+    targetIndex: number,
+    origin: THREE.Vector3,
+    target: THREE.Vector3,
+    targetMeshes: ReadonlySet<THREE.Mesh>
+  ): THREE.Vector3[] | undefined {
+    const indexes: number[] = [];
+    let index = targetIndex;
+    while (index >= 0) {
+      indexes.unshift(index);
+      const node = nodes[index];
+      if (!node) {
+        return undefined;
+      }
+      index = node.previous;
+    }
+    const points: THREE.Vector3[] = [origin.clone()];
+    for (let routeIndex = 0; routeIndex < indexes.length; routeIndex += 1) {
+      const current = nodes[indexes[routeIndex]!];
+      const next = nodes[indexes[routeIndex + 1]!];
+      if (!current) {
+        return undefined;
+      }
+      if (next) {
+        points.push(this.navigationMeshBridgePoint(current.mesh, next.mesh, target.y));
+        continue;
+      }
+      if (!targetMeshes.has(current.mesh)) {
+        points.push(current.center.clone());
+      }
+    }
+    points.push(target.clone());
+    return points;
+  }
+
+  private navigationMeshesContainingPoint(meshes: readonly THREE.Mesh[], point: THREE.Vector3): THREE.Mesh[] {
+    const containing = meshes.filter((mesh) =>
+      this.isInsideNavigationZoneWithPadding(mesh, point, Math.max(0.18, this.collisionRadius * 1.25))
+    );
+    if (containing.length > 0) {
+      return containing;
+    }
+    return meshes
+      .map((mesh) => ({ mesh, distance: this.navigationMeshDistanceToPoint(mesh, point) }))
+      .filter((entry) => entry.distance <= Math.max(0.75, this.collisionRadius * 2.5))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 2)
+      .map((entry) => entry.mesh);
+  }
+
+  private navigationMeshesConnect(a: THREE.Mesh, b: THREE.Mesh): boolean {
+    const boxA = this.navigationMeshBounds2D(a);
+    const boxB = this.navigationMeshBounds2D(b);
+    const padding = Math.max(0.22, this.collisionRadius * 1.35);
+    return (
+      boxA.minX - padding <= boxB.maxX &&
+      boxA.maxX + padding >= boxB.minX &&
+      boxA.minZ - padding <= boxB.maxZ &&
+      boxA.maxZ + padding >= boxB.minZ
+    );
+  }
+
+  private navigationMeshBridgePoint(a: THREE.Mesh, b: THREE.Mesh, y: number): THREE.Vector3 {
+    const boxA = this.navigationMeshBounds2D(a);
+    const boxB = this.navigationMeshBounds2D(b);
+    const overlapMinX = Math.max(boxA.minX, boxB.minX);
+    const overlapMaxX = Math.min(boxA.maxX, boxB.maxX);
+    const overlapMinZ = Math.max(boxA.minZ, boxB.minZ);
+    const overlapMaxZ = Math.min(boxA.maxZ, boxB.maxZ);
+    const centerA = this.navigationMeshCenter(a, y);
+    const centerB = this.navigationMeshCenter(b, y);
+    const x =
+      overlapMinX <= overlapMaxX
+        ? (overlapMinX + overlapMaxX) / 2
+        : (Math.max(boxA.minX, boxB.minX) + Math.min(boxA.maxX, boxB.maxX)) / 2;
+    const z =
+      overlapMinZ <= overlapMaxZ
+        ? (overlapMinZ + overlapMaxZ) / 2
+        : (Math.max(boxA.minZ, boxB.minZ) + Math.min(boxA.maxZ, boxB.maxZ)) / 2;
+    const point = new THREE.Vector3(
+      Number.isFinite(x) ? x : (centerA.x + centerB.x) / 2,
+      y,
+      Number.isFinite(z) ? z : (centerA.z + centerB.z) / 2
+    );
+    return this.navigationProbePosition(point);
+  }
+
+  private navigationMeshCenter(mesh: THREE.Mesh, y: number): THREE.Vector3 {
+    const point = new THREE.Vector3();
+    mesh.getWorldPosition(point);
+    point.y = y;
+    return this.navigationProbePosition(point);
+  }
+
+  private navigationMeshDistanceToPoint(mesh: THREE.Mesh, point: THREE.Vector3): number {
+    const box = this.navigationMeshBounds2D(mesh);
+    const dx = point.x < box.minX ? box.minX - point.x : point.x > box.maxX ? point.x - box.maxX : 0;
+    const dz = point.z < box.minZ ? box.minZ - point.z : point.z > box.maxZ ? point.z - box.maxZ : 0;
+    return Math.hypot(dx, dz);
+  }
+
+  private navigationMeshBounds2D(mesh: THREE.Mesh): NavigationMeshBounds2D {
+    const halfSize = mesh.userData["navigationHalfSize"];
+    const polygon = mesh.userData["navigationPolygon"];
+    if (Array.isArray(polygon) && polygon.every((point) => point instanceof THREE.Vector2)) {
+      const points = polygon.map((point) => mesh.localToWorld(new THREE.Vector3(point.x, 0, point.y)));
+      return {
+        minX: Math.min(...points.map((point) => point.x)),
+        maxX: Math.max(...points.map((point) => point.x)),
+        minZ: Math.min(...points.map((point) => point.z)),
+        maxZ: Math.max(...points.map((point) => point.z))
+      };
+    }
+    if (halfSize instanceof THREE.Vector3) {
+      const corners = [
+        new THREE.Vector3(-halfSize.x, 0, -halfSize.z),
+        new THREE.Vector3(halfSize.x, 0, -halfSize.z),
+        new THREE.Vector3(halfSize.x, 0, halfSize.z),
+        new THREE.Vector3(-halfSize.x, 0, halfSize.z)
+      ].map((point) => mesh.localToWorld(point));
+      return {
+        minX: Math.min(...corners.map((point) => point.x)),
+        maxX: Math.max(...corners.map((point) => point.x)),
+        minZ: Math.min(...corners.map((point) => point.z)),
+        maxZ: Math.max(...corners.map((point) => point.z))
+      };
+    }
+    const box = new THREE.Box3().setFromObject(mesh);
+    return {
+      minX: box.min.x,
+      maxX: box.max.x,
+      minZ: box.min.z,
+      maxZ: box.max.z
+    };
   }
 
   private findGridNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
