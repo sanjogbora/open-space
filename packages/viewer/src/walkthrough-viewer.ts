@@ -84,6 +84,8 @@ interface GridRouteNode {
 interface GridRouteCell {
   point: THREE.Vector3;
   floorY?: number;
+  clearance: number;
+  onPassZone: boolean;
 }
 
 interface ZoneRouteNode {
@@ -2127,6 +2129,18 @@ export class WalkthroughViewer {
     };
   }
 
+  private navigationClearanceAtPosition(position: THREE.Vector3): number {
+    const vertical = this.bodyVerticalRangeAt(position);
+    let clearance = Number.POSITIVE_INFINITY;
+    for (const blocker of this.collisionBlockers) {
+      if (vertical.max < blocker.box.min.y || vertical.min > blocker.box.max.y) {
+        continue;
+      }
+      clearance = Math.min(clearance, distanceToInflatedBox2D(position, blocker.box, this.collisionRadius));
+    }
+    return clearance;
+  }
+
   private navigationProbePosition(position: THREE.Vector3): THREE.Vector3 {
     const candidate = position.clone();
     if (!this.generatedWalkZonesOnly || this.geometryFloorMeshes.length === 0) {
@@ -2591,6 +2605,8 @@ export class WalkthroughViewer {
       const cell: GridRouteCell | undefined = (hasExplicitWalkZones || onDetectedFloor) && !this.navigationFailureDetail(point)
         ? {
             point,
+            clearance: this.navigationClearanceAtPosition(point),
+            onPassZone: this.isInsidePassZone(point),
             ...(typeof floorY === "number" ? { floorY } : {})
           }
         : undefined;
@@ -2699,7 +2715,12 @@ export class WalkthroughViewer {
           continue;
         }
         const nextKey = keyFor(nextX, nextZ);
-        const nextCost = current.cost + step * multiplier + Math.abs(floorDelta) * 1.8;
+        const desiredClearance = Math.max(0.42, this.collisionRadius * 2.2);
+        const effectiveClearance = Number.isFinite(nextCell.clearance) ? nextCell.clearance : desiredClearance;
+        const clearancePenalty = Math.max(0, desiredClearance - effectiveClearance) * 2.4;
+        const passZoneBias = nextCell.onPassZone ? step * -0.18 : 0;
+        const nextCost =
+          current.cost + step * multiplier + Math.abs(floorDelta) * 1.8 + clearancePenalty + passZoneBias;
         const existing = nodes.get(nextKey);
         if (existing && (existing.closed || existing.cost <= nextCost)) {
           continue;
@@ -3713,6 +3734,16 @@ function pointInsideInflatedBox2D(point: THREE.Vector3, box: THREE.Box3, padding
     point.z >= box.min.z - padding &&
     point.z <= box.max.z + padding
   );
+}
+
+function distanceToInflatedBox2D(point: THREE.Vector3, box: THREE.Box3, padding: number): number {
+  const minX = box.min.x - padding;
+  const maxX = box.max.x + padding;
+  const minZ = box.min.z - padding;
+  const maxZ = box.max.z + padding;
+  const dx = point.x < minX ? minX - point.x : point.x > maxX ? point.x - maxX : 0;
+  const dz = point.z < minZ ? minZ - point.z : point.z > maxZ ? point.z - maxZ : 0;
+  return Math.hypot(dx, dz);
 }
 
 function pointToSegmentDistance(point: THREE.Vector2, start: THREE.Vector2, end: THREE.Vector2): number {
