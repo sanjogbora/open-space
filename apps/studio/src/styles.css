@@ -586,6 +586,34 @@ button.list-row {
   background: transparent;
 }
 
+.object-role-chip {
+  width: fit-content;
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #294150;
+  background: #e7eef3;
+}
+
+.object-role-chip.walk {
+  color: #075438;
+  background: #d9f5e8;
+}
+
+.object-role-chip.collision {
+  color: #7a2816;
+  background: #ffe3d9;
+}
+
+.object-role-chip.ignore {
+  color: #594714;
+  background: #fff1c7;
+}
+
 .visibility-button {
   width: 34px;
   height: 34px;

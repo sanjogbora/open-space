@@ -604,6 +604,19 @@ function navigationZonePlainHelp(kind: NavigationZone["kind"]): string {
   return "People cannot move through this area.";
 }
 
+function objectNavigationBehaviorLabel(behavior: ObjectOverride["navigationBehavior"] | undefined): string {
+  if (behavior === "walk") {
+    return "Walk";
+  }
+  if (behavior === "collision") {
+    return "Collision";
+  }
+  if (behavior === "ignore") {
+    return "Ignored";
+  }
+  return "Auto";
+}
+
 function navigationRepairRecommendation(draft: NavigationRepairDraft): NavigationRepairRecommendation {
   if (draft.reason === "route-not-found") {
     return {
@@ -6598,38 +6611,45 @@ function App() {
                 <h2>Objects</h2>
                 <small>{sceneGraph?.nodes.length ?? 0}</small>
               </div>
-              {sceneGraph?.nodes.map((node) => (
-                <div
-                  key={node.id}
-                  className={selectedObjectId === node.id ? "list-row active" : "list-row"}
-                >
-                  <button type="button" className="list-row-main" onClick={() => setSelectedObjectId(node.id)}>
-                    <span>{node.name}</span>
-                    <small>{node.triangleCount} triangles</small>
-                  </button>
-                  <button
-                    type="button"
-                    className="visibility-button"
-                    title={
-                      objectsDoc?.objects.find((object) => object.id === node.id)?.visible === false
-                        ? "Show object"
-                        : "Hide object"
-                    }
-                    onClick={() =>
-                      updateObject(node.id, (object) => ({
-                        ...object,
-                        visible: !object.visible
-                      }))
-                    }
+              {sceneGraph?.nodes.map((node) => {
+                const override = objectsDoc?.objects.find((object) => object.id === node.id);
+                return (
+                  <div
+                    key={node.id}
+                    className={selectedObjectId === node.id ? "list-row active" : "list-row"}
                   >
-                    {objectsDoc?.objects.find((object) => object.id === node.id)?.visible === false ? (
-                      <EyeOff size={16} aria-hidden="true" />
-                    ) : (
-                      <Eye size={16} aria-hidden="true" />
-                    )}
-                  </button>
-                </div>
-              ))}
+                    <button type="button" className="list-row-main" onClick={() => setSelectedObjectId(node.id)}>
+                      <span>{node.name}</span>
+                      <small>
+                        {node.triangleCount} triangles
+                        {override?.hideInTopView ? " · hidden in top" : ""}
+                      </small>
+                      {override?.navigationBehavior && override.navigationBehavior !== "default" && (
+                        <span className={`object-role-chip ${override.navigationBehavior}`}>
+                          {objectNavigationBehaviorLabel(override.navigationBehavior)}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="visibility-button"
+                      title={override?.visible === false ? "Show object" : "Hide object"}
+                      onClick={() =>
+                        updateObject(node.id, (object) => ({
+                          ...object,
+                          visible: !object.visible
+                        }))
+                      }
+                    >
+                      {override?.visible === false ? (
+                        <EyeOff size={16} aria-hidden="true" />
+                      ) : (
+                        <Eye size={16} aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
               {!sceneGraph && <p className="empty-list">No scene graph generated.</p>}
             </div>
 
@@ -6654,7 +6674,7 @@ function App() {
                   />
                   <Stat
                     label="Navigation"
-                    value={selectedObjectOverride?.navigationBehavior ?? "default"}
+                    value={objectNavigationBehaviorLabel(selectedObjectOverride?.navigationBehavior)}
                   />
                 </div>
 

@@ -44,6 +44,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Top views can hide ceiling/roof shell meshes so uploaded apartments are inspectable from above.
 - Object overrides now include a per-object `hideInTopView` flag, and Studio exposes it so ceiling/roof/helper objects can be hidden only in floor-plan/top views.
 - Object overrides now include a per-object navigation behavior, and Studio can mark objects as default-detected, walkable, collision, or ignored for viewer navigation.
+- Studio Objects now shows navigation-role chips and top-view hiding hints in the object list, making movement-affecting objects easier to audit.
 - Viewer fallback navigation now keeps ignored/collision objects out of walkable click targets and honors forced collision objects even when their names look floor-like.
 - Movement is constrained by configured scene bounds.
 - Basic collision boxes are generated from configured collision mesh names.
