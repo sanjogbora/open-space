@@ -2988,6 +2988,21 @@ function App() {
       .sort((a, b) => b.score - a.score || a.source.localeCompare(b.source))
       .slice(0, 10);
   }, [bundleStats?.looseImages, selectedMaterial]);
+  const selectedMaterialTexturePreviews = useMemo(() => {
+    if (!selectedMaterial) {
+      return [];
+    }
+    const fields: readonly { field: MaterialTextureField; label: string }[] = [
+      { field: "mapUrl", label: "Base" },
+      { field: "normalMapUrl", label: "Normal" },
+      { field: "emissiveMapUrl", label: "Emissive" },
+      { field: "lightMapUrl", label: "Lightmap" }
+    ];
+    return fields.flatMap(({ field, label }) => {
+      const source = selectedMaterial[field];
+      return source ? [{ field, label, source }] : [];
+    });
+  }, [selectedMaterial]);
   const pendingMaterialTextureSuggestionCount = useMemo(() => {
     if (!materialsDoc || !bundleStats?.materialTextureSuggestions) {
       return 0;
@@ -7033,6 +7048,23 @@ function App() {
 
                 <div className="object-detail">
                   <h3>Texture Maps</h3>
+                  <div className="material-preview-strip">
+                    {selectedMaterialTexturePreviews.length > 0 ? (
+                      selectedMaterialTexturePreviews.map((preview) => (
+                        <div key={preview.field} className="material-preview-tile">
+                          {canPreviewTextureAsset(preview.source) ? (
+                            <img src={projectAssetPath(activeProjectId, preview.source)} alt="" loading="lazy" />
+                          ) : (
+                            <span>{preview.label.slice(0, 2).toUpperCase()}</span>
+                          )}
+                          <strong>{preview.label}</strong>
+                          <small>{preview.source}</small>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="quiet-note">No texture maps are assigned to this material yet.</p>
+                    )}
+                  </div>
                   {selectedMaterialTextureCandidates.length > 0 && (
                     <div className="texture-candidate-panel">
                       <div className="surface-mapper-heading">

@@ -1968,6 +1968,58 @@ button.list-row {
   padding: 0 10px;
 }
 
+.material-preview-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.material-preview-tile {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid #e3e8eb;
+  border-radius: 7px;
+  background: #fbfcfd;
+}
+
+.material-preview-tile img,
+.material-preview-tile > span {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid rgba(36, 49, 58, 0.12);
+  border-radius: 5px;
+  background: #e9eef2;
+}
+
+.material-preview-tile > span {
+  display: grid;
+  place-items: center;
+  color: #667681;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.material-preview-tile strong,
+.material-preview-tile small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.material-preview-tile strong {
+  color: #24313a;
+  font-size: 12px;
+}
+
+.material-preview-tile small {
+  color: #667681;
+  font-size: 11px;
+}
+
 .zone-kind-segmented {
   display: inline-flex;
   width: fit-content;
