@@ -1214,9 +1214,14 @@ export class WalkthroughViewer {
   private collectWalkableMeshes(root: THREE.Object3D): THREE.Object3D[] {
     const meshes = new Set<THREE.Object3D>(this.floorMeshes);
     root.traverse((node) => {
-      if (node instanceof THREE.Mesh) {
-        meshes.add(node);
+      if (!(node instanceof THREE.Mesh)) {
+        return;
       }
+      const navigationBehavior = this.objectNavigationBehavior(node);
+      if (navigationBehavior === "ignore" || navigationBehavior === "collision") {
+        return;
+      }
+      meshes.add(node);
     });
     return [...meshes];
   }
@@ -1237,17 +1242,6 @@ export class WalkthroughViewer {
       if (navigationBehavior === "ignore" || navigationBehavior === "walk") {
         return;
       }
-      const name = node.name.toLowerCase();
-      if (floorNames.some((floorName) => name.includes(floorName))) {
-        return;
-      }
-      const collisionSearchName = `${node.name} ${node.parent?.name ?? ""} ${node.userData["name"] ?? ""}`.toLowerCase();
-      if (ignoredCollisionNames.some((ignoredName) => collisionSearchName.includes(ignoredName))) {
-        return;
-      }
-      if (isDoorwayNavigationPanel(node, collisionSearchName) && !isExplicitPortalCollision(collisionSearchName)) {
-        return;
-      }
       const box = new THREE.Box3().setFromObject(node);
       if (box.isEmpty()) {
         return;
@@ -1258,6 +1252,17 @@ export class WalkthroughViewer {
           name: node.name || node.parent?.name || "Authored collision",
           kind: "authored"
         });
+        return;
+      }
+      const name = node.name.toLowerCase();
+      if (floorNames.some((floorName) => name.includes(floorName))) {
+        return;
+      }
+      const collisionSearchName = `${node.name} ${node.parent?.name ?? ""} ${node.userData["name"] ?? ""}`.toLowerCase();
+      if (ignoredCollisionNames.some((ignoredName) => collisionSearchName.includes(ignoredName))) {
+        return;
+      }
+      if (isDoorwayNavigationPanel(node, collisionSearchName) && !isExplicitPortalCollision(collisionSearchName)) {
         return;
       }
       const isCollisionMesh = collisionNames.some((collisionName) => name.includes(collisionName));
