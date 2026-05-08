@@ -2661,7 +2661,7 @@ export class WalkthroughViewer {
 
   private sampleGeometryFloorY(
     position: THREE.Vector3,
-    options: { maxDelta?: number } = {}
+    options: { maxDelta?: number; allowFallbackHit?: boolean } = {}
   ): number | undefined {
     if (this.geometryFloorMeshes.length === 0) {
       return undefined;
@@ -2686,7 +2686,7 @@ export class WalkthroughViewer {
       .sort(
         (a, b) => Math.abs(a.point.y - expectedFloorY) - Math.abs(b.point.y - expectedFloorY)
       )[0];
-    const hit = stableHit ?? hits[0];
+    const hit = stableHit ?? (options.allowFallbackHit ? hits[0] : undefined);
     return hit?.point.y;
   }
 
