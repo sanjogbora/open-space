@@ -6779,17 +6779,25 @@ function App() {
                       <strong>{lightmapBakeJob.status}</strong>
                     </div>
                     {lightmapBakeJob.status === "completed" && (
-                      <div className="stat-grid compact-stat-grid">
-                        <Stat label="Lightmaps" value={String(lightmapBakeJob.lightmapCount ?? lightmapBakeJob.lightmaps?.length ?? 0)} />
-                        <Stat label="Total" value={formatBytes(lightmapBakeJob.totalLightmapBytes ?? 0)} />
-                        <Stat label="Max px" value={String(lightmapBakeJob.resolution ?? bakeSettings.resolution)} />
-                        <Stat label="Samples" value={String(lightmapBakeJob.samples ?? bakeSettings.samples)} />
-                      </div>
+                      <>
+                        <div className="stat-grid compact-stat-grid">
+                          <Stat label="Lightmaps" value={String(lightmapBakeJob.lightmapCount ?? lightmapBakeJob.lightmaps?.length ?? 0)} />
+                          <Stat label="Total" value={formatBytes(lightmapBakeJob.totalLightmapBytes ?? 0)} />
+                          <Stat label="Max px" value={String(lightmapBakeJob.resolution ?? bakeSettings.resolution)} />
+                          <Stat label="Samples" value={String(lightmapBakeJob.samples ?? bakeSettings.samples)} />
+                        </div>
+                        <LightmapBakeQuality job={lightmapBakeJob} materialCount={materialCountForBake} />
+                      </>
                     )}
                     {lightmapBakeJob.lightmaps && lightmapBakeJob.lightmaps.length > 0 && (
                       <div className="job-history-list">
                         {lightmapBakeJob.lightmaps.slice(0, 8).map((lightmap) => (
-                          <div key={`${lightmap.materialName}-${lightmap.url}`} className="job-history-row">
+                          <div key={`${lightmap.materialName}-${lightmap.url}`} className="job-history-row lightmap-row">
+                            {canPreviewTextureAsset(lightmap.url) ? (
+                              <img src={projectAssetPath(activeProjectId, lightmap.url)} alt="" loading="lazy" />
+                            ) : (
+                              <span className="lightmap-preview-placeholder">LM</span>
+                            )}
                             <div>
                               <strong>{lightmap.materialName}</strong>
                               <span>{lightmap.url}</span>
@@ -9457,6 +9465,52 @@ function ImportNextSteps({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function LightmapBakeQuality({
+  job,
+  materialCount
+}: {
+  job: LightmapBakeJobDocument;
+  materialCount: number;
+}) {
+  const lightmapCount = job.lightmapCount ?? job.lightmaps?.length ?? 0;
+  const expectedCount = Math.min(materialCount, job.maxMaterials ?? materialCount);
+  const totalBytes = job.totalLightmapBytes ?? 0;
+  const averageBytes = lightmapCount > 0 ? totalBytes / lightmapCount : 0;
+  const issues = [
+    lightmapCount <= 0 ? "No lightmap textures were generated. Check Blender output and material eligibility." : "",
+    job.outputSceneUrl ? "" : "No lightmapped scene artifact was reported.",
+    expectedCount > 0 && lightmapCount > 0 && lightmapCount < expectedCount
+      ? `${lightmapCount} of ${expectedCount} eligible material(s) received lightmaps. Inspect unbaked materials below.`
+      : "",
+    totalBytes <= 0 && lightmapCount > 0 ? "Generated lightmaps have no recorded file size." : "",
+    averageBytes > 0 && averageBytes < 4096 ? "Average lightmap size is very small, which can indicate an empty or failed bake." : "",
+    (job.resolution ?? 0) > 0 && (job.resolution ?? 0) < 1024 ? "Resolution is below 1024px; expect softer lighting and visible artifacts." : "",
+    (job.samples ?? 0) > 0 && (job.samples ?? 0) < 64 ? "Sample count is low; use Medium or higher before client review." : ""
+  ].filter(Boolean);
+
+  if (job.status !== "completed") {
+    return null;
+  }
+
+  if (issues.length === 0) {
+    return (
+      <div className="bake-qa-card pass">
+        <strong>Bake QA</strong>
+        <p>Lightmap artifact, texture count, resolution, samples, and file sizes look ready for viewer testing.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bake-qa-card warning">
+      <strong>Bake QA</strong>
+      {issues.map((issue) => (
+        <p key={issue}>{issue}</p>
+      ))}
     </div>
   );
 }

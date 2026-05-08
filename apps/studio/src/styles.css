@@ -2596,6 +2596,57 @@ button.list-row {
   white-space: nowrap;
 }
 
+.job-history-row.lightmap-row {
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+}
+
+.job-history-row.lightmap-row img,
+.lightmap-preview-placeholder {
+  width: 48px;
+  height: 36px;
+  border: 1px solid rgba(36, 49, 58, 0.16);
+  border-radius: 5px;
+  background: #e9eef2;
+}
+
+.job-history-row.lightmap-row img {
+  object-fit: cover;
+}
+
+.lightmap-preview-placeholder {
+  display: grid;
+  place-items: center;
+  color: #667681;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.bake-qa-card {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 7px;
+  border: 1px solid #f0d38f;
+  background: #fff8e8;
+  color: #6f4b00;
+}
+
+.bake-qa-card.pass {
+  color: #147c4f;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.bake-qa-card strong,
+.bake-qa-card p {
+  margin: 0;
+}
+
+.bake-qa-card p {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
