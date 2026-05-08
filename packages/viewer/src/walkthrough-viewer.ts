@@ -1290,10 +1290,10 @@ export class WalkthroughViewer {
         return;
       }
       const name = node.name.toLowerCase();
-      if (floorNames.some((floorName) => name.includes(floorName))) {
+      const collisionSearchName = `${node.name} ${node.parent?.name ?? ""} ${node.userData["name"] ?? ""}`.toLowerCase();
+      if (floorNames.some((floorName) => collisionSearchName.includes(floorName))) {
         return;
       }
-      const collisionSearchName = `${node.name} ${node.parent?.name ?? ""} ${node.userData["name"] ?? ""}`.toLowerCase();
       if (ignoredCollisionNames.some((ignoredName) => collisionSearchName.includes(ignoredName))) {
         return;
       }
@@ -1314,11 +1314,12 @@ export class WalkthroughViewer {
       const height = size.y;
       const wideAxis = Math.max(size.x, size.z);
       const thinAxis = Math.min(size.x, size.z);
+      const footprintArea = size.x * size.z;
       const looksLikeWall =
         height >= 0.8 &&
         wideAxis >= 0.75 &&
         thinAxis <= Math.max(0.35, wideAxis * 0.18) &&
-        size.x * size.z <= Math.max(8, wideAxis * 0.75);
+        footprintArea <= Math.max(8, wideAxis * 0.75);
       if (looksLikeWall) {
         inferredBlockers.push({
           blocker: {
@@ -1327,6 +1328,25 @@ export class WalkthroughViewer {
             kind: "inferred"
           },
           area: wideAxis * height
+        });
+        return;
+      }
+      const lowObstacleHeight = Math.max(this.maxStepUp + 0.12, this.cameraHeight * 0.22);
+      const looksLikeLowObstacle =
+        height >= lowObstacleHeight &&
+        height <= Math.max(1.65, this.cameraHeight * 0.95) &&
+        footprintArea >= 0.06 &&
+        footprintArea <= Math.max(14, wideAxis * 3.2) &&
+        wideAxis >= 0.18 &&
+        !this.isLikelyExteriorSurfaceName(collisionSearchName);
+      if (looksLikeLowObstacle) {
+        inferredBlockers.push({
+          blocker: {
+            box,
+            name: node.name || node.parent?.name || "Inferred obstacle",
+            kind: "inferred"
+          },
+          area: footprintArea * height * (isLikelyNonWalkSurfaceName(collisionSearchName) ? 1.4 : 0.7)
         });
       }
     });
