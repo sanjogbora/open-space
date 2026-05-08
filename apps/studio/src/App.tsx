@@ -1987,6 +1987,7 @@ function App() {
     resolution: 1024,
     samples: 96,
     margin: 16,
+    maxMaterials: 160,
     mode: "lighting" as "lighting" | "combined"
   });
   const [repairState, setRepairState] = useState<RepairState>("idle");
@@ -2567,6 +2568,14 @@ function App() {
     ];
   }, [bundleStats, manifest, navigationIssues]);
   const hasBlockingPublishErrors = publishChecks.some((check) => check.blocking && !check.ready);
+  const blenderTool = toolStatus?.tools.blender;
+  const materialCountForBake = bundleStats?.materialCount ?? materialsDoc?.materials.length ?? 0;
+  const bakeMaterialLimitExceeded = materialCountForBake > bakeSettings.maxMaterials;
+  const canRunLightmapBake =
+    apiConnected &&
+    bakeState !== "baking" &&
+    blenderTool?.ready !== false &&
+    !bakeMaterialLimitExceeded;
 
   const selectedHotspot = useMemo(
     () => hotspotInteractions.find((interaction) => interaction.id === selectedInteractionId),
@@ -6323,17 +6332,30 @@ function App() {
                     <p className="quiet-note">
                       Uses Blender/Cycles when available. Manual uploaded lightmaps remain supported below.
                     </p>
+                    <small>
+                      {blenderTool
+                        ? blenderTool.ready
+                          ? `Blender ready: ${blenderTool.command}`
+                          : blenderTool.action
+                        : "Checking Blender availability."}
+                    </small>
                   </div>
                   <button
                     type="button"
                     className="button secondary"
-                    disabled={!apiConnected || bakeState === "baking"}
+                    disabled={!canRunLightmapBake}
                     onClick={() => void bakeLightmaps()}
                   >
                     <Activity size={16} aria-hidden="true" />
                     {bakeState === "baking" ? "Baking" : "Bake"}
                   </button>
                 </div>
+                {bakeMaterialLimitExceeded && (
+                  <p className="error-note">
+                    This scene has {materialCountForBake} materials, above the current bake limit of{" "}
+                    {bakeSettings.maxMaterials}. Increase the limit for testing, or optimize/merge materials first.
+                  </p>
+                )}
                 <div className="field-grid">
                   <label className="field">
                     <span>Quality preset</span>
@@ -6390,6 +6412,19 @@ function App() {
                       setBakeSettings((current) => ({
                         ...current,
                         margin: Math.min(96, Math.max(2, Math.round(value)))
+                      }))
+                    }
+                  />
+                  <NumberField
+                    label="Max materials"
+                    min={1}
+                    max={512}
+                    step={1}
+                    value={bakeSettings.maxMaterials}
+                    onChange={(value) =>
+                      setBakeSettings((current) => ({
+                        ...current,
+                        maxMaterials: Math.min(512, Math.max(1, Math.round(value)))
                       }))
                     }
                   />
