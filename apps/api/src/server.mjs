@@ -857,12 +857,9 @@ async function writeProjectAsset(projectId, assetPath, body) {
   return safePath;
 }
 
-function runAnalyze(projectId = "demo") {
+function runProcess(command, args, errorLabel) {
   return new Promise((resolve, reject) => {
-    const viewerTarget = `apps/viewer-demo/public/scenes/${projectId}`;
-    const studioTarget = `apps/studio/public/scenes/${projectId}`;
-    const command = `node scripts/analyze-scene-bundle.mjs ${viewerTarget} --write && node scripts/analyze-scene-bundle.mjs ${studioTarget} --write`;
-    const child = spawn(process.env.ComSpec ?? "cmd.exe", ["/c", command], {
+    const child = spawn(command, args, {
       cwd: repoRoot,
       windowsHide: true
     });
@@ -880,40 +877,42 @@ function runAnalyze(projectId = "demo") {
         resolve({ stdout, stderr });
         return;
       }
-      reject(new Error(stderr || stdout || `Analyzer exited with ${code}.`));
+      reject(new Error(stderr || stdout || `${errorLabel} exited with ${code}.`));
     });
   });
 }
 
+async function runNodeScriptForTargets(script, targets, args, errorLabel) {
+  let stdout = "";
+  let stderr = "";
+  for (const target of targets) {
+    const result = await runProcess(process.execPath, [script, target, ...args], errorLabel);
+    stdout += result.stdout;
+    stderr += result.stderr;
+  }
+  return { stdout, stderr };
+}
+
+function runAnalyze(projectId = "demo") {
+  return runNodeScriptForTargets(
+    "scripts/analyze-scene-bundle.mjs",
+    targetDirs(projectId),
+    ["--write"],
+    "Analyzer"
+  );
+}
+
 function runOptimize(projectId = "demo", profile = "balanced", applyOptimized = true) {
-  return new Promise((resolve, reject) => {
-    const viewerTarget = `apps/viewer-demo/public/scenes/${projectId}`;
-    const studioTarget = `apps/studio/public/scenes/${projectId}`;
-    const applyFlag = applyOptimized ? " --apply" : "";
-    const command =
-      `node scripts/optimize-scene-bundle.mjs ${viewerTarget} --profile=${profile}${applyFlag} && ` +
-      `node scripts/optimize-scene-bundle.mjs ${studioTarget} --profile=${profile}${applyFlag}`;
-    const child = spawn(process.env.ComSpec ?? "cmd.exe", ["/c", command], {
-      cwd: repoRoot,
-      windowsHide: true
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on("error", reject);
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr });
-        return;
-      }
-      reject(new Error(stderr || stdout || `Optimizer exited with ${code}.`));
-    });
-  });
+  const args = [`--profile=${profile}`];
+  if (applyOptimized) {
+    args.push("--apply");
+  }
+  return runNodeScriptForTargets(
+    "scripts/optimize-scene-bundle.mjs",
+    targetDirs(projectId),
+    args,
+    "Optimizer"
+  );
 }
 
 function lightmapBakeOptions(body = {}) {
@@ -944,41 +943,20 @@ function lightmapBakeOptions(body = {}) {
 }
 
 function runLightmapBake(projectId = "demo", options = {}) {
-  return new Promise((resolve, reject) => {
-    const viewerTarget = `apps/viewer-demo/public/scenes/${projectId}`;
-    const studioTarget = `apps/studio/public/scenes/${projectId}`;
-    const bakeOptions = lightmapBakeOptions(options);
-    const bakeArgs =
-      ` --resolution=${bakeOptions.resolution}` +
-      ` --samples=${bakeOptions.samples}` +
-      ` --margin=${bakeOptions.margin}` +
-      ` --max-materials=${bakeOptions.maxMaterials}` +
-      ` --mode=${bakeOptions.mode}` +
-      ` --preset=${bakeOptions.preset}`;
-    const command =
-      `node scripts/bake-lightmaps.mjs ${viewerTarget}${bakeArgs} && ` +
-      `node scripts/bake-lightmaps.mjs ${studioTarget}${bakeArgs}`;
-    const child = spawn(process.env.ComSpec ?? "cmd.exe", ["/c", command], {
-      cwd: repoRoot,
-      windowsHide: true
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on("error", reject);
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr });
-        return;
-      }
-      reject(new Error(stderr || stdout || `Lightmap bake exited with ${code}.`));
-    });
-  });
+  const bakeOptions = lightmapBakeOptions(options);
+  return runNodeScriptForTargets(
+    "scripts/bake-lightmaps.mjs",
+    targetDirs(projectId),
+    [
+      `--resolution=${bakeOptions.resolution}`,
+      `--samples=${bakeOptions.samples}`,
+      `--margin=${bakeOptions.margin}`,
+      `--max-materials=${bakeOptions.maxMaterials}`,
+      `--mode=${bakeOptions.mode}`,
+      `--preset=${bakeOptions.preset}`
+    ],
+    "Lightmap bake"
+  );
 }
 
 function runModelConversion(projectId = "demo", sourceRelative) {
