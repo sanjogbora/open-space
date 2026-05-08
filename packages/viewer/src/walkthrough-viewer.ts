@@ -3319,7 +3319,14 @@ export class WalkthroughViewer {
   ): RecoveredNavigationTarget | undefined {
     const candidates = this.nearbyNavigationCandidates(target);
     for (const candidate of candidates) {
-      if (this.navigationFailureDetail(candidate, origin)) {
+      const directFailure = this.navigationFailureDetail(candidate, origin);
+      if (directFailure) {
+        if (directFailure.reason === "blocked-collision" || directFailure.reason === "blocked-step") {
+          const route = this.findNavigationRoute(candidate, origin);
+          if (route) {
+            return { target: candidate, route };
+          }
+        }
         continue;
       }
       if (!this.navigationRouteFailureDetail(candidate, origin)) {
