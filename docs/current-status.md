@@ -32,6 +32,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer video textures can now target material slots inside multi-material meshes and pause distance-triggered videos while the camera is outside the configured trigger range.
 - Studio surfaces room/floorplan mapping status with room counts, linked walk views, and one-click room sync.
 - Studio Rooms can now sync authored walk areas into room map regions, so floorplan areas can be generated from the navigation zones users draw.
+- Viewer room lists now appear as a top-view room index tied to the active top/floor-plan view instead of cluttering walk mode.
 - Analyzer now reports missing or partial room maps and routes the import next step directly to Rooms when room labels, floorplan areas, or view links need setup.
 - Import repair now builds room entries from the final generated walk zones as well as semantic room candidates, giving repaired uploads better room bounds and floorplan areas automatically.
 - Bundle analysis warns about duplicate object/material names that can make interaction targeting ambiguous after import.

@@ -185,6 +185,10 @@ function App() {
 
   const views = useMemo(() => manifest?.views ?? [], [manifest]);
   const rooms = useMemo(() => manifest?.rooms ?? [], [manifest]);
+  const activeView = useMemo(
+    () => views.find((view) => view.id === activeViewId),
+    [activeViewId, views]
+  );
   const materialVariantInteractions = useMemo(
     () => manifest?.interactions.filter(isMaterialVariantInteraction) ?? [],
     [manifest]
@@ -543,8 +547,11 @@ function App() {
           </aside>
         )}
 
-        {rooms.length > 0 && (
+        {rooms.length > 0 && activeView?.kind === "top" && (
           <aside className="room-list" aria-label="Rooms">
+            <div className="room-list-heading">
+              <strong>{activeView.label}</strong>
+            </div>
             {rooms.map((room) => {
               const view = views.find((item) => item.id === room.viewId);
               return (

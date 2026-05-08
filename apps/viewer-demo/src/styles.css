@@ -318,6 +318,24 @@ button {
   border-radius: 8px;
 }
 
+.room-list-heading {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px 4px;
+  border-bottom: 1px solid rgba(238, 243, 247, 0.16);
+  color: rgba(238, 243, 247, 0.82);
+}
+
+.room-list-heading strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .room-row {
   min-height: 32px;
   display: grid;
@@ -728,5 +746,12 @@ button {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .room-list {
+    top: 64px;
+    right: 10px;
+    width: min(230px, calc(100vw - 172px));
+    max-height: min(42vh, 340px);
   }
 }
