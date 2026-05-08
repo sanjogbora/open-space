@@ -1361,7 +1361,36 @@ function graphRoomCandidates(graph, modelScale, cameraHeight) {
     "dry area",
     "hall"
   ];
-  const rejectKeywords = ["wall", "door", "window", "glass", "ceiling", "roof", "railing", "column", "pillar"];
+  const rejectKeywords = [
+    "wall",
+    "door",
+    "window",
+    "glass",
+    "ceiling",
+    "roof",
+    "railing",
+    "column",
+    "pillar",
+    "plant",
+    "tree",
+    "chair",
+    "table",
+    "sofa",
+    "couch",
+    "bed",
+    "cabinet",
+    "cupboard",
+    "wardrobe",
+    "counter",
+    "shelf",
+    "tv",
+    "screen",
+    "appliance",
+    "decor",
+    "vase",
+    "lamp",
+    "fan"
+  ];
   return (graph?.nodes ?? [])
     .map((node) => {
       if (!node.bounds) {
@@ -1714,7 +1743,37 @@ function roomLabelFromZoneContents(zone, graph, modelScale) {
   if (!zone || !graph) {
     return undefined;
   }
-  const rejectKeywords = ["wall", "door", "window", "glass", "ceiling", "roof", "floor", "slab", "tile", "ground"];
+  const rejectKeywords = [
+    "wall",
+    "door",
+    "window",
+    "glass",
+    "ceiling",
+    "roof",
+    "floor",
+    "slab",
+    "tile",
+    "ground",
+    "plant",
+    "tree",
+    "chair",
+    "table",
+    "sofa",
+    "couch",
+    "bed",
+    "cabinet",
+    "cupboard",
+    "wardrobe",
+    "counter",
+    "shelf",
+    "tv",
+    "screen",
+    "appliance",
+    "decor",
+    "vase",
+    "lamp",
+    "fan"
+  ];
   const box = navigationZoneBox(zone);
   const scores = new Map();
   for (const node of graph.nodes ?? []) {

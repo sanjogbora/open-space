@@ -1802,7 +1802,8 @@ function semanticRoomLabelFromZoneGroup(
   if (!graph || zones.length === 0) {
     return undefined;
   }
-  const rejectKeywords = /\b(wall|door|window|glass|ceiling|roof|floor|slab|tile|ground|column|pillar)\b/;
+  const rejectKeywords =
+    /\b(wall|door|window|glass|ceiling|roof|floor|slab|tile|ground|column|pillar|plant|tree|chair|table|sofa|couch|bed|cabinet|cupboard|wardrobe|counter|shelf|tv|screen|appliance|decor|vase|lamp|fan)\b/;
   const aabb = mergeNavigationAabbs(zones);
   const scores = new Map<string, number>();
   for (const node of graph.nodes) {
