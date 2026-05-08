@@ -3597,12 +3597,12 @@ export class WalkthroughViewer {
     const objectHit = this.raycaster.intersectObjects(this.pickableMeshes, true)[0];
     if (objectHit && objectHit.object instanceof THREE.Mesh) {
       const objectName = objectHit.object.name || objectHit.object.parent?.name || "Object";
-      const nearbyFloorHit = this.findWalkableHitNearObject(objectHit);
-      if (nearbyFloorHit && this.tryMoveToFloorHit(nearbyFloorHit, event)) {
-        return;
-      }
       const portalFloorHit = this.findWalkableHitBeyondPortalObject(objectHit, objectName);
       if (portalFloorHit && this.tryMoveToFloorHit(portalFloorHit, event)) {
+        return;
+      }
+      const nearbyFloorHit = this.findWalkableHitNearObject(objectHit);
+      if (nearbyFloorHit && this.tryMoveToFloorHit(nearbyFloorHit, event)) {
         return;
       }
       this.emitNavigationFailure("no-walkable-hit", event, objectHit.point, objectName);
