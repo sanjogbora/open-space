@@ -150,6 +150,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Analyzer now treats missing or generically named ceiling/roof geometry as a visible architectural QA warning when the scene otherwise looks like a walkthrough.
 - Analyzer now flags very small texture images that can make imported interiors look blurry, flat, or worse than reference GLB viewers.
 - Analyzer now warns when low flat furniture/object surfaces may catch click-to-move in models without explicit walk zones.
+- Analyzer now warns when many generic flat surfaces exist without named floors or walk zones, so users know to draw explicit walk areas instead of trusting fallback floor detection.
 - Analyzer now reports multiple floor-height levels so split-level imports can be routed to explicit walk/pass/step authoring before users see camera hopping.
 - API upload validation rejects malformed GLB containers with broken lengths, truncated chunks, invalid JSON chunks, or non-glTF 2.0 assets.
 - Analyzer now flags invalid default-scene node links, node child links, and node mesh references that can make an otherwise uploadable GLB appear blank or partial.

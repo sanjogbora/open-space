@@ -10247,6 +10247,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   if (
     [
       "no-named-floor-meshes",
+      "ambiguous-flat-walk-surfaces",
       "flat-object-surfaces-may-catch-clicks",
       "multiple-floor-heights-detected",
       "no-named-collision-meshes",

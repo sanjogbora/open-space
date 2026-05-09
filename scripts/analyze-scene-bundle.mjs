@@ -1860,6 +1860,7 @@ function flatSurfaceNavigationRisk(graph, sceneBounds) {
   const lowBandTop = sceneBounds.min[1] + Math.max(1.4, sceneHeight * 0.45);
   const flatSurfaces = [];
   const flatNonWalkSurfaces = [];
+  const ambiguousFlatSurfaces = [];
   const walkLikeLevels = new Map();
   for (const node of graph.nodes ?? []) {
     if (!node.bounds) {
@@ -1895,6 +1896,9 @@ function flatSurfaceNavigationRisk(graph, sceneBounds) {
     if (entry.nonWalk && !entry.walkLike) {
       flatNonWalkSurfaces.push(entry);
     }
+    if (!entry.walkLike && !entry.nonWalk) {
+      ambiguousFlatSurfaces.push(entry);
+    }
     if (entry.walkLike && !entry.nonWalk && area >= Math.max(0.45, sceneArea * 0.004)) {
       const level = Math.round(centerY / 0.18) * 0.18;
       const current = walkLikeLevels.get(level) ?? { level, count: 0, area: 0 };
@@ -1906,6 +1910,11 @@ function flatSurfaceNavigationRisk(graph, sceneBounds) {
   return {
     flatSurfaceCount: flatSurfaces.length,
     flatNonWalkSurfaceCount: flatNonWalkSurfaces.length,
+    ambiguousFlatSurfaceCount: ambiguousFlatSurfaces.length,
+    ambiguousFlatSurfaceExamples: ambiguousFlatSurfaces
+      .sort((a, b) => b.area - a.area)
+      .slice(0, 4)
+      .map((surface) => surface.name),
     flatNonWalkExamples: flatNonWalkSurfaces
       .sort((a, b) => b.area - a.area)
       .slice(0, 4)
@@ -3401,6 +3410,21 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if (
+    floorMatches === 0 &&
+    !hasWalkZones &&
+    (flatSurfaceRisk?.ambiguousFlatSurfaceCount ?? 0) >= 6
+  ) {
+    const examples = flatSurfaceRisk.ambiguousFlatSurfaceExamples.join(", ");
+    diagnostics.push({
+      severity: "warning",
+      code: "ambiguous-flat-walk-surfaces",
+      title: "Flat surfaces need explicit walk zones",
+      message: `${flatSurfaceRisk.ambiguousFlatSurfaceCount} low flat surface(s) have generic names, so the viewer may not know which ones are real floors${examples ? `, including ${examples}` : ""}.`,
+      action: "Use Controls to draw walk zones over the real floor areas, or rename/export actual floor meshes with clear floor/navmesh names."
+    });
+  }
+
   if ((flatSurfaceRisk?.flatNonWalkSurfaceCount ?? 0) >= 4 && !hasWalkZones) {
     const examples = flatSurfaceRisk.flatNonWalkExamples.join(", ");
     diagnostics.push({
@@ -4089,6 +4113,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "initial-view-on-dominant-plane",
     "focused-model-small-in-scene",
     "no-named-floor-meshes",
+    "ambiguous-flat-walk-surfaces",
     "flat-object-surfaces-may-catch-clicks",
     "multiple-floor-heights-detected",
     "no-named-collision-meshes",
