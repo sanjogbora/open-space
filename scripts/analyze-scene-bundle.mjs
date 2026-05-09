@@ -633,6 +633,8 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   let invalidBufferViewRangeCount = 0;
   let invalidAccessorBufferViewCount = 0;
   let invalidAccessorByteRangeCount = 0;
+  let invalidMaterialReferenceCount = 0;
+  let unassignedMaterialPrimitiveCount = 0;
   let invalidTextureReferenceCount = 0;
   let undersizedBufferCount = 0;
   let texturesMissingImageCount = 0;
@@ -715,6 +717,11 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
         primitive.material < materialTriangleCounts.length
       ) {
         materialTriangleCounts[primitive.material] += primitiveTriangles;
+      }
+      if (typeof primitive.material !== "number") {
+        unassignedMaterialPrimitiveCount += 1;
+      } else if (primitive.material < 0 || primitive.material >= materials.length) {
+        invalidMaterialReferenceCount += 1;
       }
     }
   }
@@ -943,6 +950,8 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     invalidBufferViewRangeCount,
     invalidAccessorBufferViewCount,
     invalidAccessorByteRangeCount,
+    invalidMaterialReferenceCount,
+    unassignedMaterialPrimitiveCount,
     invalidTextureReferenceCount,
     undersizedBufferCount,
     texturesMissingImageCount,
@@ -2551,6 +2560,14 @@ function createDiagnostics(manifest, report, graphs, controls) {
     (sum, model) => sum + (model.unreferencedDefaultSceneMeshCount ?? 0),
     0
   );
+  const invalidMaterialReferenceCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidMaterialReferenceCount ?? 0),
+    0
+  );
+  const unassignedMaterialPrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.unassignedMaterialPrimitiveCount ?? 0),
+    0
+  );
   const meshCount = report.models.reduce((sum, model) => sum + (model.meshCount ?? 0), 0);
   const dominantUntexturedMaterials = report.models.filter(
     (model) =>
@@ -2715,6 +2732,26 @@ function createDiagnostics(manifest, report, graphs, controls) {
       title: "Accessor byte ranges are invalid",
       message: `${invalidAccessorByteRangeCount} accessor definition(s) read beyond their bufferView byte range.`,
       action: "Re-export the model from the source tool or run it through a glTF repair pipeline before importing."
+    });
+  }
+
+  if (invalidMaterialReferenceCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-material-references",
+      title: "Mesh primitives reference missing materials",
+      message: `${invalidMaterialReferenceCount} primitive material reference(s) point outside the material list.`,
+      action: "Repair or re-export the GLB/GLTF; invalid material references can make surfaces render with fallback colors or disappear in some viewers."
+    });
+  }
+
+  if (unassignedMaterialPrimitiveCount > 0 && (report.materialCount ?? 0) > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "unassigned-primitive-materials",
+      title: "Some mesh primitives have no material",
+      message: `${unassignedMaterialPrimitiveCount} primitive(s) have no material assignment even though the model defines materials.`,
+      action: "Assign materials to those meshes in the source model or use Studio Materials only after confirming the plain fallback surfaces are intentional."
     });
   }
 
@@ -3901,6 +3938,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "walk-views-outside-walk-zones",
     "missing-room-map",
     "textured-primitives-missing-uvs",
+    "unassigned-primitive-materials",
     "mostly-unlit-materials",
     "vertex-colors-detected",
     "relocatable-texture-resources",
