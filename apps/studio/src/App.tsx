@@ -5512,6 +5512,8 @@ function App() {
                 onMaterials={() => setSelectedTab("materials")}
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
+                pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
+                onApplyTextureSuggestions={applyMaterialTextureSuggestions}
               />
             </div>
 
@@ -9407,6 +9409,7 @@ function DiagnosticList({
 
 type ImportNextStepAction =
   | "repair"
+  | "apply-textures"
   | "environment"
   | "materials"
   | "navigation"
@@ -9527,6 +9530,14 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
 }
 
 function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
+  if (action === "apply-textures") {
+    return {
+      action,
+      title: "Apply texture matches",
+      detail: "Use the analyzer's likely texture-folder matches before judging material quality in the viewer.",
+      button: "Apply Matches"
+    };
+  }
   if (action === "repair") {
     return {
       action,
@@ -9612,7 +9623,9 @@ function ImportNextSteps({
   onEnvironment,
   onMaterials,
   onNavigation,
-  onRooms
+  onRooms,
+  pendingTextureSuggestionCount = 0,
+  onApplyTextureSuggestions
 }: {
   stats: BundleStats | null;
   apiConnected: boolean;
@@ -9627,15 +9640,26 @@ function ImportNextSteps({
   onMaterials: () => void;
   onNavigation: () => void;
   onRooms: () => void;
+  pendingTextureSuggestionCount?: number;
+  onApplyTextureSuggestions?: () => void;
 }) {
   const diagnostics = stats?.diagnostics ?? [];
   const priority = diagnostics.filter((diagnostic) => diagnostic.severity !== "info");
   const actions = [
     ...new Set(priority.map((diagnostic) => importActionForDiagnostic(diagnostic.code)).filter(Boolean))
   ] as ImportNextStepAction[];
-  const steps = (actions.length > 0 ? actions : priority.length > 0 ? ["review" as const] : ["test" as const])
+  const prioritizedActions =
+    pendingTextureSuggestionCount > 0 && onApplyTextureSuggestions
+      ? (["apply-textures", ...actions.filter((action) => action !== "materials")] as ImportNextStepAction[])
+      : actions;
+  const steps = (prioritizedActions.length > 0 ? prioritizedActions : priority.length > 0 ? ["review" as const] : ["test" as const])
     .slice(0, 3)
-    .map(nextStepCopy);
+    .map((action) => {
+      const step = nextStepCopy(action);
+      return action === "apply-textures"
+        ? { ...step, button: `Apply ${pendingTextureSuggestionCount}` }
+        : step;
+    });
   const firstIssue = priority[0];
 
   return (
@@ -9652,6 +9676,8 @@ function ImportNextSteps({
         const onClick =
           step.action === "repair"
             ? onRepair
+            : step.action === "apply-textures"
+              ? onApplyTextureSuggestions ?? onMaterials
             : step.action === "environment"
               ? onEnvironment
             : step.action === "materials"
@@ -9675,6 +9701,7 @@ function ImportNextSteps({
             </div>
             <button type="button" className="button secondary" disabled={disabled} onClick={onClick}>
               {step.action === "repair" && <Wrench size={15} aria-hidden="true" />}
+              {step.action === "apply-textures" && <Palette size={15} aria-hidden="true" />}
               {step.action === "environment" && <Globe2 size={15} aria-hidden="true" />}
               {step.action === "materials" && <Palette size={15} aria-hidden="true" />}
               {step.action === "navigation" && <MapPin size={15} aria-hidden="true" />}

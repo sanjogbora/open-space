@@ -786,6 +786,11 @@ button.list-row {
   border-color: #c9e1f4;
 }
 
+.import-next-step.apply-textures,
+.import-next-step.materials {
+  border-color: #cdddf0;
+}
+
 .import-next-step.navigation {
   border-color: #badde8;
 }
