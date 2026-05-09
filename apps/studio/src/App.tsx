@@ -66,6 +66,10 @@ type OptimizeState = "idle" | "optimizing" | "done" | "error";
 type RepairState = "idle" | "repairing" | "done" | "error";
 type BakeState = "idle" | "baking" | "done" | "error";
 type BakePreset = "draft" | "medium" | "high" | "super";
+type BakePreflightIssue = {
+  severity: "error" | "warning";
+  message: string;
+};
 type HotspotIcon = NonNullable<HotspotInteraction["icon"]>;
 type MovementToggle = "enabled" | "keyboard" | "clickToMove" | "dragLook";
 type NavigationPaintShape = "rectangle" | "polygon";
@@ -2970,9 +2974,52 @@ function App() {
   const estimatedBakeMaterialCount = Math.min(materialCountForBake, bakeSettings.maxMaterials);
   const estimatedBakeTextureBytes =
     estimatedBakeMaterialCount * bakeSettings.resolution * bakeSettings.resolution * 4;
-  const bakePreflightRisk =
-    estimatedBakeTextureBytes > 1024 * 1024 * 1024 || bakeSettings.resolution >= 4096 || bakeSettings.samples >= 384;
   const bakeMaterialLimitExceeded = materialCountForBake > bakeSettings.maxMaterials;
+  const bakePreflightIssues: BakePreflightIssue[] = [
+    bakeMaterialLimitExceeded
+      ? {
+          severity: "error",
+          message: `${materialCountForBake} materials exceed the current ${bakeSettings.maxMaterials} material bake limit.`
+        }
+      : undefined,
+    estimatedBakeTextureBytes > 2 * 1024 * 1024 * 1024
+      ? {
+          severity: "error",
+          message: `${formatBytes(estimatedBakeTextureBytes)} raw lightmap target is too large for a reliable local bake.`
+        }
+      : estimatedBakeTextureBytes > 1024 * 1024 * 1024
+        ? {
+            severity: "warning",
+            message: `${formatBytes(estimatedBakeTextureBytes)} raw lightmap target can make Blender slow or unstable.`
+          }
+        : undefined,
+    bakeSettings.resolution >= 4096
+      ? {
+          severity: "warning",
+          message: "4096px lightmaps are expensive; use them only for final hero scenes."
+        }
+      : undefined,
+    bakeSettings.samples >= 384
+      ? {
+          severity: "warning",
+          message: "Super sample counts can take a long time on CPU or weak GPUs."
+        }
+      : undefined,
+    bakeSettings.samples < 64
+      ? {
+          severity: "warning",
+          message: "Low sample counts are fast but can produce noisy lighting."
+        }
+      : undefined,
+    bakeSettings.resolution < 1024 && bakeSettings.preset !== "draft"
+      ? {
+          severity: "warning",
+          message: "Resolution below 1024px may produce soft or blurry baked shadows."
+        }
+      : undefined
+  ].filter((issue): issue is BakePreflightIssue => Boolean(issue));
+  const bakePreflightBlocked = bakePreflightIssues.some((issue) => issue.severity === "error");
+  const bakePreflightRisk = bakePreflightIssues.length > 0;
   const lightmapBakeBlockedReason = !apiConnected
     ? "API is not connected."
     : bakeState === "baking"
@@ -2981,8 +3028,8 @@ function App() {
         ? "Checking Blender availability."
         : !blenderTool.ready
           ? blenderTool.action
-          : bakeMaterialLimitExceeded
-            ? `This scene has ${materialCountForBake} materials, above the current bake limit of ${bakeSettings.maxMaterials}.`
+          : bakePreflightBlocked
+            ? "Resolve the bake preflight errors before starting Blender."
             : "";
   const canRunLightmapBake = !lightmapBakeBlockedReason;
 
@@ -7227,13 +7274,7 @@ function App() {
                     {bakeState === "baking" ? "Baking" : "Bake"}
                   </button>
                 </div>
-                {bakeMaterialLimitExceeded && (
-                  <p className="error-note">
-                    This scene has {materialCountForBake} materials, above the current bake limit of{" "}
-                    {bakeSettings.maxMaterials}. Increase the limit for testing, or optimize/merge materials first.
-                  </p>
-                )}
-                {!canRunLightmapBake && lightmapBakeBlockedReason && bakeState !== "baking" && !bakeMaterialLimitExceeded && (
+                {!canRunLightmapBake && lightmapBakeBlockedReason && bakeState !== "baking" && !bakePreflightBlocked && (
                   <p className={blenderTool && !blenderTool.ready ? "error-note" : "quiet-note"}>
                     {lightmapBakeBlockedReason}
                   </p>
@@ -7326,7 +7367,7 @@ function App() {
                     </select>
                   </label>
                 </div>
-                <div className={bakePreflightRisk ? "bake-preflight-card warning" : "bake-preflight-card"}>
+                <div className={bakePreflightBlocked ? "bake-preflight-card error" : bakePreflightRisk ? "bake-preflight-card warning" : "bake-preflight-card"}>
                   <div>
                     <strong>Bake preflight</strong>
                     <p>
@@ -7334,10 +7375,16 @@ function App() {
                     </p>
                   </div>
                   <span>{formatBytes(estimatedBakeTextureBytes)} raw lightmap target</span>
-                  {bakePreflightRisk && (
-                    <small>
-                      High resolution, sample count, or lightmap memory can make Blender bakes slow or fail on weak GPUs.
-                    </small>
+                  {bakePreflightIssues.length > 0 ? (
+                    <ul>
+                      {bakePreflightIssues.map((issue) => (
+                        <li key={issue.message} className={issue.severity}>
+                          {issue.message}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <small>Settings look reasonable for a local Blender/Cycles bake.</small>
                   )}
                 </div>
                 {bakeError && <p className="error-note">{bakeError}</p>}

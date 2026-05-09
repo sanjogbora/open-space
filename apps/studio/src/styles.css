@@ -2931,14 +2931,21 @@ button.list-row {
   background: #fff8e8;
 }
 
+.bake-preflight-card.error {
+  border-color: #f2b7b5;
+  background: #fff2f1;
+}
+
 .bake-preflight-card strong,
 .bake-preflight-card p,
-.bake-preflight-card small {
+.bake-preflight-card small,
+.bake-preflight-card ul {
   margin: 0;
 }
 
 .bake-preflight-card p,
-.bake-preflight-card small {
+.bake-preflight-card small,
+.bake-preflight-card li {
   color: #60717c;
   font-size: 12px;
   line-height: 1.4;
@@ -2951,8 +2958,23 @@ button.list-row {
   white-space: nowrap;
 }
 
-.bake-preflight-card small {
+.bake-preflight-card small,
+.bake-preflight-card ul {
   grid-column: 1 / -1;
+}
+
+.bake-preflight-card ul {
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+}
+
+.bake-preflight-card li.error {
+  color: #9a2f2f;
+}
+
+.bake-preflight-card li.warning {
+  color: #7b4c00;
 }
 
 .stat-grid {
