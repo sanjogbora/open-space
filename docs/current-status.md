@@ -187,6 +187,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio bake QA now gives a recommended next action for failed, tiny, flat, low-resolution, or low-sample lightmap bakes.
 - Analyzer and Publish readiness now flag missing or suspiciously tiny material lightmap files before a baked scene is delivered.
 - Studio Import and Asset Health now surface lightmap file health and route missing/tiny lightmap diagnostics to the bake workflow.
+- Studio bake repair actions now open and focus the bake workflow instead of starting Blender immediately, so users can review preflight settings first.
 - Studio now shows a bake preflight estimate for material count, target resolution, sample count, and raw lightmap texture footprint before Blender starts.
 - Studio bake preflight now lists specific blocking errors and warnings for material limits, raw lightmap memory, resolution, and sample count before Blender starts.
 - Studio bake settings now show when resolution, samples, or margin differ from the selected preset and can reset those values back to the preset defaults.

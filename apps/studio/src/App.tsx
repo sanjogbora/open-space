@@ -5813,6 +5813,15 @@ function App() {
     manifest.originalSceneUrl ??
     optimizationJob?.sourceSceneUrl ??
     (manifest.sceneUrl && manifest.sceneUrl !== "scene.optimized.glb" ? manifest.sceneUrl : "scene.glb");
+  const openBakeWorkflow = () => {
+    if (!selectedMaterial && materialsDoc?.materials[0]) {
+      setSelectedMaterialId(materialsDoc.materials[0].id);
+    }
+    setSelectedTab("materials");
+    window.setTimeout(() => {
+      document.querySelector(".lightmap-bake-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+  };
   const runImportDiagnosticAction = (action: ImportNextStepAction) => {
     if (action === "repair") {
       void repairImport();
@@ -5851,7 +5860,7 @@ function App() {
       return;
     }
     if (action === "bake") {
-      void bakeLightmaps();
+      openBakeWorkflow();
       return;
     }
     if (action === "review") {
@@ -6148,7 +6157,7 @@ function App() {
                 bakeState={bakeState}
                 onRepair={() => void repairImport()}
                 onOptimize={() => void optimizeProject()}
-                onBake={() => void bakeLightmaps()}
+                onBake={openBakeWorkflow}
                 onEnvironment={() => setSelectedTab("environment")}
                 onMaterials={() => setSelectedTab("materials")}
                 onViews={() => setSelectedTab("views")}
@@ -6201,7 +6210,7 @@ function App() {
                     onApplyTextureSuggestions={applyMaterialTextureSuggestions}
                     onRepair={() => void repairImport()}
                     onMaterials={() => setSelectedTab("materials")}
-                    onBake={() => void bakeLightmaps()}
+                    onBake={openBakeWorkflow}
                     onReviewTextureSuggestion={reviewMaterialTextureSuggestion}
                   />
                   <DiagnosticList
@@ -7630,7 +7639,7 @@ function App() {
                   <h2>{selectedMaterial.name}</h2>
                 </div>
 
-                <div className="publish-action-card">
+                <div className="publish-action-card lightmap-bake-card">
                   <div>
                     <strong>Automatic lightmap bake</strong>
                     <p className="quiet-note">
