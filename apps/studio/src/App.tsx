@@ -3064,6 +3064,10 @@ function App() {
       return material && !material[suggestion.field];
     }).length;
   }, [bundleStats?.materialTextureSuggestions, materialsDoc]);
+  const appliedMaterialTextureSuggestionCount = Math.max(
+    0,
+    (bundleStats?.materialTextureSuggestions?.length ?? 0) - pendingMaterialTextureSuggestionCount
+  );
 
   const updateManifest = (updater: (manifest: SceneManifest) => SceneManifest) => {
     setManifest((current) => (current ? updater(current) : current));
@@ -5542,6 +5546,7 @@ function App() {
                     apiConnected={apiConnected}
                     repairState={repairState}
                     pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
+                    appliedTextureSuggestionCount={appliedMaterialTextureSuggestionCount}
                     onApplyTextureSuggestions={applyMaterialTextureSuggestions}
                     onRepair={() => void repairImport()}
                     onMaterials={() => setSelectedTab("materials")}
@@ -9661,12 +9666,18 @@ function ImportNextSteps({
         : step;
     });
   const firstIssue = priority[0];
+  const headingHint =
+    pendingTextureSuggestionCount > 0
+      ? `${pendingTextureSuggestionCount} texture match${pendingTextureSuggestionCount === 1 ? "" : "es"} ready`
+      : firstIssue
+        ? firstIssue.title
+        : "Import report looks usable";
 
   return (
     <div className="import-next-steps">
       <div className="compact-panel-heading">
         <strong>Recommended next step</strong>
-        {firstIssue ? <small>{firstIssue.title}</small> : <small>Import report looks usable</small>}
+        <small>{headingHint}</small>
       </div>
       {steps.map((step) => {
         const disabled =
@@ -9771,6 +9782,7 @@ function AssetHealth({
   apiConnected,
   repairState,
   pendingTextureSuggestionCount = 0,
+  appliedTextureSuggestionCount = 0,
   onApplyTextureSuggestions,
   onRepair,
   onMaterials
@@ -9780,6 +9792,7 @@ function AssetHealth({
   apiConnected: boolean;
   repairState: RepairState;
   pendingTextureSuggestionCount?: number;
+  appliedTextureSuggestionCount?: number;
   onApplyTextureSuggestions?: () => void;
   onRepair?: () => void;
   onMaterials?: () => void;
@@ -9821,8 +9834,9 @@ function AssetHealth({
           )}
           {!hasTextureRepairWork && textureSuggestions.length > 0 && (
             <p>
-              Loose texture files were found and matched to likely materials. Apply the mappings, then review the
-              material previews.
+              {pendingTextureSuggestionCount > 0
+                ? `${pendingTextureSuggestionCount} loose texture match${pendingTextureSuggestionCount === 1 ? "" : "es"} can be applied to likely materials.`
+                : `${appliedTextureSuggestionCount} texture match${appliedTextureSuggestionCount === 1 ? "" : "es"} already assigned. Review the material previews before opening the viewer.`}
             </p>
           )}
           {!hasTextureRepairWork && textureSuggestions.length === 0 && hasLooseUnmappedTextures && (
