@@ -133,6 +133,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio/API expose Blender/Cycles lightmap bake jobs with quality presets, UV2 generation, generated lightmap assets, and material assignment.
 - Lightmap bake jobs now report generated lightmap URLs, resolutions, byte sizes, total lightmap bytes, and the exported lightmapped scene artifact in Studio.
 - Studio now shows lightmap bake QA checks and thumbnails for generated lightmaps so empty, tiny, incomplete, or low-quality bakes are visible before publish.
+- Studio now shows a bake preflight estimate for material count, target resolution, sample count, and raw lightmap texture footprint before Blender starts.
 - Failed Blender/Cycles bakes return the bake job in the API error response so Studio can show the failed stage and job steps.
 
 Current limitations:

@@ -2850,6 +2850,11 @@ function App() {
   const hasBlockingPublishErrors = publishChecks.some((check) => check.blocking && !check.ready);
   const blenderTool = toolStatus?.tools.blender;
   const materialCountForBake = bundleStats?.materialCount ?? materialsDoc?.materials.length ?? 0;
+  const estimatedBakeMaterialCount = Math.min(materialCountForBake, bakeSettings.maxMaterials);
+  const estimatedBakeTextureBytes =
+    estimatedBakeMaterialCount * bakeSettings.resolution * bakeSettings.resolution * 4;
+  const bakePreflightRisk =
+    estimatedBakeTextureBytes > 1024 * 1024 * 1024 || bakeSettings.resolution >= 4096 || bakeSettings.samples >= 384;
   const bakeMaterialLimitExceeded = materialCountForBake > bakeSettings.maxMaterials;
   const lightmapBakeBlockedReason = !apiConnected
     ? "API is not connected."
@@ -6961,6 +6966,20 @@ function App() {
                       <option value="combined">Combined</option>
                     </select>
                   </label>
+                </div>
+                <div className={bakePreflightRisk ? "bake-preflight-card warning" : "bake-preflight-card"}>
+                  <div>
+                    <strong>Bake preflight</strong>
+                    <p>
+                      {estimatedBakeMaterialCount} material(s) at {bakeSettings.resolution}px / {bakeSettings.samples} samples.
+                    </p>
+                  </div>
+                  <span>{formatBytes(estimatedBakeTextureBytes)} raw lightmap target</span>
+                  {bakePreflightRisk && (
+                    <small>
+                      High resolution, sample count, or lightmap memory can make Blender bakes slow or fail on weak GPUs.
+                    </small>
+                  )}
                 </div>
                 {bakeError && <p className="error-note">{bakeError}</p>}
                 {lightmapBakeJob && lightmapBakeJob.status !== "idle" && (

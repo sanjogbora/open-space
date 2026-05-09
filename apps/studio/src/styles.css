@@ -2704,6 +2704,46 @@ button.list-row {
   line-height: 1.4;
 }
 
+.bake-preflight-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px;
+  border: 1px solid #dce7ee;
+  border-radius: 7px;
+  background: #fbfcfd;
+}
+
+.bake-preflight-card.warning {
+  border-color: #f0d38f;
+  background: #fff8e8;
+}
+
+.bake-preflight-card strong,
+.bake-preflight-card p,
+.bake-preflight-card small {
+  margin: 0;
+}
+
+.bake-preflight-card p,
+.bake-preflight-card small {
+  color: #60717c;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bake-preflight-card span {
+  color: #24313a;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.bake-preflight-card small {
+  grid-column: 1 / -1;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
