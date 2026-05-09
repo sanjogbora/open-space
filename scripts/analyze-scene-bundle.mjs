@@ -3862,6 +3862,8 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "initial-view-on-dominant-plane",
     "focused-model-small-in-scene",
     "no-named-floor-meshes",
+    "flat-object-surfaces-may-catch-clicks",
+    "multiple-floor-heights-detected",
     "no-named-collision-meshes",
     "no-named-ceiling-meshes",
     "missing-walk-zones",
