@@ -6167,6 +6167,7 @@ function App() {
                     <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
                     <Stat label="Embedded images" value={String(bundleStats.embeddedImageCount ?? 0)} />
                     <Stat label="Max texture" value={`${bundleStats.maxTextureDimension ?? 0}px`} />
+                    <Stat label="Strip textures" value={String(bundleStats.extremeAspectTextureCount ?? 0)} />
                     <Stat label="Loose images" value={String(bundleStats.looseImageCount ?? 0)} />
                     <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
                     <Stat label="Texture compression" value={textureCompressionLabel(bundleStats)} />
@@ -10187,6 +10188,7 @@ function App() {
                       <Stat label="Embedded images" value={String(bundleStats.embeddedImageCount ?? 0)} />
                       <Stat label="Max texture" value={`${bundleStats.maxTextureDimension ?? 0}px`} />
                       <Stat label="Oversized" value={String(bundleStats.oversizedTextureCount ?? 0)} />
+                      <Stat label="Strip textures" value={String(bundleStats.extremeAspectTextureCount ?? 0)} />
                       <Stat label="Loose images" value={String(bundleStats.looseImageCount ?? 0)} />
                       <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
                       <Stat label="Texture compression" value={textureCompressionLabel(bundleStats)} />

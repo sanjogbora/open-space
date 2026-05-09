@@ -169,6 +169,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.
 - Analyzer now flags models that contain image textures but do not assign them to material slots, or assign them to only a tiny share of materials.
 - Analyzer now flags extreme wide/tall texture strips, which can explain web-viewer blur, shimmer, or poor compression after optimization.
+- Studio stats now expose the strip-texture count beside texture size/compression, making that visual-risk signal visible without opening diagnostics.
 - Studio Asset Health now surfaces texture assignment coverage and routes weak coverage directly to Materials.
 - Analyzer now counts unused texture image payloads, so GLBs with many disconnected image files are flagged before users judge a flat-looking viewer.
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
