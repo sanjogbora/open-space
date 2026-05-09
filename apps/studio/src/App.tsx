@@ -7163,23 +7163,34 @@ function App() {
                     )}
                     {lightmapBakeJob.lightmaps && lightmapBakeJob.lightmaps.length > 0 && (
                       <div className="job-history-list">
-                        {lightmapBakeJob.lightmaps.slice(0, 8).map((lightmap) => (
-                          <div key={`${lightmap.materialName}-${lightmap.url}`} className="job-history-row lightmap-row">
-                            {canPreviewTextureAsset(lightmap.url) ? (
-                              <img src={projectAssetPath(activeProjectId, lightmap.url)} alt="" loading="lazy" />
-                            ) : (
-                              <span className="lightmap-preview-placeholder">LM</span>
-                            )}
-                            <div>
-                              <strong>{lightmap.materialName}</strong>
-                              <span>{lightmap.url}</span>
-                            </div>
-                            <small>
-                              {lightmap.resolution ? `${lightmap.resolution}px / ` : ""}
-                              {formatBytes(lightmap.bytes ?? 0)}
-                            </small>
-                          </div>
-                        ))}
+                        {lightmapBakeJob.lightmaps
+                          .slice(0, 8)
+                          .map((lightmap) => {
+                            const quality = lightmapPreviewQuality(lightmap);
+                            return (
+                              <div
+                                key={`${lightmap.materialName}-${lightmap.url}`}
+                                className={`job-history-row lightmap-row ${quality}`}
+                              >
+                                {canPreviewTextureAsset(lightmap.url) ? (
+                                  <img src={projectAssetPath(activeProjectId, lightmap.url)} alt="" loading="lazy" />
+                                ) : (
+                                  <span className="lightmap-preview-placeholder">LM</span>
+                                )}
+                                <div>
+                                  <strong>{lightmap.materialName}</strong>
+                                  <span>{lightmap.url}</span>
+                                </div>
+                                <small>
+                                  <span className={`lightmap-quality-pill ${quality}`}>
+                                    {quality === "warning" ? "Review" : "OK"}
+                                  </span>
+                                  {lightmap.resolution ? `${lightmap.resolution}px / ` : ""}
+                                  {formatBytes(lightmap.bytes ?? 0)}
+                                </small>
+                              </div>
+                            );
+                          })}
                       </div>
                     )}
                     {lightmapBakeJob.steps.map((step) => (
@@ -9967,6 +9978,13 @@ function LightmapBakeQuality({
   const expectedCount = Math.min(materialCount, job.maxMaterials ?? materialCount);
   const totalBytes = job.totalLightmapBytes ?? 0;
   const averageBytes = lightmapCount > 0 ? totalBytes / lightmapCount : 0;
+  const missingByteCount = (job.lightmaps ?? []).filter((lightmap) => !lightmap.bytes).length;
+  const tinyLightmapCount = (job.lightmaps ?? []).filter(
+    (lightmap) => typeof lightmap.bytes === "number" && lightmap.bytes > 0 && lightmap.bytes < 4096
+  ).length;
+  const lowResolutionCount = (job.lightmaps ?? []).filter(
+    (lightmap) => typeof lightmap.resolution === "number" && lightmap.resolution < 1024
+  ).length;
   const issues = [
     lightmapCount <= 0 ? "No lightmap textures were generated. Check Blender output and material eligibility." : "",
     job.outputSceneUrl ? "" : "No lightmapped scene artifact was reported.",
@@ -9975,6 +9993,9 @@ function LightmapBakeQuality({
       : "",
     totalBytes <= 0 && lightmapCount > 0 ? "Generated lightmaps have no recorded file size." : "",
     averageBytes > 0 && averageBytes < 4096 ? "Average lightmap size is very small, which can indicate an empty or failed bake." : "",
+    missingByteCount > 0 ? `${missingByteCount} lightmap(s) have no recorded file size.` : "",
+    tinyLightmapCount > 0 ? `${tinyLightmapCount} lightmap(s) are extremely small and should be inspected.` : "",
+    lowResolutionCount > 0 ? `${lowResolutionCount} lightmap(s) are below 1024px.` : "",
     (job.resolution ?? 0) > 0 && (job.resolution ?? 0) < 1024 ? "Resolution is below 1024px; expect softer lighting and visible artifacts." : "",
     (job.samples ?? 0) > 0 && (job.samples ?? 0) < 64 ? "Sample count is low; use Medium or higher before client review." : ""
   ].filter(Boolean);
@@ -10000,6 +10021,16 @@ function LightmapBakeQuality({
       ))}
     </div>
   );
+}
+
+function lightmapPreviewQuality(lightmap: NonNullable<LightmapBakeJobDocument["lightmaps"]>[number]): "pass" | "warning" {
+  if (!lightmap.bytes || lightmap.bytes < 4096) {
+    return "warning";
+  }
+  if (typeof lightmap.resolution === "number" && lightmap.resolution < 1024) {
+    return "warning";
+  }
+  return "pass";
 }
 
 function AssetHealth({
