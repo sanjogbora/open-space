@@ -39,6 +39,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio hides generated navigation zones by default so normal repairs focus on manual walk/pass/block patches.
 - Studio hides the detailed navigation zone list behind a Zone details disclosure so normal repairs can stay focused on the map and guided actions.
 - Studio hides raw Controls JSON behind a disclosure so non-technical navigation editing is not dominated by configuration text.
+- Studio hides advanced navigation settings such as scale, detection keywords, exact bounds, and blocker-name tools behind a disclosure so the default repair flow stays focused on Auto Fix, testing, and the map.
 - Studio can disable all generated navigation zones from the hidden-auto-zone warning when automatic detection creates bad walk areas.
 - Studio has an Auto Fix navigation action that can set graph bounds, add boundary blocks, add walk patches from saved views, and bridge close navigation islands.
 - Studio surfaces TV/video screen planning in Interactions with mapped candidate counts and one-click likely screen mapping.

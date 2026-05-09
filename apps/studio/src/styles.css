@@ -1706,6 +1706,51 @@ button.list-row {
   background: rgba(191, 215, 232, 0.45);
 }
 
+.navigation-advanced-settings {
+  border: 1px solid #d7e2ea;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.navigation-advanced-settings summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+  padding: 12px;
+  cursor: pointer;
+  color: #26343d;
+  font-weight: 800;
+}
+
+.navigation-advanced-settings summary::marker {
+  color: #60717c;
+}
+
+.navigation-advanced-settings summary small {
+  color: #60717c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.navigation-advanced-settings[open] {
+  padding-bottom: 12px;
+}
+
+.navigation-advanced-settings[open] summary {
+  border-bottom: 1px solid #e3ebf0;
+  margin-bottom: 12px;
+}
+
+.navigation-advanced-settings > .field-grid,
+.navigation-advanced-settings > .publish-row,
+.navigation-advanced-settings > .bounds-editor,
+.navigation-advanced-settings > .publish-action-card,
+.navigation-advanced-settings > .collision-ignore-panel,
+.navigation-advanced-settings > .quiet-note {
+  margin-left: 12px;
+  margin-right: 12px;
+}
+
 .navigation-repair-path {
   grid-column: 1 / -1;
   display: grid;

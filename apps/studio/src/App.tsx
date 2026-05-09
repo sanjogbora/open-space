@@ -9287,196 +9287,202 @@ function App() {
                         </div>
                       </div>
                     )}
-                    <div className="field-grid">
-                      <NumberField
-                        label="Model Scale"
-                        min={0.0001}
-                        max={10}
-                        step={0.001}
-                        value={manifest.rendering?.modelScale ?? 1}
-                        onChange={(value) =>
-                          updateRendering((rendering) => ({
-                            ...rendering,
-                            modelScale: value
-                          }))
-                        }
-                      />
-                      <label className="toggle-row compact-toggle">
-                        <input
-                          type="checkbox"
-                          checked={manifest.rendering?.doubleSidedMaterials ?? false}
-                          onChange={(event) =>
+                    <details className="navigation-advanced-settings">
+                      <summary>
+                        <span>Advanced navigation settings</span>
+                        <small>Model scale, detection keywords, exact bounds, and blocker-name tools.</small>
+                      </summary>
+                      <div className="field-grid">
+                        <NumberField
+                          label="Model Scale"
+                          min={0.0001}
+                          max={10}
+                          step={0.001}
+                          value={manifest.rendering?.modelScale ?? 1}
+                          onChange={(value) =>
                             updateRendering((rendering) => ({
                               ...rendering,
-                              doubleSidedMaterials: event.target.checked
+                              modelScale: value
                             }))
                           }
                         />
-                        <span>Double-sided walls and ceilings</span>
-                      </label>
-                      <label className="toggle-row compact-toggle">
-                        <input
-                          type="checkbox"
-                          checked={manifest.rendering?.relightUnlitMaterials ?? true}
-                          onChange={(event) =>
-                            updateRendering((rendering) => ({
-                              ...rendering,
-                              relightUnlitMaterials: event.target.checked
-                            }))
-                          }
-                        />
-                        <span>Relight flat/unlit materials</span>
-                      </label>
-                      <label>
-                        <span>Floor Keywords</span>
-                        <input
-                          value={keywordList(manifest.navigation.floorMeshNames)}
-                          onChange={(event) =>
-                            updateNavigation((navigation) => ({
-                              ...navigation,
-                              floorMeshNames: parseKeywordList(event.target.value)
-                            }))
-                          }
-                        />
-                      </label>
-                      <label>
-                        <span>Collision Keywords</span>
-                        <input
-                          value={keywordList(manifest.navigation.collisionMeshNames)}
-                          onChange={(event) =>
-                            updateNavigation((navigation) => ({
-                              ...navigation,
-                              collisionMeshNames: parseKeywordList(event.target.value)
-                            }))
-                          }
-                        />
-                      </label>
-                      <label>
-                        <span>Ignored Collision Names</span>
-                        <input
-                          value={keywordList(manifest.navigation.ignoredCollisionMeshNames)}
-                          onChange={(event) =>
-                            updateNavigation((navigation) => ({
-                              ...navigation,
-                              ignoredCollisionMeshNames: parseKeywordList(event.target.value)
-                            }))
-                          }
-                        />
-                      </label>
-                    </div>
-
-                    <div className="publish-row">
-                      <span>Navigation bounds</span>
-                      <button type="button" className="button secondary" onClick={applyBoundsFromGraph}>
-                        <Wrench size={16} aria-hidden="true" />
-                        Use graph bounds
-                      </button>
-                    </div>
-                    {manifest.navigation.bounds ? (
-                      <div className="bounds-editor">
-                        <VectorEditor
-                          label="Bounds Min"
-                          value={manifest.navigation.bounds.min}
-                          onChange={(value) =>
-                            updateNavigation((navigation) => ({
-                              ...navigation,
-                              bounds: {
-                                min: value,
-                                max: navigation.bounds?.max ?? [5, 3, 5]
-                              }
-                            }))
-                          }
-                        />
-                        <VectorEditor
-                          label="Bounds Max"
-                          value={manifest.navigation.bounds.max}
-                          onChange={(value) =>
-                            updateNavigation((navigation) => ({
-                              ...navigation,
-                              bounds: {
-                                min: navigation.bounds?.min ?? [-5, 0, -5],
-                                max: value
-                              }
-                            }))
-                          }
-                        />
+                        <label className="toggle-row compact-toggle">
+                          <input
+                            type="checkbox"
+                            checked={manifest.rendering?.doubleSidedMaterials ?? false}
+                            onChange={(event) =>
+                              updateRendering((rendering) => ({
+                                ...rendering,
+                                doubleSidedMaterials: event.target.checked
+                              }))
+                            }
+                          />
+                          <span>Double-sided walls and ceilings</span>
+                        </label>
+                        <label className="toggle-row compact-toggle">
+                          <input
+                            type="checkbox"
+                            checked={manifest.rendering?.relightUnlitMaterials ?? true}
+                            onChange={(event) =>
+                              updateRendering((rendering) => ({
+                                ...rendering,
+                                relightUnlitMaterials: event.target.checked
+                              }))
+                            }
+                          />
+                          <span>Relight flat/unlit materials</span>
+                        </label>
+                        <label>
+                          <span>Floor Keywords</span>
+                          <input
+                            value={keywordList(manifest.navigation.floorMeshNames)}
+                            onChange={(event) =>
+                              updateNavigation((navigation) => ({
+                                ...navigation,
+                                floorMeshNames: parseKeywordList(event.target.value)
+                              }))
+                            }
+                          />
+                        </label>
+                        <label>
+                          <span>Collision Keywords</span>
+                          <input
+                            value={keywordList(manifest.navigation.collisionMeshNames)}
+                            onChange={(event) =>
+                              updateNavigation((navigation) => ({
+                                ...navigation,
+                                collisionMeshNames: parseKeywordList(event.target.value)
+                              }))
+                            }
+                          />
+                        </label>
+                        <label>
+                          <span>Ignored Collision Names</span>
+                          <input
+                            value={keywordList(manifest.navigation.ignoredCollisionMeshNames)}
+                            onChange={(event) =>
+                              updateNavigation((navigation) => ({
+                                ...navigation,
+                                ignoredCollisionMeshNames: parseKeywordList(event.target.value)
+                              }))
+                            }
+                          />
+                        </label>
                       </div>
-                    ) : (
-                      <p className="quiet-note">No navigation bounds are set. Use graph bounds after analysis.</p>
-                    )}
 
-                    <div className="publish-action-card">
-                      <div>
-                        <strong>Ignore blocker from viewer</strong>
-                        <p className="quiet-note">
-                          Paste the blocker name shown by Navigation blocked, or use Fix in Studio from the viewer.
-                        </p>
-                      </div>
-                      <div className="inline-actions">
-                        <input
-                          className="compact-input"
-                          value={blockerNameDraft}
-                          placeholder="Wall_012 or DoorFrame"
-                          onChange={(event) => setBlockerNameDraft(event.target.value)}
-                        />
-                        <button
-                          type="button"
-                          className="button secondary"
-                          disabled={!blockerNameDraft.trim()}
-                          onClick={() => ignoreCollisionName(blockerNameDraft)}
-                        >
-                          Ignore
+                      <div className="publish-row">
+                        <span>Navigation bounds</span>
+                        <button type="button" className="button secondary" onClick={applyBoundsFromGraph}>
+                          <Wrench size={16} aria-hidden="true" />
+                          Use graph bounds
                         </button>
                       </div>
-                    </div>
-
-                    {collisionNameCandidates.length > 0 && (
-                      <div className="collision-ignore-panel">
-                        <div className="surface-mapper-heading">
-                          <strong>Collision candidates</strong>
-                          <small>{collisionNameCandidates.length}</small>
+                      {manifest.navigation.bounds ? (
+                        <div className="bounds-editor">
+                          <VectorEditor
+                            label="Bounds Min"
+                            value={manifest.navigation.bounds.min}
+                            onChange={(value) =>
+                              updateNavigation((navigation) => ({
+                                ...navigation,
+                                bounds: {
+                                  min: value,
+                                  max: navigation.bounds?.max ?? [5, 3, 5]
+                                }
+                              }))
+                            }
+                          />
+                          <VectorEditor
+                            label="Bounds Max"
+                            value={manifest.navigation.bounds.max}
+                            onChange={(value) =>
+                              updateNavigation((navigation) => ({
+                                ...navigation,
+                                bounds: {
+                                  min: navigation.bounds?.min ?? [-5, 0, -5],
+                                  max: value
+                                }
+                              }))
+                            }
+                          />
                         </div>
-                        <div className="collision-candidate-list">
-                          {collisionNameCandidates.map((node) => (
-                            <button
-                              key={node.id}
-                              type="button"
-                              className="collision-candidate"
-                              title={`Ignore ${node.name} for navigation collision`}
-                              onClick={() => ignoreCollisionName(node.name)}
-                            >
-                              <span>{node.name}</span>
-                              <small>{node.triangleCount} triangles</small>
-                            </button>
-                          ))}
+                      ) : (
+                        <p className="quiet-note">No navigation bounds are set. Use graph bounds after analysis.</p>
+                      )}
+
+                      <div className="publish-action-card">
+                        <div>
+                          <strong>Ignore blocker from viewer</strong>
+                          <p className="quiet-note">
+                            Paste the blocker name shown by Navigation blocked, or use Fix in Studio from the viewer.
+                          </p>
+                        </div>
+                        <div className="inline-actions">
+                          <input
+                            className="compact-input"
+                            value={blockerNameDraft}
+                            placeholder="Wall_012 or DoorFrame"
+                            onChange={(event) => setBlockerNameDraft(event.target.value)}
+                          />
+                          <button
+                            type="button"
+                            className="button secondary"
+                            disabled={!blockerNameDraft.trim()}
+                            onClick={() => ignoreCollisionName(blockerNameDraft)}
+                          >
+                            Ignore
+                          </button>
                         </div>
                       </div>
-                    )}
 
-                    {doorPassCandidates.length > 0 && (
-                      <div className="collision-ignore-panel">
-                        <div className="surface-mapper-heading">
-                          <strong>Door/pass candidates</strong>
-                          <small>{doorPassCandidates.length}</small>
+                      {collisionNameCandidates.length > 0 && (
+                        <div className="collision-ignore-panel">
+                          <div className="surface-mapper-heading">
+                            <strong>Collision candidates</strong>
+                            <small>{collisionNameCandidates.length}</small>
+                          </div>
+                          <div className="collision-candidate-list">
+                            {collisionNameCandidates.map((node) => (
+                              <button
+                                key={node.id}
+                                type="button"
+                                className="collision-candidate"
+                                title={`Ignore ${node.name} for navigation collision`}
+                                onClick={() => ignoreCollisionName(node.name)}
+                              >
+                                <span>{node.name}</span>
+                                <small>{node.triangleCount} triangles</small>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        <div className="collision-candidate-list">
-                          {doorPassCandidates.map((candidate) => (
-                            <button
-                              key={candidate.id}
-                              type="button"
-                              className="collision-candidate pass-candidate"
-                              title={`Create a pass zone at ${candidate.name}`}
-                              onClick={() => addPassZoneFromCandidate(candidate)}
-                            >
-                              <span>{candidate.name}</span>
-                              <small>
-                                {candidate.center.map((value) => value.toFixed(2)).join(", ")}
-                              </small>
-                            </button>
-                          ))}
+                      )}
+
+                      {doorPassCandidates.length > 0 && (
+                        <div className="collision-ignore-panel">
+                          <div className="surface-mapper-heading">
+                            <strong>Door/pass candidates</strong>
+                            <small>{doorPassCandidates.length}</small>
+                          </div>
+                          <div className="collision-candidate-list">
+                            {doorPassCandidates.map((candidate) => (
+                              <button
+                                key={candidate.id}
+                                type="button"
+                                className="collision-candidate pass-candidate"
+                                title={`Create a pass zone at ${candidate.name}`}
+                                onClick={() => addPassZoneFromCandidate(candidate)}
+                              >
+                                <span>{candidate.name}</span>
+                                <small>
+                                  {candidate.center.map((value) => value.toFixed(2)).join(", ")}
+                                </small>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </details>
 
                     <div className="publish-row">
                       <span>Navigation zones</span>
