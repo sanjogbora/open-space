@@ -2071,6 +2071,69 @@ function hexColorLooksGreen(value) {
   return green > 70 && green > red * 1.15 && green > blue * 1.12;
 }
 
+function repeatedLargeMeshInstances(graph, sceneBounds) {
+  if (!graph || !sceneBounds) {
+    return undefined;
+  }
+  const nodes = (graph.nodes ?? []).filter(
+    (node) => typeof node.meshIndex === "number" && node.triangleCount > 0 && node.bounds
+  );
+  const totalTriangles = nodes.reduce((sum, node) => sum + (node.triangleCount ?? 0), 0);
+  if (totalTriangles <= 0) {
+    return undefined;
+  }
+  const sceneArea = Math.max(1, boundsArea(sceneBounds));
+  const groupsByMesh = new Map();
+  for (const node of nodes) {
+    groupsByMesh.set(node.meshIndex, [...(groupsByMesh.get(node.meshIndex) ?? []), node]);
+  }
+  const repeatedGroups = [...groupsByMesh.values()].flatMap((groupNodes) => {
+    if (groupNodes.length < 2) {
+      return [];
+    }
+    const triangles = groupNodes
+      .map((node) => node.triangleCount ?? 0)
+      .sort((a, b) => b - a);
+    const repeatedTriangles = triangles.slice(1).reduce((sum, count) => sum + count, 0);
+    const groupBounds = graphBounds({ nodes: groupNodes });
+    const footprintArea = boundsArea(groupBounds);
+    if (
+      repeatedTriangles < 200 ||
+      (repeatedTriangles / totalTriangles < 0.02 && footprintArea / sceneArea < 0.01)
+    ) {
+      return [];
+    }
+    return [
+      {
+        meshIndex: groupNodes[0].meshIndex,
+        count: groupNodes.length,
+        repeatedTriangles,
+        footprintArea,
+        names: groupNodes.slice(0, 3).map((node) => node.name).filter(Boolean)
+      }
+    ];
+  });
+  const repeatedTriangles = repeatedGroups.reduce((sum, group) => sum + group.repeatedTriangles, 0);
+  const repeatedShare = repeatedTriangles / totalTriangles;
+  if (
+    repeatedGroups.length < 8 &&
+    !(repeatedGroups.length >= 4 && repeatedShare >= 0.35)
+  ) {
+    return undefined;
+  }
+  if (repeatedShare < 0.18) {
+    return undefined;
+  }
+  return {
+    groupCount: repeatedGroups.length,
+    repeatedShare,
+    repeatedTriangles,
+    examples: repeatedGroups
+      .sort((a, b) => b.repeatedTriangles - a.repeatedTriangles)
+      .slice(0, 3)
+  };
+}
+
 function createDiagnostics(manifest, report, graphs, controls) {
   const diagnostics = [];
   const graph = graphs[0];
@@ -2079,6 +2142,7 @@ function createDiagnostics(manifest, report, graphs, controls) {
   const largestDimension = size ? Math.max(...size.map(Math.abs)) : 0;
   const flatPlane = dominantFlatPlane(graph, bounds);
   const focusedBounds = graphFocusBounds(graph);
+  const repeatedInstances = repeatedLargeMeshInstances(graph, bounds);
   const modelScale = manifest.rendering?.modelScale ?? 1;
   const missingExternalResources = report.models.reduce(
     (sum, model) => sum + (model.missingExternalResourceCount ?? 0),
@@ -2507,6 +2571,17 @@ function createDiagnostics(manifest, report, graphs, controls) {
         .map((item) => `${item.name} (${item.count})`)
         .join(", ")}.`,
       action: "Rename duplicate materials before export so video screens, finish variants, and lightmaps target the intended surfaces."
+    });
+  }
+
+  if (repeatedInstances) {
+    const example = repeatedInstances.examples?.[0];
+    diagnostics.push({
+      severity: "warning",
+      code: "repeated-large-mesh-instances",
+      title: "Possible duplicated model instances",
+      message: `${repeatedInstances.groupCount} repeated mesh group(s) account for about ${Math.round(repeatedInstances.repeatedShare * 100)}% of analyzed triangles${example?.names?.length ? `, including ${example.names.join(", ")}` : ""}.`,
+      action: "Inspect the source export for duplicated building groups or linked copies. If the duplicates are intentional furniture/modules, keep them; otherwise remove duplicate scene objects and re-import."
     });
   }
 
@@ -3538,6 +3613,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "video-textures-target-missing",
     "duplicate-node-names",
     "duplicate-material-names",
+    "repeated-large-mesh-instances",
     "stale-object-overrides",
     "invalid-object-navigation-behavior"
   ]);
