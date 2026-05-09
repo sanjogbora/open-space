@@ -159,6 +159,29 @@ function validateWarningQualityGate() {
   );
 }
 
+function qualityGateSummary() {
+  const gate = deployment.qualityGate;
+  if (!gate) {
+    return {
+      status: "unknown",
+      blockerCount: 0,
+      warningCount: 0,
+      topBlockers: [],
+      topWarnings: []
+    };
+  }
+  const issueTitle = (issue) => issue.title || issue.code || issue.message;
+  return {
+    status: gate.status ?? "unknown",
+    analyzedAt: gate.analyzedAt,
+    blockerCount: Number(gate.blockerCount ?? 0),
+    warningCount: Number(gate.warningCount ?? 0),
+    diagnosticCount: Number(gate.diagnosticCount ?? 0),
+    topBlockers: Array.isArray(gate.blockers) ? gate.blockers.map(issueTitle).filter(Boolean).slice(0, 5) : [],
+    topWarnings: Array.isArray(gate.warnings) ? gate.warnings.map(issueTitle).filter(Boolean).slice(0, 5) : []
+  };
+}
+
 function cachePolicySummary() {
   const summary = {
     immutable: 0,
@@ -330,6 +353,7 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir, ex
     totalBytes: deployment.totalBytes,
     cachePolicy: cachePolicySummary(),
     qualityGate: deployment.qualityGate ?? null,
+    qualityGateSummary: qualityGateSummary(),
     qualityGateOverride: allowBlockedQualityGate,
     qualityGateFailOnWarning: failOnWarningQualityGate,
     ...extra,
