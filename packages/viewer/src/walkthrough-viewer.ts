@@ -2013,7 +2013,7 @@ export class WalkthroughViewer {
     const targetY = targetFloorY + this.cameraHeight;
     const floorHeightSmoothing = this.floorHeightSmoothing();
     const smoothing = Math.abs(heightDelta) <= bumpTolerance ? floorHeightSmoothing * 2.8 : floorHeightSmoothing;
-    next.y = damp(position.y, targetY, smoothing, delta);
+    next.y = this.clampVerticalCameraDelta(position.y, damp(position.y, targetY, smoothing, delta), delta);
     return next;
   }
 
@@ -3016,7 +3016,11 @@ export class WalkthroughViewer {
     if (difference <= Math.max(0.62, this.cameraHeight * 0.38)) {
       const floorHeightSmoothing = this.floorHeightSmoothing();
       const smoothing = Math.abs(levelDelta) <= bumpTolerance ? floorHeightSmoothing * 2.8 : floorHeightSmoothing;
-      this.camera.position.y = damp(this.camera.position.y, nextY, smoothing, delta);
+      this.camera.position.y = this.clampVerticalCameraDelta(
+        this.camera.position.y,
+        damp(this.camera.position.y, nextY, smoothing, delta),
+        delta
+      );
       this.stableFloorY = damp(previousFloorY, targetFloorY, smoothing, delta);
     } else {
       this.stableFloorY = currentFloorY;
@@ -3033,6 +3037,15 @@ export class WalkthroughViewer {
 
   private floorHeightSmoothing(): number {
     return THREE.MathUtils.clamp(this.controls.floorHeightSmoothing ?? 0.9, 0.5, 8);
+  }
+
+  private clampVerticalCameraDelta(currentY: number, targetY: number, delta: number): number {
+    if (delta <= 0 || Math.abs(targetY - currentY) < 0.0001) {
+      return targetY;
+    }
+    const maxRise = Math.max(0.34, this.cameraHeight * 0.34) * delta;
+    const maxDrop = Math.max(0.52, this.cameraHeight * 0.48) * delta;
+    return THREE.MathUtils.clamp(targetY, currentY - maxDrop, currentY + maxRise);
   }
 
   private collisionBodyRadius(): number {

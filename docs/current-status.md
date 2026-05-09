@@ -14,6 +14,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Auto-generated walk zones now fall back to detected floor geometry when they miss a valid room floor, while authored zones remain strict.
 - Viewer movement stabilizes floor height so tiny ridges and threshold geometry do not make the camera bounce as aggressively.
 - Viewer movement resolves bounded step-up/step-down floor changes so thresholds and simple stairs are smoother while larger vertical jumps are blocked.
+- Viewer movement now caps per-frame eye-height changes so thresholds and noisy floor samples glide instead of popping the camera up or down.
 - Viewer navigation failures now distinguish oversized step/level changes from ordinary wall or route blocks.
 - Viewer exposes height-glide and floor-bump controls so imported models with ridges or raised thresholds can be tuned without code changes.
 - Click-to-move targets and route waypoints now normalize small floor bumps to the current walking level, reducing camera hop at rugs, slab lips, and minor thresholds.
