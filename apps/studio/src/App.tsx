@@ -2277,6 +2277,9 @@ function App() {
       return;
     }
     setSelectedTab("controls");
+    window.setTimeout(() => {
+      document.querySelector(".repair-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
     if (navigationRepairDraft.blockerName) {
       setBlockerNameDraft(navigationRepairDraft.blockerName);
     }
