@@ -194,6 +194,7 @@ Current limitations:
 - Studio reports how many loose-texture suggestions were actually applied so texture-folder repair has a clear result.
 - Studio Import now promotes pending loose-texture matches into the recommended next step so users can apply likely texture-folder mappings before opening the viewer.
 - Studio Asset Health now previews auto texture mappings with thumbnails, target material names, target slots, and match scores instead of raw paths only.
+- Studio texture repair now separates high-confidence mappings from review-only matches, so one-click Apply avoids weaker texture guesses.
 - Studio Asset Health now distinguishes pending loose-texture matches from matches that are already assigned.
 - Viewer can relight unlit/flat GLTF materials as standard lit materials, with a Studio toggle to disable it when a source intentionally uses flat rendering.
 - Viewer generates runtime vertex normals for meshes that lack normal attributes, improving lighting on rough exports.

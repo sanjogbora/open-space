@@ -70,6 +70,7 @@ type HotspotIcon = NonNullable<HotspotInteraction["icon"]>;
 type MovementToggle = "enabled" | "keyboard" | "clickToMove" | "dragLook";
 type NavigationPaintShape = "rectangle" | "polygon";
 type MaterialTextureField = "mapUrl" | "normalMapUrl" | "emissiveMapUrl" | "lightMapUrl";
+type TextureSuggestionConfidence = "strong" | "review";
 
 interface MaterialTextureCandidate {
   source: string;
@@ -97,6 +98,7 @@ const materialTextureFieldLabels: Record<MaterialTextureField, string> = {
   emissiveMapUrl: "emissive map",
   lightMapUrl: "lightmap"
 };
+const highConfidenceTextureSuggestionScore = 28;
 
 function normalizeTextureMatchName(value: string): string {
   return value
@@ -195,6 +197,14 @@ function materialTextureCandidateScore(materialName: string, source: string): nu
     score += 2;
   }
   return score;
+}
+
+function textureSuggestionConfidence(score: number): TextureSuggestionConfidence {
+  return score >= highConfidenceTextureSuggestionScore ? "strong" : "review";
+}
+
+function textureSuggestionConfidenceLabel(score: number): string {
+  return textureSuggestionConfidence(score) === "strong" ? "High confidence" : "Review";
 }
 
 interface NavigationRepairDraft {
@@ -3102,12 +3112,32 @@ function App() {
     const materialsByName = new Map(materialsDoc.materials.map((material) => [material.name, material]));
     return bundleStats.materialTextureSuggestions.filter((suggestion) => {
       const material = materialsByName.get(suggestion.materialName);
-      return material && !material[suggestion.field];
+      return (
+        material &&
+        !material[suggestion.field] &&
+        textureSuggestionConfidence(suggestion.score) === "strong"
+      );
+    }).length;
+  }, [bundleStats?.materialTextureSuggestions, materialsDoc]);
+  const reviewMaterialTextureSuggestionCount = useMemo(() => {
+    if (!materialsDoc || !bundleStats?.materialTextureSuggestions) {
+      return 0;
+    }
+    const materialsByName = new Map(materialsDoc.materials.map((material) => [material.name, material]));
+    return bundleStats.materialTextureSuggestions.filter((suggestion) => {
+      const material = materialsByName.get(suggestion.materialName);
+      return (
+        material &&
+        !material[suggestion.field] &&
+        textureSuggestionConfidence(suggestion.score) === "review"
+      );
     }).length;
   }, [bundleStats?.materialTextureSuggestions, materialsDoc]);
   const appliedMaterialTextureSuggestionCount = Math.max(
     0,
-    (bundleStats?.materialTextureSuggestions?.length ?? 0) - pendingMaterialTextureSuggestionCount
+    (bundleStats?.materialTextureSuggestions?.length ?? 0) -
+      pendingMaterialTextureSuggestionCount -
+      reviewMaterialTextureSuggestionCount
   );
 
   const updateManifest = (updater: (manifest: SceneManifest) => SceneManifest) => {
@@ -4752,8 +4782,11 @@ function App() {
   };
 
   const applyMaterialTextureSuggestions = () => {
-    const suggestions = bundleStats?.materialTextureSuggestions ?? [];
+    const suggestions = (bundleStats?.materialTextureSuggestions ?? []).filter(
+      (suggestion) => textureSuggestionConfidence(suggestion.score) === "strong"
+    );
     if (suggestions.length === 0) {
+      setRepairSummary("No high-confidence texture suggestions are ready to apply. Open Materials to review weaker matches manually.");
       return;
     }
     const suggestionsByMaterial = new Map<string, typeof suggestions>();
@@ -4799,8 +4832,8 @@ function App() {
     });
     setRepairSummary(
       appliedCount > 0
-        ? `Applied ${appliedCount} texture suggestion(s). Save changes, then re-open the viewer to inspect materials.`
-        : "No texture suggestions were applied because the suggested material fields are already filled."
+        ? `Applied ${appliedCount} high-confidence texture suggestion(s). Save changes, then re-open the viewer to inspect materials.`
+        : "No high-confidence texture suggestions were applied because the suggested material fields are already filled."
     );
     setNotice("saved");
   };
@@ -5654,6 +5687,7 @@ function App() {
                     apiConnected={apiConnected}
                     repairState={repairState}
                     pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
+                    reviewTextureSuggestionCount={reviewMaterialTextureSuggestionCount}
                     appliedTextureSuggestionCount={appliedMaterialTextureSuggestionCount}
                     onApplyTextureSuggestions={applyMaterialTextureSuggestions}
                     onRepair={() => void repairImport()}
@@ -9731,7 +9765,7 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
     return {
       action,
       title: "Apply texture matches",
-      detail: "Use the analyzer's likely texture-folder matches before judging material quality in the viewer.",
+      detail: "Apply high-confidence texture-folder matches before judging material quality in the viewer.",
       button: "Apply Matches"
     };
   }
@@ -9974,6 +10008,7 @@ function AssetHealth({
   apiConnected,
   repairState,
   pendingTextureSuggestionCount = 0,
+  reviewTextureSuggestionCount = 0,
   appliedTextureSuggestionCount = 0,
   onApplyTextureSuggestions,
   onRepair,
@@ -9984,6 +10019,7 @@ function AssetHealth({
   apiConnected: boolean;
   repairState: RepairState;
   pendingTextureSuggestionCount?: number;
+  reviewTextureSuggestionCount?: number;
   appliedTextureSuggestionCount?: number;
   onApplyTextureSuggestions?: () => void;
   onRepair?: () => void;
@@ -10027,7 +10063,9 @@ function AssetHealth({
           {!hasTextureRepairWork && textureSuggestions.length > 0 && (
             <p>
               {pendingTextureSuggestionCount > 0
-                ? `${pendingTextureSuggestionCount} loose texture match${pendingTextureSuggestionCount === 1 ? "" : "es"} can be applied to likely materials.`
+                ? `${pendingTextureSuggestionCount} high-confidence texture match${pendingTextureSuggestionCount === 1 ? "" : "es"} can be applied${reviewTextureSuggestionCount > 0 ? `; ${reviewTextureSuggestionCount} lower-confidence match${reviewTextureSuggestionCount === 1 ? "" : "es"} need review.` : "."}`
+                : reviewTextureSuggestionCount > 0
+                  ? `${reviewTextureSuggestionCount} lower-confidence texture match${reviewTextureSuggestionCount === 1 ? "" : "es"} need manual review in Materials.`
                 : `${appliedTextureSuggestionCount} texture match${appliedTextureSuggestionCount === 1 ? "" : "es"} already assigned. Review the material previews before opening the viewer.`}
             </p>
           )}
@@ -10106,6 +10144,9 @@ function AssetHealth({
                 <small>
                   {materialTextureFieldLabels[suggestion.field]} - score {suggestion.score}
                 </small>
+                <span className={`asset-confidence ${textureSuggestionConfidence(suggestion.score)}`}>
+                  {textureSuggestionConfidenceLabel(suggestion.score)}
+                </span>
                 <code>{suggestion.source}</code>
               </div>
             </div>

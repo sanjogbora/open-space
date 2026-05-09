@@ -1283,6 +1283,28 @@ button.list-row {
   white-space: nowrap;
 }
 
+.asset-confidence {
+  justify-self: start;
+  padding: 2px 6px;
+  border: 1px solid rgba(36, 49, 58, 0.16);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.asset-confidence.strong {
+  color: #147c4f;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.asset-confidence.review {
+  color: #7b4c00;
+  border-color: #f3d0a1;
+  background: #fff7e8;
+}
+
 .diagnostic-card {
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);
