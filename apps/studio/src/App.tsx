@@ -6171,6 +6171,7 @@ function App() {
               <ViewerQaChecklist
                 manifest={manifest}
                 stats={bundleStats}
+                objects={objectsDoc}
                 viewerUrl={viewerUrl(activeProjectId)}
                 onMaterials={() => setSelectedTab("materials")}
                 onEnvironment={() => setSelectedTab("environment")}
@@ -6180,9 +6181,10 @@ function App() {
                 onBake={openBakeWorkflow}
                 onInteractions={() => setSelectedTab("interactions")}
                 onOptimize={() => setSelectedTab("optimization")}
+                onObjects={() => setSelectedTab("objects")}
                 onPublish={() => setSelectedTab("publish")}
                 onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })}
-                onCopyReport={() => void copyText(viewerQaReportText(manifest, bundleStats, viewerUrl(activeProjectId)))}
+                onCopyReport={() => void copyText(viewerQaReportText(manifest, bundleStats, objectsDoc, viewerUrl(activeProjectId)))}
               />
             </div>
 
@@ -10827,6 +10829,7 @@ function ImportNextSteps({
 function ViewerQaChecklist({
   manifest,
   stats,
+  objects,
   viewerUrl,
   onMaterials,
   onEnvironment,
@@ -10836,12 +10839,14 @@ function ViewerQaChecklist({
   onBake,
   onInteractions,
   onOptimize,
+  onObjects,
   onPublish,
   onReviewDiagnostics,
   onCopyReport
 }: {
   manifest: SceneManifest;
   stats: BundleStats | null;
+  objects: ObjectsDocument | null;
   viewerUrl: string;
   onMaterials: () => void;
   onEnvironment: () => void;
@@ -10851,6 +10856,7 @@ function ViewerQaChecklist({
   onBake: () => void;
   onInteractions: () => void;
   onOptimize: () => void;
+  onObjects: () => void;
   onPublish: () => void;
   onReviewDiagnostics: () => void;
   onCopyReport: () => void;
@@ -10945,8 +10951,14 @@ function ViewerQaChecklist({
     "focused-model-small-in-scene",
     "initial-view-misses-focused-model"
   ];
+  const objectCodes = [
+    "no-named-ceiling-meshes",
+    "stale-object-overrides",
+    "invalid-object-navigation-behavior"
+  ];
   const visualIssue = materialCodes.find((code) => diagnosticCodes.has(code));
   const environmentIssue = environmentCodes.find((code) => diagnosticCodes.has(code));
+  const objectIssue = objectCodes.find((code) => diagnosticCodes.has(code));
   const lightingIssue = lightingCodes.find((code) => diagnosticCodes.has(code));
   const interactionIssue = interactionCodes.find((code) => diagnosticCodes.has(code));
   const sourceIssue = sourceExportCodes.find((code) => diagnosticCodes.has(code));
@@ -10965,6 +10977,9 @@ function ViewerQaChecklist({
   const viewIssue = diagnosticCodes.has("missing-views") ? "missing-views" : viewPublishIssue?.code;
   const walkViewCount = manifest.views.filter((view) => view.kind === "walk").length;
   const topViewCount = manifest.views.filter((view) => view.kind === "top").length;
+  const hiddenTopViewObjectCount = objects?.objects.filter((object) => object.hideInTopView).length ?? 0;
+  const navigationRoleObjectCount =
+    objects?.objects.filter((object) => object.navigationBehavior && object.navigationBehavior !== "default").length ?? 0;
   const videoTextureCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
   const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;
   const linkCount = manifest.interactions.filter((interaction) => interaction.kind === "link").length;
@@ -11016,6 +11031,18 @@ function ViewerQaChecklist({
       status: viewIssue ? "blocked" : manifest.views.length === 0 || walkViewCount === 0 ? "warn" : "ready",
       button: viewIssue || manifest.views.length === 0 || walkViewCount === 0 ? "Open Views" : "Open Viewer",
       onClick: viewIssue || manifest.views.length === 0 || walkViewCount === 0 ? onViews : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+    },
+    {
+      id: "objects",
+      label: "Object visibility and roles",
+      detail: objectIssue
+        ? "Object diagnostics need review before trusting top view, visibility, or navigation blockers."
+        : objects
+          ? `${hiddenTopViewObjectCount} object(s) hidden in top view; ${navigationRoleObjectCount} object(s) have explicit navigation roles.`
+          : "Object graph is not loaded yet; run analysis before checking top-view hiding or navigation roles.",
+      status: objectIssue && errorCodes.has(objectIssue) ? "blocked" : objectIssue || !objects ? "warn" : "ready",
+      button: objectIssue || !objects || topViewCount > 0 ? "Open Objects" : "Open Viewer",
+      onClick: objectIssue || !objects || topViewCount > 0 ? onObjects : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
     },
     {
       id: "lighting",
@@ -11127,6 +11154,7 @@ function ViewerQaChecklist({
               {check.button === "Open Controls" && <MapPin size={15} aria-hidden="true" />}
               {check.button === "Open Rooms" && <Layers3 size={15} aria-hidden="true" />}
               {check.button === "Open Views" && <MapPin size={15} aria-hidden="true" />}
+              {check.button === "Open Objects" && <Eye size={15} aria-hidden="true" />}
               {check.button === "Open Interactions" && <Video size={15} aria-hidden="true" />}
               {check.button === "Open Optimization" && <Activity size={15} aria-hidden="true" />}
               {check.button === "Open Publish" && <ExternalLink size={15} aria-hidden="true" />}
@@ -11140,7 +11168,12 @@ function ViewerQaChecklist({
   );
 }
 
-function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, viewerUrl: string): string {
+function viewerQaReportText(
+  manifest: SceneManifest,
+  stats: BundleStats | null,
+  objects: ObjectsDocument | null,
+  viewerUrl: string
+): string {
   const diagnostics = stats?.diagnostics ?? [];
   const actionableDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "info").slice(0, 6);
   const sourceExportDiagnostics = diagnostics.filter((diagnostic) =>
@@ -11166,6 +11199,10 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
   const walkViewCount = manifest.views.filter((view) => view.kind === "walk").length;
   const orbitViewCount = manifest.views.filter((view) => view.kind === "orbit").length;
   const topViewCount = manifest.views.filter((view) => view.kind === "top").length;
+  const hiddenTopViewObjectCount = objects?.objects.filter((object) => object.hideInTopView).length ?? 0;
+  const forcedWalkObjectCount = objects?.objects.filter((object) => object.navigationBehavior === "walk").length ?? 0;
+  const forcedCollisionObjectCount = objects?.objects.filter((object) => object.navigationBehavior === "collision").length ?? 0;
+  const ignoredNavigationObjectCount = objects?.objects.filter((object) => object.navigationBehavior === "ignore").length ?? 0;
   const videoTextureCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
   const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;
   const linkCount = manifest.interactions.filter((interaction) => interaction.kind === "link").length;
@@ -11203,6 +11240,13 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     `- Orbit views: ${orbitViewCount}`,
     `- Top views: ${topViewCount}`,
     "",
+    "Objects:",
+    `- Total object overrides: ${objects?.objects.length ?? 0}`,
+    `- Hidden in top view: ${hiddenTopViewObjectCount}`,
+    `- Forced walkable: ${forcedWalkObjectCount}`,
+    `- Forced collision: ${forcedCollisionObjectCount}`,
+    `- Ignored for navigation: ${ignoredNavigationObjectCount}`,
+    "",
     "Navigation setup:",
     `- Bounds: ${manifest.navigation.bounds ? "yes" : "no"}`,
     `- Walk zones: ${coverage.walkZones}`,
@@ -11231,6 +11275,7 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     "- Visual match vs reference viewer: ",
     "- Exterior/window/context: ",
     "- Starting view / saved views / top view: ",
+    "- Object visibility / ceiling / navigation roles: ",
     "- Baked lighting / lightmap quality: ",
     "- WASD / mouse drag / wheel movement: ",
     "- Click-to-move floor marker and glide: ",
