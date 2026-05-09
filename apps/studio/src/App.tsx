@@ -206,7 +206,7 @@ interface NavigationRepairDraft {
   bodyRadius?: number;
 }
 
-type NavigationRepairAction = "pass" | "walk" | "ignore";
+type NavigationRepairAction = "pass" | "walk" | "ignore" | "tune";
 
 interface NavigationRepairRecommendation {
   title: string;
@@ -812,10 +812,9 @@ function navigationRepairRecommendation(draft: NavigationRepairDraft): Navigatio
     return {
       title: "Recommended fix: tune stair movement",
       detail:
-        "The clicked route crosses a height change bigger than the current step limits. If this is a stair or threshold, increase Step Up or Step Down in Movement Controls; add a walk patch only if the landing itself is missing.",
-      primaryLabel: "Add Walk Patch",
-      action: "walk",
-      requiresPoint: true
+        "The clicked route crosses a height change bigger than the current step limits. Apply the Steps preset first for thresholds or simple stairs; add a walk patch only if the landing itself is missing.",
+      primaryLabel: "Apply Steps Preset",
+      action: "tune"
     };
   }
 
@@ -3769,6 +3768,13 @@ function App() {
       ignoreCollisionName(navigationRepairDraft.blockerName);
       return;
     }
+    if (repairRecommendation.action === "tune") {
+      applyMovementPreset(
+        "steps",
+        "Applied the Steps movement preset for thresholds and stairs. Save changes, then retry the click in the viewer."
+      );
+      return;
+    }
     addNavigationRepairZone(repairRecommendation.action);
   };
 
@@ -3869,6 +3875,24 @@ function App() {
     setRepairSummary(
       `Body Radius set to ${narrowBodyRepairRadius.toFixed(2)}. Save changes, then retry the doorway click in the viewer.`
     );
+    setNotice("saved");
+  };
+
+  const applyMovementPreset = (presetId: string, summary?: string) => {
+    const preset = movementPresets.find((item) => item.id === presetId);
+    if (!preset) {
+      return;
+    }
+    updateControls((current) => ({
+      ...current,
+      movement: {
+        ...current.movement,
+        ...preset.movement
+      }
+    }));
+    if (summary) {
+      setRepairSummary(summary);
+    }
     setNotice("saved");
   };
 
@@ -7868,15 +7892,7 @@ function App() {
                         key={preset.id}
                         type="button"
                         className="movement-preset-button"
-                        onClick={() =>
-                          updateControls((current) => ({
-                            ...current,
-                            movement: {
-                              ...current.movement,
-                              ...preset.movement
-                            }
-                          }))
-                        }
+                        onClick={() => applyMovementPreset(preset.id)}
                       >
                         <strong>{preset.label}</strong>
                         <small>{preset.detail}</small>
@@ -8187,14 +8203,15 @@ function App() {
                             type="button"
                             className="repair-action-button"
                             onClick={() =>
-                              document
-                                .querySelector(".movement-preset-grid")
-                                ?.scrollIntoView({ behavior: "smooth", block: "center" })
+                              applyMovementPreset(
+                                "steps",
+                                "Applied the Steps movement preset for thresholds and stairs. Save changes, then retry the click in the viewer."
+                              )
                             }
                           >
                             <span>Tune Movement</span>
-                            <strong>Steps / Stairs</strong>
-                            <small>Adjust step limits if the route crosses thresholds, stairs, or level changes.</small>
+                            <strong>Apply Steps Preset</strong>
+                            <small>Use this when the route crosses thresholds, stairs, or level changes.</small>
                           </button>
                         </div>
                         {navigationRepairObjectMatch && (
