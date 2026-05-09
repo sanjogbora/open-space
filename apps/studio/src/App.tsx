@@ -3474,6 +3474,7 @@ function App() {
       let bridgeCount = 0;
       let detectedDoorPassCount = 0;
       let expandedPassCount = 0;
+      let widenedPassCount = 0;
       const usedIds = new Set(zones.map((zone) => zone.id));
 
       if (bounds) {
@@ -3534,6 +3535,19 @@ function App() {
         })
       );
 
+      const requiredPassSpan = Math.max(0.42, (controlsDoc?.movement.collisionRadius ?? 0.28) * 2);
+      zones.splice(
+        0,
+        zones.length,
+        ...zones.map((zone) => {
+          if (zone.kind !== "pass" || zone.enabled === false || navigationZoneNarrowestSpan(zone) >= requiredPassSpan) {
+            return zone;
+          }
+          widenedPassCount += 1;
+          return markNavigationZoneAuthored(widenNavigationPassZone(zone, requiredPassSpan));
+        })
+      );
+
       const routeZones = enabledNavigationZones({ ...repairedNavigation, zones }).filter(
         (zone) => zone.kind === "walk" || zone.kind === "pass"
       );
@@ -3557,6 +3571,7 @@ function App() {
         walkPatchCount > 0 ? `${walkPatchCount} walk patch(es)` : undefined,
         detectedDoorPassCount > 0 ? `${detectedDoorPassCount} detected door pass(es)` : undefined,
         expandedPassCount > 0 ? `${expandedPassCount} one-sided pass repair(s)` : undefined,
+        widenedPassCount > 0 ? `${widenedPassCount} widened pass zone(s)` : undefined,
         bridgeCount > 0 ? `${bridgeCount} bridge pass zone(s)` : undefined
       ].filter(Boolean);
       setRepairSummary(
