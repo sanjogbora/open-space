@@ -2643,6 +2643,12 @@ function createDiagnostics(manifest, report, graphs, controls) {
   const oversizedTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 4096);
   const largeTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 2048);
   const tinyTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 0 && Math.max(image.width, image.height) <= 256);
+  const extremeAspectTextures = textureImages.filter((image) => {
+    const width = image.width ?? 0;
+    const height = image.height ?? 0;
+    const shortestSide = Math.min(width, height);
+    return shortestSide > 0 && Math.max(width, height) / shortestSide >= 8;
+  });
   const invalidDefaultSceneModels = report.models.filter((model) => model.invalidDefaultScene);
   const emptyDefaultSceneModels = report.models.filter(
     (model) =>
@@ -3305,6 +3311,14 @@ function createDiagnostics(manifest, report, graphs, controls) {
       message: `${oversizedTextures.length} texture image(s) are larger than 4096px on one side.`,
       action: "Resize or compress oversized textures before publishing; large textures can exhaust mobile GPU memory."
     });
+  } else if (extremeAspectTextures.length > 0) {
+    diagnostics.push({
+      severity: extremeAspectTextures.length > 4 ? "warning" : "info",
+      code: "extreme-texture-aspect-ratios",
+      title: "Extreme texture aspect ratios",
+      message: `${extremeAspectTextures.length} texture image(s) are very wide or tall strips, which can blur, shimmer, or compress poorly in web delivery.`,
+      action: "Inspect these textures in Materials and compare against the source viewer. If they are baked strips or atlases, keep enough resolution before optimization."
+    });
   } else if (tinyTextures.length > 0 && (report.imageCount ?? 0) > 0) {
     diagnostics.push({
       severity: tinyTextures.length > 4 ? "warning" : "info",
@@ -3805,6 +3819,12 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     0
   );
   const oversizedTextureCount = textureImages.filter((image) => Math.max(image.width, image.height) > 4096).length;
+  const extremeAspectTextureCount = textureImages.filter((image) => {
+    const width = image.width ?? 0;
+    const height = image.height ?? 0;
+    const shortestSide = Math.min(width, height);
+    return shortestSide > 0 && Math.max(width, height) / shortestSide >= 8;
+  }).length;
   const compression = {
     meshopt: models.some((model) => model.compression?.meshopt),
     draco: models.some((model) => model.compression?.draco),
@@ -3888,6 +3908,7 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     invalidObjectNavigationBehaviorCount,
     maxTextureDimension,
     oversizedTextureCount,
+    extremeAspectTextureCount,
     embeddedImageCount: models.reduce((sum, model) => sum + (model.embeddedImageCount ?? 0), 0),
     looseImageCount: looseImages.length,
     looseImages: looseImages.slice(0, 40),
@@ -4204,6 +4225,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "dominant-untextured-material",
     "dominant-green-placeholder-material",
     "oversized-texture-dimensions",
+    "extreme-texture-aspect-ratios",
     "tiny-texture-dimensions",
     "many-large-textures",
     "missing-texture-compression",

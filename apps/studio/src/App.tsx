@@ -321,6 +321,7 @@ interface BundleStats {
   embeddedImageCount?: number;
   maxTextureDimension?: number;
   oversizedTextureCount?: number;
+  extremeAspectTextureCount?: number;
   looseImageCount?: number;
   compression?: {
     meshopt?: boolean;
@@ -10308,6 +10309,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "mostly-unlit-materials",
       "vertex-colors-detected",
       "dominant-untextured-material",
+      "extreme-texture-aspect-ratios",
       "tiny-texture-dimensions"
     ].includes(code)
   ) {
