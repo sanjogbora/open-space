@@ -2975,6 +2975,11 @@ function App() {
   const estimatedBakeTextureBytes =
     estimatedBakeMaterialCount * bakeSettings.resolution * bakeSettings.resolution * 4;
   const bakeMaterialLimitExceeded = materialCountForBake > bakeSettings.maxMaterials;
+  const activeBakePresetDefaults = bakePresetDefaults[bakeSettings.preset];
+  const bakePresetModified =
+    bakeSettings.resolution !== activeBakePresetDefaults.resolution ||
+    bakeSettings.samples !== activeBakePresetDefaults.samples ||
+    bakeSettings.margin !== activeBakePresetDefaults.margin;
   const bakePreflightIssues: BakePreflightIssue[] = [
     bakeMaterialLimitExceeded
       ? {
@@ -3032,6 +3037,12 @@ function App() {
             ? "Resolve the bake preflight errors before starting Blender."
             : "";
   const canRunLightmapBake = !lightmapBakeBlockedReason;
+  const resetBakeSettingsToPreset = () => {
+    setBakeSettings((current) => ({
+      ...current,
+      ...bakePresetDefaults[current.preset]
+    }));
+  };
 
   const selectedHotspot = useMemo(
     () => hotspotInteractions.find((interaction) => interaction.id === selectedInteractionId),
@@ -7367,6 +7378,18 @@ function App() {
                     </select>
                   </label>
                 </div>
+                {bakePresetModified && (
+                  <div className="bake-preset-note">
+                    <span>
+                      Custom bake values differ from {bakeSettings.preset} defaults (
+                      {activeBakePresetDefaults.resolution}px / {activeBakePresetDefaults.samples} samples /{" "}
+                      {activeBakePresetDefaults.margin}px margin).
+                    </span>
+                    <button type="button" className="button secondary compact-button" onClick={resetBakeSettingsToPreset}>
+                      Reset to preset
+                    </button>
+                  </div>
+                )}
                 <div className={bakePreflightBlocked ? "bake-preflight-card error" : bakePreflightRisk ? "bake-preflight-card warning" : "bake-preflight-card"}>
                   <div>
                     <strong>Bake preflight</strong>

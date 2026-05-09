@@ -163,6 +163,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio lightmap rows now flag low-resolution, missing-size, or tiny bake outputs individually so weak bake artifacts are easier to spot.
 - Studio now shows a bake preflight estimate for material count, target resolution, sample count, and raw lightmap texture footprint before Blender starts.
 - Studio bake preflight now lists specific blocking errors and warnings for material limits, raw lightmap memory, resolution, and sample count before Blender starts.
+- Studio bake settings now show when resolution, samples, or margin differ from the selected preset and can reset those values back to the preset defaults.
 - Failed Blender/Cycles bakes return the bake job in the API error response so Studio can show the failed stage and job steps.
 
 Current limitations:

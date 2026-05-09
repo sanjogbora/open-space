@@ -2977,6 +2977,24 @@ button.list-row {
   color: #7b4c00;
 }
 
+.bake-preset-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #dce7ee;
+  border-radius: 7px;
+  background: #fbfcfd;
+}
+
+.bake-preset-note span {
+  color: #60717c;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
