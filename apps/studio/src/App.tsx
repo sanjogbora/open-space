@@ -9523,7 +9523,8 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "missing-uv-attributes",
       "mostly-unlit-materials",
       "vertex-colors-detected",
-      "dominant-untextured-material"
+      "dominant-untextured-material",
+      "tiny-texture-dimensions"
     ].includes(code)
   ) {
     return "materials";

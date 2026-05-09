@@ -2294,6 +2294,7 @@ function createDiagnostics(manifest, report, graphs, controls) {
   ].filter((image) => typeof image.width === "number" && typeof image.height === "number");
   const oversizedTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 4096);
   const largeTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 2048);
+  const tinyTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 0 && Math.max(image.width, image.height) <= 256);
   const invalidDefaultSceneModels = report.models.filter((model) => model.invalidDefaultScene);
   const emptyDefaultSceneModels = report.models.filter(
     (model) =>
@@ -2841,6 +2842,14 @@ function createDiagnostics(manifest, report, graphs, controls) {
       title: "Oversized texture dimensions",
       message: `${oversizedTextures.length} texture image(s) are larger than 4096px on one side.`,
       action: "Resize or compress oversized textures before publishing; large textures can exhaust mobile GPU memory."
+    });
+  } else if (tinyTextures.length > 0 && (report.imageCount ?? 0) > 0) {
+    diagnostics.push({
+      severity: tinyTextures.length > 4 ? "warning" : "info",
+      code: "tiny-texture-dimensions",
+      title: "Very small texture images detected",
+      message: `${tinyTextures.length} texture image(s) are 256px or smaller on their largest side.`,
+      action: "Compare the model against the source/reference viewer. If surfaces look blurry or flat, re-export with higher-resolution textures before optimization."
     });
   } else if (largeTextures.length > 8) {
     diagnostics.push({
@@ -3607,6 +3616,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "dominant-untextured-material",
     "dominant-green-placeholder-material",
     "oversized-texture-dimensions",
+    "tiny-texture-dimensions",
     "many-large-textures",
     "missing-texture-compression",
     "some-lightmap-secondary-uvs-missing",
