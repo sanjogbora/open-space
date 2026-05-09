@@ -2272,6 +2272,21 @@ function navigationZonesOverlap(a, b, padding = 0.2) {
   return polygonDistance2D(navigationZoneFootprint(a), navigationZoneFootprint(b)) <= padding;
 }
 
+function navigationZoneOutsideBounds(zone, bounds, padding = 0.05) {
+  if (!bounds) {
+    return false;
+  }
+  const box = navigationZoneAabb(zone);
+  return (
+    box.minX < bounds.min[0] - padding ||
+    box.maxX > bounds.max[0] + padding ||
+    box.minZ < bounds.min[2] - padding ||
+    box.maxZ > bounds.max[2] + padding ||
+    zone.center[1] < bounds.min[1] - Math.max(0.25, zone.size[1]) ||
+    zone.center[1] > bounds.max[1] + Math.max(0.25, zone.size[1])
+  );
+}
+
 function navigationComponents(zones) {
   if (zones.length === 0) {
     return [];
@@ -2344,6 +2359,12 @@ function navigationTopology(manifest, bodyRadius = 0.28) {
   const narrowPassZones = passZones.filter(
     (zone) => navigationZoneNarrowestSpan(zone) < Math.max(0.42, bodyRadius * 2)
   );
+  const outOfBoundsWalkZones = walkZones.filter((zone) =>
+    navigationZoneOutsideBounds(zone, navigation.bounds)
+  );
+  const outOfBoundsPassZones = passZones.filter((zone) =>
+    navigationZoneOutsideBounds(zone, navigation.bounds)
+  );
   const walkViews = (manifest.views ?? []).filter(
     (view) => view.kind === "walk" && Array.isArray(view.position) && view.position.length >= 3
   );
@@ -2368,6 +2389,8 @@ function navigationTopology(manifest, bodyRadius = 0.28) {
     blockedPassZones,
     blockedWalkZones,
     narrowPassZones,
+    outOfBoundsWalkZones,
+    outOfBoundsPassZones,
     walkViews,
     outOfBoundsWalkViews,
     blockedWalkViews,
@@ -3579,6 +3602,26 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if (topology.outOfBoundsWalkZones.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "walk-zones-outside-navigation-bounds",
+      title: "Walk zones extend outside movement bounds",
+      message: `${topology.outOfBoundsWalkZones.length} walk zone(s) extend outside the configured movement bounds, so those floor areas may look valid but refuse movement.`,
+      action: "Expand the navigation bounds or trim the walk zones so all reachable floor areas sit inside the movement bounds."
+    });
+  }
+
+  if (topology.outOfBoundsPassZones.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "pass-zones-outside-navigation-bounds",
+      title: "Door pass zones extend outside movement bounds",
+      message: `${topology.outOfBoundsPassZones.length} pass zone(s) extend outside the configured movement bounds, so doorway routing may stop at the edge of the allowed area.`,
+      action: "Expand the navigation bounds or move the door pass zones fully inside the movement bounds."
+    });
+  }
+
   if (topology.outOfBoundsWalkViews.length > 0) {
     diagnostics.push({
       severity: "error",
@@ -4140,6 +4183,8 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "one-sided-pass-zones",
     "pass-zones-overlap-block-zones",
     "walk-zones-overlap-block-zones",
+    "walk-zones-outside-navigation-bounds",
+    "pass-zones-outside-navigation-bounds",
     "walk-views-inside-block-zones",
     "walk-views-outside-walk-zones",
     "missing-room-map",

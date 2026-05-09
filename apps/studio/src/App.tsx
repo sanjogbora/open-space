@@ -1193,6 +1193,25 @@ function navigationZonesOverlap(a: NavigationZone, b: NavigationZone, padding = 
   return polygonDistance2D(navigationZoneFootprint(a), navigationZoneFootprint(b)) <= padding;
 }
 
+function navigationZoneOutsideBounds(
+  zone: NavigationZone,
+  bounds: SceneManifest["navigation"]["bounds"] | undefined,
+  padding = 0.05
+): boolean {
+  if (!bounds) {
+    return false;
+  }
+  const box = navigationZoneAabb(zone);
+  return (
+    box.minX < bounds.min[0] - padding ||
+    box.maxX > bounds.max[0] + padding ||
+    box.minZ < bounds.min[2] - padding ||
+    box.maxZ > bounds.max[2] + padding ||
+    zone.center[1] < bounds.min[1] - Math.max(0.25, zone.size[1]) ||
+    zone.center[1] > bounds.max[1] + Math.max(0.25, zone.size[1])
+  );
+}
+
 function navigationComponents(zones: readonly NavigationZone[]): NavigationZone[][] {
   if (zones.length === 0) {
     return [];
@@ -1563,6 +1582,30 @@ function navigationQaIssues(manifest: SceneManifest, bodyRadius = 0.28): Navigat
       });
     }
   });
+
+  walkZones
+    .filter((zone) => navigationZoneOutsideBounds(zone, navigation.bounds))
+    .forEach((zone) => {
+      issues.push({
+        id: `walk-zone-bounds-${zone.id}`,
+        severity: "warning",
+        title: `Walk zone extends outside bounds: ${zone.label}`,
+        detail: "The viewer enforces movement bounds before walk zones, so this floor area may look reachable but still refuse movement.",
+        action: "Expand navigation bounds or trim the walk zone until all reachable floor area sits inside bounds."
+      });
+    });
+
+  passZones
+    .filter((zone) => navigationZoneOutsideBounds(zone, navigation.bounds))
+    .forEach((zone) => {
+      issues.push({
+        id: `pass-zone-bounds-${zone.id}`,
+        severity: "warning",
+        title: `Pass zone extends outside bounds: ${zone.label}`,
+        detail: "Door routing can stop at the movement boundary if the pass connector crosses outside the allowed area.",
+        action: "Expand navigation bounds or move this pass fully inside bounds."
+      });
+    });
 
   manifest.views
     .filter((view) => view.kind === "walk")
@@ -10300,6 +10343,8 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "one-sided-pass-zones",
       "pass-zones-overlap-block-zones",
       "walk-zones-overlap-block-zones",
+      "walk-zones-outside-navigation-bounds",
+      "pass-zones-outside-navigation-bounds",
       "walk-views-outside-navigation-bounds",
       "walk-views-inside-block-zones",
       "walk-views-outside-walk-zones"
