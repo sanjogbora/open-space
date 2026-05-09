@@ -30,6 +30,7 @@ POST /api/projects/demo/analyze
 POST /api/projects/demo/optimize
 POST /api/projects/demo/model-source
 POST /api/projects/demo/publish
+POST /api/projects/demo/publish/active
 ```
 
 ## Current Behavior
@@ -43,6 +44,7 @@ POST /api/projects/demo/publish
 - Switches project manifests between `scene.glb` and `scene.optimized.glb` for rollback or re-apply.
 - Creates new projects by cloning the demo scene bundle into viewer and Studio scene roots.
 - Publishes static versioned bundles under the viewer `published/` path.
+- Promotes a published version to `/published/<project>/live/` for stable live links and local rollback.
 
 ## Why This Matters
 
@@ -62,4 +64,4 @@ Shapespark-class editing needs a persistent project document, not local browser 
 - No database.
 - Uploads are GLB-only.
 - Optimization jobs run synchronously; no background queue yet.
-- Publish history is filesystem-based and has no rollback controls yet.
+- Publish history and live-version rollback are filesystem-based.

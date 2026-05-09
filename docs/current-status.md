@@ -129,6 +129,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio sidebar can switch between project bundles.
 - API publishes versioned static scene bundles.
 - Studio has a Publish tab with draft URL, published URLs, embed snippets, and version history.
+- Studio/API can promote any published version to a stable live bundle, so rollback is now a one-click Set Live action in local publish history.
 - Studio Publish now surfaces the first blocking or client-delivery issue directly in the publish action card.
 - Published bundles include copy-ready S3/R2 deploy commands, including an opt-in per-asset cache-header pass for CDN-friendly immutable GLB/texture assets and revalidated manifests.
 - Studio Publish now exposes a copy-ready dry-run validation command before deploy commands, so deployment manifests, hashes, asset sizes, and quality gates can be checked before upload.

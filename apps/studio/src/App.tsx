@@ -557,6 +557,11 @@ interface DoorPassCandidate {
 interface PublishHistoryDocument {
   schemaVersion: "0.1";
   projectId: string;
+  activeVersion?: string;
+  activePublishedAt?: string;
+  activatedAt?: string;
+  liveScenePath?: string;
+  liveViewerUrl?: string;
   versions: PublishEntry[];
 }
 
@@ -2343,6 +2348,13 @@ function publishedViewerUrl(entry: PublishEntry): string {
   return `${viewerBaseUrl}/?scene=${encodeURIComponent(entry.scenePath)}`;
 }
 
+function livePublishedViewerUrl(projectId: string, history: PublishHistoryDocument | null): string {
+  if (history?.liveViewerUrl) {
+    return `${viewerBaseUrl}${history.liveViewerUrl}`;
+  }
+  return `${viewerBaseUrl}/?scene=${encodeURIComponent(`/published/${projectId}/live/scene.manifest.json`)}`;
+}
+
 function embedSnippet(projectId: string, title: string): string {
   return `<script src="${viewerBaseUrl}/embed.js" data-scene="${projectScenePath(projectId)}" data-title="${title}" data-height="640px"></script>`;
 }
@@ -2453,6 +2465,7 @@ function App() {
   const [mediaUploadState, setMediaUploadState] = useState<UploadState>("idle");
   const [mediaUploadError, setMediaUploadError] = useState("");
   const [publishState, setPublishState] = useState<PublishState>("idle");
+  const [activePublishVersion, setActivePublishVersion] = useState("");
   const [publishError, setPublishError] = useState("");
   const [optimizeState, setOptimizeState] = useState<OptimizeState>("idle");
   const [optimizeError, setOptimizeError] = useState("");
@@ -4684,6 +4697,35 @@ function App() {
     }
   };
 
+  const activatePublishedVersion = async (entry: PublishEntry) => {
+    if (!apiConnected) {
+      setPublishError("API is not connected.");
+      return;
+    }
+    setActivePublishVersion(entry.version);
+    setPublishError("");
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/publish/active`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ version: entry.version })
+      });
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error ?? `Activate failed with ${response.status}.`);
+      }
+      const result = (await response.json()) as {
+        publishHistory: PublishHistoryDocument;
+      };
+      setPublishHistory(result.publishHistory);
+      setNotice("saved");
+    } catch (error) {
+      setPublishError(error instanceof Error ? error.message : "Could not set live version.");
+    } finally {
+      setActivePublishVersion("");
+    }
+  };
+
   const optimizeProject = async () => {
     if (!apiConnected) {
       setOptimizeState("error");
@@ -6348,6 +6390,22 @@ function App() {
                 </button>
               </div>
               <code>{viewerUrl(activeProjectId)}</code>
+              {publishHistory?.activeVersion && (
+                <>
+                  <div className="publish-row">
+                    <span>Live Published Link</span>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => void copyText(livePublishedViewerUrl(activeProjectId, publishHistory))}
+                    >
+                      <Copy size={16} aria-hidden="true" />
+                      Copy
+                    </button>
+                  </div>
+                  <code>{livePublishedViewerUrl(activeProjectId, publishHistory)}</code>
+                </>
+              )}
             </div>
 
             <div className="side-stack">
@@ -6361,7 +6419,12 @@ function App() {
                     {publishHistory.versions.map((entry) => (
                       <div key={entry.version} className="publish-version-row">
                         <div>
-                          <strong>{entry.version}</strong>
+                          <div className="publish-version-title">
+                            <strong>{entry.version}</strong>
+                            {publishHistory.activeVersion === entry.version && (
+                              <span className="publish-live-pill">Live</span>
+                            )}
+                          </div>
                           <span>{entry.publishedAt}</span>
                           {typeof entry.assetCount === "number" && (
                             <small>
@@ -6408,6 +6471,23 @@ function App() {
                               Manifest
                             </button>
                           )}
+                          <button
+                            type="button"
+                            className={publishHistory.activeVersion === entry.version ? "button primary" : "button secondary"}
+                            disabled={
+                              !apiConnected ||
+                              activePublishVersion === entry.version ||
+                              publishHistory.activeVersion === entry.version
+                            }
+                            onClick={() => void activatePublishedVersion(entry)}
+                          >
+                            <Globe2 size={16} aria-hidden="true" />
+                            {publishHistory.activeVersion === entry.version
+                              ? "Live"
+                              : activePublishVersion === entry.version
+                                ? "Setting"
+                                : "Set Live"}
+                          </button>
                         </div>
                         {entry.cdnBasePath && <code>{entry.cdnBasePath}</code>}
                         <code>{publishedEmbedSnippet(entry, manifest.branding.clientName ?? manifest.branding.title)}</code>

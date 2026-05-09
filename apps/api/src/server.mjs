@@ -213,6 +213,66 @@ async function publishHistory(projectId) {
   });
 }
 
+async function activatePublishedVersion(projectId, version, options = {}) {
+  const history = options.history ?? await publishHistory(projectId);
+  const entry = history.versions.find((item) => item.version === version);
+  if (!entry) {
+    throw badRequest(`Published version ${version} does not exist.`);
+  }
+
+  const source = path.join(publishedRoot, projectId, entry.version);
+  if (!(await fileExists(source))) {
+    throw badRequest(`Published version ${version} is missing from disk.`);
+  }
+
+  const liveScenePath = `/published/${projectId}/live/scene.manifest.json`;
+  const liveViewerUrl = `/?scene=${encodeURIComponent(liveScenePath)}`;
+  const activatedAt = options.activatedAt ?? new Date().toISOString();
+  const target = path.join(publishedRoot, projectId, "live");
+  await rm(target, { recursive: true, force: true });
+  await mkdir(path.dirname(target), { recursive: true });
+  await cp(source, target, { recursive: true, force: true });
+  await writeFile(path.join(target, "index.html"), publishedIndexHtml(liveScenePath));
+  await writeFile(
+    path.join(target, "active-publish.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: "0.1",
+        projectId,
+        activeVersion: entry.version,
+        sourceScenePath: entry.scenePath,
+        liveScenePath,
+        liveViewerUrl,
+        activatedAt
+      },
+      null,
+      2
+    )}\n`
+  );
+
+  const nextHistory = {
+    ...history,
+    projectId,
+    activeVersion: entry.version,
+    activePublishedAt: entry.publishedAt,
+    activatedAt,
+    liveScenePath,
+    liveViewerUrl
+  };
+  await writeProjectAll(projectId, "publish-history.json", nextHistory);
+  return {
+    ok: true,
+    active: {
+      version: entry.version,
+      publishedAt: entry.publishedAt,
+      activatedAt,
+      scenePath: liveScenePath,
+      viewerUrl: liveViewerUrl
+    },
+    publishHistory: nextHistory
+  };
+}
+
 async function optimizationJob(projectId) {
   return readJsonDefault(path.join(targetDirs(projectId)[0], "optimization-job.json"), {
     schemaVersion: "0.1",
@@ -2793,11 +2853,15 @@ async function publishProject(projectId) {
     projectId,
     versions: [entry, ...history.versions.filter((item) => item.version !== version)]
   };
-  await writeProjectAll(projectId, "publish-history.json", nextHistory);
+  const activePublish = await activatePublishedVersion(projectId, version, {
+    history: nextHistory,
+    activatedAt: publishedAt
+  });
   return {
     ok: true,
     entry,
-    publishHistory: nextHistory
+    active: activePublish.active,
+    publishHistory: activePublish.publishHistory
   };
 }
 
@@ -3073,6 +3137,17 @@ async function handleRequest(request, response) {
     const publishProjectId = projectIdFromPathname(url.pathname, "/publish");
     if (request.method === "POST" && publishProjectId) {
       sendJson(response, 200, await publishProject(publishProjectId));
+      return;
+    }
+
+    const activePublishProjectId = projectIdFromPathname(url.pathname, "/publish/active");
+    if (request.method === "POST" && activePublishProjectId) {
+      const body = await readBody(request);
+      const version = typeof body.version === "string" ? body.version.trim() : "";
+      if (!version) {
+        throw badRequest("Missing published version to activate.");
+      }
+      sendJson(response, 200, await activatePublishedVersion(activePublishProjectId, version));
       return;
     }
 
