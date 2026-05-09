@@ -207,6 +207,16 @@ function textureSuggestionConfidenceLabel(score: number): string {
   return textureSuggestionConfidence(score) === "strong" ? "High confidence" : "Review";
 }
 
+function textureSuggestionConfidenceDetail(score: number): string {
+  if (score >= highConfidenceTextureSuggestionScore) {
+    return "Strong name/path match; safe for one-click apply";
+  }
+  if (score >= 20) {
+    return "Some name overlap; inspect before applying";
+  }
+  return "Weak semantic match; review manually";
+}
+
 interface NavigationRepairDraft {
   reason: string;
   blockerName: string;
@@ -7583,8 +7593,8 @@ function App() {
                             )}
                             <span>{candidate.source}</span>
                             <small>
-                              Use as {materialTextureFieldLabels[candidate.field]} / {formatBytes(candidate.bytes)} / score{" "}
-                              {candidate.score}
+                              Use as {materialTextureFieldLabels[candidate.field]} / {formatBytes(candidate.bytes)} /{" "}
+                              {textureSuggestionConfidenceDetail(candidate.score)} / score {candidate.score}
                             </small>
                           </button>
                         ))}
@@ -10447,7 +10457,8 @@ function AssetHealth({
               <div>
                 <strong>{suggestion.materialName}</strong>
                 <small>
-                  {materialTextureFieldLabels[suggestion.field]} - score {suggestion.score}
+                  {materialTextureFieldLabels[suggestion.field]} -{" "}
+                  {textureSuggestionConfidenceDetail(suggestion.score)} - score {suggestion.score}
                 </small>
                 <span className={`asset-confidence ${textureSuggestionConfidence(suggestion.score)}`}>
                   {textureSuggestionConfidenceLabel(suggestion.score)}
