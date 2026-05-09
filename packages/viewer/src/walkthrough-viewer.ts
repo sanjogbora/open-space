@@ -1916,10 +1916,14 @@ export class WalkthroughViewer {
     const flatCompletionDelta = target.clone().sub(this.camera.position);
     flatCompletionDelta.y = 0;
     const flatCompletionDistance = flatCompletionDelta.length();
-    const flatReached = flatCompletionDistance < 0.035;
+    const hasIntermediateWaypoint = this.movePath.length > 0;
+    const arrivalRadius = hasIntermediateWaypoint
+      ? Math.max(0.18, this.collisionBodyRadius() * 0.72)
+      : 0.035;
+    const flatReached = flatCompletionDistance < arrivalRadius;
     const verticalSnapThreshold = 0.025;
-    const verticalSettleThreshold = 0.12;
-    if (flatReached && (verticalDistance < verticalSettleThreshold || this.movePath.length > 0)) {
+    const verticalSettleThreshold = hasIntermediateWaypoint ? Math.max(0.18, this.floorBumpTolerance() * 0.65) : 0.12;
+    if (flatReached && (verticalDistance < verticalSettleThreshold || hasIntermediateWaypoint)) {
       this.camera.position.x = target.x;
       this.camera.position.z = target.z;
       const verticalSettled = verticalDistance <= verticalSnapThreshold;
@@ -1937,14 +1941,15 @@ export class WalkthroughViewer {
         );
         this.stableFloorY = damp(previousFloorY, target.y - this.cameraHeight, smoothing, delta);
       }
-      if (!verticalSettled && this.movePath.length === 0) {
+      if (!verticalSettled && !hasIntermediateWaypoint) {
         return;
       }
-      this.clickMoveVelocity = 0;
       const nextWaypoint = this.movePath.shift();
       if (nextWaypoint) {
         this.moveTarget = nextWaypoint;
+        this.clickMoveVelocity = Math.max(0.16, this.clickMoveVelocity * 0.72);
       } else {
+        this.clickMoveVelocity = 0;
         this.moveTarget = undefined;
         this.moveMarker.visible = false;
       }

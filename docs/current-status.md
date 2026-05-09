@@ -98,6 +98,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer and Studio now share the same polygon-distance helper for route islands, door-pass overlap, and nearest-edge bridge checks, reducing mismatches between QA and runtime movement.
 - Studio and import diagnostics now name the disconnected walk/pass islands when route zones are split, making doorway repair easier without reading coordinates.
 - Viewer prunes routed click-to-move paths after visibility/grid routing so movement glides through fewer unnecessary intermediate waypoints.
+- Viewer now carries click-to-move velocity through intermediate route waypoints, so routed movement glides around corners instead of stopping at every internal point.
 - Viewer grid fallback now validates each neighbor movement segment, so fallback routes do not pass through thin walls between legal sample points.
 - Viewer mouse-wheel forward/back movement now decays blocked impulses quickly instead of repeatedly pushing into walls or invalid floor.
 - Viewer collision now uses swept segment checks against inflated blocker bounds so movement and route validation cannot skip through thin walls between sampled positions.
