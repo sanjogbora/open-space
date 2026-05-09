@@ -2496,6 +2496,42 @@ function publishedS3CompatibleDeployCommand(entry: PublishEntry): string {
     : "";
 }
 
+function publishedDeploymentChecklist(entry: PublishEntry, title: string): string {
+  const gate = entry.qualityGate;
+  const lines = [
+    `Open Space deployment checklist - ${title}`,
+    `Version: ${entry.version}`,
+    `Published at: ${entry.publishedAt}`,
+    `Viewer URL: ${publishedViewerUrl(entry)}`,
+    `Embed snippet:`,
+    publishedEmbedSnippet(entry, title),
+    "",
+    "Quality gate:",
+    `- Status: ${gate?.status ?? "unknown"}`,
+    `- Blockers: ${gate?.blockerCount ?? 0}`,
+    `- Warnings: ${gate?.warningCount ?? 0}`,
+    "",
+    "Preflight:",
+    entry.deploymentPath
+      ? `1. Validate bundle:\n${publishedValidateDeployCommand(entry)}`
+      : "1. Republish this project to generate deployment metadata.",
+    entry.deploymentPath ? `2. Run client gate:\n${publishedClientGateDeployCommand(entry)}` : "",
+    "",
+    "Production upload:",
+    entry.deploymentPath
+      ? `3. S3/R2 with cache headers:\n${publishedBucketDeployWithCacheCommand(entry)}`
+      : "- Deployment command unavailable until the project is republished.",
+    entry.deploymentPath ? `4. S3-compatible endpoint example:\n${publishedS3CompatibleDeployCommand(entry)}` : "",
+    "",
+    "After upload:",
+    "- Open the viewer URL on desktop and mobile.",
+    "- Test WASD, click-to-move, mouse wheel movement, room buttons, top view, TV/video screens, and hotspots.",
+    "- Confirm CDN URLs are HTTPS and cache headers are applied to GLB, texture, video, KTX2, WebP, and AVIF assets."
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -6703,6 +6739,24 @@ function App() {
                         <code>{publishedEmbedSnippet(entry, manifest.branding.clientName ?? manifest.branding.title)}</code>
                         {entry.deploymentPath && (
                           <div className="deploy-command-list">
+                            <div className="publish-row">
+                              <span>Deployment checklist</span>
+                              <button
+                                type="button"
+                                className="button primary"
+                                onClick={() =>
+                                  void copyText(
+                                    publishedDeploymentChecklist(
+                                      entry,
+                                      manifest.branding.clientName ?? manifest.branding.title
+                                    )
+                                  )
+                                }
+                              >
+                                <Copy size={16} aria-hidden="true" />
+                                Copy
+                              </button>
+                            </div>
                             <div className="publish-row">
                               <span>Validate bundle</span>
                               <button
