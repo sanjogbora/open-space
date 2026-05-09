@@ -10656,6 +10656,7 @@ function LightmapBakeQuality({
   const lowResolutionCount = (job.lightmaps ?? []).filter(
     (lightmap) => typeof lightmap.resolution === "number" && lightmap.resolution < 1024
   ).length;
+  const suspiciousFlatLightmapCount = (job.lightmaps ?? []).filter(lightmapLooksFlatOrBlank).length;
   const issues = [
     lightmapCount <= 0 ? "No lightmap textures were generated. Check Blender output and material eligibility." : "",
     job.outputSceneUrl ? "" : "No lightmapped scene artifact was reported.",
@@ -10666,6 +10667,9 @@ function LightmapBakeQuality({
     averageBytes > 0 && averageBytes < 4096 ? "Average lightmap size is very small, which can indicate an empty or failed bake." : "",
     missingByteCount > 0 ? `${missingByteCount} lightmap(s) have no recorded file size.` : "",
     tinyLightmapCount > 0 ? `${tinyLightmapCount} lightmap(s) are extremely small and should be inspected.` : "",
+    suspiciousFlatLightmapCount > 0
+      ? `${suspiciousFlatLightmapCount} lightmap(s) are unusually small for their resolution, which can indicate a blank or failed bake.`
+      : "",
     lowResolutionCount > 0 ? `${lowResolutionCount} lightmap(s) are below 1024px.` : "",
     (job.resolution ?? 0) > 0 && (job.resolution ?? 0) < 1024 ? "Resolution is below 1024px; expect softer lighting and visible artifacts." : "",
     (job.samples ?? 0) > 0 && (job.samples ?? 0) < 64 ? "Sample count is low; use Medium or higher before client review." : ""
@@ -10698,10 +10702,21 @@ function lightmapPreviewQuality(lightmap: NonNullable<LightmapBakeJobDocument["l
   if (!lightmap.bytes || lightmap.bytes < 4096) {
     return "warning";
   }
+  if (lightmapLooksFlatOrBlank(lightmap)) {
+    return "warning";
+  }
   if (typeof lightmap.resolution === "number" && lightmap.resolution < 1024) {
     return "warning";
   }
   return "pass";
+}
+
+function lightmapLooksFlatOrBlank(lightmap: NonNullable<LightmapBakeJobDocument["lightmaps"]>[number]): boolean {
+  if (!lightmap.bytes || typeof lightmap.resolution !== "number" || lightmap.resolution <= 0) {
+    return false;
+  }
+  const bytesPerPixel = lightmap.bytes / (lightmap.resolution * lightmap.resolution);
+  return lightmap.resolution >= 512 && bytesPerPixel < 0.018;
 }
 
 function AssetHealth({

@@ -174,6 +174,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Lightmap bake jobs now report generated lightmap URLs, resolutions, byte sizes, total lightmap bytes, and the exported lightmapped scene artifact in Studio.
 - Studio now shows lightmap bake QA checks and thumbnails for generated lightmaps so empty, tiny, incomplete, or low-quality bakes are visible before publish.
 - Studio lightmap rows now flag low-resolution, missing-size, or tiny bake outputs individually so weak bake artifacts are easier to spot.
+- Studio bake QA now also flags lightmaps that are suspiciously small for their resolution, catching likely blank or failed bake outputs.
 - Studio now shows a bake preflight estimate for material count, target resolution, sample count, and raw lightmap texture footprint before Blender starts.
 - Studio bake preflight now lists specific blocking errors and warnings for material limits, raw lightmap memory, resolution, and sample count before Blender starts.
 - Studio bake settings now show when resolution, samples, or margin differ from the selected preset and can reset those values back to the preset defaults.
