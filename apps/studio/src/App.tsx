@@ -10689,6 +10689,14 @@ function AssetHealth({
   const missingResources = externalResources.filter((resource) => !resource.exists);
   const looseImages = stats.looseImages ?? [];
   const textureSuggestions = stats.materialTextureSuggestions ?? [];
+  const textureAssignmentDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
+    diagnostic.code === "image-textures-unused-by-materials" || diagnostic.code === "few-materials-use-textures"
+  );
+  const hasTextureAssignmentGap =
+    Boolean(textureAssignmentDiagnostic) ||
+    ((stats.imageCount ?? 0) > 0 &&
+      (stats.materialCount ?? 0) > 0 &&
+      (stats.texturedMaterialCount ?? 0) < Math.max(1, Math.ceil((stats.materialCount ?? 0) * 0.2)));
   const canRunRepair = Boolean(onRepair) && apiConnected && repairState !== "repairing";
   const hasTextureRepairWork = missingResources.length > 0 || missingAssets.length > 0;
   const hasLooseUnmappedTextures = looseImages.length > 0 && textureSuggestions.length === 0;
@@ -10696,6 +10704,7 @@ function AssetHealth({
     missingAssets.length > 0 ||
     missingResources.length > 0 ||
     looseImages.length > 0 ||
+    hasTextureAssignmentGap ||
     textureSuggestions.length > 0 ||
     externalResources.length > 0;
 
@@ -10711,12 +10720,19 @@ function AssetHealth({
   return (
     <div className="asset-health-card">
       <strong>Asset health</strong>
-      {(hasTextureRepairWork || textureSuggestions.length > 0 || hasLooseUnmappedTextures) && (
+      {(hasTextureRepairWork || textureSuggestions.length > 0 || hasLooseUnmappedTextures || hasTextureAssignmentGap) && (
         <div className="asset-repair-plan">
           {hasTextureRepairWork && (
             <p>
               Some referenced texture files are missing from the paths stored in the model. Run repair after importing
               the model ZIP or texture folder so matching files can be copied into place.
+            </p>
+          )}
+          {hasTextureAssignmentGap && !hasTextureRepairWork && (
+            <p>
+              {textureAssignmentDiagnostic?.message ??
+                `${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0} material(s) currently use texture maps.`}{" "}
+              Open Materials to assign base, normal, or emissive maps before judging visual quality.
             </p>
           )}
           {!hasTextureRepairWork && textureSuggestions.length > 0 && (
@@ -10753,6 +10769,19 @@ function AssetHealth({
                 Open Materials
               </button>
             )}
+          </div>
+        </div>
+      )}
+      {hasTextureAssignmentGap && (
+        <div className="asset-health-section">
+          <span>Texture assignment coverage</span>
+          <div className="asset-coverage-row">
+            <strong>
+              {stats.texturedMaterialCount ?? 0}/{stats.materialCount ?? 0} material(s)
+            </strong>
+            <small>
+              {textureAssignmentDiagnostic?.title ?? "Few materials use texture images"}
+            </small>
           </div>
         </div>
       )}

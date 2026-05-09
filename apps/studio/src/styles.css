@@ -1315,6 +1315,27 @@ button.list-row {
   white-space: nowrap;
 }
 
+.asset-coverage-row {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid rgba(111, 75, 0, 0.16);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.asset-coverage-row strong,
+.asset-coverage-row small {
+  display: block;
+  margin: 0;
+}
+
+.asset-coverage-row small {
+  color: #785419;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .asset-texture-row {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
