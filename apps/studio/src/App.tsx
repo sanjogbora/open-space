@@ -870,6 +870,25 @@ function navigationRepairRecommendation(draft: NavigationRepairDraft): Navigatio
   };
 }
 
+function navigationRepairActionLabel(action: string | undefined): string {
+  if (action === "add-walk-zone") {
+    return "Add walk patch";
+  }
+  if (action === "add-door-pass") {
+    return "Add door pass";
+  }
+  if (action === "adjust-blocker") {
+    return "Adjust blocker";
+  }
+  if (action === "tune-steps") {
+    return "Tune step limits";
+  }
+  if (action === "inspect-click") {
+    return "Inspect clicked area";
+  }
+  return "Review navigation";
+}
+
 function markNavigationZoneAuthored(zone: NavigationZone): NavigationZone {
   const { generatedBy: _generatedBy, ...rest } = zone;
   return {
@@ -8086,6 +8105,9 @@ function App() {
                           <div>
                             <span>Viewer repair</span>
                             <strong>{repairRecommendation?.title ?? "Navigation needs a repair"}</strong>
+                            <div className="repair-source-pill">
+                              Viewer recommended: {navigationRepairActionLabel(navigationRepairDraft.action)}
+                            </div>
                             <p>
                               {navigationRepairDraft.hint ||
                                 "Choose the action that matches the clicked area, then save and retry the viewer."}

@@ -1444,6 +1444,18 @@ button.list-row {
   line-height: 1.45;
 }
 
+.repair-source-pill {
+  width: fit-content;
+  margin-top: 7px;
+  padding: 4px 8px;
+  border: 1px solid rgba(7, 135, 255, 0.24);
+  border-radius: 999px;
+  color: #17415d;
+  background: rgba(7, 135, 255, 0.1);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .navigation-guide-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
