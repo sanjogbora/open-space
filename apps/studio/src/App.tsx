@@ -2163,6 +2163,11 @@ function publishedValidateDeployCommand(entry: PublishEntry): string {
   return command ? `${command} --dry-run` : "";
 }
 
+function publishedClientGateDeployCommand(entry: PublishEntry): string {
+  const command = publishedValidateDeployCommand(entry);
+  return command ? `${command} --fail-on-warning` : "";
+}
+
 function publishedBucketDeployCommand(entry: PublishEntry): string {
   if (!entry.deploymentPath) {
     return "";
@@ -5913,6 +5918,18 @@ function App() {
                               </button>
                             </div>
                             <code>{publishedValidateDeployCommand(entry)}</code>
+                            <div className="publish-row">
+                              <span>Client gate</span>
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => void copyText(publishedClientGateDeployCommand(entry))}
+                              >
+                                <Copy size={16} aria-hidden="true" />
+                                Copy
+                              </button>
+                            </div>
+                            <code>{publishedClientGateDeployCommand(entry)}</code>
                             <div className="publish-row">
                               <span>Local deploy</span>
                               <button

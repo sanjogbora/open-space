@@ -16,10 +16,11 @@ const regionArg = args.find((arg) => arg.startsWith("--region="))?.slice("--regi
 const dryRun = args.includes("--dry-run");
 const applyCacheControl = args.includes("--apply-cache-control");
 const allowBlockedQualityGate = args.includes("--allow-blocked");
+const failOnWarningQualityGate = args.includes("--fail-on-warning");
 
 if (!deploymentArg) {
   throw new Error(
-    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--endpoint-url=https://...] [--profile=name] [--region=auto] [--apply-cache-control] [--allow-blocked] [--dry-run]"
+    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--endpoint-url=https://...] [--profile=name] [--region=auto] [--apply-cache-control] [--allow-blocked] [--fail-on-warning] [--dry-run]"
   );
 }
 
@@ -108,6 +109,7 @@ async function validateDeployment() {
     );
   }
   validateQualityGate();
+  validateWarningQualityGate();
   return checks;
 }
 
@@ -134,6 +136,27 @@ function validateQualityGate() {
     return;
   }
   throw new Error(`${message} Fix the bundle or pass --allow-blocked for internal testing only.`);
+}
+
+function validateWarningQualityGate() {
+  const qualityGate = deployment.qualityGate;
+  if (!failOnWarningQualityGate || !qualityGate) {
+    return;
+  }
+  const warningCount = Number(qualityGate.warningCount ?? 0);
+  if (warningCount <= 0) {
+    return;
+  }
+  const warnings = Array.isArray(qualityGate.warnings)
+    ? qualityGate.warnings
+        .slice(0, 6)
+        .map((warning) => warning.title || warning.code || warning.message)
+        .filter(Boolean)
+    : [];
+  const detail = warnings.length > 0 ? `: ${warnings.join("; ")}` : "";
+  throw new Error(
+    `Deployment quality gate has ${warningCount} warning(s)${detail}. Fix warnings or remove --fail-on-warning for draft/internal deployment.`
+  );
 }
 
 function cachePolicySummary() {
@@ -308,6 +331,7 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir, ex
     cachePolicy: cachePolicySummary(),
     qualityGate: deployment.qualityGate ?? null,
     qualityGateOverride: allowBlockedQualityGate,
+    qualityGateFailOnWarning: failOnWarningQualityGate,
     ...extra,
     ...(viewerBase ? { viewerBase } : {}),
     ...(publicBase ? { publicBase } : {}),

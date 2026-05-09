@@ -112,6 +112,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Publish now surfaces the first blocking or client-delivery issue directly in the publish action card.
 - Published bundles include copy-ready S3/R2 deploy commands, including an opt-in per-asset cache-header pass for CDN-friendly immutable GLB/texture assets and revalidated manifests.
 - Studio Publish now exposes a copy-ready dry-run validation command before deploy commands, so deployment manifests, hashes, asset sizes, and quality gates can be checked before upload.
+- Studio Publish now exposes a stricter client-gate validation command that fails on publish warnings as well as blockers.
 - Published `deployment.json` now carries the analyzed publish quality gate, including readiness warnings and diagnostics used when the version was created.
 - The deploy script now refuses to deploy a bundle whose saved quality gate is blocked unless `--allow-blocked` is passed for internal testing.
 - The deploy script now maps WebAssembly, Basis, KTX2, AVIF, WebP, video, and GLB assets to explicit content types when applying per-asset S3 cache headers.
