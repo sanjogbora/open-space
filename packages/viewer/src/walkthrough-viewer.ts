@@ -2087,7 +2087,7 @@ export class WalkthroughViewer {
     } else {
       this.pendingFloorSamples += 1;
     }
-    const requiredSamples = Math.abs(levelDelta) >= Math.max(0.55, this.cameraHeight * 0.32) ? 1 : 4;
+    const requiredSamples = Math.abs(levelDelta) >= Math.max(0.55, this.cameraHeight * 0.32) ? 2 : 4;
     return this.pendingFloorSamples >= requiredSamples ? floorY : referenceFloorY;
   }
 
