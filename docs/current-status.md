@@ -14,6 +14,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio now scrolls directly to the guided repair card when opened from a viewer Navigation blocked / Fix in Studio link.
 - Studio repair cards now echo the viewer's recommended repair action so the viewer and Studio handoff is easier to follow.
 - Studio viewer-repair cards now offer Auto Bridge directly when a route-not-found click happens while walk/pass areas are split into multiple islands.
+- Studio viewer-repair cards explain when Auto Bridge appears and how many disconnected route islands were detected.
 - Studio step/threshold repair now offers a one-click Steps movement preset instead of pushing users toward a walk-zone patch first.
 - Studio door-pass repair can also add a missing target-side walk patch so the clicked room becomes reachable.
 - Auto-generated walk zones now fall back to detected floor geometry when they miss a valid room floor, while authored zones remain strict.

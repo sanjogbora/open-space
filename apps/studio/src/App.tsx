@@ -8514,6 +8514,11 @@ function App() {
                             <div>
                               <strong>Recommended</strong>
                               <p>{repairRecommendation.detail}</p>
+                              {viewerRepairCanBridgeIslands && (
+                                <small>
+                                  Studio detected {navigationCoverageSummary?.routeComponents} disconnected route islands. Auto Bridge can add a connector when the nearest islands are close enough.
+                                </small>
+                              )}
                             </div>
                             <button
                               type="button"

@@ -1721,11 +1721,17 @@ button.list-row {
   color: #146c43;
 }
 
-.repair-recommendation p {
+.repair-recommendation p,
+.repair-recommendation small {
   margin-top: 4px;
   color: #315466;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.repair-recommendation small {
+  display: block;
+  color: #49697a;
 }
 
 .repair-action-grid {
