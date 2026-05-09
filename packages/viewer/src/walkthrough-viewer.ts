@@ -2572,12 +2572,20 @@ export class WalkthroughViewer {
     const boxA = this.navigationMeshBounds2D(a);
     const boxB = this.navigationMeshBounds2D(b);
     const padding = Math.max(0.22, this.collisionBodyRadius() * 1.35);
-    return (
+    const boundsMayTouch =
       boxA.minX - padding <= boxB.maxX &&
       boxA.maxX + padding >= boxB.minX &&
       boxA.minZ - padding <= boxB.maxZ &&
-      boxA.maxZ + padding >= boxB.minZ
-    );
+      boxA.maxZ + padding >= boxB.minZ;
+    if (!boundsMayTouch) {
+      return false;
+    }
+    const footprintA = this.navigationMeshFootprint2D(a);
+    const footprintB = this.navigationMeshFootprint2D(b);
+    if (footprintA.length >= 3 && footprintB.length >= 3) {
+      return polygonDistance2D(footprintA, footprintB) <= padding;
+    }
+    return true;
   }
 
   private navigationMeshIsPass(mesh: THREE.Mesh): boolean {
@@ -2606,6 +2614,17 @@ export class WalkthroughViewer {
       y,
       Number.isFinite(z) ? z : (centerA.z + centerB.z) / 2
     );
+    if (overlapMinX > overlapMaxX || overlapMinZ > overlapMaxZ) {
+      const footprintA = this.navigationMeshFootprint2D(a);
+      const footprintB = this.navigationMeshFootprint2D(b);
+      const bridgePair =
+        footprintA.length >= 3 && footprintB.length >= 3
+          ? closestPolygonPointPair2D(footprintA, footprintB)
+          : undefined;
+      if (bridgePair) {
+        point.set((bridgePair.a.x + bridgePair.b.x) / 2, y, (bridgePair.a.y + bridgePair.b.y) / 2);
+      }
+    }
     return this.navigationProbePosition(point);
   }
 
@@ -2617,10 +2636,46 @@ export class WalkthroughViewer {
   }
 
   private navigationMeshDistanceToPoint(mesh: THREE.Mesh, point: THREE.Vector3): number {
+    const footprint = this.navigationMeshFootprint2D(mesh);
+    if (footprint.length >= 3) {
+      return pointToPolygonDistance2D(new THREE.Vector2(point.x, point.z), footprint);
+    }
     const box = this.navigationMeshBounds2D(mesh);
     const dx = point.x < box.minX ? box.minX - point.x : point.x > box.maxX ? point.x - box.maxX : 0;
     const dz = point.z < box.minZ ? box.minZ - point.z : point.z > box.maxZ ? point.z - box.maxZ : 0;
     return Math.hypot(dx, dz);
+  }
+
+  private navigationMeshFootprint2D(mesh: THREE.Mesh): THREE.Vector2[] {
+    const polygon = mesh.userData["navigationPolygon"];
+    if (Array.isArray(polygon) && polygon.every((point) => point instanceof THREE.Vector2)) {
+      return polygon.map((point) => {
+        const world = mesh.localToWorld(new THREE.Vector3(point.x, 0, point.y));
+        return new THREE.Vector2(world.x, world.z);
+      });
+    }
+    const halfSize = mesh.userData["navigationHalfSize"];
+    if (halfSize instanceof THREE.Vector3) {
+      return [
+        new THREE.Vector3(-halfSize.x, 0, -halfSize.z),
+        new THREE.Vector3(halfSize.x, 0, -halfSize.z),
+        new THREE.Vector3(halfSize.x, 0, halfSize.z),
+        new THREE.Vector3(-halfSize.x, 0, halfSize.z)
+      ].map((point) => {
+        const world = mesh.localToWorld(point);
+        return new THREE.Vector2(world.x, world.z);
+      });
+    }
+    const box = new THREE.Box3().setFromObject(mesh);
+    if (box.isEmpty()) {
+      return [];
+    }
+    return [
+      new THREE.Vector2(box.min.x, box.min.z),
+      new THREE.Vector2(box.max.x, box.min.z),
+      new THREE.Vector2(box.max.x, box.max.z),
+      new THREE.Vector2(box.min.x, box.max.z)
+    ];
   }
 
   private navigationMeshBounds2D(mesh: THREE.Mesh): NavigationMeshBounds2D {
@@ -3925,6 +3980,136 @@ function pointToSegmentDistance(point: THREE.Vector2, start: THREE.Vector2, end:
     1
   );
   return Math.hypot(point.x - (start.x + segmentX * t), point.y - (start.y + segmentY * t));
+}
+
+function pointInPolygon2D(point: THREE.Vector2, polygon: readonly THREE.Vector2[]): boolean {
+  let inside = false;
+  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current, current += 1) {
+    const a = polygon[current]!;
+    const b = polygon[previous]!;
+    if ((a.y > point.y) !== (b.y > point.y) && point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function segmentOrientation(a: THREE.Vector2, b: THREE.Vector2, c: THREE.Vector2): number {
+  return (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y);
+}
+
+function pointOnSegment2D(point: THREE.Vector2, start: THREE.Vector2, end: THREE.Vector2): boolean {
+  return (
+    point.x <= Math.max(start.x, end.x) + 0.000001 &&
+    point.x + 0.000001 >= Math.min(start.x, end.x) &&
+    point.y <= Math.max(start.y, end.y) + 0.000001 &&
+    point.y + 0.000001 >= Math.min(start.y, end.y)
+  );
+}
+
+function segmentsIntersect2D(aStart: THREE.Vector2, aEnd: THREE.Vector2, bStart: THREE.Vector2, bEnd: THREE.Vector2): boolean {
+  const o1 = segmentOrientation(aStart, aEnd, bStart);
+  const o2 = segmentOrientation(aStart, aEnd, bEnd);
+  const o3 = segmentOrientation(bStart, bEnd, aStart);
+  const o4 = segmentOrientation(bStart, bEnd, aEnd);
+  if (o1 * o2 < 0 && o3 * o4 < 0) {
+    return true;
+  }
+  return (
+    (Math.abs(o1) < 0.000001 && pointOnSegment2D(bStart, aStart, aEnd)) ||
+    (Math.abs(o2) < 0.000001 && pointOnSegment2D(bEnd, aStart, aEnd)) ||
+    (Math.abs(o3) < 0.000001 && pointOnSegment2D(aStart, bStart, bEnd)) ||
+    (Math.abs(o4) < 0.000001 && pointOnSegment2D(aEnd, bStart, bEnd))
+  );
+}
+
+function closestPointOnSegment2D(point: THREE.Vector2, start: THREE.Vector2, end: THREE.Vector2): THREE.Vector2 {
+  const segment = end.clone().sub(start);
+  const lengthSq = segment.lengthSq();
+  if (lengthSq < 0.0001) {
+    return start.clone();
+  }
+  const t = THREE.MathUtils.clamp(point.clone().sub(start).dot(segment) / lengthSq, 0, 1);
+  return start.clone().add(segment.multiplyScalar(t));
+}
+
+function pointToPolygonDistance2D(point: THREE.Vector2, polygon: readonly THREE.Vector2[]): number {
+  if (polygon.length < 3 || pointInPolygon2D(point, polygon)) {
+    return 0;
+  }
+  let distance = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < polygon.length; index += 1) {
+    const start = polygon[index]!;
+    const end = polygon[(index + 1) % polygon.length]!;
+    distance = Math.min(distance, pointToSegmentDistance(point, start, end));
+  }
+  return distance;
+}
+
+function polygonDistance2D(a: readonly THREE.Vector2[], b: readonly THREE.Vector2[]): number {
+  if (a.length < 3 || b.length < 3) {
+    return Number.POSITIVE_INFINITY;
+  }
+  if (a.some((point) => pointInPolygon2D(point, b)) || b.some((point) => pointInPolygon2D(point, a))) {
+    return 0;
+  }
+  let distance = Number.POSITIVE_INFINITY;
+  for (let aIndex = 0; aIndex < a.length; aIndex += 1) {
+    const aStart = a[aIndex]!;
+    const aEnd = a[(aIndex + 1) % a.length]!;
+    for (let bIndex = 0; bIndex < b.length; bIndex += 1) {
+      const bStart = b[bIndex]!;
+      const bEnd = b[(bIndex + 1) % b.length]!;
+      if (segmentsIntersect2D(aStart, aEnd, bStart, bEnd)) {
+        return 0;
+      }
+      distance = Math.min(
+        distance,
+        pointToSegmentDistance(aStart, bStart, bEnd),
+        pointToSegmentDistance(aEnd, bStart, bEnd),
+        pointToSegmentDistance(bStart, aStart, aEnd),
+        pointToSegmentDistance(bEnd, aStart, aEnd)
+      );
+    }
+  }
+  return distance;
+}
+
+function closestPolygonPointPair2D(
+  a: readonly THREE.Vector2[],
+  b: readonly THREE.Vector2[]
+): { a: THREE.Vector2; b: THREE.Vector2 } | undefined {
+  if (a.length < 3 || b.length < 3) {
+    return undefined;
+  }
+  if (polygonDistance2D(a, b) === 0) {
+    const insideA = a.find((point) => pointInPolygon2D(point, b));
+    if (insideA) {
+      return { a: insideA.clone(), b: insideA.clone() };
+    }
+    const insideB = b.find((point) => pointInPolygon2D(point, a));
+    if (insideB) {
+      return { a: insideB.clone(), b: insideB.clone() };
+    }
+  }
+  let best: { a: THREE.Vector2; b: THREE.Vector2; distance: number } | undefined;
+  const remember = (pointA: THREE.Vector2, pointB: THREE.Vector2) => {
+    const distance = pointA.distanceTo(pointB);
+    if (!best || distance < best.distance) {
+      best = { a: pointA.clone(), b: pointB.clone(), distance };
+    }
+  };
+  for (const point of a) {
+    for (let index = 0; index < b.length; index += 1) {
+      remember(point, closestPointOnSegment2D(point, b[index]!, b[(index + 1) % b.length]!));
+    }
+  }
+  for (const point of b) {
+    for (let index = 0; index < a.length; index += 1) {
+      remember(closestPointOnSegment2D(point, a[index]!, a[(index + 1) % a.length]!), point);
+    }
+  }
+  return best ? { a: best.a, b: best.b } : undefined;
 }
 
 function isGeneratedViewerNavigationZone(zone: NavigationZone): boolean {
