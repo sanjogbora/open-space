@@ -615,6 +615,7 @@ const movementPresets: readonly {
     detail: "Slower glide, stronger tiny-bump ignore.",
     movement: {
       clickMoveSpeed: 1.05,
+      wheelMoveSpeed: 1,
       collisionRadius: 0.26,
       maxStepUp: 0.38,
       maxStepDown: 0.72,
@@ -628,6 +629,7 @@ const movementPresets: readonly {
     detail: "More forgiving for thresholds and simple stairs.",
     movement: {
       clickMoveSpeed: 1.15,
+      wheelMoveSpeed: 1,
       collisionRadius: 0.24,
       maxStepUp: 0.62,
       maxStepDown: 1.15,
@@ -641,6 +643,7 @@ const movementPresets: readonly {
     detail: "Stricter floor following for clean navmesh-style floors.",
     movement: {
       clickMoveSpeed: 1.25,
+      wheelMoveSpeed: 0.85,
       collisionRadius: 0.32,
       maxStepUp: 0.28,
       maxStepDown: 0.55,
@@ -8523,6 +8526,19 @@ function App() {
                         updateControls((current) => ({
                           ...current,
                           movement: { ...current.movement, clickMoveSpeed: value }
+                        }))
+                      }
+                    />
+                    <NumberField
+                      label="Wheel Glide"
+                      min={0.1}
+                      max={4}
+                      step={0.05}
+                      value={controlsDoc.movement.wheelMoveSpeed ?? 1}
+                      onChange={(value) =>
+                        updateControls((current) => ({
+                          ...current,
+                          movement: { ...current.movement, wheelMoveSpeed: value }
                         }))
                       }
                     />

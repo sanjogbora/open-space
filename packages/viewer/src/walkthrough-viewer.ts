@@ -153,6 +153,7 @@ export class WalkthroughViewer {
     dragLook: true,
     moveSpeed: 3.8,
     clickMoveSpeed: 1.05,
+    wheelMoveSpeed: 1,
     collisionRadius: 0.28,
     maxStepUp: 0.38,
     maxStepDown: 0.72,
@@ -3171,6 +3172,10 @@ export class WalkthroughViewer {
     return THREE.MathUtils.clamp(this.controls.floorHeightSmoothing ?? 0.9, 0.5, 8);
   }
 
+  private wheelMoveSpeed(): number {
+    return THREE.MathUtils.clamp(this.controls.wheelMoveSpeed ?? 1, 0.1, 4);
+  }
+
   private clampVerticalCameraDelta(currentY: number, targetY: number, delta: number): number {
     if (delta <= 0 || Math.abs(targetY - currentY) < 0.0001) {
       return targetY;
@@ -3895,8 +3900,10 @@ export class WalkthroughViewer {
     this.movePath = [];
     this.moveMarker.visible = false;
     const intent = -Math.sign(event.deltaY || 0);
-    const impulse = THREE.MathUtils.clamp(Math.abs(event.deltaY) * 0.035, 0.45, 3.2);
-    this.wheelVelocity = THREE.MathUtils.clamp(this.wheelVelocity + intent * impulse, -5.5, 5.5);
+    const wheelMoveSpeed = this.wheelMoveSpeed();
+    const impulse = THREE.MathUtils.clamp(Math.abs(event.deltaY) * 0.035 * wheelMoveSpeed, 0.25, 3.2 * wheelMoveSpeed);
+    const maxVelocity = 5.5 * wheelMoveSpeed;
+    this.wheelVelocity = THREE.MathUtils.clamp(this.wheelVelocity + intent * impulse, -maxVelocity, maxVelocity);
   };
 
   private resize = (): void => {

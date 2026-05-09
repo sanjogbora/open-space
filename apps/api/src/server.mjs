@@ -29,6 +29,7 @@ const defaultControlsDocument = {
     dragLook: true,
     moveSpeed: 3.8,
     clickMoveSpeed: 1.05,
+    wheelMoveSpeed: 1,
     collisionRadius: 0.28,
     maxStepUp: 0.38,
     maxStepDown: 0.72,
@@ -875,6 +876,7 @@ function validateControls(value) {
     typeof movement.dragLook !== "boolean" ||
     typeof movement.moveSpeed !== "number" ||
     (movement.clickMoveSpeed !== undefined && typeof movement.clickMoveSpeed !== "number") ||
+    (movement.wheelMoveSpeed !== undefined && typeof movement.wheelMoveSpeed !== "number") ||
     (movement.collisionRadius !== undefined && typeof movement.collisionRadius !== "number") ||
     (movement.maxStepUp !== undefined && typeof movement.maxStepUp !== "number") ||
     (movement.maxStepDown !== undefined && typeof movement.maxStepDown !== "number") ||

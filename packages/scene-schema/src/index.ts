@@ -198,6 +198,7 @@ export interface SceneControlsDocument {
     dragLook: boolean;
     moveSpeed: number;
     clickMoveSpeed?: number;
+    wheelMoveSpeed?: number;
     collisionRadius?: number;
     maxStepUp?: number;
     maxStepDown?: number;
