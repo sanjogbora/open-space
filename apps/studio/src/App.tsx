@@ -247,7 +247,15 @@ interface NavigationCoverage {
   coveredWalkViews: number;
 }
 
-type NavigationQuickFixAction = "auto" | "bounds" | "paint-walk" | "paint-pass" | "widen-pass" | "review-zones" | "test";
+type NavigationQuickFixAction =
+  | "auto"
+  | "bounds"
+  | "bridge"
+  | "paint-walk"
+  | "paint-pass"
+  | "widen-pass"
+  | "review-zones"
+  | "test";
 
 interface NavigationQuickFix {
   title: string;
@@ -1618,9 +1626,16 @@ function navigationQuickFixForIssue(issue: NavigationQaIssue | undefined): Navig
       action: "widen-pass"
     };
   }
+  if (issue.id === "disconnected-route-zones") {
+    return {
+      title: "Bridge nearby walk islands",
+      detail: "Try adding green connector passes between close walk areas before drawing doorway passes manually.",
+      button: "Auto Bridge",
+      action: "bridge"
+    };
+  }
   if (
     issue.id === "missing-pass-zones" ||
-    issue.id === "disconnected-route-zones" ||
     issue.id.startsWith("orphan-pass-") ||
     issue.id.startsWith("one-sided-pass-")
   ) {
@@ -3509,6 +3524,10 @@ function App() {
     }
     if (quickFix.action === "widen-pass") {
       widenNarrowPassZones();
+      return;
+    }
+    if (quickFix.action === "bridge") {
+      createBridgePassZones();
       return;
     }
     if (quickFix.action === "auto") {
