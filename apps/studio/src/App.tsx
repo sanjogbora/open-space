@@ -9863,6 +9863,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "sidecar-texture-decode-failed",
       "textured-primitives-missing-uvs",
       "unassigned-primitive-materials",
+      "invalid-uv-accessor-shapes",
       "missing-uv-attributes",
       "mostly-unlit-materials",
       "vertex-colors-detected",
@@ -9939,6 +9940,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   if (
     [
       "missing-normal-attributes",
+      "invalid-normal-accessor-shapes",
       "lightmaps-missing-secondary-uvs",
       "some-lightmap-secondary-uvs-missing"
     ].includes(code)
@@ -9953,6 +9955,8 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "invalid-scene-node-references",
       "invalid-node-child-references",
       "invalid-node-mesh-references",
+      "invalid-position-accessor-shapes",
+      "invalid-index-accessor-shapes",
       "invalid-material-references",
       "invalid-texture-references",
       "stale-object-overrides",

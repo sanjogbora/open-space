@@ -49,6 +49,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Bundle analysis warns about duplicate object/material names that can make interaction targeting ambiguous after import.
 - Bundle analysis now flags primitives with invalid or missing material assignments, catching GLBs that load but show fallback/plain surfaces compared with source viewers.
 - Studio routes missing primitive material assignments to Materials and invalid material/texture references to source review actions.
+- Bundle analysis now validates POSITION, NORMAL, TEXCOORD, and index accessor shapes so malformed geometry attributes are surfaced before publishing.
 - Bundle analysis now warns when saved object overrides are stale after reimport or contain invalid navigation behavior values.
 - Viewer initial-camera repair avoids likely exterior/grass planes when it can recover to a better navigation surface.
 - Viewer doorway recovery treats named/transparent door panels as portal surfaces, then validates the floor beyond through normal bounds and route checks.

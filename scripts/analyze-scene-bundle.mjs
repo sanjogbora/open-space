@@ -590,6 +590,13 @@ function accessorRequiredByteLength(accessor, bufferView) {
   return (count - 1) * stride + elementBytes;
 }
 
+function accessorHasShape(accessor, type, componentTypes) {
+  if (!accessor || accessor.type !== type || componentTypeByteSize(accessor.componentType) === 0) {
+    return false;
+  }
+  return !componentTypes || componentTypes.includes(accessor.componentType);
+}
+
 async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   const accessors = document.accessors ?? [];
   const bufferViews = document.bufferViews ?? [];
@@ -628,6 +635,10 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   let missingPositionBoundsPrimitiveCount = 0;
   let invalidPositionBoundsPrimitiveCount = 0;
   let collapsedPositionBoundsPrimitiveCount = 0;
+  let invalidPositionAccessorShapeCount = 0;
+  let invalidNormalAccessorShapeCount = 0;
+  let invalidUvAccessorShapeCount = 0;
+  let invalidIndexAccessorShapeCount = 0;
   let invalidAccessorReferenceCount = 0;
   let invalidBufferViewReferenceCount = 0;
   let invalidBufferViewRangeCount = 0;
@@ -658,6 +669,11 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       }
       primitiveCount += 1;
       const positionAccessorIndex = primitive.attributes?.POSITION;
+      const normalAccessorIndex = primitive.attributes?.NORMAL;
+      const uvAccessorIndices = [
+        primitive.attributes?.TEXCOORD_0,
+        primitive.attributes?.TEXCOORD_1
+      ].filter((index) => typeof index === "number");
       const attributeIndices = Object.values(primitive.attributes ?? {});
       for (const accessorIndex of [
         ...attributeIndices,
@@ -674,7 +690,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       if (typeof positionAccessorIndex !== "number") {
         missingPositionPrimitiveCount += 1;
       }
-      if (typeof primitive.attributes?.NORMAL !== "number") {
+      if (typeof normalAccessorIndex !== "number") {
         missingNormalPrimitiveCount += 1;
       }
       if (typeof primitive.attributes?.TEXCOORD_0 !== "number") {
@@ -691,8 +707,25 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       }
       const positionAccessor =
         typeof positionAccessorIndex === "number" ? accessors[positionAccessorIndex] : undefined;
+      const normalAccessor =
+        typeof normalAccessorIndex === "number" ? accessors[normalAccessorIndex] : undefined;
       const indexAccessor =
         typeof primitive.indices === "number" ? accessors[primitive.indices] : undefined;
+      if (positionAccessor && !accessorHasShape(positionAccessor, "VEC3")) {
+        invalidPositionAccessorShapeCount += 1;
+      }
+      if (normalAccessor && !accessorHasShape(normalAccessor, "VEC3")) {
+        invalidNormalAccessorShapeCount += 1;
+      }
+      for (const uvAccessorIndex of uvAccessorIndices) {
+        const uvAccessor = accessors[uvAccessorIndex];
+        if (uvAccessor && !accessorHasShape(uvAccessor, "VEC2")) {
+          invalidUvAccessorShapeCount += 1;
+        }
+      }
+      if (indexAccessor && !accessorHasShape(indexAccessor, "SCALAR", [5121, 5123, 5125])) {
+        invalidIndexAccessorShapeCount += 1;
+      }
       if (positionAccessor && (!Array.isArray(positionAccessor.min) || !Array.isArray(positionAccessor.max))) {
         missingPositionBoundsPrimitiveCount += 1;
       } else if (positionAccessor && !validAccessorBounds(positionAccessor)) {
@@ -945,6 +978,10 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     missingPositionBoundsPrimitiveCount,
     invalidPositionBoundsPrimitiveCount,
     collapsedPositionBoundsPrimitiveCount,
+    invalidPositionAccessorShapeCount,
+    invalidNormalAccessorShapeCount,
+    invalidUvAccessorShapeCount,
+    invalidIndexAccessorShapeCount,
     invalidAccessorReferenceCount,
     invalidBufferViewReferenceCount,
     invalidBufferViewRangeCount,
@@ -2568,6 +2605,22 @@ function createDiagnostics(manifest, report, graphs, controls) {
     (sum, model) => sum + (model.unassignedMaterialPrimitiveCount ?? 0),
     0
   );
+  const invalidPositionAccessorShapeCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidPositionAccessorShapeCount ?? 0),
+    0
+  );
+  const invalidNormalAccessorShapeCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidNormalAccessorShapeCount ?? 0),
+    0
+  );
+  const invalidUvAccessorShapeCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidUvAccessorShapeCount ?? 0),
+    0
+  );
+  const invalidIndexAccessorShapeCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidIndexAccessorShapeCount ?? 0),
+    0
+  );
   const meshCount = report.models.reduce((sum, model) => sum + (model.meshCount ?? 0), 0);
   const dominantUntexturedMaterials = report.models.filter(
     (model) =>
@@ -2695,6 +2748,26 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if (invalidPositionAccessorShapeCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-position-accessor-shapes",
+      title: "Position accessors have invalid shapes",
+      message: `${invalidPositionAccessorShapeCount} POSITION accessor(s) are not valid VEC3 geometry attributes.`,
+      action: "Repair or re-export the GLB/GLTF; invalid position accessors can make geometry disappear, collapse, or generate wrong navigation bounds."
+    });
+  }
+
+  if (invalidIndexAccessorShapeCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-index-accessor-shapes",
+      title: "Index accessors have invalid shapes",
+      message: `${invalidIndexAccessorShapeCount} index accessor(s) are not valid scalar unsigned integer attributes.`,
+      action: "Repair or re-export the GLB/GLTF; invalid indices can make surfaces render as broken triangles or fail in mobile browsers."
+    });
+  }
+
   if (invalidBufferViewReferenceCount > 0) {
     diagnostics.push({
       severity: "error",
@@ -2752,6 +2825,26 @@ function createDiagnostics(manifest, report, graphs, controls) {
       title: "Some mesh primitives have no material",
       message: `${unassignedMaterialPrimitiveCount} primitive(s) have no material assignment even though the model defines materials.`,
       action: "Assign materials to those meshes in the source model or use Studio Materials only after confirming the plain fallback surfaces are intentional."
+    });
+  }
+
+  if (invalidNormalAccessorShapeCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "invalid-normal-accessor-shapes",
+      title: "Normal accessors have invalid shapes",
+      message: `${invalidNormalAccessorShapeCount} NORMAL accessor(s) are not valid VEC3 attributes.`,
+      action: "Recalculate normals in Blender before export; invalid normals can make lighting look faceted, black, or flat."
+    });
+  }
+
+  if (invalidUvAccessorShapeCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "invalid-uv-accessor-shapes",
+      title: "UV accessors have invalid shapes",
+      message: `${invalidUvAccessorShapeCount} TEXCOORD accessor(s) are not valid VEC2 attributes.`,
+      action: "Unwrap or rebake UVs before export; invalid UVs can make textures appear stretched, missing, or mismatched."
     });
   }
 
@@ -3939,6 +4032,8 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "missing-room-map",
     "textured-primitives-missing-uvs",
     "unassigned-primitive-materials",
+    "invalid-normal-accessor-shapes",
+    "invalid-uv-accessor-shapes",
     "mostly-unlit-materials",
     "vertex-colors-detected",
     "relocatable-texture-resources",
