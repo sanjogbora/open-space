@@ -1353,6 +1353,10 @@ button.list-row {
   background: #fff7e8;
 }
 
+.asset-suggestion-action {
+  justify-self: start;
+}
+
 .diagnostic-card {
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);

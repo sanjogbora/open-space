@@ -350,6 +350,8 @@ interface BundleStats {
   }[];
 }
 
+type MaterialTextureSuggestion = NonNullable<BundleStats["materialTextureSuggestions"]>[number];
+
 interface PublishReadinessIssue {
   code: string;
   title: string;
@@ -4925,6 +4927,17 @@ function App() {
     setNotice("saved");
   };
 
+  const reviewMaterialTextureSuggestion = (suggestion: MaterialTextureSuggestion) => {
+    const material = materialsDoc?.materials.find((item) => item.name === suggestion.materialName);
+    if (material) {
+      setSelectedMaterialId(material.id);
+    }
+    setSelectedTab("materials");
+    setRepairSummary(
+      `Review ${suggestion.materialName} ${materialTextureFieldLabels[suggestion.field]} using ${suggestion.source}.`
+    );
+  };
+
   const uploadVideoMedia = async (interactionId: string, file: File | undefined) => {
     if (!file) {
       return;
@@ -5789,6 +5802,7 @@ function App() {
                     onApplyTextureSuggestions={applyMaterialTextureSuggestions}
                     onRepair={() => void repairImport()}
                     onMaterials={() => setSelectedTab("materials")}
+                    onReviewTextureSuggestion={reviewMaterialTextureSuggestion}
                   />
                   <DiagnosticList
                     diagnostics={bundleStats.diagnostics ?? []}
@@ -10301,7 +10315,8 @@ function AssetHealth({
   appliedTextureSuggestionCount = 0,
   onApplyTextureSuggestions,
   onRepair,
-  onMaterials
+  onMaterials,
+  onReviewTextureSuggestion
 }: {
   stats: BundleStats;
   projectId: string;
@@ -10313,6 +10328,7 @@ function AssetHealth({
   onApplyTextureSuggestions?: () => void;
   onRepair?: () => void;
   onMaterials?: () => void;
+  onReviewTextureSuggestion?: (suggestion: MaterialTextureSuggestion) => void;
 }) {
   const missingAssets = (stats.assets ?? []).filter((asset) => !asset.exists);
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
@@ -10437,6 +10453,16 @@ function AssetHealth({
                   {textureSuggestionConfidenceLabel(suggestion.score)}
                 </span>
                 <code>{suggestion.source}</code>
+                {onReviewTextureSuggestion && (
+                  <button
+                    type="button"
+                    className="button secondary compact-button asset-suggestion-action"
+                    onClick={() => onReviewTextureSuggestion(suggestion)}
+                  >
+                    <Palette size={14} aria-hidden="true" />
+                    Review
+                  </button>
+                )}
               </div>
             </div>
           ))}
