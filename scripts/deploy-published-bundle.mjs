@@ -17,10 +17,11 @@ const dryRun = args.includes("--dry-run");
 const applyCacheControl = args.includes("--apply-cache-control");
 const allowBlockedQualityGate = args.includes("--allow-blocked");
 const failOnWarningQualityGate = args.includes("--fail-on-warning");
+const failOnDeploymentWarning = args.includes("--fail-on-deployment-warning");
 
 if (!deploymentArg) {
   throw new Error(
-    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--endpoint-url=https://...] [--profile=name] [--region=auto] [--apply-cache-control] [--allow-blocked] [--fail-on-warning] [--dry-run]"
+    "Usage: node scripts/deploy-published-bundle.mjs <deployment.json> [--out=dist/published] [--s3=s3://bucket/prefix] [--viewer-base=https://viewer.example.com] [--public-base=https://cdn.example.com/scene/] [--endpoint-url=https://...] [--profile=name] [--region=auto] [--apply-cache-control] [--allow-blocked] [--fail-on-warning] [--fail-on-deployment-warning] [--dry-run]"
   );
 }
 
@@ -267,6 +268,21 @@ function deploymentWarnings(checks, viewerBase, publicBase) {
   return warnings;
 }
 
+function validateDeploymentWarnings(checks, viewerBase, publicBase) {
+  if (!failOnDeploymentWarning) {
+    return;
+  }
+  const warnings = deploymentWarnings(checks, viewerBase, publicBase);
+  if (warnings.length === 0) {
+    return;
+  }
+  const detail = warnings
+    .slice(0, 6)
+    .map((warning) => warning.message || warning.code)
+    .join("; ");
+  throw new Error(`Deployment has ${warnings.length} deployment warning(s): ${detail}. Fix warnings or remove --fail-on-deployment-warning for draft/internal deployment.`);
+}
+
 function headersFile(deployment) {
   const lines = [];
   for (const rule of deployment.headers ?? []) {
@@ -426,6 +442,7 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir, ex
     qualityGateSummary: qualityGateSummary(),
     qualityGateOverride: allowBlockedQualityGate,
     qualityGateFailOnWarning: failOnWarningQualityGate,
+    deploymentWarningsFailOnWarning: failOnDeploymentWarning,
     ...extra,
     ...(viewerBase ? { viewerBase } : {}),
     ...(publicBase ? { publicBase } : {}),
@@ -452,6 +469,7 @@ async function deployToDirectory(outputRoot) {
   if ((viewerBase && !publicBase) || (!viewerBase && publicBase)) {
     throw new Error("--viewer-base and --public-base must be provided together.");
   }
+  validateDeploymentWarnings(checks, viewerBase, publicBase);
   const target = path.resolve(outputRoot, deployment.projectId, deployment.version);
   if (dryRun) {
     await writeDeployReport("directory", target, checks);
@@ -475,6 +493,7 @@ async function deployToS3(targetUri) {
   if ((viewerBase && !publicBase) || (!viewerBase && publicBase)) {
     throw new Error("--viewer-base and --public-base must be provided together.");
   }
+  validateDeploymentWarnings(checks, viewerBase, publicBase);
   let syncSourceDir = sourceDir;
   let stagingDir;
   try {

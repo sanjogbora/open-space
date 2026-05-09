@@ -2388,7 +2388,7 @@ function publishedValidateDeployCommand(entry: PublishEntry): string {
 
 function publishedClientGateDeployCommand(entry: PublishEntry): string {
   const command = publishedValidateDeployCommand(entry);
-  return command ? `${command} --fail-on-warning` : "";
+  return command ? `${command} --fail-on-warning --fail-on-deployment-warning` : "";
 }
 
 function publishedBucketDeployCommand(entry: PublishEntry): string {
