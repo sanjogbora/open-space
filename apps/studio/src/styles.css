@@ -1652,6 +1652,84 @@ button.list-row {
   background: rgba(191, 215, 232, 0.45);
 }
 
+.navigation-repair-path {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.navigation-path-step {
+  min-height: 126px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #d7e2ea;
+  border-radius: 8px;
+  color: #26343d;
+  background: #ffffff;
+}
+
+.navigation-path-step.active {
+  border-color: rgba(8, 127, 231, 0.42);
+  background: #f8fbff;
+}
+
+.navigation-path-step.done {
+  border-color: #bfe5d3;
+  background: #f4fbf7;
+}
+
+.navigation-path-step.pending {
+  opacity: 0.72;
+}
+
+.navigation-path-marker {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #49697a;
+  background: #edf3f7;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.navigation-path-step.active .navigation-path-marker {
+  color: #ffffff;
+  background: #087fe7;
+}
+
+.navigation-path-step.done .navigation-path-marker {
+  color: #146c43;
+  background: #dff4e8;
+}
+
+.navigation-path-step strong,
+.navigation-path-step p {
+  display: block;
+  margin: 0;
+}
+
+.navigation-path-step strong {
+  color: #182026;
+  font-size: 13px;
+}
+
+.navigation-path-step p {
+  margin-top: 4px;
+  color: #52636f;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.navigation-path-step .button {
+  width: 100%;
+  justify-content: center;
+}
+
 .zone-shape-tools {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -3136,7 +3214,8 @@ code {
   .content-grid,
   .editor-layout,
   .bundle-grid,
-  .repair-action-grid {
+  .repair-action-grid,
+  .navigation-repair-path {
     grid-template-columns: 1fr;
   }
 

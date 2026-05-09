@@ -267,6 +267,7 @@ type NavigationQuickFixAction =
   | "bridge"
   | "paint-walk"
   | "paint-pass"
+  | "view-walks"
   | "widen-pass"
   | "review-zones"
   | "test";
@@ -276,6 +277,14 @@ interface NavigationQuickFix {
   detail: string;
   button: string;
   action: NavigationQuickFixAction;
+}
+
+interface NavigationRepairPathStep {
+  id: string;
+  label: string;
+  detail: string;
+  status: "done" | "active" | "pending";
+  quickFix: NavigationQuickFix | undefined;
 }
 
 interface MaterialsDocument {
@@ -1678,6 +1687,100 @@ function navigationQuickFixForIssue(issue: NavigationQaIssue | undefined): Navig
   };
 }
 
+function navigationRepairPath(
+  manifest: SceneManifest,
+  coverage: NavigationCoverage,
+  primaryIssue: NavigationQaIssue | undefined
+): NavigationRepairPathStep[] {
+  const hasBounds = Boolean(manifest.navigation.bounds);
+  const hasWalkViews = coverage.walkViews > 0;
+  const walkViewsCovered = !hasWalkViews || coverage.coveredWalkViews >= coverage.walkViews;
+  const walkReady = coverage.walkZones > 0 && walkViewsCovered;
+  const routeReady = coverage.routeComponents <= 1;
+  const routeNeedsBridge = coverage.walkZones > 1 && coverage.routeComponents > 1;
+  const hasBlockingIssue = Boolean(primaryIssue && primaryIssue.severity !== "info");
+  const issueFix = navigationQuickFixForIssue(primaryIssue);
+
+  const steps: NavigationRepairPathStep[] = [
+    {
+      id: "bounds",
+      label: "1. Boundary",
+      detail: hasBounds
+        ? "Movement has a bounded area."
+        : "Set movement bounds so users cannot drift into empty exterior space.",
+      status: hasBounds ? "done" : "active",
+      quickFix: hasBounds
+        ? undefined
+        : {
+            title: "Set movement boundary",
+            detail: "Use the detected model bounds.",
+            button: "Use Bounds",
+            action: "bounds"
+          }
+    },
+    {
+      id: "walk",
+      label: "2. Walk areas",
+      detail:
+        coverage.walkZones === 0
+          ? "Create clickable floor areas from saved walk views or draw them on the map."
+          : walkViewsCovered
+            ? `${coverage.walkZones} walk area(s) cover the saved walk views.`
+            : `${coverage.coveredWalkViews}/${coverage.walkViews} walk view(s) are inside walk areas.`,
+      status: walkReady ? "done" : hasBounds ? "active" : "pending",
+      quickFix: walkReady
+        ? undefined
+        : {
+            title: "Create clickable floor",
+            detail: "Generate walk patches from saved walk views, then refine them on the map.",
+            button: "View Walks",
+            action: "view-walks"
+          }
+    },
+    {
+      id: "connect",
+      label: "3. Room links",
+      detail: routeNeedsBridge
+        ? `${coverage.routeComponents} route islands need green passes through doors or openings.`
+        : coverage.passZones > 0
+          ? `${coverage.passZones} door pass(es) connect rooms.`
+          : "Add door passes only where separate rooms need a connector.",
+      status: routeReady ? "done" : walkReady ? "active" : "pending",
+      quickFix: routeReady
+        ? undefined
+        : {
+            title: "Bridge route islands",
+            detail: "Try automatic green connectors between nearby walk areas.",
+            button: "Auto Bridge",
+            action: "bridge"
+          }
+    },
+    {
+      id: "blockers",
+      label: "4. Blockers",
+      detail: hasBlockingIssue
+        ? primaryIssue?.detail ?? "One navigation issue still needs review."
+        : "No obvious blocker or zone issue remains in Studio checks.",
+      status: hasBlockingIssue ? (routeReady ? "active" : "pending") : "done",
+      quickFix: hasBlockingIssue ? issueFix : undefined
+    },
+    {
+      id: "test",
+      label: "5. Test",
+      detail: "Open the viewer and test WASD, click-to-move, doorways, and room buttons.",
+      status: hasBounds && walkReady && routeReady && !hasBlockingIssue ? "active" : "pending",
+      quickFix: {
+        title: "Test viewer",
+        detail: "Open the walkthrough with navigation debug enabled.",
+        button: "Test Viewer",
+        action: "test"
+      }
+    }
+  ];
+
+  return steps;
+}
+
 function isHotspot(interaction: SceneInteraction): interaction is HotspotInteraction {
   return interaction.kind === "hotspot";
 }
@@ -2890,6 +2993,13 @@ function App() {
     () => navigationIssues.find((issue) => issue.severity !== "info"),
     [navigationIssues]
   );
+  const navigationRepairPathSteps = useMemo(
+    () =>
+      manifest && navigationCoverageSummary
+        ? navigationRepairPath(manifest, navigationCoverageSummary, primaryNavigationIssue)
+        : [],
+    [manifest, navigationCoverageSummary, primaryNavigationIssue]
+  );
   const navigationQuickFix = useMemo(
     () => navigationQuickFixForIssue(primaryNavigationIssue),
     [primaryNavigationIssue]
@@ -3593,6 +3703,10 @@ function App() {
     }
     if (quickFix.action === "paint-pass") {
       openNavigationPaintTool("pass");
+      return;
+    }
+    if (quickFix.action === "view-walks") {
+      createWalkZonesFromViews();
       return;
     }
     if (quickFix.action === "widen-pass") {
@@ -8484,6 +8598,40 @@ function App() {
                           <span>{navigationCoverageSummary.walkZones} walk area(s)</span>
                           <span>{navigationCoverageSummary.passZones} door pass(es)</span>
                           <span>{navigationCoverageSummary.routeComponents} route island(s)</span>
+                        </div>
+                      )}
+                      {navigationRepairPathSteps.length > 0 && (
+                        <div className="navigation-repair-path" aria-label="Navigation repair path">
+                          {navigationRepairPathSteps.map((step) => (
+                            <div key={step.id} className={`navigation-path-step ${step.status}`}>
+                              <div className="navigation-path-marker" aria-hidden="true">
+                                {step.status === "done" ? "OK" : step.status === "active" ? "!" : ""}
+                              </div>
+                              <div>
+                                <strong>{step.label}</strong>
+                                <p>{step.detail}</p>
+                              </div>
+                              {step.quickFix && step.status !== "done" && (
+                                <button
+                                  type="button"
+                                  className={step.status === "active" ? "button primary compact-button" : "button secondary compact-button"}
+                                  disabled={step.status === "pending"}
+                                  onClick={() => runNavigationQuickFixAction(step.quickFix!)}
+                                >
+                                  {step.quickFix.action === "test" ? (
+                                    <ExternalLink size={15} aria-hidden="true" />
+                                  ) : step.quickFix.action === "paint-walk" ||
+                                    step.quickFix.action === "paint-pass" ||
+                                    step.quickFix.action === "review-zones" ? (
+                                    <MapPin size={15} aria-hidden="true" />
+                                  ) : (
+                                    <Wrench size={15} aria-hidden="true" />
+                                  )}
+                                  {step.quickFix.button}
+                                </button>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
