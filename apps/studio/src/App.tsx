@@ -22,6 +22,9 @@ import {
   Video
 } from "lucide-react";
 import {
+  pointInPolygon2D,
+  pointToPolygonDistance2D,
+  polygonDistance2D,
   parseSceneManifest,
   type HotspotInteraction,
   type LinkInteraction,
@@ -1004,7 +1007,7 @@ function pointInNavigationZone(zone: NavigationZone, point: Vec3, padding = 0): 
   if (zone.polygon && zone.polygon.length >= 3) {
     return (
       Math.abs(point[1] - zone.center[1]) <= zone.size[1] / 2 + padding &&
-      pointInPolygonWithPadding([localX, localZ], zone.polygon, padding)
+      pointInPolygon2D([localX, localZ], zone.polygon, padding)
     );
   }
   return (
@@ -1012,103 +1015,6 @@ function pointInNavigationZone(zone: NavigationZone, point: Vec3, padding = 0): 
     Math.abs(point[1] - zone.center[1]) <= zone.size[1] / 2 + padding &&
     Math.abs(localZ) <= zone.size[2] / 2 + padding
   );
-}
-
-function pointInPolygonWithPadding(point: Vec2, polygon: readonly Vec2[], padding: number): boolean {
-  let inside = false;
-  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current, current += 1) {
-    const a = polygon[current]!;
-    const b = polygon[previous]!;
-    if ((a[1] > point[1]) !== (b[1] > point[1]) && point[0] < ((b[0] - a[0]) * (point[1] - a[1])) / (b[1] - a[1]) + a[0]) {
-      inside = !inside;
-    }
-    if (padding > 0 && pointToSegmentDistance2D(point, a, b) <= padding) {
-      return true;
-    }
-  }
-  return inside;
-}
-
-function pointToSegmentDistance2D(point: Vec2, start: Vec2, end: Vec2): number {
-  const segmentX = end[0] - start[0];
-  const segmentZ = end[1] - start[1];
-  const segmentLengthSq = segmentX * segmentX + segmentZ * segmentZ;
-  if (segmentLengthSq < 0.0001) {
-    return Math.hypot(point[0] - start[0], point[1] - start[1]);
-  }
-  const t = Math.min(
-    1,
-    Math.max(0, ((point[0] - start[0]) * segmentX + (point[1] - start[1]) * segmentZ) / segmentLengthSq)
-  );
-  return Math.hypot(point[0] - (start[0] + segmentX * t), point[1] - (start[1] + segmentZ * t));
-}
-
-function segmentOrientation2D(a: Vec2, b: Vec2, c: Vec2): number {
-  return (b[1] - a[1]) * (c[0] - b[0]) - (b[0] - a[0]) * (c[1] - b[1]);
-}
-
-function pointOnSegment2D(point: Vec2, start: Vec2, end: Vec2): boolean {
-  return (
-    point[0] <= Math.max(start[0], end[0]) + 0.000001 &&
-    point[0] + 0.000001 >= Math.min(start[0], end[0]) &&
-    point[1] <= Math.max(start[1], end[1]) + 0.000001 &&
-    point[1] + 0.000001 >= Math.min(start[1], end[1])
-  );
-}
-
-function segmentsIntersect2D(aStart: Vec2, aEnd: Vec2, bStart: Vec2, bEnd: Vec2): boolean {
-  const o1 = segmentOrientation2D(aStart, aEnd, bStart);
-  const o2 = segmentOrientation2D(aStart, aEnd, bEnd);
-  const o3 = segmentOrientation2D(bStart, bEnd, aStart);
-  const o4 = segmentOrientation2D(bStart, bEnd, aEnd);
-  if (o1 * o2 < 0 && o3 * o4 < 0) {
-    return true;
-  }
-  return (
-    (Math.abs(o1) < 0.000001 && pointOnSegment2D(bStart, aStart, aEnd)) ||
-    (Math.abs(o2) < 0.000001 && pointOnSegment2D(bEnd, aStart, aEnd)) ||
-    (Math.abs(o3) < 0.000001 && pointOnSegment2D(aStart, bStart, bEnd)) ||
-    (Math.abs(o4) < 0.000001 && pointOnSegment2D(aEnd, bStart, bEnd))
-  );
-}
-
-function pointToPolygonDistance2D(point: Vec2, polygon: readonly Vec2[]): number {
-  if (polygon.length < 3 || pointInPolygonWithPadding(point, polygon, 0)) {
-    return 0;
-  }
-  return polygon.reduce((distance, start, index) => {
-    const end = polygon[(index + 1) % polygon.length]!;
-    return Math.min(distance, pointToSegmentDistance2D(point, start, end));
-  }, Number.POSITIVE_INFINITY);
-}
-
-function polygonDistance2D(a: readonly Vec2[], b: readonly Vec2[]): number {
-  if (a.length < 3 || b.length < 3) {
-    return Number.POSITIVE_INFINITY;
-  }
-  if (a.some((point) => pointInPolygonWithPadding(point, b, 0)) || b.some((point) => pointInPolygonWithPadding(point, a, 0))) {
-    return 0;
-  }
-  let distance = Number.POSITIVE_INFINITY;
-  for (let aIndex = 0; aIndex < a.length; aIndex += 1) {
-    const aStart = a[aIndex]!;
-    const aEnd = a[(aIndex + 1) % a.length]!;
-    for (let bIndex = 0; bIndex < b.length; bIndex += 1) {
-      const bStart = b[bIndex]!;
-      const bEnd = b[(bIndex + 1) % b.length]!;
-      if (segmentsIntersect2D(aStart, aEnd, bStart, bEnd)) {
-        return 0;
-      }
-      distance = Math.min(
-        distance,
-        pointToSegmentDistance2D(aStart, bStart, bEnd),
-        pointToSegmentDistance2D(aEnd, bStart, bEnd),
-        pointToSegmentDistance2D(bStart, aStart, aEnd),
-        pointToSegmentDistance2D(bEnd, aStart, aEnd)
-      );
-    }
-  }
-  return distance;
 }
 
 function navigationZoneAabb(zone: NavigationZone) {

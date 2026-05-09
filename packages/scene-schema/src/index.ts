@@ -2,6 +2,15 @@ export type Vec3 = readonly [number, number, number];
 export type Vec2 = readonly [number, number];
 export type Euler3 = readonly [number, number, number];
 
+export {
+  closestPolygonPointPair2D,
+  pointInPolygon2D,
+  pointToPolygonDistance2D,
+  pointToSegmentDistance2D,
+  polygonDistance2D,
+  type ClosestPolygonPointPair2D
+} from "./navigation-geometry";
+
 export type ViewKind = "walk" | "orbit" | "top";
 
 export interface SceneView {

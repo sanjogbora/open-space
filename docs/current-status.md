@@ -87,6 +87,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Navigation zones can now store polygon footprints in addition to rectangles, and the viewer/analyzer/Studio map honor polygon walk/pass/block zones.
 - Viewer route planning now uses polygon zone centroids, inset corners, and edge midpoints as route candidates instead of treating polygon zones like rectangles.
 - Viewer route planning now checks actual walk/pass zone footprints before connecting zones, and uses nearest-edge bridge points for polygon doorway routes.
+- Viewer and Studio now share the same polygon-distance helper for route islands, door-pass overlap, and nearest-edge bridge checks, reducing mismatches between QA and runtime movement.
 - Viewer prunes routed click-to-move paths after visibility/grid routing so movement glides through fewer unnecessary intermediate waypoints.
 - Viewer grid fallback now validates each neighbor movement segment, so fallback routes do not pass through thin walls between legal sample points.
 - Viewer mouse-wheel forward/back movement now decays blocked impulses quickly instead of repeatedly pushing into walls or invalid floor.
