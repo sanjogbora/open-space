@@ -1963,6 +1963,74 @@ function pointToSegmentDistance2D(point, start, end) {
   return Math.hypot(point[0] - (start[0] + segmentX * t), point[1] - (start[1] + segmentZ * t));
 }
 
+function segmentOrientation2D(a, b, c) {
+  return (b[1] - a[1]) * (c[0] - b[0]) - (b[0] - a[0]) * (c[1] - b[1]);
+}
+
+function pointOnSegment2D(point, start, end) {
+  return (
+    point[0] <= Math.max(start[0], end[0]) + 0.000001 &&
+    point[0] + 0.000001 >= Math.min(start[0], end[0]) &&
+    point[1] <= Math.max(start[1], end[1]) + 0.000001 &&
+    point[1] + 0.000001 >= Math.min(start[1], end[1])
+  );
+}
+
+function segmentsIntersect2D(aStart, aEnd, bStart, bEnd) {
+  const o1 = segmentOrientation2D(aStart, aEnd, bStart);
+  const o2 = segmentOrientation2D(aStart, aEnd, bEnd);
+  const o3 = segmentOrientation2D(bStart, bEnd, aStart);
+  const o4 = segmentOrientation2D(bStart, bEnd, aEnd);
+  if (o1 * o2 < 0 && o3 * o4 < 0) {
+    return true;
+  }
+  return (
+    (Math.abs(o1) < 0.000001 && pointOnSegment2D(bStart, aStart, aEnd)) ||
+    (Math.abs(o2) < 0.000001 && pointOnSegment2D(bEnd, aStart, aEnd)) ||
+    (Math.abs(o3) < 0.000001 && pointOnSegment2D(aStart, bStart, bEnd)) ||
+    (Math.abs(o4) < 0.000001 && pointOnSegment2D(aEnd, bStart, bEnd))
+  );
+}
+
+function pointToPolygonDistance2D(point, polygon) {
+  if (polygon.length < 3 || pointInPolygonWithPadding(point, polygon, 0)) {
+    return 0;
+  }
+  return polygon.reduce((distance, start, index) => {
+    const end = polygon[(index + 1) % polygon.length];
+    return Math.min(distance, pointToSegmentDistance2D(point, start, end));
+  }, Number.POSITIVE_INFINITY);
+}
+
+function polygonDistance2D(a, b) {
+  if (a.length < 3 || b.length < 3) {
+    return Number.POSITIVE_INFINITY;
+  }
+  if (a.some((point) => pointInPolygonWithPadding(point, b, 0)) || b.some((point) => pointInPolygonWithPadding(point, a, 0))) {
+    return 0;
+  }
+  let distance = Number.POSITIVE_INFINITY;
+  for (let aIndex = 0; aIndex < a.length; aIndex += 1) {
+    const aStart = a[aIndex];
+    const aEnd = a[(aIndex + 1) % a.length];
+    for (let bIndex = 0; bIndex < b.length; bIndex += 1) {
+      const bStart = b[bIndex];
+      const bEnd = b[(bIndex + 1) % b.length];
+      if (segmentsIntersect2D(aStart, aEnd, bStart, bEnd)) {
+        return 0;
+      }
+      distance = Math.min(
+        distance,
+        pointToSegmentDistance2D(aStart, bStart, bEnd),
+        pointToSegmentDistance2D(aEnd, bStart, bEnd),
+        pointToSegmentDistance2D(bStart, aStart, aEnd),
+        pointToSegmentDistance2D(bEnd, aStart, aEnd)
+      );
+    }
+  }
+  return distance;
+}
+
 function navigationZoneAabb(zone) {
   const halfX = zone.size[0] / 2;
   const halfZ = zone.size[2] / 2;
@@ -1990,6 +2058,27 @@ function navigationZoneAabb(zone) {
   };
 }
 
+function navigationZoneFootprint(zone) {
+  const halfX = zone.size[0] / 2;
+  const halfZ = zone.size[2] / 2;
+  const rotation = zone.rotationY ?? 0;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const localCorners =
+    Array.isArray(zone.polygon) && zone.polygon.length >= 3
+      ? zone.polygon
+      : [
+          [-halfX, -halfZ],
+          [halfX, -halfZ],
+          [halfX, halfZ],
+          [-halfX, halfZ]
+        ];
+  return localCorners.map(([x, z]) => [
+    zone.center[0] + x * cos - z * sin,
+    zone.center[2] + x * sin + z * cos
+  ]);
+}
+
 function navigationZoneNarrowestSpan(zone) {
   if (Array.isArray(zone.polygon) && zone.polygon.length >= 3) {
     const xs = zone.polygon.map(([x]) => x);
@@ -2002,12 +2091,15 @@ function navigationZoneNarrowestSpan(zone) {
 function navigationZonesOverlap(a, b, padding = 0.2) {
   const boxA = navigationZoneAabb(a);
   const boxB = navigationZoneAabb(b);
-  return (
+  const boundsMayTouch =
     boxA.minX - padding <= boxB.maxX &&
     boxA.maxX + padding >= boxB.minX &&
     boxA.minZ - padding <= boxB.maxZ &&
-    boxA.maxZ + padding >= boxB.minZ
-  );
+    boxA.maxZ + padding >= boxB.minZ;
+  if (!boundsMayTouch) {
+    return false;
+  }
+  return polygonDistance2D(navigationZoneFootprint(a), navigationZoneFootprint(b)) <= padding;
 }
 
 function navigationComponents(zones) {

@@ -81,6 +81,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Auto Fix now expands one-sided door pass zones toward the nearest second walk area when the gap is small enough to repair safely.
 - Analyzer and Studio now flag door pass zones that overlap block zones, which explains cases where a green doorway connector exists but the wall/boundary blocker still prevents entry.
 - Analyzer and Studio now flag door pass zones narrower than the current Body Radius, which explains valid-looking door connectors that still cannot be crossed.
+- Analyzer and Studio now use actual zone footprints, not only bounding boxes, when checking route islands and door-pass overlap.
 - Studio can auto-widen narrow door pass zones to match the current Body Radius from the navigation QA quick fix.
 - Studio Auto Fix also widens narrow door pass zones as part of the broader navigation repair flow.
 - Navigation zones can now store polygon footprints in addition to rectangles, and the viewer/analyzer/Studio map honor polygon walk/pass/block zones.
