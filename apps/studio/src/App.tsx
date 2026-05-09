@@ -234,7 +234,7 @@ interface NavigationCoverage {
   coveredWalkViews: number;
 }
 
-type NavigationQuickFixAction = "auto" | "bounds" | "paint-walk" | "paint-pass" | "review-zones" | "test";
+type NavigationQuickFixAction = "auto" | "bounds" | "paint-walk" | "paint-pass" | "widen-pass" | "review-zones" | "test";
 
 interface NavigationQuickFix {
   title: string;
@@ -1061,6 +1061,48 @@ function navigationZoneNarrowestSpan(zone: NavigationZone): number {
   return Math.min(Math.abs(zone.size[0]), Math.abs(zone.size[2]));
 }
 
+function widenNavigationPassZone(zone: NavigationZone, requiredSpan: number): NavigationZone {
+  const nextSize: Vec3 = [
+    Math.max(zone.size[0], requiredSpan),
+    zone.size[1],
+    Math.max(zone.size[2], requiredSpan)
+  ];
+  if (!zone.polygon || zone.polygon.length < 3) {
+    return {
+      ...zone,
+      size: nextSize
+    };
+  }
+  const xs = zone.polygon.map(([x]) => x);
+  const zs = zone.polygon.map(([, z]) => z);
+  const xSpan = Math.max(...xs) - Math.min(...xs);
+  const zSpan = Math.max(...zs) - Math.min(...zs);
+  if (xSpan >= requiredSpan && zSpan >= requiredSpan) {
+    return {
+      ...zone,
+      size: nextSize
+    };
+  }
+  const centroidSum = zone.polygon.reduce<Vec2>(
+    (sum, point) => [sum[0] + point[0], sum[1] + point[1]],
+    [0, 0]
+  );
+  const centroid: Vec2 = [
+    centroidSum[0] / zone.polygon.length,
+    centroidSum[1] / zone.polygon.length
+  ];
+  const scaleX = xSpan > 0 && xSpan <= zSpan ? requiredSpan / xSpan : 1;
+  const scaleZ = zSpan > 0 && zSpan < xSpan ? requiredSpan / zSpan : 1;
+  return {
+    ...zone,
+    size: nextSize,
+    polygon: zone.polygon.map(([x, z]) => [
+      Number((centroid[0] + (x - centroid[0]) * scaleX).toFixed(3)),
+      Number((centroid[1] + (z - centroid[1]) * scaleZ).toFixed(3))
+    ])
+  };
+}
+
 function navigationZonesOverlap(a: NavigationZone, b: NavigationZone, padding = 0.2): boolean {
   const boxA = navigationZoneAabb(a);
   const boxB = navigationZoneAabb(b);
@@ -1497,10 +1539,19 @@ function navigationQuickFixForIssue(issue: NavigationQaIssue | undefined): Navig
     };
   }
   if (
+    issue.id.startsWith("narrow-pass-")
+  ) {
+    return {
+      title: "Widen narrow door passes",
+      detail: "Expand existing green pass zones so the current camera body can fit through the doorway.",
+      button: "Widen Passes",
+      action: "widen-pass"
+    };
+  }
+  if (
     issue.id === "missing-pass-zones" ||
     issue.id === "disconnected-route-zones" ||
     issue.id.startsWith("orphan-pass-") ||
-    issue.id.startsWith("narrow-pass-") ||
     issue.id.startsWith("one-sided-pass-")
   ) {
     return {
@@ -3334,6 +3385,10 @@ function App() {
       openNavigationPaintTool("pass");
       return;
     }
+    if (quickFix.action === "widen-pass") {
+      widenNarrowPassZones();
+      return;
+    }
     if (quickFix.action === "auto") {
       autoRepairNavigation();
       return;
@@ -3346,6 +3401,28 @@ function App() {
   };
 
   const runNavigationQuickFix = () => runNavigationQuickFixAction(navigationQuickFix);
+
+  const widenNarrowPassZones = () => {
+    const bodyRadius = controlsDoc?.movement.collisionRadius ?? 0.28;
+    const requiredSpan = Math.max(0.42, bodyRadius * 2);
+    let widenedCount = 0;
+    updateNavigation((navigation) => ({
+      ...navigation,
+      zones: (navigation.zones ?? []).map((zone) => {
+        if (zone.kind !== "pass" || zone.enabled === false || navigationZoneNarrowestSpan(zone) >= requiredSpan) {
+          return zone;
+        }
+        widenedCount += 1;
+        return markNavigationZoneAuthored(widenNavigationPassZone(zone, requiredSpan));
+      })
+    }));
+    setRepairSummary(
+      widenedCount > 0
+        ? `Widened ${widenedCount} narrow door pass zone(s) to at least ${requiredSpan.toFixed(2)}m. Save changes, then retry the viewer.`
+        : "No narrow pass zones needed widening."
+    );
+    setNotice("saved");
+  };
 
   const disableGeneratedNavigationZones = () => {
     updateNavigation((navigation) => ({
@@ -8139,6 +8216,7 @@ function App() {
                                   <ExternalLink size={16} aria-hidden="true" />
                                 ) : issueFix.action === "paint-walk" ||
                                   issueFix.action === "paint-pass" ||
+                                  issueFix.action === "widen-pass" ||
                                   issueFix.action === "review-zones" ? (
                                   <MapPin size={16} aria-hidden="true" />
                                 ) : (
