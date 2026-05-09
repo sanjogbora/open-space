@@ -9571,6 +9571,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   if (
     [
       "focused-model-small-in-scene",
+      "initial-view-misses-focused-model",
       "large-coordinate-units",
       "missing-scene-bounds",
       "missing-model-resources",

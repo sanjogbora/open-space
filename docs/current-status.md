@@ -50,6 +50,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer initial-camera repair avoids likely exterior/grass planes when it can recover to a better navigation surface.
 - Viewer doorway recovery treats named/transparent door panels as portal surfaces, then validates the floor beyond through normal bounds and route checks.
 - Bundle analysis warns when the first camera view appears to start on a dominant exterior/terrain plane.
+- Bundle analysis warns when the first camera view misses the focused building footprint in terrain-heavy scenes.
 - Publish readiness now carries terrain-dominance, poor first-view, focused-bounds, and missing navigation-name diagnostics into the Publish tab.
 - Top views can hide ceiling/roof shell meshes so uploaded apartments are inspectable from above.
 - Object overrides now include a per-object `hideInTopView` flag, and Studio exposes it so ceiling/roof/helper objects can be hidden only in floor-plan/top views.

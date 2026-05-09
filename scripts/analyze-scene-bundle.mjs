@@ -1884,6 +1884,35 @@ function pointInBoundsFootprint(point, bounds, padding = 0) {
   );
 }
 
+function boundsFootprintCenter(bounds) {
+  if (!bounds) {
+    return undefined;
+  }
+  return [
+    (bounds.min[0] + bounds.max[0]) / 2,
+    (bounds.min[2] + bounds.max[2]) / 2
+  ];
+}
+
+function footprintDistanceToBounds(point, bounds) {
+  if (!point || !bounds) {
+    return 0;
+  }
+  const dx =
+    point[0] < bounds.min[0]
+      ? bounds.min[0] - point[0]
+      : point[0] > bounds.max[0]
+        ? point[0] - bounds.max[0]
+        : 0;
+  const dz =
+    point[2] < bounds.min[2]
+      ? bounds.min[2] - point[2]
+      : point[2] > bounds.max[2]
+        ? point[2] - bounds.max[2]
+        : 0;
+  return Math.hypot(dx, dz);
+}
+
 function pointInNavigationZone(zone, point, padding = 0) {
   const rotation = -(zone.rotationY ?? 0);
   const dx = point[0] - zone.center[0];
@@ -2913,6 +2942,41 @@ function createDiagnostics(manifest, report, graphs, controls) {
       message: `${firstWalkView.label ?? "The first view"} is positioned over ${flatPlane.name}, a large flat surface that can make the viewer open to grass or empty space.`,
       action: "Run import repair or move the first walk view onto the intended interior floor before publishing."
     });
+  }
+
+  if (bounds && focusedBounds && firstWalkView?.position) {
+    const sceneArea = Math.max(1, boundsArea(bounds));
+    const focusArea = boundsArea(focusedBounds);
+    const focusRatio = focusArea / sceneArea;
+    const focusCenter = boundsFootprintCenter(focusedBounds);
+    const focusSpan = Math.max(
+      1,
+      Math.max(
+        Math.abs(focusedBounds.max[0] - focusedBounds.min[0]),
+        Math.abs(focusedBounds.max[2] - focusedBounds.min[2])
+      )
+    );
+    const cameraDistance = footprintDistanceToBounds(firstWalkView.position, focusedBounds);
+    const targetDistance = footprintDistanceToBounds(firstWalkView.target, focusedBounds);
+    const cameraOutsideFocus = !pointInBoundsFootprint(firstWalkView.position, focusedBounds, Math.min(2, focusSpan * 0.18));
+    const targetOutsideFocus = firstWalkView.target
+      ? !pointInBoundsFootprint(firstWalkView.target, focusedBounds, Math.min(2, focusSpan * 0.18))
+      : false;
+    if (
+      focusRatio > 0 &&
+      focusRatio < 0.55 &&
+      cameraOutsideFocus &&
+      targetOutsideFocus &&
+      Math.min(cameraDistance, targetDistance) > Math.max(1.5, focusSpan * 0.22)
+    ) {
+      diagnostics.push({
+        severity: "warning",
+        code: "initial-view-misses-focused-model",
+        title: "First camera may miss the building",
+        message: `${firstWalkView.label ?? "The first view"} starts and looks outside the focused model footprint${focusCenter ? ` near ${focusCenter.map((value) => value.toFixed(1)).join(", ")}` : ""}.`,
+        action: "Run import repair to rebuild focused camera views, or move the first walk view and target onto the actual building floor."
+      });
+    }
   }
 
   if (bounds && focusedBounds) {
