@@ -99,6 +99,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer and Studio now share the same polygon-distance helper for route islands, door-pass overlap, and nearest-edge bridge checks, reducing mismatches between QA and runtime movement.
 - Studio and import diagnostics now name the disconnected walk/pass islands when route zones are split, making doorway repair easier without reading coordinates.
 - Analyzer now warns when walk zones overlap wall/boundary block zones, so Studio can explain why a floor area looks reachable but still refuses movement.
+- Studio live Navigation QA now also flags walk zones overlapping blockers and routes them to blocker review without waiting for a fresh bundle analysis.
 - Analyzer and Studio now warn when walk or door-pass zones extend outside movement bounds, which catches another cause of valid-looking floors that still refuse navigation.
 - Studio Navigation Repair can now expand movement bounds to fit active walk and door-pass zones when authored route areas sit outside the allowed movement boundary.
 - Viewer prunes routed click-to-move paths after visibility/grid routing so movement glides through fewer unnecessary intermediate waypoints.

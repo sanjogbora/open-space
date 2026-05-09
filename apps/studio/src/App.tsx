@@ -1585,6 +1585,23 @@ function navigationQaIssues(manifest: SceneManifest, bodyRadius = 0.28): Navigat
     }
   });
 
+  walkZones.forEach((zone) => {
+    const touchingBlockZones = blockZones.filter((blockZone) => navigationZonesOverlap(zone, blockZone, 0.05));
+    if (touchingBlockZones.length > 0) {
+      const blockerNames = touchingBlockZones
+        .slice(0, 3)
+        .map((blockZone) => blockZone.label || blockZone.id)
+        .join(", ");
+      issues.push({
+        id: `blocked-walk-${zone.id}`,
+        severity: "warning",
+        title: `Walk zone overlaps a blocker: ${zone.label}`,
+        detail: `This walk area overlaps ${blockerNames || "a block zone"}, so users may see clickable floor that still refuses movement.`,
+        action: "Shrink or split the blocker around the room floor, or trim the walk area away from blocked geometry."
+      });
+    }
+  });
+
   walkZones
     .filter((zone) => navigationZoneOutsideBounds(zone, navigation.bounds))
     .forEach((zone) => {
@@ -1736,10 +1753,10 @@ function navigationQuickFixForIssue(issue: NavigationQaIssue | undefined): Navig
       action: "paint-pass"
     };
   }
-  if (issue.id.startsWith("blocked-pass-")) {
+  if (issue.id.startsWith("blocked-pass-") || issue.id.startsWith("blocked-walk-")) {
     return {
-      title: "Open the blocker at the door",
-      detail: "A door pass exists, but a block zone still overlaps it. Use the zone map to split, shrink, or move the blocker around the opening.",
+      title: "Review blocking zones",
+      detail: "A walk or door-pass zone overlaps a blocker. Use the zone map to split, shrink, or move blockers away from the intended route.",
       button: "Review Blockers",
       action: "review-zones"
     };
