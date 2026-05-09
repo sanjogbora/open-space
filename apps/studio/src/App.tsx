@@ -10958,6 +10958,13 @@ function ViewerQaChecklist({
   const performanceIssue = performanceDiagnosticIssue ?? performancePublishIssue?.code;
   const navigationIssue = navigationCodes.find((code) => diagnosticCodes.has(code));
   const roomIssue = roomCodes.find((code) => diagnosticCodes.has(code));
+  const viewPublishIssue = [
+    ...(stats?.publishReadiness?.blockers ?? []),
+    ...(stats?.publishReadiness?.warnings ?? [])
+  ].find((issue) => issue.code === "no-starting-views" || issue.code === "diagnostic-missing-views");
+  const viewIssue = diagnosticCodes.has("missing-views") ? "missing-views" : viewPublishIssue?.code;
+  const walkViewCount = manifest.views.filter((view) => view.kind === "walk").length;
+  const topViewCount = manifest.views.filter((view) => view.kind === "top").length;
   const videoTextureCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
   const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;
   const linkCount = manifest.interactions.filter((interaction) => interaction.kind === "link").length;
@@ -10999,6 +11006,16 @@ function ViewerQaChecklist({
       status: environmentIssue && errorCodes.has(environmentIssue) ? "blocked" : environmentIssue ? "warn" : "ready",
       button: environmentIssue ? "Open Environment" : "Open Viewer",
       onClick: environmentIssue ? onEnvironment : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+    },
+    {
+      id: "views",
+      label: "Views and framing",
+      detail: viewIssue
+        ? "Starting, walk, or top views need setup before viewer review."
+        : `${manifest.views.length} saved view(s): ${walkViewCount} walk, ${topViewCount} top. Check first load, room buttons, and top-view framing.`,
+      status: viewIssue ? "blocked" : manifest.views.length === 0 || walkViewCount === 0 ? "warn" : "ready",
+      button: viewIssue || manifest.views.length === 0 || walkViewCount === 0 ? "Open Views" : "Open Viewer",
+      onClick: viewIssue || manifest.views.length === 0 || walkViewCount === 0 ? onViews : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
     },
     {
       id: "lighting",
@@ -11146,6 +11163,9 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     ].includes(diagnostic.code)
   );
   const coverage = navigationCoverage(manifest);
+  const walkViewCount = manifest.views.filter((view) => view.kind === "walk").length;
+  const orbitViewCount = manifest.views.filter((view) => view.kind === "orbit").length;
+  const topViewCount = manifest.views.filter((view) => view.kind === "top").length;
   const videoTextureCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
   const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;
   const linkCount = manifest.interactions.filter((interaction) => interaction.kind === "link").length;
@@ -11177,6 +11197,12 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     `- Ground: ${manifest.environment?.groundEnabled === false ? "off" : "on"}`,
     `- Enclosure: ${manifest.environment?.enclosureEnabled === false ? "off" : "on"}`,
     "",
+    "Views:",
+    `- Total views: ${manifest.views.length}`,
+    `- Walk views: ${walkViewCount}`,
+    `- Orbit views: ${orbitViewCount}`,
+    `- Top views: ${topViewCount}`,
+    "",
     "Navigation setup:",
     `- Bounds: ${manifest.navigation.bounds ? "yes" : "no"}`,
     `- Walk zones: ${coverage.walkZones}`,
@@ -11204,6 +11230,7 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     "- Source export / model structure: ",
     "- Visual match vs reference viewer: ",
     "- Exterior/window/context: ",
+    "- Starting view / saved views / top view: ",
     "- Baked lighting / lightmap quality: ",
     "- WASD / mouse drag / wheel movement: ",
     "- Click-to-move floor marker and glide: ",
