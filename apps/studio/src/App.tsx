@@ -6177,6 +6177,7 @@ function App() {
                 onRooms={() => setSelectedTab("rooms")}
                 onViews={() => setSelectedTab("views")}
                 onBake={openBakeWorkflow}
+                onInteractions={() => setSelectedTab("interactions")}
                 onPublish={() => setSelectedTab("publish")}
                 onCopyReport={() => void copyText(viewerQaReportText(manifest, bundleStats, viewerUrl(activeProjectId)))}
               />
@@ -10829,6 +10830,7 @@ function ViewerQaChecklist({
   onRooms,
   onViews,
   onBake,
+  onInteractions,
   onPublish,
   onCopyReport
 }: {
@@ -10840,6 +10842,7 @@ function ViewerQaChecklist({
   onRooms: () => void;
   onViews: () => void;
   onBake: () => void;
+  onInteractions: () => void;
   onPublish: () => void;
   onCopyReport: () => void;
 }) {
@@ -10885,10 +10888,21 @@ function ViewerQaChecklist({
     "missing-normal-attributes",
     "invalid-normal-accessor-shapes"
   ];
+  const interactionCodes = [
+    "video-textures-missing-source",
+    "video-textures-missing-target",
+    "video-textures-target-missing"
+  ];
   const visualIssue = materialCodes.find((code) => diagnosticCodes.has(code));
   const lightingIssue = lightingCodes.find((code) => diagnosticCodes.has(code));
+  const interactionIssue = interactionCodes.find((code) => diagnosticCodes.has(code));
   const navigationIssue = navigationCodes.find((code) => diagnosticCodes.has(code));
   const roomIssue = roomCodes.find((code) => diagnosticCodes.has(code));
+  const videoTextureCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
+  const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;
+  const linkCount = manifest.interactions.filter((interaction) => interaction.kind === "link").length;
+  const objectToggleCount = manifest.interactions.filter((interaction) => interaction.kind === "object-toggle").length;
+  const interactionCount = videoTextureCount + hotspotCount + linkCount + objectToggleCount;
   const walkZones = enabledNavigationZones(manifest.navigation, "walk");
   const passZones = enabledNavigationZones(manifest.navigation, "pass");
   const hasNavigationSetup = Boolean(manifest.navigation.bounds) && walkZones.length > 0 && manifest.views.some((view) => view.kind === "walk");
@@ -10949,6 +10963,18 @@ function ViewerQaChecklist({
       onClick: roomIssue ? onRooms : onViews
     },
     {
+      id: "interactions",
+      label: "Screens and hotspots",
+      detail: interactionIssue
+        ? "Video screens have missing media or target surfaces."
+        : interactionCount > 0
+          ? `Test ${videoTextureCount} video screen(s), ${hotspotCount} hotspot(s), ${linkCount} link(s), and ${objectToggleCount} object toggle(s).`
+          : "No TV screens, hotspots, links, or object toggles are configured yet.",
+      status: interactionIssue && errorCodes.has(interactionIssue) ? "blocked" : interactionIssue || interactionCount === 0 ? "warn" : "ready",
+      button: interactionIssue || interactionCount === 0 ? "Open Interactions" : "Open Viewer",
+      onClick: interactionIssue || interactionCount === 0 ? onInteractions : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+    },
+    {
       id: "publish",
       label: "Client readiness",
       detail:
@@ -10989,6 +11015,7 @@ function ViewerQaChecklist({
               {check.button === "Open Controls" && <MapPin size={15} aria-hidden="true" />}
               {check.button === "Open Rooms" && <Layers3 size={15} aria-hidden="true" />}
               {check.button === "Open Views" && <MapPin size={15} aria-hidden="true" />}
+              {check.button === "Open Interactions" && <Video size={15} aria-hidden="true" />}
               {check.button === "Open Publish" && <ExternalLink size={15} aria-hidden="true" />}
               {check.button}
             </button>
@@ -11003,6 +11030,10 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
   const diagnostics = stats?.diagnostics ?? [];
   const actionableDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "info").slice(0, 6);
   const coverage = navigationCoverage(manifest);
+  const videoTextureCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
+  const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;
+  const linkCount = manifest.interactions.filter((interaction) => interaction.kind === "link").length;
+  const objectToggleCount = manifest.interactions.filter((interaction) => interaction.kind === "object-toggle").length;
   const publishReadiness = stats?.publishReadiness;
   const publishIssues = [
     ...(publishReadiness?.blockers ?? []).map((issue) => `BLOCKER: ${issue.title} - ${issue.message}`),
@@ -11028,6 +11059,12 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     `- Route islands: ${coverage.routeComponents}`,
     `- Walk views covered: ${coverage.coveredWalkViews}/${coverage.walkViews}`,
     "",
+    "Interactions:",
+    `- Video screens: ${videoTextureCount}`,
+    `- Hotspots: ${hotspotCount}`,
+    `- Links: ${linkCount}`,
+    `- Object toggles: ${objectToggleCount}`,
+    "",
     "Top risks:",
     ...(actionableDiagnostics.length > 0
       ? actionableDiagnostics.map(
@@ -11045,6 +11082,7 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     "- Click-to-move floor marker and glide: ",
     "- Doorway entry and wall/window blocking: ",
     "- Room buttons, minimap, and top view: ",
+    "- TV screens, hotspots, links, and toggles: ",
     "- Most annoying issue: "
   ];
   return lines.join("\n");
