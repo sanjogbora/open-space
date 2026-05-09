@@ -2848,6 +2848,9 @@ function App() {
     ];
   }, [bundleStats, manifest, navigationIssues]);
   const hasBlockingPublishErrors = publishChecks.some((check) => check.blocking && !check.ready);
+  const firstPublishCheckIssue = publishChecks.find((check) => check.blocking && !check.ready) ?? publishChecks.find((check) => !check.ready);
+  const firstPublishGateIssue =
+    bundleStats?.publishReadiness?.blockers[0] ?? bundleStats?.publishReadiness?.warnings[0];
   const blenderTool = toolStatus?.tools.blender;
   const materialCountForBake = bundleStats?.materialCount ?? materialsDoc?.materials.length ?? 0;
   const estimatedBakeMaterialCount = Math.min(materialCountForBake, bakeSettings.maxMaterials);
@@ -5770,6 +5773,13 @@ function App() {
                 <div>
                   <strong>{manifest.branding.clientName ?? manifest.branding.title}</strong>
                   <p className="quiet-note">Create a static versioned bundle for sharing or embedding.</p>
+                  {firstPublishCheckIssue && (
+                    <div className={hasBlockingPublishErrors ? "publish-next-issue blocked" : "publish-next-issue"}>
+                      <span>{hasBlockingPublishErrors ? "Publish blocked" : "Before client delivery"}</span>
+                      <strong>{firstPublishGateIssue?.title ?? firstPublishCheckIssue.label}</strong>
+                      <p>{firstPublishGateIssue?.action ?? firstPublishCheckIssue.detail}</p>
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
