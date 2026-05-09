@@ -989,6 +989,44 @@ button.list-row {
   font-size: 12px;
 }
 
+.publish-gate-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 7px;
+  border: 1px solid #bfe5d3;
+  border-radius: 999px;
+  color: #147c4f;
+  background: #f1fbf6;
+}
+
+.publish-gate-pill.warning {
+  color: #7b4c00;
+  border-color: #f3d0a1;
+  background: #fff7e8;
+}
+
+.publish-gate-pill.blocked {
+  color: #8f1e2b;
+  border-color: #f0bdc5;
+  background: #fff1f3;
+}
+
+.publish-gate-pill span,
+.publish-gate-pill small {
+  margin: 0;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.publish-gate-pill small {
+  opacity: 0.78;
+  text-transform: none;
+}
+
 .publish-version-actions {
   display: flex;
   flex-wrap: wrap;

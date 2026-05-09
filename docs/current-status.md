@@ -125,6 +125,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Publish now exposes a copy-ready dry-run validation command before deploy commands, so deployment manifests, hashes, asset sizes, and quality gates can be checked before upload.
 - Studio Publish now exposes a stricter client-gate validation command that fails on publish warnings as well as blockers.
 - Published `deployment.json` now carries the analyzed publish quality gate, including readiness warnings and diagnostics used when the version was created.
+- Publish history entries now keep a compact quality-gate snapshot so each version shows its ready/warning/blocked state and issue counts.
 - The deploy script now refuses to deploy a bundle whose saved quality gate is blocked unless `--allow-blocked` is passed for internal testing.
 - The deploy script now maps WebAssembly, Basis, KTX2, AVIF, WebP, video, and GLB assets to explicit content types when applying per-asset S3 cache headers.
 - The deploy script now supports S3-compatible endpoint, profile, and region options for R2/Spaces/MinIO-style hosting, and Studio shows a copy-ready compatible command.

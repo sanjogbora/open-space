@@ -484,6 +484,13 @@ interface PublishEntry {
   cdnBasePath?: string;
   assetCount?: number;
   totalBytes?: number;
+  qualityGate?: {
+    status: "ready" | "warning" | "blocked";
+    analyzedAt?: string;
+    blockerCount?: number;
+    warningCount?: number;
+    diagnosticCount?: number;
+  };
 }
 
 interface PublishCheck {
@@ -6060,6 +6067,17 @@ function App() {
                             <small>
                               {entry.assetCount} assets / {formatBytes(entry.totalBytes ?? 0)}
                             </small>
+                          )}
+                          {entry.qualityGate && (
+                            <div className={`publish-gate-pill ${entry.qualityGate.status}`}>
+                              <span>{entry.qualityGate.status}</span>
+                              <small>
+                                {entry.qualityGate.blockerCount ?? 0} blocker
+                                {(entry.qualityGate.blockerCount ?? 0) === 1 ? "" : "s"} /{" "}
+                                {entry.qualityGate.warningCount ?? 0} warning
+                                {(entry.qualityGate.warningCount ?? 0) === 1 ? "" : "s"}
+                              </small>
+                            </div>
                           )}
                         </div>
                         <div className="publish-version-actions">

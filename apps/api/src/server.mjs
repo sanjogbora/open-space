@@ -2778,7 +2778,14 @@ async function publishProject(projectId) {
     deploymentPath: `apps/viewer-demo/public/published/${projectId}/${version}/deployment.json`,
     cdnBasePath: deployment.cdnBasePath,
     assetCount: deployment.assetCount,
-    totalBytes: deployment.totalBytes
+    totalBytes: deployment.totalBytes,
+    qualityGate: {
+      status: deployment.qualityGate.status,
+      analyzedAt: deployment.qualityGate.analyzedAt,
+      blockerCount: deployment.qualityGate.blockerCount,
+      warningCount: deployment.qualityGate.warningCount,
+      diagnosticCount: deployment.qualityGate.diagnosticCount
+    }
   };
   const history = await publishHistory(projectId);
   const nextHistory = {
