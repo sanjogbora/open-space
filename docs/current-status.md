@@ -207,6 +207,7 @@ Current limitations:
 - Studio texture repair now separates high-confidence mappings from review-only matches, so one-click Apply avoids weaker texture guesses.
 - Studio Asset Health can jump from an individual texture suggestion to the matching material, making weak texture-folder matches easier to review manually.
 - Studio texture suggestion rows now explain whether a match is safe to apply, needs inspection, or is only a weak semantic match.
+- Studio Import now promotes review-only texture matches into the recommended next step instead of treating the import as ready to test.
 - Studio Asset Health now distinguishes pending loose-texture matches from matches that are already assigned.
 - Viewer can relight unlit/flat GLTF materials as standard lit materials, with a Studio toggle to disable it when a source intentionally uses flat rendering.
 - Viewer generates runtime vertex normals for meshes that lack normal attributes, improving lighting on rough exports.

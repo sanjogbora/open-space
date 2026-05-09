@@ -5778,6 +5778,7 @@ function App() {
                 onRooms={() => setSelectedTab("rooms")}
                 onInteractions={() => setSelectedTab("interactions")}
                 pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
+                reviewTextureSuggestionCount={reviewMaterialTextureSuggestionCount}
                 onApplyTextureSuggestions={applyMaterialTextureSuggestions}
               />
             </div>
@@ -10141,6 +10142,7 @@ function ImportNextSteps({
   onRooms,
   onInteractions,
   pendingTextureSuggestionCount = 0,
+  reviewTextureSuggestionCount = 0,
   onApplyTextureSuggestions
 }: {
   stats: BundleStats | null;
@@ -10159,6 +10161,7 @@ function ImportNextSteps({
   onRooms: () => void;
   onInteractions: () => void;
   pendingTextureSuggestionCount?: number;
+  reviewTextureSuggestionCount?: number;
   onApplyTextureSuggestions?: () => void;
 }) {
   const diagnostics = stats?.diagnostics ?? [];
@@ -10169,19 +10172,32 @@ function ImportNextSteps({
   const prioritizedActions =
     pendingTextureSuggestionCount > 0 && onApplyTextureSuggestions
       ? (["apply-textures", ...actions.filter((action) => action !== "materials")] as ImportNextStepAction[])
+      : reviewTextureSuggestionCount > 0
+        ? (["materials", ...actions.filter((action) => action !== "materials")] as ImportNextStepAction[])
       : actions;
   const steps = (prioritizedActions.length > 0 ? prioritizedActions : priority.length > 0 ? ["review" as const] : ["test" as const])
     .slice(0, 3)
     .map((action) => {
       const step = nextStepCopy(action);
-      return action === "apply-textures"
-        ? { ...step, button: `Apply ${pendingTextureSuggestionCount}` }
-        : step;
+      if (action === "apply-textures") {
+        return { ...step, button: `Apply ${pendingTextureSuggestionCount}` };
+      }
+      if (action === "materials" && pendingTextureSuggestionCount === 0 && reviewTextureSuggestionCount > 0) {
+        return {
+          ...step,
+          title: "Review texture matches",
+          detail: "Open Materials to inspect lower-confidence texture-folder matches before applying them.",
+          button: `Review ${reviewTextureSuggestionCount}`
+        };
+      }
+      return step;
     });
   const firstIssue = priority[0];
   const headingHint =
     pendingTextureSuggestionCount > 0
       ? `${pendingTextureSuggestionCount} texture match${pendingTextureSuggestionCount === 1 ? "" : "es"} ready`
+      : reviewTextureSuggestionCount > 0
+        ? `${reviewTextureSuggestionCount} texture match${reviewTextureSuggestionCount === 1 ? "" : "es"} need review`
       : firstIssue
         ? firstIssue.title
         : "Import report looks usable";
