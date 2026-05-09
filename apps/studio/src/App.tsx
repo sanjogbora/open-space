@@ -6176,6 +6176,7 @@ function App() {
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
                 onViews={() => setSelectedTab("views")}
+                onBake={openBakeWorkflow}
                 onPublish={() => setSelectedTab("publish")}
                 onCopyReport={() => void copyText(viewerQaReportText(manifest, bundleStats, viewerUrl(activeProjectId)))}
               />
@@ -10827,6 +10828,7 @@ function ViewerQaChecklist({
   onNavigation,
   onRooms,
   onViews,
+  onBake,
   onPublish,
   onCopyReport
 }: {
@@ -10837,6 +10839,7 @@ function ViewerQaChecklist({
   onNavigation: () => void;
   onRooms: () => void;
   onViews: () => void;
+  onBake: () => void;
   onPublish: () => void;
   onCopyReport: () => void;
 }) {
@@ -10874,7 +10877,16 @@ function ViewerQaChecklist({
     "walk-views-outside-walk-zones"
   ];
   const roomCodes = ["missing-room-map", "room-map-missing-bounds", "partial-room-map", "rooms-not-linked-to-views"];
+  const lightingCodes = [
+    "missing-lightmap-assets",
+    "tiny-lightmap-assets",
+    "lightmaps-missing-secondary-uvs",
+    "some-lightmap-secondary-uvs-missing",
+    "missing-normal-attributes",
+    "invalid-normal-accessor-shapes"
+  ];
   const visualIssue = materialCodes.find((code) => diagnosticCodes.has(code));
+  const lightingIssue = lightingCodes.find((code) => diagnosticCodes.has(code));
   const navigationIssue = navigationCodes.find((code) => diagnosticCodes.has(code));
   const roomIssue = roomCodes.find((code) => diagnosticCodes.has(code));
   const walkZones = enabledNavigationZones(manifest.navigation, "walk");
@@ -10891,6 +10903,18 @@ function ViewerQaChecklist({
       status: visualIssue && errorCodes.has(visualIssue) ? "blocked" : visualIssue ? "warn" : "ready",
       button: visualIssue ? "Open Materials" : "Open Viewer",
       onClick: visualIssue ? onMaterials : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+    },
+    {
+      id: "lighting",
+      label: "Baked lighting",
+      detail: lightingIssue
+        ? "Lighting, normals, or lightmap diagnostics should be reviewed before client visual review."
+        : (stats?.lightmapMaterialCount ?? 0) > 0
+          ? "Open the viewer and inspect soft shadows, bright seams, blank lightmaps, and flat baked areas."
+          : "No lightmapped materials are configured yet; bake lighting when the scene needs Shapespark-like realism.",
+      status: lightingIssue && errorCodes.has(lightingIssue) ? "blocked" : lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? "warn" : "ready",
+      button: lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? "Open Bake" : "Open Viewer",
+      onClick: lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? onBake : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
     },
     {
       id: "movement",
@@ -10961,6 +10985,7 @@ function ViewerQaChecklist({
             <button type="button" className="button secondary compact-button readiness-action" onClick={check.onClick}>
               {check.button === "Open Viewer" && <ExternalLink size={15} aria-hidden="true" />}
               {check.button === "Open Materials" && <Palette size={15} aria-hidden="true" />}
+              {check.button === "Open Bake" && <Palette size={15} aria-hidden="true" />}
               {check.button === "Open Controls" && <MapPin size={15} aria-hidden="true" />}
               {check.button === "Open Rooms" && <Layers3 size={15} aria-hidden="true" />}
               {check.button === "Open Views" && <MapPin size={15} aria-hidden="true" />}
@@ -11015,6 +11040,7 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     "",
     "Manual test results:",
     "- Visual match vs reference viewer: ",
+    "- Baked lighting / lightmap quality: ",
     "- WASD / mouse drag / wheel movement: ",
     "- Click-to-move floor marker and glide: ",
     "- Doorway entry and wall/window blocking: ",
