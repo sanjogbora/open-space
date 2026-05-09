@@ -2838,6 +2838,9 @@ function App() {
     [controlsDoc?.movement.collisionRadius, manifest]
   );
   const navigationCoverageSummary = useMemo(() => (manifest ? navigationCoverage(manifest) : null), [manifest]);
+  const viewerRepairCanBridgeIslands =
+    navigationRepairDraft?.reason === "route-not-found" &&
+    (navigationCoverageSummary?.routeComponents ?? 0) > 1;
   const navigationZones = useMemo(() => manifest?.navigation.zones ?? [], [manifest]);
   const generatedNavigationZoneCount = useMemo(
     () => navigationZones.filter((zone) => zone.source === "generated").length,
@@ -8527,9 +8530,20 @@ function App() {
                           </div>
                         )}
                         <div className="repair-action-grid" aria-label="Navigation repair actions">
+                          {viewerRepairCanBridgeIslands && (
+                            <button
+                              type="button"
+                              className="repair-action-button primary-action"
+                              onClick={createBridgePassZones}
+                            >
+                              <span>Split Route Islands</span>
+                              <strong>Auto Bridge</strong>
+                              <small>Try this first when the clicked room is in a nearby disconnected walk area.</small>
+                            </button>
+                          )}
                           <button
                             type="button"
-                            className="repair-action-button primary-action"
+                            className={viewerRepairCanBridgeIslands ? "repair-action-button" : "repair-action-button primary-action"}
                             disabled={!navigationRepairDraft.point}
                             onClick={() => addNavigationRepairZone("pass")}
                           >
