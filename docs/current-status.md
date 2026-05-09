@@ -71,6 +71,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Auto Fix now expands one-sided door pass zones toward the nearest second walk area when the gap is small enough to repair safely.
 - Analyzer and Studio now flag door pass zones that overlap block zones, which explains cases where a green doorway connector exists but the wall/boundary blocker still prevents entry.
 - Analyzer and Studio now flag door pass zones narrower than the current Body Radius, which explains valid-looking door connectors that still cannot be crossed.
+- Studio can auto-widen narrow door pass zones to match the current Body Radius from the navigation QA quick fix.
 - Navigation zones can now store polygon footprints in addition to rectangles, and the viewer/analyzer/Studio map honor polygon walk/pass/block zones.
 - Viewer route planning now uses polygon zone centroids, inset corners, and edge midpoints as route candidates instead of treating polygon zones like rectangles.
 - Viewer prunes routed click-to-move paths after visibility/grid routing so movement glides through fewer unnecessary intermediate waypoints.
@@ -167,6 +168,7 @@ Current limitations:
 - Runtime material overrides can now apply base color, base texture, normal map, emissive map, emissive intensity, UV repeat/offset/rotation, roughness, metalness, opacity, and lightmaps.
 - Runtime material variant switching can swap color and base texture options.
 - Studio Materials now previews assigned base, normal, emissive, and lightmap textures for the selected material instead of only showing URL fields.
+- Studio reports how many loose-texture suggestions were actually applied so texture-folder repair has a clear result.
 - Viewer can relight unlit/flat GLTF materials as standard lit materials, with a Studio toggle to disable it when a source intentionally uses flat rendering.
 - Viewer generates runtime vertex normals for meshes that lack normal attributes, improving lighting on rough exports.
 - Runtime object inspection panel.
