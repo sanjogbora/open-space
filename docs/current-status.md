@@ -79,7 +79,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Auto Fix can add detected door/pass zones from likely door, opening, passage, and threshold meshes.
 - Analyzer and Studio now flag one-sided door pass zones that touch only one walk area, which explains the "can reach the doorway but cannot enter the room" failure case.
 - Studio Auto Fix now expands one-sided door pass zones toward the nearest second walk area when the gap is small enough to repair safely.
-- Studio now offers Auto Bridge as the primary repair for disconnected walk/pass islands, so close room islands can be connected before manual doorway drawing.
+- Studio now offers Auto Bridge as the primary repair for disconnected walk/pass islands, names the connected zones, and explains the closest gap when automatic bridging is not safe.
 - Analyzer and Studio now flag door pass zones that overlap block zones, which explains cases where a green doorway connector exists but the wall/boundary blocker still prevents entry.
 - Analyzer and Studio now flag door pass zones narrower than the current Body Radius, which explains valid-looking door connectors that still cannot be crossed.
 - Analyzer and Studio now use actual zone footprints, not only bounding boxes, when checking route islands and door-pass overlap.

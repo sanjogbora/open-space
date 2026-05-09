@@ -3739,24 +3739,45 @@ function App() {
 
       const existing = (navigation.zones ?? []).filter((zone) => !zone.id.startsWith("pass-bridge-"));
       const bridges: NavigationZone[] = [];
+      const bridgeDescriptions: string[] = [];
+      const skippedDescriptions: string[] = [];
       const connectedComponents: NavigationZone[][] = [components[0] ?? []];
       const cameraHeight = navigation.cameraHeight;
+      const maxBridgeGap = Math.max(2.4, cameraHeight * 1.45);
 
       components.slice(1).forEach((component, index) => {
         const nearest = nearestNavigationComponentBridge(connectedComponents.flat(), component);
-        if (!nearest || nearest.gap > Math.max(2.4, cameraHeight * 1.45)) {
+        if (!nearest) {
           return;
         }
-        bridges.push(createBridgePassZone(nearest.from, nearest.to, index + 1, cameraHeight));
+        const fromName = navigationZoneDisplayName(nearest.from);
+        const toName = navigationZoneDisplayName(nearest.to);
+        if (nearest.gap > maxBridgeGap) {
+          skippedDescriptions.push(`${fromName} to ${toName} is ${nearest.gap.toFixed(1)}m apart`);
+          return;
+        }
+        bridges.push({
+          ...createBridgePassZone(nearest.from, nearest.to, index + 1, cameraHeight),
+          label: `Bridge ${fromName} to ${toName}`.slice(0, 80)
+        });
+        bridgeDescriptions.push(`${fromName} to ${toName}`);
         connectedComponents.push(component);
       });
 
       if (bridges.length === 0) {
-        setRepairSummary("No close navigation islands found to bridge automatically.");
+        setRepairSummary(
+          skippedDescriptions.length > 0
+            ? `No close navigation islands found to bridge automatically. Closest gap: ${skippedDescriptions[0]}. Draw a Door Pass manually through the opening.`
+            : "No close navigation islands found to bridge automatically. Draw a Door Pass manually through the opening."
+        );
         return navigation;
       }
 
-      setRepairSummary(`Added ${bridges.length} bridge pass zone(s).`);
+      setRepairSummary(
+        `Added ${bridges.length} bridge pass zone(s)${
+          bridgeDescriptions.length > 0 ? `: ${bridgeDescriptions.slice(0, 3).join(", ")}` : ""
+        }. Save changes, then retry the viewer.`
+      );
       return {
         ...navigation,
         zones: [...existing, ...bridges]
