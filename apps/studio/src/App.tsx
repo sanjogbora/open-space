@@ -265,6 +265,7 @@ type NavigationQuickFixAction =
   | "auto"
   | "bounds"
   | "bridge"
+  | "fit-zone-bounds"
   | "paint-walk"
   | "paint-pass"
   | "view-walks"
@@ -1687,6 +1688,14 @@ function navigationQuickFixForIssue(issue: NavigationQaIssue | undefined): Navig
       detail: "Use the detected model bounds so users cannot drift into empty exterior space.",
       button: "Use Bounds",
       action: "bounds"
+    };
+  }
+  if (issue.id.startsWith("walk-zone-bounds-") || issue.id.startsWith("pass-zone-bounds-")) {
+    return {
+      title: "Expand movement boundary",
+      detail: "Grow the movement bounds to include authored walk and door-pass zones that currently sit outside the allowed area.",
+      button: "Fit Bounds",
+      action: "fit-zone-bounds"
     };
   }
   if (issue.id === "missing-walk-zones" || issue.id.startsWith("view-walk-zone-")) {
@@ -3698,6 +3707,57 @@ function App() {
     }));
   };
 
+  const fitNavigationBoundsToRouteZones = () => {
+    updateNavigation((navigation) => {
+      const routeZones = enabledNavigationZones(navigation).filter((zone) => zone.kind === "walk" || zone.kind === "pass");
+      if (routeZones.length === 0) {
+        return navigation;
+      }
+      const currentBounds = navigation.bounds ?? navigationBoundsFromGraph();
+      if (!currentBounds) {
+        return navigation;
+      }
+      const nextBounds = routeZones.reduce(
+        (bounds, zone) => {
+          const box = navigationZoneAabb(zone);
+          return {
+            min: [
+              Math.min(bounds.min[0], box.minX - 0.2),
+              Math.min(bounds.min[1], zone.center[1] - Math.max(0.2, zone.size[1] / 2)),
+              Math.min(bounds.min[2], box.minZ - 0.2)
+            ] as Vec3,
+            max: [
+              Math.max(bounds.max[0], box.maxX + 0.2),
+              Math.max(bounds.max[1], zone.center[1] + Math.max(0.2, zone.size[1] / 2)),
+              Math.max(bounds.max[2], box.maxZ + 0.2)
+            ] as Vec3
+          };
+        },
+        {
+          min: [...currentBounds.min] as Vec3,
+          max: [...currentBounds.max] as Vec3
+        }
+      );
+      return {
+        ...navigation,
+        bounds: {
+          min: [
+            Number(nextBounds.min[0].toFixed(3)),
+            Number(nextBounds.min[1].toFixed(3)),
+            Number(nextBounds.min[2].toFixed(3))
+          ],
+          max: [
+            Number(nextBounds.max[0].toFixed(3)),
+            Number(nextBounds.max[1].toFixed(3)),
+            Number(nextBounds.max[2].toFixed(3))
+          ]
+        }
+      };
+    });
+    setRepairSummary("Expanded movement bounds to include active walk and door-pass zones. Save changes, then retry click navigation.");
+    setNotice("saved");
+  };
+
   const addNavigationZone = (kind: NavigationZone["kind"]) => {
     updateNavigation((navigation) => {
       const zones = [...(navigation.zones ?? [])];
@@ -3766,6 +3826,10 @@ function App() {
   const runNavigationQuickFixAction = (quickFix: NavigationQuickFix) => {
     if (quickFix.action === "bounds") {
       applyBoundsFromGraph();
+      return;
+    }
+    if (quickFix.action === "fit-zone-bounds") {
+      fitNavigationBoundsToRouteZones();
       return;
     }
     if (quickFix.action === "paint-walk") {
