@@ -144,6 +144,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Analyzer now flags embedded GLB textures and sidecar texture files that cannot be decoded, so broken image payloads are reported instead of only showing flat or strange-colored surfaces in the viewer.
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
+- Studio diagnostic cards now include direct action buttons that route each warning to the right repair surface, such as Controls, Materials, Rooms, Environment, Optimization, Bake, or source review.
 - Studio Import now treats disconnected loose texture folders as a source-export review issue instead of implying generic repair can always attach them.
 - Studio Import now routes navigation-specific diagnostics directly to the guided Controls editor instead of hiding them behind the generic repair action.
 - Studio Import now routes exterior/terrain context diagnostics directly to Environment and visual/texture diagnostics directly to Materials.

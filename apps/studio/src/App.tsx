@@ -5292,6 +5292,45 @@ function App() {
     manifest.originalSceneUrl ??
     optimizationJob?.sourceSceneUrl ??
     (manifest.sceneUrl && manifest.sceneUrl !== "scene.optimized.glb" ? manifest.sceneUrl : "scene.glb");
+  const runImportDiagnosticAction = (action: ImportNextStepAction) => {
+    if (action === "repair") {
+      void repairImport();
+      return;
+    }
+    if (action === "apply-textures") {
+      applyMaterialTextureSuggestions();
+      return;
+    }
+    if (action === "environment") {
+      setSelectedTab("environment");
+      return;
+    }
+    if (action === "materials") {
+      setSelectedTab("materials");
+      return;
+    }
+    if (action === "navigation") {
+      setSelectedTab("controls");
+      return;
+    }
+    if (action === "rooms") {
+      setSelectedTab("rooms");
+      return;
+    }
+    if (action === "optimize") {
+      void optimizeProject();
+      return;
+    }
+    if (action === "bake") {
+      void bakeLightmaps();
+      return;
+    }
+    if (action === "review") {
+      document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    window.open(viewerUrl(activeProjectId), "_blank", "noopener,noreferrer");
+  };
 
   return (
     <main className="studio-shell">
@@ -5430,7 +5469,10 @@ function App() {
                   />
                 </label>
               </div>
-              <DiagnosticList diagnostics={bundleStats?.diagnostics ?? []} />
+              <DiagnosticList
+                diagnostics={bundleStats?.diagnostics ?? []}
+                onAction={runImportDiagnosticAction}
+              />
             </div>
 
             <div className="side-stack">
@@ -5617,7 +5659,10 @@ function App() {
                     onRepair={() => void repairImport()}
                     onMaterials={() => setSelectedTab("materials")}
                   />
-                  <DiagnosticList diagnostics={bundleStats.diagnostics ?? []} />
+                  <DiagnosticList
+                    diagnostics={bundleStats.diagnostics ?? []}
+                    onAction={runImportDiagnosticAction}
+                  />
                 </>
               ) : (
                 <p className="quiet-note">Stats will appear after import.</p>
@@ -9496,9 +9541,11 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function DiagnosticList({
-  diagnostics
+  diagnostics,
+  onAction
 }: {
   diagnostics: NonNullable<BundleStats["diagnostics"]>;
+  onAction?: (action: ImportNextStepAction) => void;
 }) {
   if (diagnostics.length === 0) {
     return null;
@@ -9514,16 +9561,39 @@ function DiagnosticList({
           {warningCount} warning{warningCount === 1 ? "" : "s"} / {infoCount} info
         </span>
       </div>
-      {diagnostics.map((diagnostic) => (
-        <div key={diagnostic.code} className={`diagnostic-card ${diagnostic.severity}`}>
-          <AlertTriangle size={17} aria-hidden="true" />
-          <div>
-            <strong>{diagnostic.title}</strong>
-            <p>{diagnostic.message}</p>
-            {diagnostic.action && <small>{diagnostic.action}</small>}
+      {diagnostics.map((diagnostic) => {
+        const action = importActionForDiagnostic(diagnostic.code);
+        const actionCopy = action ? nextStepCopy(action) : undefined;
+        return (
+          <div key={diagnostic.code} className={`diagnostic-card ${diagnostic.severity}`}>
+            <AlertTriangle size={17} aria-hidden="true" />
+            <div className="diagnostic-card-main">
+              <div>
+                <strong>{diagnostic.title}</strong>
+                <p>{diagnostic.message}</p>
+                {diagnostic.action && <small>{diagnostic.action}</small>}
+              </div>
+              {action && actionCopy && onAction && (
+                <button
+                  type="button"
+                  className="button secondary compact-button diagnostic-action"
+                  onClick={() => onAction(action)}
+                >
+                  {action === "repair" && <Wrench size={15} aria-hidden="true" />}
+                  {action === "environment" && <Globe2 size={15} aria-hidden="true" />}
+                  {action === "materials" && <Palette size={15} aria-hidden="true" />}
+                  {action === "navigation" && <MapPin size={15} aria-hidden="true" />}
+                  {action === "rooms" && <Layers3 size={15} aria-hidden="true" />}
+                  {action === "optimize" && <Activity size={15} aria-hidden="true" />}
+                  {action === "bake" && <Palette size={15} aria-hidden="true" />}
+                  {action === "review" && <AlertTriangle size={15} aria-hidden="true" />}
+                  {actionCopy.button}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

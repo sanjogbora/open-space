@@ -1271,6 +1271,17 @@ button.list-row {
   background: #fbfcfd;
 }
 
+.diagnostic-card-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.diagnostic-action {
+  white-space: nowrap;
+}
+
 .diagnostic-summary {
   display: flex;
   align-items: center;
@@ -1333,6 +1344,16 @@ button.list-row {
 
 .diagnostic-card small {
   opacity: 0.82;
+}
+
+@media (max-width: 780px) {
+  .diagnostic-card-main {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostic-action {
+    justify-self: start;
+  }
 }
 
 .screen-planner-card,
