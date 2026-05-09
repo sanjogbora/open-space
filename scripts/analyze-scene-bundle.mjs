@@ -656,6 +656,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   let vertexColorPrimitiveCount = 0;
   const materialTriangleCounts = new Array(materials.length).fill(0);
   const embeddedImages = [];
+  const texturedMaterialCount = materials.filter((material) => materialUsesTexture(material)).length;
   const texturedMaterialIndices = new Set(
     materials
       .map((material, index) => (materialUsesTexture(material) ? index : undefined))
@@ -961,6 +962,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     meshCount: meshes.length,
     primitiveCount,
     materialCount: materials.length,
+    texturedMaterialCount,
     textureCount: document.textures?.length ?? 0,
     imageCount: document.images?.length ?? 0,
     bufferCount: document.buffers?.length ?? 0,
@@ -2529,6 +2531,10 @@ function createDiagnostics(manifest, report, graphs, controls) {
     (sum, model) => sum + (model.unlitMaterialCount ?? 0),
     0
   );
+  const texturedMaterialCount = report.models.reduce(
+    (sum, model) => sum + (model.texturedMaterialCount ?? 0),
+    0
+  );
   const vertexColorPrimitiveCount = report.models.reduce(
     (sum, model) => sum + (model.vertexColorPrimitiveCount ?? 0),
     0
@@ -2632,6 +2638,8 @@ function createDiagnostics(manifest, report, graphs, controls) {
   const dominantGreenMaterials = dominantUntexturedMaterials.filter((model) =>
     hexColorLooksGreen(model.dominantMaterial?.baseColor)
   );
+  const materialTextureUsageRatio =
+    (report.materialCount ?? 0) > 0 ? texturedMaterialCount / (report.materialCount ?? 1) : 1;
 
   if (parseFailures.length > 0) {
     diagnostics.push({
@@ -3164,6 +3172,22 @@ function createDiagnostics(manifest, report, graphs, controls) {
       message: "The active model has materials but no texture/image definitions, so surfaces will rely only on flat material colors.",
       action: "If the source render has brick, fabric, wood, or wall textures, upload the GLTF ZIP with its texture folder or re-export a GLB with embedded textures."
     });
+  } else if ((report.imageCount ?? 0) > 0 && (report.materialCount ?? 0) > 0 && texturedMaterialCount === 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "image-textures-unused-by-materials",
+      title: "Texture images are not assigned",
+      message: `${report.imageCount ?? 0} image(s) are present in the active model, but none of the ${report.materialCount ?? 0} material(s) reference texture maps.`,
+      action: "Open Materials to assign the intended base, normal, or emissive maps, or re-export the source model with textures connected to material slots."
+    });
+  } else if ((report.imageCount ?? 0) >= 3 && (report.materialCount ?? 0) >= 8 && materialTextureUsageRatio < 0.15) {
+    diagnostics.push({
+      severity: "info",
+      code: "few-materials-use-textures",
+      title: "Few materials use texture images",
+      message: `${texturedMaterialCount}/${report.materialCount ?? 0} material(s) reference texture maps even though ${report.imageCount ?? 0} image(s) are present.`,
+      action: "Compare against the reference viewer. If detailed surfaces are missing, map textures in Materials or re-export with material texture slots intact."
+    });
   } else if ((report.looseImageCount ?? 0) > 0) {
     diagnostics.push({
       severity: "info",
@@ -3627,6 +3651,7 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
   const meshCount = models.reduce((sum, model) => sum + model.meshCount, 0);
   const primitiveCount = models.reduce((sum, model) => sum + (model.primitiveCount ?? 0), 0);
   const materialCount = models.reduce((sum, model) => sum + model.materialCount, 0);
+  const texturedMaterialCount = models.reduce((sum, model) => sum + (model.texturedMaterialCount ?? 0), 0);
   const textureCount = models.reduce((sum, model) => sum + (model.textureCount ?? 0), 0);
   const imageCount = models.reduce((sum, model) => sum + (model.imageCount ?? 0), 0);
   const lightmapMaterials = (materialOverrides?.materials ?? []).filter((material) => material?.lightMapUrl);
@@ -3725,6 +3750,7 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     meshCount,
     primitiveCount,
     materialCount,
+    texturedMaterialCount,
     textureCount,
     imageCount,
     lightmapMaterialCount: lightmapMaterials.length,
@@ -4039,6 +4065,8 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "relocatable-texture-resources",
     "loose-textures-not-referenced",
     "model-has-no-texture-images",
+    "image-textures-unused-by-materials",
+    "few-materials-use-textures",
     "loose-texture-files",
     "dominant-untextured-material",
     "dominant-green-placeholder-material",

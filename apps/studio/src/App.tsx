@@ -313,6 +313,7 @@ interface BundleStats {
   triangleCount: number;
   meshCount: number;
   materialCount: number;
+  texturedMaterialCount?: number;
   textureCount?: number;
   imageCount?: number;
   embeddedImageCount?: number;
@@ -10200,6 +10201,8 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "dominant-green-placeholder-material",
       "model-has-no-texture-images",
       "loose-textures-not-referenced",
+      "image-textures-unused-by-materials",
+      "few-materials-use-textures",
       "case-mismatched-model-resources",
       "embedded-texture-decode-failed",
       "sidecar-texture-decode-failed",
