@@ -2216,6 +2216,27 @@ function navigationComponents(zones) {
   return components;
 }
 
+function navigationZoneDisplayName(zone) {
+  return String(zone.label ?? zone.id ?? "Unnamed zone").trim() || "Unnamed zone";
+}
+
+function navigationComponentSummary(components, maxComponents = 3, maxZonesPerComponent = 3) {
+  return [...components]
+    .sort((a, b) => b.length - a.length)
+    .slice(0, maxComponents)
+    .map((component, index) => {
+      const zoneNames = component
+        .slice(0, maxZonesPerComponent)
+        .map(navigationZoneDisplayName)
+        .join(", ");
+      const hiddenCount = Math.max(0, component.length - maxZonesPerComponent);
+      const suffix = hiddenCount > 0 ? ` +${hiddenCount} more` : "";
+      const zoneCount = `${component.length} zone${component.length === 1 ? "" : "s"}`;
+      return `island ${index + 1}: ${zoneCount}${zoneNames ? ` (${zoneNames}${suffix})` : ""}`;
+    })
+    .join("; ");
+}
+
 function navigationTopology(manifest, bodyRadius = 0.28) {
   const navigation = manifest.navigation ?? {};
   const walkZones = enabledNavigationZones(navigation, "walk");
@@ -3270,11 +3291,14 @@ function createDiagnostics(manifest, report, graphs, controls) {
   }
 
   if (topology.routeComponents.length > 1) {
+    const islandSummary = navigationComponentSummary(topology.routeComponents);
     diagnostics.push({
       severity: "warning",
       code: "disconnected-navigation-zones",
       title: "Walkable areas are disconnected",
-      message: `${topology.routeComponents.length} separate navigation islands were detected across walk/pass zones.`,
+      message: `${topology.routeComponents.length} separate navigation islands were detected across walk/pass zones${
+        islandSummary ? `: ${islandSummary}.` : "."
+      }`,
       action: "Add or resize pass zones until connected rooms touch through doorways."
     });
   }

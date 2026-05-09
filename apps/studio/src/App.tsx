@@ -1176,6 +1176,31 @@ function navigationComponents(zones: readonly NavigationZone[]): NavigationZone[
   return components;
 }
 
+function navigationZoneDisplayName(zone: NavigationZone): string {
+  return zone.label?.trim() || zone.id || "Unnamed zone";
+}
+
+function navigationComponentSummary(
+  components: readonly NavigationZone[][],
+  maxComponents = 3,
+  maxZonesPerComponent = 3
+): string {
+  return [...components]
+    .sort((a, b) => b.length - a.length)
+    .slice(0, maxComponents)
+    .map((component, index) => {
+      const zoneNames = component
+        .slice(0, maxZonesPerComponent)
+        .map(navigationZoneDisplayName)
+        .join(", ");
+      const hiddenCount = Math.max(0, component.length - maxZonesPerComponent);
+      const suffix = hiddenCount > 0 ? ` +${hiddenCount} more` : "";
+      const zoneCount = `${component.length} zone${component.length === 1 ? "" : "s"}`;
+      return `island ${index + 1}: ${zoneCount}${zoneNames ? ` (${zoneNames}${suffix})` : ""}`;
+    })
+    .join("; ");
+}
+
 function countNavigationComponents(zones: readonly NavigationZone[]): number {
   return navigationComponents(zones).length;
 }
@@ -1434,13 +1459,16 @@ function navigationQaIssues(manifest: SceneManifest, bodyRadius = 0.28): Navigat
     });
   }
 
-  const componentCount = countNavigationComponents(routeZones);
-  if (componentCount > 1) {
+  const routeComponents = navigationComponents(routeZones);
+  if (routeComponents.length > 1) {
+    const islandSummary = navigationComponentSummary(routeComponents);
     issues.push({
       id: "disconnected-route-zones",
       severity: "warning",
       title: "Walkable areas are disconnected",
-      detail: `${componentCount} separate navigation islands were detected across walk/pass zones.`,
+      detail: `${routeComponents.length} separate navigation islands were detected across walk/pass zones${
+        islandSummary ? `: ${islandSummary}.` : "."
+      }`,
       action: "Add or resize pass zones until connected rooms touch through doorways."
     });
   }
