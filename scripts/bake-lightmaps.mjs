@@ -10,6 +10,7 @@ const marginArg = args.find((arg) => arg.startsWith("--margin="));
 const modeArg = args.find((arg) => arg.startsWith("--mode="));
 const maxMaterialsArg = args.find((arg) => arg.startsWith("--max-materials="));
 const presetArg = args.find((arg) => arg.startsWith("--preset="));
+const denoiseArg = args.find((arg) => arg.startsWith("--denoise="));
 const bundleDir = path.resolve(target);
 const blenderCommand = process.env.BLENDER_PATH || "blender";
 
@@ -35,6 +36,7 @@ const margin = integerOption(marginArg?.split("=")[1] ?? process.env.LIGHTMAP_MA
 const maxMaterials = integerOption(maxMaterialsArg?.split("=")[1] ?? process.env.LIGHTMAP_MAX_MATERIALS, 160, 1, 512);
 const requestedBakeMode = String(modeArg?.split("=")[1] ?? process.env.LIGHTMAP_BAKE_MODE ?? "lighting").toLowerCase();
 const bakeMode = ["lighting", "combined"].includes(requestedBakeMode) ? requestedBakeMode : "lighting";
+const denoise = String(denoiseArg?.split("=")[1] ?? process.env.LIGHTMAP_DENOISE ?? "true").toLowerCase() !== "false";
 const outputSceneUrl = "scene.lightmapped.glb";
 
 function jobId(timestamp) {
@@ -130,6 +132,7 @@ samples = int(config["samples"])
 margin = int(config["margin"])
 bake_mode = config.get("bakeMode", "lighting")
 max_materials = int(config.get("maxMaterials", 160))
+denoise = bool(config.get("denoise", True))
 
 def clean_name(value):
     value = re.sub(r"[^A-Za-z0-9_.-]+", "-", value or "material").strip("-")
@@ -214,7 +217,7 @@ if not any(obj.type == "LIGHT" for obj in bpy.context.scene.objects):
 
 bpy.context.scene.render.engine = "CYCLES"
 bpy.context.scene.cycles.samples = samples
-bpy.context.scene.cycles.use_denoising = True
+bpy.context.scene.cycles.use_denoising = denoise
 bpy.context.scene.world = bpy.context.scene.world or bpy.data.worlds.new("World")
 bpy.context.scene.world.color = (0.78, 0.82, 0.88)
 
@@ -301,6 +304,7 @@ if (!hasBlender) {
     completedAt: timestamp,
     engine: "blender-cycles",
     bakeMode,
+    denoise,
     preset,
     message: "Blender was not found. Install Blender or set BLENDER_PATH before running automatic lightmap baking.",
     steps: [
@@ -332,6 +336,7 @@ const startedJob = {
   engine: "blender-cycles",
   message: `Baking ${sceneUrl} with Blender.`,
   bakeMode,
+  denoise,
   preset,
   steps: [
     step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
@@ -365,6 +370,7 @@ await writeFile(
       samples,
       margin,
       bakeMode,
+      denoise,
       maxMaterials
     },
     null,
@@ -481,11 +487,12 @@ try {
     margin,
     maxMaterials,
     bakeMode,
+    denoise,
     preset,
     steps: [
       step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
       step("unwrap-uv2", "Create secondary lightmap UVs", "completed", "Generated Lightmap UVs with Blender smart projection."),
-      step("bake-cycles", "Bake indirect lighting and shadows", "completed", `${samples} Cycles samples with automatic 256-${resolution}px ${bakeMode} lightmaps; max ${maxMaterials} materials.`),
+      step("bake-cycles", "Bake indirect lighting and shadows", "completed", `${samples} Cycles samples with automatic 256-${resolution}px ${bakeMode} lightmaps; ${denoise ? "denoise on" : "denoise off"}; max ${maxMaterials} materials.`),
       step("assign-lightmaps", "Assign generated lightmaps to materials", "completed", "Updated materials.json and scene manifest.")
     ]
   };

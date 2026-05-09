@@ -177,6 +177,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio now shows a bake preflight estimate for material count, target resolution, sample count, and raw lightmap texture footprint before Blender starts.
 - Studio bake preflight now lists specific blocking errors and warnings for material limits, raw lightmap memory, resolution, and sample count before Blender starts.
 - Studio bake settings now show when resolution, samples, or margin differ from the selected preset and can reset those values back to the preset defaults.
+- Studio/API/Blender bake jobs now expose a denoise toggle and record whether denoise was used in the bake job output.
 - Failed Blender/Cycles bakes return the bake job in the API error response so Studio can show the failed stage and job steps.
 
 Current limitations:

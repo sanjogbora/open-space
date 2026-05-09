@@ -376,6 +376,11 @@ textarea:focus {
   color: #24313a;
 }
 
+.toggle-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
 .movement-preset-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

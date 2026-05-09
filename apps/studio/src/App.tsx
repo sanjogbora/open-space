@@ -465,6 +465,7 @@ interface LightmapBakeJobDocument {
   samples?: number;
   margin?: number;
   maxMaterials?: number;
+  denoise?: boolean;
   lightmaps?: readonly {
     materialName: string;
     url: string;
@@ -2483,6 +2484,7 @@ function App() {
     samples: 96,
     margin: 16,
     maxMaterials: 160,
+    denoise: true,
     mode: "lighting" as "lighting" | "combined"
   });
   const [repairState, setRepairState] = useState<RepairState>("idle");
@@ -3146,6 +3148,12 @@ function App() {
       ? {
           severity: "warning",
           message: "Low sample counts are fast but can produce noisy lighting."
+        }
+      : undefined,
+    !bakeSettings.denoise && bakeSettings.samples < 192
+      ? {
+          severity: "warning",
+          message: "Denoise is off; use higher samples or enable denoise before client review."
         }
       : undefined,
     bakeSettings.resolution < 1024 && bakeSettings.preset !== "draft"
@@ -7584,6 +7592,19 @@ function App() {
                       <option value="combined">Combined</option>
                     </select>
                   </label>
+                  <label className="field toggle-field">
+                    <span>Denoise</span>
+                    <input
+                      type="checkbox"
+                      checked={bakeSettings.denoise}
+                      onChange={(event) =>
+                        setBakeSettings((current) => ({
+                          ...current,
+                          denoise: event.target.checked
+                        }))
+                      }
+                    />
+                  </label>
                 </div>
                 {bakePresetModified && (
                   <div className="bake-preset-note">
@@ -7625,6 +7646,9 @@ function App() {
                         <span>{lightmapBakeJob.engine}</span>
                         {lightmapBakeJob.message && <small>{lightmapBakeJob.message}</small>}
                         {lightmapBakeJob.bakeMode && <small>{lightmapBakeJob.bakeMode} bake</small>}
+                        {typeof lightmapBakeJob.denoise === "boolean" && (
+                          <small>{lightmapBakeJob.denoise ? "denoise on" : "denoise off"}</small>
+                        )}
                         {lightmapBakeJob.preset && <small>{lightmapBakeJob.preset} quality</small>}
                         {lightmapBakeJob.outputSceneUrl && <small>{lightmapBakeJob.outputSceneUrl}</small>}
                       </div>
@@ -7637,6 +7661,7 @@ function App() {
                           <Stat label="Total" value={formatBytes(lightmapBakeJob.totalLightmapBytes ?? 0)} />
                           <Stat label="Max px" value={String(lightmapBakeJob.resolution ?? bakeSettings.resolution)} />
                           <Stat label="Samples" value={String(lightmapBakeJob.samples ?? bakeSettings.samples)} />
+                          <Stat label="Denoise" value={lightmapBakeJob.denoise === false ? "Off" : "On"} />
                         </div>
                         <LightmapBakeQuality job={lightmapBakeJob} materialCount={materialCountForBake} />
                       </>

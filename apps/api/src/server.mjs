@@ -1008,12 +1008,14 @@ function lightmapBakeOptions(body = {}) {
   const requestedPreset = String(body.preset ?? "medium").toLowerCase();
   const preset = Object.hasOwn(presets, requestedPreset) ? requestedPreset : "medium";
   const presetDefaults = presets[preset];
+  const denoise = body.denoise !== false;
   return {
     preset,
     resolution: integerOption(body.resolution, presetDefaults.resolution, 256, 4096),
     samples: integerOption(body.samples, presetDefaults.samples, 16, 1024),
     margin: integerOption(body.margin, presetDefaults.margin, 2, 96),
     maxMaterials: integerOption(body.maxMaterials, 160, 1, 512),
+    denoise,
     mode
   };
 }
@@ -1029,7 +1031,8 @@ function runLightmapBake(projectId = "demo", options = {}) {
       `--margin=${bakeOptions.margin}`,
       `--max-materials=${bakeOptions.maxMaterials}`,
       `--mode=${bakeOptions.mode}`,
-      `--preset=${bakeOptions.preset}`
+      `--preset=${bakeOptions.preset}`,
+      `--denoise=${bakeOptions.denoise ? "true" : "false"}`
     ],
     "Lightmap bake"
   );
