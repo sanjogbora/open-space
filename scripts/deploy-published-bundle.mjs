@@ -108,6 +108,18 @@ async function validateDeployment() {
         .join("; ")
     );
   }
+  const checkedTotalBytes = checks.reduce((sum, check) => sum + check.bytes, 0);
+  const aggregateMismatches = [
+    typeof deployment.assetCount === "number" && deployment.assetCount !== checks.length
+      ? `deployment assetCount is ${deployment.assetCount}, but ${checks.length} asset(s) are listed`
+      : undefined,
+    typeof deployment.totalBytes === "number" && deployment.totalBytes !== checkedTotalBytes
+      ? `deployment totalBytes is ${deployment.totalBytes}, but listed assets total ${checkedTotalBytes}`
+      : undefined
+  ].filter(Boolean);
+  if (aggregateMismatches.length > 0) {
+    throw new Error(`Deployment manifest aggregate mismatch: ${aggregateMismatches.join("; ")}.`);
+  }
   validateQualityGate();
   validateWarningQualityGate();
   return checks;
@@ -199,6 +211,29 @@ function cachePolicySummary() {
     }
   }
   return summary;
+}
+
+function assetTypeBreakdown(checks) {
+  const byType = new Map();
+  for (const check of checks) {
+    const extension = path.extname(check.path).toLowerCase() || "(none)";
+    const current = byType.get(extension) ?? { extension, count: 0, bytes: 0 };
+    current.count += 1;
+    current.bytes += check.bytes;
+    byType.set(extension, current);
+  }
+  return [...byType.values()].sort((a, b) => b.bytes - a.bytes || a.extension.localeCompare(b.extension));
+}
+
+function largestAssets(checks, limit = 8) {
+  return [...checks]
+    .sort((a, b) => b.bytes - a.bytes || a.path.localeCompare(b.path))
+    .slice(0, limit)
+    .map((asset) => ({
+      path: asset.path,
+      bytes: asset.bytes,
+      contentType: contentTypeForAssetPath(asset.path)
+    }));
 }
 
 function headersFile(deployment) {
@@ -351,6 +386,9 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir, ex
     assetCount: deployment.assetCount,
     checkedAssetCount: checks.length,
     totalBytes: deployment.totalBytes,
+    checkedTotalBytes: checks.reduce((sum, check) => sum + check.bytes, 0),
+    assetTypes: assetTypeBreakdown(checks),
+    largestAssets: largestAssets(checks),
     cachePolicy: cachePolicySummary(),
     qualityGate: deployment.qualityGate ?? null,
     qualityGateSummary: qualityGateSummary(),
