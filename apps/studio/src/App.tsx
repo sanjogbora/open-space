@@ -10814,6 +10814,14 @@ function LightmapBakeQuality({
     (job.resolution ?? 0) > 0 && (job.resolution ?? 0) < 1024 ? "Resolution is below 1024px; expect softer lighting and visible artifacts." : "",
     (job.samples ?? 0) > 0 && (job.samples ?? 0) < 64 ? "Sample count is low; use Medium or higher before client review." : ""
   ].filter(Boolean);
+  const recommendedAction =
+    lightmapCount <= 0 || !job.outputSceneUrl
+      ? "Re-run the bake after checking the Blender output folder and eligible materials."
+      : suspiciousFlatLightmapCount > 0 || tinyLightmapCount > 0 || averageBytes < 4096
+        ? "Inspect the lightmap previews, then re-run with a higher resolution or sample preset if any preview is blank or flat."
+        : lowResolutionCount > 0 || (job.resolution ?? 0) < 1024 || (job.samples ?? 0) < 64
+          ? "Use Medium or High bake settings before client review."
+          : "Review the flagged materials before publishing.";
 
   if (job.status !== "completed") {
     return null;
@@ -10834,6 +10842,9 @@ function LightmapBakeQuality({
       {issues.map((issue) => (
         <p key={issue}>{issue}</p>
       ))}
+      <p>
+        <strong>Recommended action:</strong> {recommendedAction}
+      </p>
     </div>
   );
 }
