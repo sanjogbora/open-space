@@ -6012,6 +6012,10 @@ function App() {
                     <Stat label="Model" value={formatBytes(bundleStats.modelBytes)} />
                     <Stat label="Meshes" value={String(bundleStats.meshCount)} />
                     <Stat label="Materials" value={String(bundleStats.materialCount)} />
+                    <Stat
+                      label="Textured mats"
+                      value={`${bundleStats.texturedMaterialCount ?? 0}/${bundleStats.materialCount}`}
+                    />
                     <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
                     <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
                     <Stat label="Embedded images" value={String(bundleStats.embeddedImageCount ?? 0)} />
@@ -9996,6 +10000,10 @@ function App() {
                       <Stat label="Model" value={formatBytes(bundleStats.modelBytes)} />
                       <Stat label="Meshes" value={String(bundleStats.meshCount)} />
                       <Stat label="Materials" value={String(bundleStats.materialCount)} />
+                      <Stat
+                        label="Textured mats"
+                        value={`${bundleStats.texturedMaterialCount ?? 0}/${bundleStats.materialCount}`}
+                      />
                       <Stat label="Triangles" value={String(bundleStats.triangleCount)} />
                       <Stat label="Textures" value={String(bundleStats.textureCount ?? 0)} />
                       <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
