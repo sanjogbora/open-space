@@ -174,6 +174,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Analyzer now counts unused texture image payloads, so GLBs with many disconnected image files are flagged before users judge a flat-looking viewer.
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
+- Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio diagnostic cards now include direct action buttons that route each warning to the right repair surface, such as Controls, Materials, Rooms, Environment, Optimization, Bake, or source review.
 - Studio Publish quality-gate warnings now include direct repair actions, so publish blockers can jump to Views, Import Repair, Controls, Materials, Interactions, Optimization, or Bake.
 - Studio Publish readiness checklist rows now include direct fix actions for failed checks instead of only showing status text.

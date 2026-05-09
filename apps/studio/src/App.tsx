@@ -6171,12 +6171,13 @@ function App() {
               <ViewerQaChecklist
                 manifest={manifest}
                 stats={bundleStats}
-                viewerUrl={`http://127.0.0.1:5173/?scene=${encodeURIComponent(projectScenePath(activeProjectId))}`}
+                viewerUrl={viewerUrl(activeProjectId)}
                 onMaterials={() => setSelectedTab("materials")}
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
                 onViews={() => setSelectedTab("views")}
                 onPublish={() => setSelectedTab("publish")}
+                onCopyReport={() => void copyText(viewerQaReportText(manifest, bundleStats, viewerUrl(activeProjectId)))}
               />
             </div>
 
@@ -10826,7 +10827,8 @@ function ViewerQaChecklist({
   onNavigation,
   onRooms,
   onViews,
-  onPublish
+  onPublish,
+  onCopyReport
 }: {
   manifest: SceneManifest;
   stats: BundleStats | null;
@@ -10836,6 +10838,7 @@ function ViewerQaChecklist({
   onRooms: () => void;
   onViews: () => void;
   onPublish: () => void;
+  onCopyReport: () => void;
 }) {
   const diagnostics = stats?.diagnostics ?? [];
   const diagnosticCodes = new Set(diagnostics.map((diagnostic) => diagnostic.code));
@@ -10942,8 +10945,12 @@ function ViewerQaChecklist({
     <div className="import-next-steps viewer-qa-checklist">
       <div className="compact-panel-heading">
         <strong>Viewer QA checklist</strong>
-        <small>Use this after every import or repair</small>
+        <button type="button" className="button secondary compact-button" onClick={onCopyReport}>
+          <Copy size={15} aria-hidden="true" />
+          Copy Report
+        </button>
       </div>
+      <p className="quiet-note">Use this after every import or repair.</p>
       <div className="publish-readiness-list">
         {checks.map((check) => (
           <div key={check.id} className={`readiness-row ${check.status}`}>
@@ -10965,6 +10972,56 @@ function ViewerQaChecklist({
       </div>
     </div>
   );
+}
+
+function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, viewerUrl: string): string {
+  const diagnostics = stats?.diagnostics ?? [];
+  const actionableDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "info").slice(0, 6);
+  const coverage = navigationCoverage(manifest);
+  const publishReadiness = stats?.publishReadiness;
+  const publishIssues = [
+    ...(publishReadiness?.blockers ?? []).map((issue) => `BLOCKER: ${issue.title} - ${issue.message}`),
+    ...(publishReadiness?.warnings ?? []).map((issue) => `WARNING: ${issue.title} - ${issue.message}`)
+  ].slice(0, 6);
+  const lines = [
+    `Open Space QA Report - ${manifest.branding.title}`,
+    `Viewer: ${viewerUrl}`,
+    "",
+    "Scene stats:",
+    `- Model size: ${formatBytes(stats?.modelBytes ?? 0)}`,
+    `- Triangles: ${stats?.triangleCount ?? 0}`,
+    `- Meshes: ${stats?.meshCount ?? 0}`,
+    `- Materials: ${stats?.materialCount ?? 0}`,
+    `- Textured materials: ${stats?.texturedMaterialCount ?? 0}/${stats?.materialCount ?? 0}`,
+    `- Lightmaps: ${stats?.lightmapAssetCount ?? 0}/${stats?.lightmapMaterialCount ?? 0}`,
+    `- Publish gate: ${publishReadiness?.status ?? "not analyzed"}`,
+    "",
+    "Navigation setup:",
+    `- Bounds: ${manifest.navigation.bounds ? "yes" : "no"}`,
+    `- Walk zones: ${coverage.walkZones}`,
+    `- Door/pass zones: ${coverage.passZones}`,
+    `- Route islands: ${coverage.routeComponents}`,
+    `- Walk views covered: ${coverage.coveredWalkViews}/${coverage.walkViews}`,
+    "",
+    "Top risks:",
+    ...(actionableDiagnostics.length > 0
+      ? actionableDiagnostics.map(
+          (diagnostic) => `- ${diagnostic.severity.toUpperCase()}: ${diagnostic.title} - ${diagnostic.message}`
+        )
+      : ["- No blocking or warning diagnostics listed."]),
+    "",
+    "Publish issues:",
+    ...(publishIssues.length > 0 ? publishIssues.map((issue) => `- ${issue}`) : ["- No publish blockers or warnings listed."]),
+    "",
+    "Manual test results:",
+    "- Visual match vs reference viewer: ",
+    "- WASD / mouse drag / wheel movement: ",
+    "- Click-to-move floor marker and glide: ",
+    "- Doorway entry and wall/window blocking: ",
+    "- Room buttons, minimap, and top view: ",
+    "- Most annoying issue: "
+  ];
+  return lines.join("\n");
 }
 
 function LightmapBakeQuality({
