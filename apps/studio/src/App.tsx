@@ -320,6 +320,12 @@ interface BundleStats {
   imageCount?: number;
   materialTextureImageCount?: number;
   unusedTextureImageCount?: number;
+  lightmapMaterialCount?: number;
+  secondaryUvLightmapMaterialCount?: number;
+  lightmapAssetCount?: number;
+  missingLightmapAssetCount?: number;
+  tinyLightmapAssetCount?: number;
+  lightmapAssetBytes?: number;
   embeddedImageCount?: number;
   maxTextureDimension?: number;
   oversizedTextureCount?: number;
@@ -357,6 +363,13 @@ interface BundleStats {
   looseImages?: readonly {
     source: string;
     bytes: number;
+  }[];
+  lightmapAssets?: readonly {
+    kind: string;
+    source: string;
+    label: string;
+    exists: boolean;
+    bytes?: number;
   }[];
   materialTextureSuggestionCount?: number;
   materialTextureSuggestions?: readonly {
@@ -6168,6 +6181,11 @@ function App() {
                     <Stat label="Embedded images" value={String(bundleStats.embeddedImageCount ?? 0)} />
                     <Stat label="Max texture" value={`${bundleStats.maxTextureDimension ?? 0}px`} />
                     <Stat label="Strip textures" value={String(bundleStats.extremeAspectTextureCount ?? 0)} />
+                    <Stat
+                      label="Lightmaps"
+                      value={`${bundleStats.lightmapAssetCount ?? 0}/${bundleStats.lightmapMaterialCount ?? 0}`}
+                    />
+                    <Stat label="Lightmap size" value={formatBytes(bundleStats.lightmapAssetBytes ?? 0)} />
                     <Stat label="Loose images" value={String(bundleStats.looseImageCount ?? 0)} />
                     <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
                     <Stat label="Texture compression" value={textureCompressionLabel(bundleStats)} />
@@ -6183,6 +6201,7 @@ function App() {
                     onApplyTextureSuggestions={applyMaterialTextureSuggestions}
                     onRepair={() => void repairImport()}
                     onMaterials={() => setSelectedTab("materials")}
+                    onBake={() => void bakeLightmaps()}
                     onReviewTextureSuggestion={reviewMaterialTextureSuggestion}
                   />
                   <DiagnosticList
@@ -10480,7 +10499,9 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "missing-normal-attributes",
       "invalid-normal-accessor-shapes",
       "lightmaps-missing-secondary-uvs",
-      "some-lightmap-secondary-uvs-missing"
+      "some-lightmap-secondary-uvs-missing",
+      "missing-lightmap-assets",
+      "tiny-lightmap-assets"
     ].includes(code)
   ) {
     return "bake";
@@ -10881,6 +10902,7 @@ function AssetHealth({
   onApplyTextureSuggestions,
   onRepair,
   onMaterials,
+  onBake,
   onReviewTextureSuggestion
 }: {
   stats: BundleStats;
@@ -10893,12 +10915,18 @@ function AssetHealth({
   onApplyTextureSuggestions?: () => void;
   onRepair?: () => void;
   onMaterials?: () => void;
+  onBake?: () => void;
   onReviewTextureSuggestion?: (suggestion: MaterialTextureSuggestion) => void;
 }) {
   const missingAssets = (stats.assets ?? []).filter((asset) => !asset.exists);
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
   const looseImages = stats.looseImages ?? [];
+  const lightmapAssets = stats.lightmapAssets ?? [];
+  const missingLightmapAssets = lightmapAssets.filter((asset) => !asset.exists);
+  const tinyLightmapAssets = lightmapAssets.filter(
+    (asset) => asset.exists && typeof asset.bytes === "number" && asset.bytes > 0 && asset.bytes < 4096
+  );
   const textureSuggestions = stats.materialTextureSuggestions ?? [];
   const textureAssignmentDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
     diagnostic.code === "image-textures-unused-by-materials" ||
@@ -10912,10 +10940,12 @@ function AssetHealth({
       (stats.texturedMaterialCount ?? 0) < Math.max(1, Math.ceil((stats.materialCount ?? 0) * 0.2)));
   const canRunRepair = Boolean(onRepair) && apiConnected && repairState !== "repairing";
   const hasTextureRepairWork = missingResources.length > 0 || missingAssets.length > 0;
+  const hasLightmapRepairWork = missingLightmapAssets.length > 0 || tinyLightmapAssets.length > 0;
   const hasLooseUnmappedTextures = looseImages.length > 0 && textureSuggestions.length === 0;
   const hasDetails =
     missingAssets.length > 0 ||
     missingResources.length > 0 ||
+    hasLightmapRepairWork ||
     looseImages.length > 0 ||
     hasTextureAssignmentGap ||
     textureSuggestions.length > 0 ||
@@ -10933,7 +10963,7 @@ function AssetHealth({
   return (
     <div className="asset-health-card">
       <strong>Asset health</strong>
-      {(hasTextureRepairWork || textureSuggestions.length > 0 || hasLooseUnmappedTextures || hasTextureAssignmentGap) && (
+      {(hasTextureRepairWork || hasLightmapRepairWork || textureSuggestions.length > 0 || hasLooseUnmappedTextures || hasTextureAssignmentGap) && (
         <div className="asset-repair-plan">
           {hasTextureRepairWork && (
             <p>
@@ -10963,6 +10993,14 @@ function AssetHealth({
               right image to each material.
             </p>
           )}
+          {hasLightmapRepairWork && (
+            <p>
+              {missingLightmapAssets.length > 0
+                ? `${missingLightmapAssets.length} lightmap file${missingLightmapAssets.length === 1 ? "" : "s"} referenced by Materials are missing from the bundle.`
+                : `${tinyLightmapAssets.length} lightmap file${tinyLightmapAssets.length === 1 ? "" : "s"} look too small to trust.`}{" "}
+              Re-run the bake or relink the material lightmap before publishing.
+            </p>
+          )}
           <div className="asset-health-actions">
             {hasTextureRepairWork && onRepair && (
               <button type="button" className="button secondary compact-button" disabled={!canRunRepair} onClick={onRepair}>
@@ -10982,7 +11020,26 @@ function AssetHealth({
                 Open Materials
               </button>
             )}
+            {hasLightmapRepairWork && onBake && (
+              <button type="button" className="button secondary compact-button" disabled={!apiConnected} onClick={onBake}>
+                <Palette size={15} aria-hidden="true" />
+                Bake Lightmaps
+              </button>
+            )}
           </div>
+        </div>
+      )}
+      {hasLightmapRepairWork && (
+        <div className="asset-health-section">
+          <span>Lightmap asset health</span>
+          {missingLightmapAssets.slice(0, 5).map((asset) => (
+            <code key={`${asset.kind}-${asset.source}`}>{asset.source}</code>
+          ))}
+          {tinyLightmapAssets.slice(0, 5).map((asset) => (
+            <code key={`${asset.kind}-${asset.source}`}>
+              {asset.source} - {formatBytes(asset.bytes ?? 0)}
+            </code>
+          ))}
         </div>
       )}
       {hasTextureAssignmentGap && (
