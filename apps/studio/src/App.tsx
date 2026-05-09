@@ -278,6 +278,7 @@ interface NavigationQuickFix {
   detail: string;
   button: string;
   action: NavigationQuickFixAction;
+  targetZoneId?: string;
 }
 
 interface NavigationRepairPathStep {
@@ -1754,11 +1755,13 @@ function navigationQuickFixForIssue(issue: NavigationQaIssue | undefined): Navig
     };
   }
   if (issue.id.startsWith("blocked-pass-") || issue.id.startsWith("blocked-walk-")) {
+    const targetZoneId = issue.id.replace(/^blocked-(?:pass|walk)-/, "");
     return {
       title: "Review blocking zones",
       detail: "A walk or door-pass zone overlaps a blocker. Use the zone map to split, shrink, or move blockers away from the intended route.",
       button: "Review Blockers",
-      action: "review-zones"
+      action: "review-zones",
+      targetZoneId
     };
   }
   return {
@@ -3874,6 +3877,12 @@ function App() {
       return;
     }
     if (quickFix.action === "review-zones") {
+      setShowNavigationZoneList(true);
+      setShowGeneratedNavigationZones(true);
+      if (quickFix.targetZoneId) {
+        setExpandedNavigationZoneIds((current) => new Set(current).add(quickFix.targetZoneId!));
+      }
+      setRepairSummary("Opened navigation zone details. Review highlighted walk/pass and block zones, then resize or split blockers away from the intended route.");
       window.setTimeout(() => document.querySelector(".zone-map")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
       return;
     }
