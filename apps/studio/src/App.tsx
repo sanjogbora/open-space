@@ -4678,6 +4678,11 @@ function App() {
         suggestion
       ]);
     }
+    const appliedCount =
+      materialsDoc?.materials.reduce((count, material) => {
+        const materialSuggestions = suggestionsByMaterial.get(material.name) ?? [];
+        return count + materialSuggestions.filter((suggestion) => !material[suggestion.field]).length;
+      }, 0) ?? 0;
     setMaterialsDoc((current) => {
       if (!current) {
         return current;
@@ -4707,6 +4712,11 @@ function App() {
         })
       };
     });
+    setRepairSummary(
+      appliedCount > 0
+        ? `Applied ${appliedCount} texture suggestion(s). Save changes, then re-open the viewer to inspect materials.`
+        : "No texture suggestions were applied because the suggested material fields are already filled."
+    );
     setNotice("saved");
   };
 
