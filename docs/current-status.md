@@ -182,6 +182,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import's viewer QA checklist now tracks exterior context and routes terrain, first-view, ground, and enclosure concerns to Environment.
 - Studio Import's viewer QA checklist now tracks starting views, walk views, and top-view framing separately from room mapping.
 - Studio Import's viewer QA checklist now tracks object visibility, top-view hiding, and navigation-role overrides separately.
+- Studio Import's movement and doorway QA checks now open the navigation-debug viewer and the copied QA report includes its URL.
 - Studio diagnostic cards now include direct action buttons that route each warning to the right repair surface, such as Controls, Materials, Rooms, Environment, Optimization, Bake, or source review.
 - Studio Publish quality-gate warnings now include direct repair actions, so publish blockers can jump to Views, Import Repair, Controls, Materials, Interactions, Optimization, or Bake.
 - Studio Publish readiness checklist rows now include direct fix actions for failed checks instead of only showing status text.

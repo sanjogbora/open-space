@@ -6173,6 +6173,7 @@ function App() {
                 stats={bundleStats}
                 objects={objectsDoc}
                 viewerUrl={viewerUrl(activeProjectId)}
+                navigationViewerUrl={navigationDebugViewerUrl(activeProjectId)}
                 onMaterials={() => setSelectedTab("materials")}
                 onEnvironment={() => setSelectedTab("environment")}
                 onNavigation={() => setSelectedTab("controls")}
@@ -6184,7 +6185,17 @@ function App() {
                 onObjects={() => setSelectedTab("objects")}
                 onPublish={() => setSelectedTab("publish")}
                 onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })}
-                onCopyReport={() => void copyText(viewerQaReportText(manifest, bundleStats, objectsDoc, viewerUrl(activeProjectId)))}
+                onCopyReport={() =>
+                  void copyText(
+                    viewerQaReportText(
+                      manifest,
+                      bundleStats,
+                      objectsDoc,
+                      viewerUrl(activeProjectId),
+                      navigationDebugViewerUrl(activeProjectId)
+                    )
+                  )
+                }
               />
             </div>
 
@@ -10831,6 +10842,7 @@ function ViewerQaChecklist({
   stats,
   objects,
   viewerUrl,
+  navigationViewerUrl,
   onMaterials,
   onEnvironment,
   onNavigation,
@@ -10848,6 +10860,7 @@ function ViewerQaChecklist({
   stats: BundleStats | null;
   objects: ObjectsDocument | null;
   viewerUrl: string;
+  navigationViewerUrl: string;
   onMaterials: () => void;
   onEnvironment: () => void;
   onNavigation: () => void;
@@ -11063,8 +11076,8 @@ function ViewerQaChecklist({
         ? "Test WASD, mouse drag, mouse wheel glide, and click-to-move on real floors."
         : "Set bounds, walk views, and at least one walk zone before testing movement.",
       status: hasNavigationSetup ? "ready" : "blocked",
-      button: hasNavigationSetup ? "Open Viewer" : "Open Controls",
-      onClick: hasNavigationSetup ? () => window.open(viewerUrl, "_blank", "noopener,noreferrer") : onNavigation
+      button: hasNavigationSetup ? "Debug Viewer" : "Open Controls",
+      onClick: hasNavigationSetup ? () => window.open(navigationViewerUrl, "_blank", "noopener,noreferrer") : onNavigation
     },
     {
       id: "doors",
@@ -11075,8 +11088,8 @@ function ViewerQaChecklist({
           ? "Click through doorways and confirm walls, windows, cupboards, and exterior bounds reject movement."
           : "If rooms are separate, draw green door passes before testing entry between rooms.",
       status: navigationIssue && errorCodes.has(navigationIssue) ? "blocked" : navigationIssue || passZones.length === 0 ? "warn" : "ready",
-      button: navigationIssue || passZones.length === 0 ? "Open Controls" : "Open Viewer",
-      onClick: navigationIssue || passZones.length === 0 ? onNavigation : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+      button: navigationIssue || passZones.length === 0 ? "Open Controls" : "Debug Viewer",
+      onClick: navigationIssue || passZones.length === 0 ? onNavigation : () => window.open(navigationViewerUrl, "_blank", "noopener,noreferrer")
     },
     {
       id: "rooms",
@@ -11148,6 +11161,7 @@ function ViewerQaChecklist({
             </div>
             <button type="button" className="button secondary compact-button readiness-action" onClick={check.onClick}>
               {check.button === "Open Viewer" && <ExternalLink size={15} aria-hidden="true" />}
+              {check.button === "Debug Viewer" && <ExternalLink size={15} aria-hidden="true" />}
               {check.button === "Open Materials" && <Palette size={15} aria-hidden="true" />}
               {check.button === "Open Environment" && <Globe2 size={15} aria-hidden="true" />}
               {check.button === "Open Bake" && <Palette size={15} aria-hidden="true" />}
@@ -11172,7 +11186,8 @@ function viewerQaReportText(
   manifest: SceneManifest,
   stats: BundleStats | null,
   objects: ObjectsDocument | null,
-  viewerUrl: string
+  viewerUrl: string,
+  navigationViewerUrl: string
 ): string {
   const diagnostics = stats?.diagnostics ?? [];
   const actionableDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "info").slice(0, 6);
@@ -11215,6 +11230,7 @@ function viewerQaReportText(
   const lines = [
     `Open Space QA Report - ${manifest.branding.title}`,
     `Viewer: ${viewerUrl}`,
+    `Navigation debug viewer: ${navigationViewerUrl}`,
     "",
     "Scene stats:",
     `- Total bundle: ${formatBytes(stats?.totalBytes ?? 0)}`,
