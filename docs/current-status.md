@@ -158,6 +158,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.
 - Analyzer now flags models that contain image textures but do not assign them to material slots, or assign them to only a tiny share of materials.
 - Studio Asset Health now surfaces texture assignment coverage and routes weak coverage directly to Materials.
+- Analyzer now counts unused texture image payloads, so GLBs with many disconnected image files are flagged before users judge a flat-looking viewer.
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
 - Studio diagnostic cards now include direct action buttons that route each warning to the right repair surface, such as Controls, Materials, Rooms, Environment, Optimization, Bake, or source review.
 - Studio Publish quality-gate warnings now include direct repair actions, so publish blockers can jump to Views, Import Repair, Controls, Materials, Interactions, Optimization, or Bake.

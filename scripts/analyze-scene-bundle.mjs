@@ -662,6 +662,23 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       .map((material, index) => (materialUsesTexture(material) ? index : undefined))
       .filter((index) => typeof index === "number")
   );
+  const materialTextureIndexSet = new Set(
+    materials
+      .flatMap((material) => materialTextureIndices(material))
+      .filter((index) => typeof index === "number")
+  );
+  const materialImageIndexSet = new Set();
+  for (const textureIndex of materialTextureIndexSet) {
+    const texture = document.textures?.[textureIndex];
+    if (!texture) {
+      continue;
+    }
+    for (const imageIndex of textureImageSourceIndices(texture)) {
+      if (imageIndex >= 0 && imageIndex < (document.images?.length ?? 0)) {
+        materialImageIndexSet.add(imageIndex);
+      }
+    }
+  }
 
   for (const mesh of meshes) {
     for (const primitive of mesh.primitives ?? []) {
@@ -965,6 +982,8 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     texturedMaterialCount,
     textureCount: document.textures?.length ?? 0,
     imageCount: document.images?.length ?? 0,
+    materialTextureImageCount: materialImageIndexSet.size,
+    unusedTextureImageCount: Math.max(0, (document.images?.length ?? 0) - materialImageIndexSet.size),
     bufferCount: document.buffers?.length ?? 0,
     bufferBytes: (document.buffers ?? []).reduce((sum, buffer) => sum + (buffer.byteLength ?? 0), 0),
     vertexCount,
@@ -1060,6 +1079,14 @@ function materialTextureIndices(value, indices = []) {
     }
   }
   return indices;
+}
+
+function textureImageSourceIndices(texture) {
+  return [
+    texture?.source,
+    texture?.extensions?.KHR_texture_basisu?.source,
+    texture?.extensions?.EXT_texture_webp?.source
+  ].filter((source) => typeof source === "number");
 }
 
 function materialIsTransparent(material) {
@@ -2515,6 +2542,10 @@ function createDiagnostics(manifest, report, graphs, controls) {
     (sum, model) => sum + (model.texturesMissingImageCount ?? 0),
     0
   );
+  const unusedTextureImageCount = report.models.reduce(
+    (sum, model) => sum + (model.unusedTextureImageCount ?? 0),
+    0
+  );
   const nonTrianglePrimitiveCount = report.models.reduce(
     (sum, model) => sum + (model.nonTrianglePrimitiveCount ?? 0),
     0
@@ -3188,6 +3219,18 @@ function createDiagnostics(manifest, report, graphs, controls) {
       message: `${texturedMaterialCount}/${report.materialCount ?? 0} material(s) reference texture maps even though ${report.imageCount ?? 0} image(s) are present.`,
       action: "Compare against the reference viewer. If detailed surfaces are missing, map textures in Materials or re-export with material texture slots intact."
     });
+  } else if (
+    (report.imageCount ?? 0) >= 4 &&
+    unusedTextureImageCount >= 2 &&
+    unusedTextureImageCount / (report.imageCount ?? 1) >= 0.5
+  ) {
+    diagnostics.push({
+      severity: "warning",
+      code: "many-unused-texture-images",
+      title: "Many texture images are unused",
+      message: `${unusedTextureImageCount}/${report.imageCount ?? 0} image texture(s) are present but not connected to any material texture slot.`,
+      action: "Open Materials to map the unused images, or re-export the source model with texture nodes connected before judging visual quality."
+    });
   } else if ((report.looseImageCount ?? 0) > 0) {
     diagnostics.push({
       severity: "info",
@@ -3654,6 +3697,8 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
   const texturedMaterialCount = models.reduce((sum, model) => sum + (model.texturedMaterialCount ?? 0), 0);
   const textureCount = models.reduce((sum, model) => sum + (model.textureCount ?? 0), 0);
   const imageCount = models.reduce((sum, model) => sum + (model.imageCount ?? 0), 0);
+  const materialTextureImageCount = models.reduce((sum, model) => sum + (model.materialTextureImageCount ?? 0), 0);
+  const unusedTextureImageCount = models.reduce((sum, model) => sum + (model.unusedTextureImageCount ?? 0), 0);
   const lightmapMaterials = (materialOverrides?.materials ?? []).filter((material) => material?.lightMapUrl);
   const objectOverrideList = objectOverrides?.objects ?? [];
   const graphNodeNames = new Set((graphs[0]?.nodes ?? []).map((node) => node.name).filter(Boolean));
@@ -3753,6 +3798,8 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     texturedMaterialCount,
     textureCount,
     imageCount,
+    materialTextureImageCount,
+    unusedTextureImageCount,
     lightmapMaterialCount: lightmapMaterials.length,
     secondaryUvLightmapMaterialCount,
     objectOverrideCount: objectOverrideList.length,
@@ -4067,6 +4114,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "model-has-no-texture-images",
     "image-textures-unused-by-materials",
     "few-materials-use-textures",
+    "many-unused-texture-images",
     "loose-texture-files",
     "dominant-untextured-material",
     "dominant-green-placeholder-material",

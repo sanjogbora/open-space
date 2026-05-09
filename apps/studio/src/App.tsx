@@ -316,6 +316,8 @@ interface BundleStats {
   texturedMaterialCount?: number;
   textureCount?: number;
   imageCount?: number;
+  materialTextureImageCount?: number;
+  unusedTextureImageCount?: number;
   embeddedImageCount?: number;
   maxTextureDimension?: number;
   oversizedTextureCount?: number;
@@ -10211,6 +10213,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "loose-textures-not-referenced",
       "image-textures-unused-by-materials",
       "few-materials-use-textures",
+      "many-unused-texture-images",
       "case-mismatched-model-resources",
       "embedded-texture-decode-failed",
       "sidecar-texture-decode-failed",
@@ -10690,7 +10693,9 @@ function AssetHealth({
   const looseImages = stats.looseImages ?? [];
   const textureSuggestions = stats.materialTextureSuggestions ?? [];
   const textureAssignmentDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
-    diagnostic.code === "image-textures-unused-by-materials" || diagnostic.code === "few-materials-use-textures"
+    diagnostic.code === "image-textures-unused-by-materials" ||
+    diagnostic.code === "few-materials-use-textures" ||
+    diagnostic.code === "many-unused-texture-images"
   );
   const hasTextureAssignmentGap =
     Boolean(textureAssignmentDiagnostic) ||
@@ -10781,6 +10786,9 @@ function AssetHealth({
             </strong>
             <small>
               {textureAssignmentDiagnostic?.title ?? "Few materials use texture images"}
+              {typeof stats.unusedTextureImageCount === "number" && (stats.imageCount ?? 0) > 0
+                ? ` - ${stats.unusedTextureImageCount}/${stats.imageCount ?? 0} image(s) unused`
+                : ""}
             </small>
           </div>
         </div>
