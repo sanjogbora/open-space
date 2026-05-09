@@ -94,6 +94,28 @@ function collectAssetReferences(manifest) {
   return assets;
 }
 
+function collectMaterialLightmapReferences(materialOverrides) {
+  const assets = [];
+  const seen = new Set();
+  for (const material of materialOverrides?.materials ?? []) {
+    const source = material?.lightMapUrl;
+    if (!source || isExternalAsset(source)) {
+      continue;
+    }
+    const key = source.replace(/\\/g, "/");
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    assets.push({
+      kind: "lightmap",
+      source,
+      label: material.name ? `${material.name} lightmap` : "Material lightmap"
+    });
+  }
+  return assets;
+}
+
 async function assetSize(reference) {
   const fullPath = path.resolve(bundleDir, reference.source);
   try {
@@ -3142,6 +3164,26 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if ((report.missingLightmapAssetCount ?? 0) > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "missing-lightmap-assets",
+      title: "Lightmap files are missing",
+      message: `${report.missingLightmapAssetCount} material lightmap file(s) referenced in Materials could not be found in the bundle.`,
+      action: "Re-run the lightmap bake or relink the missing lightmap textures in Materials before publishing."
+    });
+  }
+
+  if ((report.tinyLightmapAssetCount ?? 0) > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "tiny-lightmap-assets",
+      title: "Tiny lightmap files detected",
+      message: `${report.tinyLightmapAssetCount} material lightmap file(s) are under 4 KB, which can indicate an empty or failed bake.`,
+      action: "Open Bake, inspect the lightmap thumbnails, and rebake at a higher quality if the previews look blank or flat."
+    });
+  }
+
   if (nonTrianglePrimitiveCount > 0) {
     diagnostics.push({
       severity: "info",
@@ -3775,7 +3817,7 @@ function createDiagnostics(manifest, report, graphs, controls) {
   return diagnostics;
 }
 
-function summarize(manifest, assets, models, graphs, looseImages, materialOverrides, objectOverrides, controls) {
+function summarize(manifest, assets, models, graphs, looseImages, materialOverrides, objectOverrides, controls, materialLightmapAssets) {
   const totalBytes = assets.reduce((sum, asset) => sum + asset.bytes, 0);
   const missingAssetCount = assets.filter((asset) => !asset.exists).length;
   const modelBytes = assets
@@ -3795,6 +3837,12 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
   const materialTextureImageCount = models.reduce((sum, model) => sum + (model.materialTextureImageCount ?? 0), 0);
   const unusedTextureImageCount = models.reduce((sum, model) => sum + (model.unusedTextureImageCount ?? 0), 0);
   const lightmapMaterials = (materialOverrides?.materials ?? []).filter((material) => material?.lightMapUrl);
+  const lightmapAssetList = materialLightmapAssets ?? [];
+  const missingLightmapAssetCount = lightmapAssetList.filter((asset) => !asset.exists).length;
+  const tinyLightmapAssetCount = lightmapAssetList.filter(
+    (asset) => asset.exists && asset.bytes > 0 && asset.bytes < 4096
+  ).length;
+  const lightmapAssetBytes = lightmapAssetList.reduce((sum, asset) => sum + asset.bytes, 0);
   const objectOverrideList = objectOverrides?.objects ?? [];
   const graphNodeNames = new Set((graphs[0]?.nodes ?? []).map((node) => node.name).filter(Boolean));
   const graphNodeIds = new Set((graphs[0]?.nodes ?? []).map((node) => node.id).filter(Boolean));
@@ -3903,6 +3951,11 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     unusedTextureImageCount,
     lightmapMaterialCount: lightmapMaterials.length,
     secondaryUvLightmapMaterialCount,
+    lightmapAssetCount: lightmapAssetList.length,
+    missingLightmapAssetCount,
+    tinyLightmapAssetCount,
+    lightmapAssetBytes,
+    lightmapAssets: lightmapAssetList.slice(0, 40),
     objectOverrideCount: objectOverrideList.length,
     staleObjectOverrideCount,
     invalidObjectNavigationBehaviorCount,
@@ -4230,6 +4283,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "many-large-textures",
     "missing-texture-compression",
     "some-lightmap-secondary-uvs-missing",
+    "tiny-lightmap-assets",
     "video-textures-missing-source",
     "video-textures-missing-target",
     "video-textures-target-missing",
@@ -4289,6 +4343,7 @@ const graphs = (await Promise.all(assets.map(modelGraph))).filter(Boolean);
 const materialDocs = (await Promise.all(assets.map(modelMaterials))).filter(Boolean);
 const looseImages = await looseBundleImages(assets, models);
 const materialOverrides = await readJsonIfExists(path.resolve(bundleDir, "materials.json"));
+const materialLightmapAssets = await Promise.all(collectMaterialLightmapReferences(materialOverrides).map(assetSize));
 const objectOverrides = await readJsonIfExists(path.resolve(bundleDir, "objects.json"));
 const controls = await readJsonIfExists(path.resolve(bundleDir, "controls.json"));
 const materialTextureSuggestions = [];
@@ -4300,7 +4355,17 @@ const materialsDocument = materialDocs[0]
       materialTextureSuggestions
     )
   : undefined;
-const report = summarize(manifest, assets, models, graphs, looseImages, materialOverrides, objectOverrides, controls);
+const report = summarize(
+  manifest,
+  assets,
+  models,
+  graphs,
+  looseImages,
+  materialOverrides,
+  objectOverrides,
+  controls,
+  materialLightmapAssets
+);
 const optimizationReport = createOptimizationReport(report);
 const finalReport = {
   ...report,
