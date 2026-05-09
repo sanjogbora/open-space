@@ -10094,9 +10094,21 @@ function AssetHealth({
         <div className="asset-health-section">
           <span>Auto texture mappings</span>
           {textureSuggestions.slice(0, 5).map((suggestion) => (
-            <code key={`${suggestion.materialName}-${suggestion.field}-${suggestion.source}`}>
-              {suggestion.materialName}: {materialTextureFieldLabels[suggestion.field]} - {suggestion.source}
-            </code>
+            <div
+              key={`${suggestion.materialName}-${suggestion.field}-${suggestion.source}`}
+              className="asset-suggestion-row"
+            >
+              {canPreviewTextureAsset(suggestion.source) && (
+                <img src={projectAssetPath(projectId, suggestion.source)} alt="" loading="lazy" />
+              )}
+              <div>
+                <strong>{suggestion.materialName}</strong>
+                <small>
+                  {materialTextureFieldLabels[suggestion.field]} - score {suggestion.score}
+                </small>
+                <code>{suggestion.source}</code>
+              </div>
+            </div>
           ))}
         </div>
       )}

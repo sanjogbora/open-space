@@ -1252,13 +1252,35 @@ button.list-row {
   align-items: center;
 }
 
-.asset-texture-row img {
+.asset-texture-row img,
+.asset-suggestion-row img {
   width: 44px;
   height: 34px;
   object-fit: cover;
   border: 1px solid rgba(36, 49, 58, 0.16);
   border-radius: 5px;
   background: #e9eef2;
+}
+
+.asset-suggestion-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.asset-suggestion-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.asset-suggestion-row strong,
+.asset-suggestion-row small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .diagnostic-card {
