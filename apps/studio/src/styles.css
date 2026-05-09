@@ -1287,6 +1287,13 @@ button.list-row {
   line-height: 1.4;
 }
 
+.asset-health-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .asset-repair-plan {
   display: grid;
   gap: 8px;

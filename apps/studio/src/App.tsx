@@ -6277,6 +6277,7 @@ function App() {
                     onMaterials={() => setSelectedTab("materials")}
                     onBake={openBakeWorkflow}
                     onReviewTextureSuggestion={reviewMaterialTextureSuggestion}
+                    onCopyPlan={() => void copyText(assetHealthRepairPlanText(bundleStats, activeProjectId))}
                   />
                   <DiagnosticList
                     diagnostics={bundleStats.diagnostics ?? []}
@@ -11456,6 +11457,77 @@ function lightmapLooksFlatOrBlank(lightmap: NonNullable<LightmapBakeJobDocument[
   return lightmap.resolution >= 512 && bytesPerPixel < 0.018;
 }
 
+function assetHealthRepairPlanText(stats: BundleStats, projectId: string): string {
+  const missingAssets = (stats.assets ?? []).filter((asset) => !asset.exists);
+  const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
+  const missingResources = externalResources.filter((resource) => !resource.exists);
+  const looseImages = stats.looseImages ?? [];
+  const lightmapAssets = stats.lightmapAssets ?? [];
+  const missingLightmapAssets = lightmapAssets.filter((asset) => !asset.exists);
+  const tinyLightmapAssets = lightmapAssets.filter(
+    (asset) => asset.exists && typeof asset.bytes === "number" && asset.bytes > 0 && asset.bytes < 4096
+  );
+  const textureSuggestions = stats.materialTextureSuggestions ?? [];
+  const strongSuggestions = textureSuggestions.filter(
+    (suggestion) => textureSuggestionConfidence(suggestion.score) === "strong"
+  );
+  const reviewSuggestions = textureSuggestions.filter(
+    (suggestion) => textureSuggestionConfidence(suggestion.score) === "review"
+  );
+  const textureAssignmentDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
+    diagnostic.code === "image-textures-unused-by-materials" ||
+    diagnostic.code === "few-materials-use-textures" ||
+    diagnostic.code === "many-unused-texture-images"
+  );
+
+  const lines = [
+    `Open Space texture repair plan - ${projectId}`,
+    "",
+    "Current texture health:",
+    `- Materials using textures: ${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0}`,
+    `- Images in model: ${stats.imageCount ?? 0}`,
+    `- Loose texture-folder images: ${looseImages.length}`,
+    `- Missing referenced GLTF resources: ${missingResources.length}`,
+    `- Missing manifest assets: ${missingAssets.length}`,
+    `- Auto texture suggestions: ${textureSuggestions.length} (${strongSuggestions.length} apply-ready, ${reviewSuggestions.length} review)`,
+    `- Lightmap assets: ${stats.lightmapAssetCount ?? 0}/${stats.lightmapMaterialCount ?? 0}`,
+    `- Lightmap bytes: ${formatBytes(stats.lightmapAssetBytes ?? 0)}`,
+    "",
+    "Recommended order:",
+    missingResources.length > 0 || missingAssets.length > 0
+      ? "1. Run Import Repair after uploading the original ZIP or texture folder so missing referenced files can be copied into place."
+      : "1. Referenced model assets are present; skip path repair unless the model was reimported.",
+    strongSuggestions.length > 0
+      ? `2. Apply ${strongSuggestions.length} high-confidence texture suggestion${strongSuggestions.length === 1 ? "" : "s"} from Asset Health.`
+      : "2. No high-confidence automatic texture matches are waiting.",
+    reviewSuggestions.length > 0 || looseImages.length > 0
+      ? "3. Open Materials and review loose texture candidates against the rendered material preview before assigning weaker matches."
+      : "3. Materials do not currently need manual loose-texture review.",
+    missingLightmapAssets.length > 0 || tinyLightmapAssets.length > 0
+      ? "4. Open Bake and re-run or relink lightmaps before publishing."
+      : "4. Lightmap asset links do not show missing or tiny file issues.",
+    "5. Save changes, reopen the viewer, and compare the model against the source/reference viewer before publishing.",
+    "",
+    textureAssignmentDiagnostic ? `Texture diagnostic: ${textureAssignmentDiagnostic.title} - ${textureAssignmentDiagnostic.message}` : "",
+    missingResources.length > 0 ? "Missing GLTF resources:" : "",
+    ...missingResources.slice(0, 8).map((resource) => `- ${resource.source}`),
+    missingAssets.length > 0 ? "Missing manifest assets:" : "",
+    ...missingAssets.slice(0, 8).map((asset) => `- ${asset.source}`),
+    looseImages.length > 0 ? "Loose texture-folder images:" : "",
+    ...looseImages.slice(0, 8).map((image) => `- ${image.source} (${formatBytes(image.bytes)})`),
+    textureSuggestions.length > 0 ? "Texture suggestions:" : "",
+    ...textureSuggestions.slice(0, 12).map(
+      (suggestion) =>
+        `- ${suggestion.materialName}: ${materialTextureFieldLabels[suggestion.field]} <- ${suggestion.source} (${textureSuggestionConfidenceLabel(suggestion.score)}, score ${suggestion.score})`
+    ),
+    missingLightmapAssets.length > 0 || tinyLightmapAssets.length > 0 ? "Lightmap issues:" : "",
+    ...missingLightmapAssets.slice(0, 8).map((asset) => `- Missing ${asset.source}`),
+    ...tinyLightmapAssets.slice(0, 8).map((asset) => `- Tiny ${asset.source} (${formatBytes(asset.bytes ?? 0)})`)
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
 function AssetHealth({
   stats,
   projectId,
@@ -11468,7 +11540,8 @@ function AssetHealth({
   onRepair,
   onMaterials,
   onBake,
-  onReviewTextureSuggestion
+  onReviewTextureSuggestion,
+  onCopyPlan
 }: {
   stats: BundleStats;
   projectId: string;
@@ -11482,6 +11555,7 @@ function AssetHealth({
   onMaterials?: () => void;
   onBake?: () => void;
   onReviewTextureSuggestion?: (suggestion: MaterialTextureSuggestion) => void;
+  onCopyPlan?: () => void;
 }) {
   const missingAssets = (stats.assets ?? []).filter((asset) => !asset.exists);
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
@@ -11527,7 +11601,15 @@ function AssetHealth({
 
   return (
     <div className="asset-health-card">
-      <strong>Asset health</strong>
+      <div className="asset-health-heading">
+        <strong>Asset health</strong>
+        {onCopyPlan && (
+          <button type="button" className="button secondary compact-button" onClick={onCopyPlan}>
+            <Copy size={15} aria-hidden="true" />
+            Copy Plan
+          </button>
+        )}
+      </div>
       {(hasTextureRepairWork || hasLightmapRepairWork || textureSuggestions.length > 0 || hasLooseUnmappedTextures || hasTextureAssignmentGap) && (
         <div className="asset-repair-plan">
           {hasTextureRepairWork && (
