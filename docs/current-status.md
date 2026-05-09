@@ -125,6 +125,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Analyzer inspects embedded GLB image payloads for dimensions, invalid buffer references, and unsupported MIME types.
 - Analyzer now flags unsafe GLTF texture or buffer paths that escape the scene folder or use absolute local paths.
 - Analyzer now flags possible duplicated model instances when repeated mesh groups account for a large share of scene triangles.
+- Analyzer now treats missing or generically named ceiling/roof geometry as a visible architectural QA warning when the scene otherwise looks like a walkthrough.
 - API upload validation rejects malformed GLB containers with broken lengths, truncated chunks, invalid JSON chunks, or non-glTF 2.0 assets.
 - Analyzer now flags invalid default-scene node links, node child links, and node mesh references that can make an otherwise uploadable GLB appear blank or partial.
 - API texture repair scores duplicate loose texture candidates by relative path and texture-folder context before copying.

@@ -2942,12 +2942,13 @@ function createDiagnostics(manifest, report, graphs, controls) {
   }
 
   if (ceilingMatches === 0) {
+    const likelyArchitecturalScene = floorMatches > 0 || collisionMatches > 0 || hasWalkZones || rooms.length > 0;
     diagnostics.push({
-      severity: "info",
+      severity: likelyArchitecturalScene ? "warning" : "info",
       code: "no-named-ceiling-meshes",
       title: "No named ceiling or roof meshes found",
       message: "The model may be open at the top, or ceiling geometry may use generic object names.",
-      action: "Check the model in top/inside views. If ceilings exist but are invisible, enable double-sided materials or rename ceiling objects before import."
+      action: "Check the model in top and interior views before client delivery. If ceilings exist but are invisible, enable double-sided materials or rename ceiling/roof objects before import."
     });
   }
 
@@ -3585,6 +3586,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "focused-model-small-in-scene",
     "no-named-floor-meshes",
     "no-named-collision-meshes",
+    "no-named-ceiling-meshes",
     "missing-walk-zones",
     "disconnected-navigation-zones",
     "missing-pass-zones",

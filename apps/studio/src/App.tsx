@@ -9598,7 +9598,8 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "invalid-object-navigation-behavior",
       "unsafe-gltf-resource-paths",
       "unsupported-required-extensions",
-      "repeated-large-mesh-instances"
+      "repeated-large-mesh-instances",
+      "no-named-ceiling-meshes"
     ].includes(code)
   ) {
     return "review";
