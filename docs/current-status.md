@@ -192,6 +192,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import now treats disconnected loose texture folders as a source-export review issue instead of implying generic repair can always attach them.
 - Studio Import now routes navigation-specific diagnostics directly to the guided Controls editor instead of hiding them behind the generic repair action.
 - Studio Import now routes exterior/terrain context diagnostics directly to Environment and visual/texture diagnostics directly to Materials.
+- Studio Import can now copy a source QA handoff with malformed GLB, invalid reference, missing resource, stale override, and re-export/repair recommendations.
 - Studio/API expose Blender/Cycles lightmap bake jobs with quality presets, UV2 generation, generated lightmap assets, and material assignment.
 - Lightmap bake jobs now report generated lightmap URLs, resolutions, byte sizes, total lightmap bytes, and the exported lightmapped scene artifact in Studio.
 - Studio now shows lightmap bake QA checks and thumbnails for generated lightmaps so empty, tiny, incomplete, or low-quality bakes are visible before publish.

@@ -2619,6 +2619,84 @@ function lightmapBakePlanText({
   return lines.filter(Boolean).join("\n");
 }
 
+function sourceQaPlanText(stats: BundleStats, projectId: string): string {
+  const sourceReviewCodes = new Set([
+    "malformed-model",
+    "invalid-default-scene",
+    "default-scene-has-no-renderable-meshes",
+    "invalid-scene-node-references",
+    "invalid-node-child-references",
+    "invalid-node-mesh-references",
+    "invalid-position-accessor-shapes",
+    "invalid-normal-accessor-shapes",
+    "invalid-uv-accessor-shapes",
+    "invalid-index-accessor-shapes",
+    "invalid-material-references",
+    "invalid-texture-references",
+    "unsafe-gltf-resource-paths",
+    "unsupported-required-extensions",
+    "missing-model-resources",
+    "case-mismatched-model-resources",
+    "relocatable-texture-resources",
+    "stale-object-overrides",
+    "invalid-object-navigation-behavior",
+    "repeated-large-mesh-instances",
+    "no-named-ceiling-meshes"
+  ]);
+  const diagnostics = stats.diagnostics ?? [];
+  const sourceDiagnostics = diagnostics.filter((diagnostic) => sourceReviewCodes.has(diagnostic.code));
+  const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
+  const missingResources = externalResources.filter((resource) => !resource.exists);
+  const modelFormats = Array.from(new Set((stats.models ?? []).map((model) => model.format))).filter(Boolean);
+  const errorCount = sourceDiagnostics.filter((diagnostic) => diagnostic.severity === "error").length;
+  const warningCount = sourceDiagnostics.filter((diagnostic) => diagnostic.severity === "warning").length;
+
+  const lines = [
+    `Open Space source QA handoff - ${projectId}`,
+    "",
+    "Source/model summary:",
+    `- Model formats: ${modelFormats.length > 0 ? modelFormats.join(", ") : "unknown"}`,
+    `- Model size: ${formatBytes(stats.modelBytes)}`,
+    `- Meshes: ${stats.meshCount}`,
+    `- Materials: ${stats.materialCount}`,
+    `- Triangles: ${stats.triangleCount}`,
+    `- Embedded images: ${stats.embeddedImageCount ?? 0}`,
+    `- External resources: ${externalResources.length}`,
+    `- Missing external resources: ${missingResources.length}`,
+    "",
+    "Source QA diagnostics:",
+    `- Blocking source issues: ${errorCount}`,
+    `- Source warnings: ${warningCount}`,
+    sourceDiagnostics.length === 0
+      ? "- No source/export diagnostics are currently flagged."
+      : "",
+    ...sourceDiagnostics.slice(0, 16).map(
+      (diagnostic) =>
+        `- ${diagnostic.severity.toUpperCase()} ${diagnostic.code}: ${diagnostic.title} - ${diagnostic.message}${diagnostic.action ? ` Action: ${diagnostic.action}` : ""}`
+    ),
+    "",
+    "Recommended order:",
+    sourceDiagnostics.some((diagnostic) => diagnostic.code === "malformed-model" || diagnostic.code.startsWith("invalid-"))
+      ? "1. Re-export the source scene from Blender/SketchUp/Revit/etc. as a valid glTF 2.0/GLB, then reimport."
+      : "1. Source structure does not show a hard GLB validity blocker.",
+    missingResources.length > 0
+      ? "2. Upload the original ZIP/texture folder and run Import Repair so missing resources can be copied into the scene bundle."
+      : "2. External resource paths do not currently show missing files.",
+    sourceDiagnostics.some((diagnostic) => diagnostic.code.includes("material") || diagnostic.code.includes("texture"))
+      ? "3. Open Materials and relink texture/material slots before judging visual quality."
+      : "3. Material/texture references do not currently show source-level reference errors.",
+    sourceDiagnostics.some((diagnostic) => diagnostic.code.includes("override") || diagnostic.code.includes("navigation-behavior"))
+      ? "4. Review Objects after reimport and remove stale overrides or invalid navigation roles."
+      : "4. Object override metadata does not currently need cleanup.",
+    "5. Run Import Repair, save, then open the viewer and compare against the source/reference viewer.",
+    "",
+    missingResources.length > 0 ? "Missing external resources:" : "",
+    ...missingResources.slice(0, 12).map((resource) => `- ${resource.source}`)
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -6249,6 +6327,25 @@ function App() {
               </div>
               {repairError && <p className="error-note">{repairError}</p>}
               {repairSummary && <p className="success-note">{repairSummary}</p>}
+              {bundleStats && (
+                <div className="publish-action-card">
+                  <div>
+                    <strong>Source QA handoff</strong>
+                    <p className="quiet-note">
+                      Copy malformed-model, missing-resource, invalid-reference, and stale-override notes for source
+                      cleanup or re-export.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => void copyText(sourceQaPlanText(bundleStats, activeProjectId))}
+                  >
+                    <Copy size={16} aria-hidden="true" />
+                    Copy QA
+                  </button>
+                </div>
+              )}
               {conversionJob && conversionJob.status !== "idle" && (
                 <div className="job-step-list">
                   <div className={`job-step-row ${conversionJob.status === "completed" ? "completed" : conversionJob.status === "running" ? "pending" : "failed"}`}>
