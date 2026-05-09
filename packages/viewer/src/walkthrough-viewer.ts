@@ -1639,10 +1639,7 @@ export class WalkthroughViewer {
           continue;
         }
         this.camera.position.copy(position);
-        this.cameraTarget.set(sceneCenter.x, position.y - 0.35, sceneCenter.z);
-        if (this.camera.position.distanceTo(this.cameraTarget) < 0.5) {
-          this.cameraTarget.z -= 1;
-        }
+        this.cameraTarget.copy(this.navigationSurfaceLookTarget(surface.box, position, sceneCenter));
         this.updateAnglesFromTarget();
         this.camera.lookAt(this.cameraTarget);
         this.stableFloorY = this.camera.position.y - this.cameraHeight;
@@ -1652,6 +1649,50 @@ export class WalkthroughViewer {
     }
 
     return false;
+  }
+
+  private navigationSurfaceLookTarget(
+    surfaceBox: THREE.Box3,
+    position: THREE.Vector3,
+    sceneCenter: THREE.Vector3
+  ): THREE.Vector3 {
+    const size = surfaceBox.getSize(new THREE.Vector3());
+    const target = new THREE.Vector3(
+      THREE.MathUtils.clamp(sceneCenter.x, surfaceBox.min.x, surfaceBox.max.x),
+      position.y - 0.35,
+      THREE.MathUtils.clamp(sceneCenter.z, surfaceBox.min.z, surfaceBox.max.z)
+    );
+
+    if (position.distanceTo(target) >= 0.8) {
+      return target;
+    }
+
+    const forward = new THREE.Vector3(sceneCenter.x - position.x, 0, sceneCenter.z - position.z);
+    if (forward.lengthSq() < 0.01) {
+      if (size.z >= size.x) {
+        forward.set(0, 0, -1);
+      } else {
+        forward.set(-1, 0, 0);
+      }
+    }
+    forward.normalize().multiplyScalar(THREE.MathUtils.clamp(Math.max(size.x, size.z) * 0.32, 1, 3.5));
+    target.x = THREE.MathUtils.clamp(position.x + forward.x, surfaceBox.min.x, surfaceBox.max.x);
+    target.z = THREE.MathUtils.clamp(position.z + forward.z, surfaceBox.min.z, surfaceBox.max.z);
+
+    if (position.distanceTo(target) < 0.5) {
+      target.z = THREE.MathUtils.clamp(
+        position.z + (size.z >= size.x ? -1 : 0),
+        surfaceBox.min.z,
+        surfaceBox.max.z
+      );
+      target.x = THREE.MathUtils.clamp(
+        position.x + (size.x > size.z ? -1 : 0),
+        surfaceBox.min.x,
+        surfaceBox.max.x
+      );
+    }
+
+    return target;
   }
 
   private cameraStartsOnLikelyExteriorSurface(sceneBox: THREE.Box3): boolean {
