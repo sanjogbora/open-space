@@ -141,6 +141,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Publish history entries now keep a compact quality-gate snapshot so each version shows its ready/warning/blocked state and issue counts.
 - The deploy script now refuses to deploy a bundle whose saved quality gate is blocked unless `--allow-blocked` is passed for internal testing.
 - Deploy reports now include a compact quality-gate summary with status, issue counts, and top blockers/warnings for dry-run and CI review.
+- Deploy reports now include non-blocking deployment warnings for missing launch URLs, missing quality gates, and weak cache policy coverage.
 - Deploy dry-runs now validate deployment aggregate asset counts/bytes and report asset type breakdown plus largest assets.
 - The deploy script now maps WebAssembly, Basis, KTX2, AVIF, WebP, video, and GLB assets to explicit content types when applying per-asset S3 cache headers.
 - The deploy script now supports S3-compatible endpoint, profile, and region options for R2/Spaces/MinIO-style hosting, and Studio shows a copy-ready compatible command.

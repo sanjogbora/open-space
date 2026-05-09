@@ -236,6 +236,37 @@ function largestAssets(checks, limit = 8) {
     }));
 }
 
+function deploymentWarnings(checks, viewerBase, publicBase) {
+  const warnings = [];
+  const cachePolicy = cachePolicySummary();
+  if (!deployment.qualityGate) {
+    warnings.push({
+      code: "missing-quality-gate",
+      message: "Deployment manifest has no saved quality gate; only asset integrity was validated."
+    });
+  }
+  if (!viewerBase || !publicBase) {
+    warnings.push({
+      code: "missing-public-launch-urls",
+      message: "No viewer/public URL pair was provided, so hosted launch and embed pages will not be generated."
+    });
+  }
+  if (cachePolicy.uncategorized > 0) {
+    warnings.push({
+      code: "uncategorized-cache-policy",
+      message: `${cachePolicy.uncategorized} deployment asset(s) do not have an explicit immutable or revalidated cache policy.`
+    });
+  }
+  const heavyAssets = checks.filter((asset) => /\.(glb|gltf|ktx2|basis|webp|avif|png|jpe?g|mp4|webm)$/i.test(asset.path));
+  if (heavyAssets.length > 0 && cachePolicy.immutable === 0) {
+    warnings.push({
+      code: "no-immutable-media-cache",
+      message: "No media/model asset is marked immutable; CDN delivery may be slower and more expensive."
+    });
+  }
+  return warnings;
+}
+
 function headersFile(deployment) {
   const lines = [];
   for (const rule of deployment.headers ?? []) {
@@ -390,6 +421,7 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir, ex
     assetTypes: assetTypeBreakdown(checks),
     largestAssets: largestAssets(checks),
     cachePolicy: cachePolicySummary(),
+    deploymentWarnings: deploymentWarnings(checks, viewerBase, publicBase),
     qualityGate: deployment.qualityGate ?? null,
     qualityGateSummary: qualityGateSummary(),
     qualityGateOverride: allowBlockedQualityGate,
