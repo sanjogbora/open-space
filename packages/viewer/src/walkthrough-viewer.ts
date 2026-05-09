@@ -1924,22 +1924,27 @@ export class WalkthroughViewer {
     const verticalSnapThreshold = 0.025;
     const verticalSettleThreshold = hasIntermediateWaypoint ? Math.max(0.18, this.floorBumpTolerance() * 0.65) : 0.12;
     if (flatReached && (verticalDistance < verticalSettleThreshold || hasIntermediateWaypoint)) {
-      this.camera.position.x = target.x;
-      this.camera.position.z = target.z;
+      if (!hasIntermediateWaypoint) {
+        this.camera.position.x = target.x;
+        this.camera.position.z = target.z;
+      }
       const verticalSettled = verticalDistance <= verticalSnapThreshold;
       if (verticalSettled) {
-        this.camera.position.y = target.y;
-        this.stableFloorY = target.y - this.cameraHeight;
+        if (!hasIntermediateWaypoint) {
+          this.camera.position.y = target.y;
+          this.stableFloorY = target.y - this.cameraHeight;
+        }
         this.resetPendingFloorTransition();
       } else {
         const smoothing = this.floorHeightSmoothing();
         const previousFloorY = this.stableFloorY ?? this.camera.position.y - this.cameraHeight;
+        const targetFloorY = target.y - this.cameraHeight;
         this.camera.position.y = this.clampVerticalCameraDelta(
           this.camera.position.y,
           damp(this.camera.position.y, target.y, smoothing, delta),
           delta
         );
-        this.stableFloorY = damp(previousFloorY, target.y - this.cameraHeight, smoothing, delta);
+        this.stableFloorY = damp(previousFloorY, targetFloorY, smoothing, delta);
       }
       if (!verticalSettled && !hasIntermediateWaypoint) {
         return;
