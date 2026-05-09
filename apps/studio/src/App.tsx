@@ -6173,6 +6173,7 @@ function App() {
                 stats={bundleStats}
                 viewerUrl={viewerUrl(activeProjectId)}
                 onMaterials={() => setSelectedTab("materials")}
+                onEnvironment={() => setSelectedTab("environment")}
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
                 onViews={() => setSelectedTab("views")}
@@ -10828,6 +10829,7 @@ function ViewerQaChecklist({
   stats,
   viewerUrl,
   onMaterials,
+  onEnvironment,
   onNavigation,
   onRooms,
   onViews,
@@ -10842,6 +10844,7 @@ function ViewerQaChecklist({
   stats: BundleStats | null;
   viewerUrl: string;
   onMaterials: () => void;
+  onEnvironment: () => void;
   onNavigation: () => void;
   onRooms: () => void;
   onViews: () => void;
@@ -10936,7 +10939,14 @@ function ViewerQaChecklist({
     "stale-object-overrides",
     "invalid-object-navigation-behavior"
   ];
+  const environmentCodes = [
+    "dominant-flat-plane",
+    "initial-view-on-dominant-plane",
+    "focused-model-small-in-scene",
+    "initial-view-misses-focused-model"
+  ];
   const visualIssue = materialCodes.find((code) => diagnosticCodes.has(code));
+  const environmentIssue = environmentCodes.find((code) => diagnosticCodes.has(code));
   const lightingIssue = lightingCodes.find((code) => diagnosticCodes.has(code));
   const interactionIssue = interactionCodes.find((code) => diagnosticCodes.has(code));
   const sourceIssue = sourceExportCodes.find((code) => diagnosticCodes.has(code));
@@ -10977,6 +10987,18 @@ function ViewerQaChecklist({
       status: visualIssue && errorCodes.has(visualIssue) ? "blocked" : visualIssue ? "warn" : "ready",
       button: visualIssue ? "Open Materials" : "Open Viewer",
       onClick: visualIssue ? onMaterials : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+    },
+    {
+      id: "environment",
+      label: "Exterior context",
+      detail: environmentIssue
+        ? "The first view, terrain plane, or focused building context needs review."
+        : manifest.environment?.groundEnabled || manifest.environment?.enclosureEnabled
+          ? "Check windows, exterior views, grass/ground, and landscape enclosure scale."
+          : "Environment is in neutral/interior mode; confirm windows and outside areas do not look empty.",
+      status: environmentIssue && errorCodes.has(environmentIssue) ? "blocked" : environmentIssue ? "warn" : "ready",
+      button: environmentIssue ? "Open Environment" : "Open Viewer",
+      onClick: environmentIssue ? onEnvironment : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
     },
     {
       id: "lighting",
@@ -11083,6 +11105,7 @@ function ViewerQaChecklist({
             <button type="button" className="button secondary compact-button readiness-action" onClick={check.onClick}>
               {check.button === "Open Viewer" && <ExternalLink size={15} aria-hidden="true" />}
               {check.button === "Open Materials" && <Palette size={15} aria-hidden="true" />}
+              {check.button === "Open Environment" && <Globe2 size={15} aria-hidden="true" />}
               {check.button === "Open Bake" && <Palette size={15} aria-hidden="true" />}
               {check.button === "Open Controls" && <MapPin size={15} aria-hidden="true" />}
               {check.button === "Open Rooms" && <Layers3 size={15} aria-hidden="true" />}
@@ -11149,6 +11172,11 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     `- Source/export issues: ${sourceExportDiagnostics.length}`,
     `- Publish gate: ${publishReadiness?.status ?? "not analyzed"}`,
     "",
+    "Environment:",
+    `- Sky backdrop: ${manifest.environment?.skyBackdropEnabled === false ? "off" : "on"}`,
+    `- Ground: ${manifest.environment?.groundEnabled === false ? "off" : "on"}`,
+    `- Enclosure: ${manifest.environment?.enclosureEnabled === false ? "off" : "on"}`,
+    "",
     "Navigation setup:",
     `- Bounds: ${manifest.navigation.bounds ? "yes" : "no"}`,
     `- Walk zones: ${coverage.walkZones}`,
@@ -11175,6 +11203,7 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     "Manual test results:",
     "- Source export / model structure: ",
     "- Visual match vs reference viewer: ",
+    "- Exterior/window/context: ",
     "- Baked lighting / lightmap quality: ",
     "- WASD / mouse drag / wheel movement: ",
     "- Click-to-move floor marker and glide: ",
