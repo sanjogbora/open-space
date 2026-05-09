@@ -2338,6 +2338,9 @@ function navigationTopology(manifest, bodyRadius = 0.28) {
   const blockedPassZones = passZones.filter((zone) =>
     blockZones.some((blockZone) => navigationZonesOverlap(zone, blockZone, 0.05))
   );
+  const blockedWalkZones = walkZones.filter((zone) =>
+    blockZones.some((blockZone) => navigationZonesOverlap(zone, blockZone, 0.05))
+  );
   const narrowPassZones = passZones.filter(
     (zone) => navigationZoneNarrowestSpan(zone) < Math.max(0.42, bodyRadius * 2)
   );
@@ -2363,6 +2366,7 @@ function navigationTopology(manifest, bodyRadius = 0.28) {
     orphanPassZones,
     oneSidedPassZones,
     blockedPassZones,
+    blockedWalkZones,
     narrowPassZones,
     walkViews,
     outOfBoundsWalkViews,
@@ -3554,6 +3558,16 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if (topology.blockedWalkZones.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "walk-zones-overlap-block-zones",
+      title: "Walk zones overlap blockers",
+      message: `${topology.blockedWalkZones.length} walk zone(s) overlap a wall, boundary, or custom blocker, so users may see valid floor areas that still refuse movement.`,
+      action: "Shrink or split the block zones around the room floor, or trim the walk zone so the allowed walking area does not sit inside blockers."
+    });
+  }
+
   if (topology.narrowPassZones.length > 0) {
     const requiredSpan = Math.max(0.42, bodyRadius * 2);
     diagnostics.push({
@@ -4125,6 +4139,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "narrow-pass-zones",
     "one-sided-pass-zones",
     "pass-zones-overlap-block-zones",
+    "walk-zones-overlap-block-zones",
     "walk-views-inside-block-zones",
     "walk-views-outside-walk-zones",
     "missing-room-map",

@@ -10299,6 +10299,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "narrow-pass-zones",
       "one-sided-pass-zones",
       "pass-zones-overlap-block-zones",
+      "walk-zones-overlap-block-zones",
       "walk-views-outside-navigation-bounds",
       "walk-views-inside-block-zones",
       "walk-views-outside-walk-zones"

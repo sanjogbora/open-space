@@ -98,6 +98,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer route planning now checks actual walk/pass zone footprints before connecting zones, and uses nearest-edge bridge points for polygon doorway routes.
 - Viewer and Studio now share the same polygon-distance helper for route islands, door-pass overlap, and nearest-edge bridge checks, reducing mismatches between QA and runtime movement.
 - Studio and import diagnostics now name the disconnected walk/pass islands when route zones are split, making doorway repair easier without reading coordinates.
+- Analyzer now warns when walk zones overlap wall/boundary block zones, so Studio can explain why a floor area looks reachable but still refuses movement.
 - Viewer prunes routed click-to-move paths after visibility/grid routing so movement glides through fewer unnecessary intermediate waypoints.
 - Viewer now carries click-to-move velocity through intermediate route waypoints, so routed movement glides around corners instead of stopping at every internal point.
 - Viewer no longer snaps the camera onto intermediate click-route waypoints, reducing small lateral jumps when a routed path changes direction.
