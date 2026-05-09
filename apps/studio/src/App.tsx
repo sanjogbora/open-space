@@ -66,6 +66,15 @@ type OptimizeState = "idle" | "optimizing" | "done" | "error";
 type RepairState = "idle" | "repairing" | "done" | "error";
 type BakeState = "idle" | "baking" | "done" | "error";
 type BakePreset = "draft" | "medium" | "high" | "super";
+type LightmapBakeSettings = {
+  preset: BakePreset;
+  resolution: number;
+  samples: number;
+  margin: number;
+  maxMaterials: number;
+  denoise: boolean;
+  mode: "lighting" | "combined";
+};
 type BakePreflightIssue = {
   severity: "error" | "warning";
   message: string;
@@ -2532,6 +2541,84 @@ function publishedDeploymentChecklist(entry: PublishEntry, title: string): strin
   return lines.filter(Boolean).join("\n");
 }
 
+function lightmapBakePlanText({
+  projectId,
+  settings,
+  materialCount,
+  estimatedMaterialCount,
+  estimatedBytes,
+  preflightIssues,
+  blenderTool,
+  job
+}: {
+  projectId: string;
+  settings: LightmapBakeSettings;
+  materialCount: number;
+  estimatedMaterialCount: number;
+  estimatedBytes: number;
+  preflightIssues: readonly BakePreflightIssue[];
+  blenderTool: ToolStatusDocument["tools"][string] | undefined;
+  job: LightmapBakeJobDocument | null;
+}): string {
+  const blockingIssues = preflightIssues.filter((issue) => issue.severity === "error");
+  const warningIssues = preflightIssues.filter((issue) => issue.severity === "warning");
+  const lightmaps = job?.lightmaps ?? [];
+  const reviewLightmaps = lightmaps.filter((lightmap) => lightmapPreviewQuality(lightmap) === "warning");
+  const defaults = bakePresetDefaults[settings.preset];
+  const presetModified =
+    settings.resolution !== defaults.resolution ||
+    settings.samples !== defaults.samples ||
+    settings.margin !== defaults.margin;
+
+  const lines = [
+    `Open Space lightmap bake plan - ${projectId}`,
+    "",
+    "Current bake settings:",
+    `- Preset: ${settings.preset}${presetModified ? " (customized)" : ""}`,
+    `- Resolution: ${settings.resolution}px`,
+    `- Samples: ${settings.samples}`,
+    `- Margin: ${settings.margin}px`,
+    `- Max materials: ${settings.maxMaterials}`,
+    `- Bake pass: ${settings.mode}`,
+    `- Denoise: ${settings.denoise ? "on" : "off"}`,
+    "",
+    "Preflight estimate:",
+    `- Eligible materials: ${materialCount}`,
+    `- Materials in this run: ${estimatedMaterialCount}`,
+    `- Raw lightmap target: ${formatBytes(estimatedBytes)}`,
+    `- Blender: ${blenderTool ? (blenderTool.ready ? `ready (${blenderTool.command})` : `not ready (${blenderTool.action})`) : "unknown"}`,
+    `- Blocking issues: ${blockingIssues.length}`,
+    `- Warnings: ${warningIssues.length}`,
+    ...preflightIssues.map((issue) => `  - ${issue.severity.toUpperCase()}: ${issue.message}`),
+    "",
+    "Recommended order:",
+    blockingIssues.length > 0
+      ? "1. Fix the blocking preflight issue(s) before starting Blender."
+      : blenderTool && !blenderTool.ready
+        ? "1. Install or configure Blender, then reload Studio before baking."
+        : "1. Run the bake with the current settings.",
+    warningIssues.length > 0
+      ? "2. If this is a client review, consider Medium/High settings and reduce raw lightmap memory before baking."
+      : "2. Current settings are reasonable for a local bake.",
+    "3. Inspect generated lightmap thumbnails for blank, tiny, or flat-looking outputs.",
+    "4. Open the viewer and compare soft shadows, seams, overly dark corners, and washed-out materials before publishing.",
+    "",
+    "Last bake job:",
+    job ? `- Status: ${job.status}` : "- No bake job recorded yet.",
+    job?.message ? `- Message: ${job.message}` : "",
+    job?.outputSceneUrl ? `- Output scene: ${job.outputSceneUrl}` : "",
+    job ? `- Lightmaps: ${job.lightmapCount ?? lightmaps.length}` : "",
+    job ? `- Total lightmap bytes: ${formatBytes(job.totalLightmapBytes ?? 0)}` : "",
+    reviewLightmaps.length > 0 ? `- Review ${reviewLightmaps.length} lightmap output(s):` : "",
+    ...reviewLightmaps.slice(0, 10).map(
+      (lightmap) =>
+        `  - ${lightmap.materialName}: ${lightmap.url} (${lightmap.resolution ?? "unknown"}px, ${formatBytes(lightmap.bytes ?? 0)})`
+    )
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -2600,7 +2687,7 @@ function App() {
   const [optimizeError, setOptimizeError] = useState("");
   const [bakeState, setBakeState] = useState<BakeState>("idle");
   const [bakeError, setBakeError] = useState("");
-  const [bakeSettings, setBakeSettings] = useState({
+  const [bakeSettings, setBakeSettings] = useState<LightmapBakeSettings>({
     preset: "medium" as BakePreset,
     resolution: 1024,
     samples: 96,
@@ -7737,15 +7824,38 @@ function App() {
                         : "Checking Blender availability."}
                     </small>
                   </div>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    disabled={!canRunLightmapBake}
-                    onClick={() => void bakeLightmaps()}
-                  >
-                    <Activity size={16} aria-hidden="true" />
-                    {bakeState === "baking" ? "Baking" : "Bake"}
-                  </button>
+                  <div className="inline-actions">
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() =>
+                        void copyText(
+                          lightmapBakePlanText({
+                            projectId: activeProjectId,
+                            settings: bakeSettings,
+                            materialCount: materialCountForBake,
+                            estimatedMaterialCount: estimatedBakeMaterialCount,
+                            estimatedBytes: estimatedBakeTextureBytes,
+                            preflightIssues: bakePreflightIssues,
+                            blenderTool,
+                            job: lightmapBakeJob
+                          })
+                        )
+                      }
+                    >
+                      <Copy size={16} aria-hidden="true" />
+                      Copy Plan
+                    </button>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      disabled={!canRunLightmapBake}
+                      onClick={() => void bakeLightmaps()}
+                    >
+                      <Activity size={16} aria-hidden="true" />
+                      {bakeState === "baking" ? "Baking" : "Bake"}
+                    </button>
+                  </div>
                 </div>
                 {!canRunLightmapBake && lightmapBakeBlockedReason && bakeState !== "baking" && !bakePreflightBlocked && (
                   <p className={blenderTool && !blenderTool.ready ? "error-note" : "quiet-note"}>
