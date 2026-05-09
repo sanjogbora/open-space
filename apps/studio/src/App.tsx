@@ -6168,6 +6168,16 @@ function App() {
                 reviewTextureSuggestionCount={reviewMaterialTextureSuggestionCount}
                 onApplyTextureSuggestions={applyMaterialTextureSuggestions}
               />
+              <ViewerQaChecklist
+                manifest={manifest}
+                stats={bundleStats}
+                viewerUrl={`http://127.0.0.1:5173/?scene=${encodeURIComponent(projectScenePath(activeProjectId))}`}
+                onMaterials={() => setSelectedTab("materials")}
+                onNavigation={() => setSelectedTab("controls")}
+                onRooms={() => setSelectedTab("rooms")}
+                onViews={() => setSelectedTab("views")}
+                onPublish={() => setSelectedTab("publish")}
+              />
             </div>
 
             <div className="panel stats-panel">
@@ -10804,6 +10814,155 @@ function ImportNextSteps({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function ViewerQaChecklist({
+  manifest,
+  stats,
+  viewerUrl,
+  onMaterials,
+  onNavigation,
+  onRooms,
+  onViews,
+  onPublish
+}: {
+  manifest: SceneManifest;
+  stats: BundleStats | null;
+  viewerUrl: string;
+  onMaterials: () => void;
+  onNavigation: () => void;
+  onRooms: () => void;
+  onViews: () => void;
+  onPublish: () => void;
+}) {
+  const diagnostics = stats?.diagnostics ?? [];
+  const diagnosticCodes = new Set(diagnostics.map((diagnostic) => diagnostic.code));
+  const errorCodes = new Set(
+    diagnostics.filter((diagnostic) => diagnostic.severity === "error").map((diagnostic) => diagnostic.code)
+  );
+  const materialCodes = [
+    "dominant-green-placeholder-material",
+    "model-has-no-texture-images",
+    "loose-textures-not-referenced",
+    "image-textures-unused-by-materials",
+    "few-materials-use-textures",
+    "many-unused-texture-images",
+    "embedded-texture-decode-failed",
+    "sidecar-texture-decode-failed",
+    "textured-primitives-missing-uvs",
+    "dominant-untextured-material",
+    "tiny-texture-dimensions",
+    "extreme-texture-aspect-ratios"
+  ];
+  const navigationCodes = [
+    "missing-walk-zones",
+    "missing-pass-zones",
+    "disconnected-navigation-zones",
+    "orphan-pass-zones",
+    "narrow-pass-zones",
+    "one-sided-pass-zones",
+    "pass-zones-overlap-block-zones",
+    "walk-zones-overlap-block-zones",
+    "walk-zones-outside-navigation-bounds",
+    "pass-zones-outside-navigation-bounds",
+    "walk-views-inside-block-zones",
+    "walk-views-outside-walk-zones"
+  ];
+  const roomCodes = ["missing-room-map", "room-map-missing-bounds", "partial-room-map", "rooms-not-linked-to-views"];
+  const visualIssue = materialCodes.find((code) => diagnosticCodes.has(code));
+  const navigationIssue = navigationCodes.find((code) => diagnosticCodes.has(code));
+  const roomIssue = roomCodes.find((code) => diagnosticCodes.has(code));
+  const walkZones = enabledNavigationZones(manifest.navigation, "walk");
+  const passZones = enabledNavigationZones(manifest.navigation, "pass");
+  const hasNavigationSetup = Boolean(manifest.navigation.bounds) && walkZones.length > 0 && manifest.views.some((view) => view.kind === "walk");
+  const publishStatus = stats?.publishReadiness?.status;
+  const checks = [
+    {
+      id: "visuals",
+      label: "Visual match",
+      detail: visualIssue
+        ? "Material or texture diagnostics should be reviewed before judging model quality."
+        : "Open the viewer and compare textures, colors, glass, ceiling, and exterior context.",
+      status: visualIssue && errorCodes.has(visualIssue) ? "blocked" : visualIssue ? "warn" : "ready",
+      button: visualIssue ? "Open Materials" : "Open Viewer",
+      onClick: visualIssue ? onMaterials : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+    },
+    {
+      id: "movement",
+      label: "Movement basics",
+      detail: hasNavigationSetup
+        ? "Test WASD, mouse drag, mouse wheel glide, and click-to-move on real floors."
+        : "Set bounds, walk views, and at least one walk zone before testing movement.",
+      status: hasNavigationSetup ? "ready" : "blocked",
+      button: hasNavigationSetup ? "Open Viewer" : "Open Controls",
+      onClick: hasNavigationSetup ? () => window.open(viewerUrl, "_blank", "noopener,noreferrer") : onNavigation
+    },
+    {
+      id: "doors",
+      label: "Door and wall rules",
+      detail: navigationIssue
+        ? "Door passes, blockers, or route islands need review before room entry can be trusted."
+        : passZones.length > 0
+          ? "Click through doorways and confirm walls, windows, cupboards, and exterior bounds reject movement."
+          : "If rooms are separate, draw green door passes before testing entry between rooms.",
+      status: navigationIssue && errorCodes.has(navigationIssue) ? "blocked" : navigationIssue || passZones.length === 0 ? "warn" : "ready",
+      button: navigationIssue || passZones.length === 0 ? "Open Controls" : "Open Viewer",
+      onClick: navigationIssue || passZones.length === 0 ? onNavigation : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+    },
+    {
+      id: "rooms",
+      label: "Rooms and top view",
+      detail: roomIssue
+        ? "Room labels, floorplan regions, or view links need setup."
+        : "Check room buttons, minimap position, and top-view readability.",
+      status: roomIssue ? "warn" : "ready",
+      button: roomIssue ? "Open Rooms" : "Open Views",
+      onClick: roomIssue ? onRooms : onViews
+    },
+    {
+      id: "publish",
+      label: "Client readiness",
+      detail:
+        publishStatus === "ready"
+          ? "Publish gate is ready; use the Publish tab for versioning and deploy dry-run checks."
+          : publishStatus === "blocked"
+            ? "Publish has blockers that should be fixed before sharing."
+            : publishStatus === "warning"
+              ? "Publish has warnings; fix them or treat the build as a draft."
+              : "Run analysis before checking publish readiness.",
+      status: publishStatus === "ready" ? "ready" : publishStatus === "blocked" ? "blocked" : "warn",
+      button: "Open Publish",
+      onClick: onPublish
+    }
+  ] as const;
+
+  return (
+    <div className="import-next-steps viewer-qa-checklist">
+      <div className="compact-panel-heading">
+        <strong>Viewer QA checklist</strong>
+        <small>Use this after every import or repair</small>
+      </div>
+      <div className="publish-readiness-list">
+        {checks.map((check) => (
+          <div key={check.id} className={`readiness-row ${check.status}`}>
+            <div>
+              <span>{check.label}</span>
+              <small>{check.detail}</small>
+            </div>
+            <button type="button" className="button secondary compact-button readiness-action" onClick={check.onClick}>
+              {check.button === "Open Viewer" && <ExternalLink size={15} aria-hidden="true" />}
+              {check.button === "Open Materials" && <Palette size={15} aria-hidden="true" />}
+              {check.button === "Open Controls" && <MapPin size={15} aria-hidden="true" />}
+              {check.button === "Open Rooms" && <Layers3 size={15} aria-hidden="true" />}
+              {check.button === "Open Views" && <MapPin size={15} aria-hidden="true" />}
+              {check.button === "Open Publish" && <ExternalLink size={15} aria-hidden="true" />}
+              {check.button}
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

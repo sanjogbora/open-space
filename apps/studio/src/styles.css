@@ -891,6 +891,12 @@ button.list-row {
   font-weight: 700;
 }
 
+.readiness-row small {
+  color: #60717c;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .readiness-row strong {
   color: #24313a;
   font-size: 13px;
