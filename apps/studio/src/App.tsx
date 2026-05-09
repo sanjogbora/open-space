@@ -5342,12 +5342,20 @@ function App() {
       setSelectedTab("materials");
       return;
     }
+    if (action === "views") {
+      setSelectedTab("views");
+      return;
+    }
     if (action === "navigation") {
       setSelectedTab("controls");
       return;
     }
     if (action === "rooms") {
       setSelectedTab("rooms");
+      return;
+    }
+    if (action === "interactions") {
+      setSelectedTab("interactions");
       return;
     }
     if (action === "optimize") {
@@ -5655,8 +5663,10 @@ function App() {
                 onBake={() => void bakeLightmaps()}
                 onEnvironment={() => setSelectedTab("environment")}
                 onMaterials={() => setSelectedTab("materials")}
+                onViews={() => setSelectedTab("views")}
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
+                onInteractions={() => setSelectedTab("interactions")}
                 pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
                 onApplyTextureSuggestions={applyMaterialTextureSuggestions}
               />
@@ -5946,26 +5956,76 @@ function App() {
                 (bundleStats.publishReadiness.blockers.length > 0 ||
                   bundleStats.publishReadiness.warnings.length > 0) && (
                   <div className="diagnostic-list" aria-label="Publish quality gate details">
-                    {bundleStats.publishReadiness.blockers.map((issue) => (
-                      <div key={issue.code} className="diagnostic-card error">
-                        <AlertTriangle size={17} aria-hidden="true" />
-                        <div>
-                          <strong>{issue.title}</strong>
-                          <p>{issue.message}</p>
-                          {issue.action && <small>{issue.action}</small>}
+                    {bundleStats.publishReadiness.blockers.map((issue) => {
+                      const action = publishActionForIssue(issue.code);
+                      const actionCopy = action ? nextStepCopy(action) : undefined;
+                      return (
+                        <div key={issue.code} className="diagnostic-card error">
+                          <AlertTriangle size={17} aria-hidden="true" />
+                          <div className="diagnostic-card-main">
+                            <div>
+                              <strong>{issue.title}</strong>
+                              <p>{issue.message}</p>
+                              {issue.action && <small>{issue.action}</small>}
+                            </div>
+                            {action && actionCopy && (
+                              <button
+                                type="button"
+                                className="button secondary compact-button diagnostic-action"
+                                onClick={() => runImportDiagnosticAction(action)}
+                              >
+                                {action === "repair" && <Wrench size={15} aria-hidden="true" />}
+                                {action === "environment" && <Globe2 size={15} aria-hidden="true" />}
+                                {action === "materials" && <Palette size={15} aria-hidden="true" />}
+                                {action === "views" && <MapPin size={15} aria-hidden="true" />}
+                                {action === "navigation" && <MapPin size={15} aria-hidden="true" />}
+                                {action === "rooms" && <Layers3 size={15} aria-hidden="true" />}
+                                {action === "interactions" && <Video size={15} aria-hidden="true" />}
+                                {action === "optimize" && <Activity size={15} aria-hidden="true" />}
+                                {action === "bake" && <Palette size={15} aria-hidden="true" />}
+                                {action === "review" && <AlertTriangle size={15} aria-hidden="true" />}
+                                {actionCopy.button}
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                    {bundleStats.publishReadiness.warnings.map((issue) => (
-                      <div key={issue.code} className="diagnostic-card warning">
-                        <AlertTriangle size={17} aria-hidden="true" />
-                        <div>
-                          <strong>{issue.title}</strong>
-                          <p>{issue.message}</p>
-                          {issue.action && <small>{issue.action}</small>}
+                      );
+                    })}
+                    {bundleStats.publishReadiness.warnings.map((issue) => {
+                      const action = publishActionForIssue(issue.code);
+                      const actionCopy = action ? nextStepCopy(action) : undefined;
+                      return (
+                        <div key={issue.code} className="diagnostic-card warning">
+                          <AlertTriangle size={17} aria-hidden="true" />
+                          <div className="diagnostic-card-main">
+                            <div>
+                              <strong>{issue.title}</strong>
+                              <p>{issue.message}</p>
+                              {issue.action && <small>{issue.action}</small>}
+                            </div>
+                            {action && actionCopy && (
+                              <button
+                                type="button"
+                                className="button secondary compact-button diagnostic-action"
+                                onClick={() => runImportDiagnosticAction(action)}
+                              >
+                                {action === "repair" && <Wrench size={15} aria-hidden="true" />}
+                                {action === "environment" && <Globe2 size={15} aria-hidden="true" />}
+                                {action === "materials" && <Palette size={15} aria-hidden="true" />}
+                                {action === "views" && <MapPin size={15} aria-hidden="true" />}
+                                {action === "navigation" && <MapPin size={15} aria-hidden="true" />}
+                                {action === "rooms" && <Layers3 size={15} aria-hidden="true" />}
+                                {action === "interactions" && <Video size={15} aria-hidden="true" />}
+                                {action === "optimize" && <Activity size={15} aria-hidden="true" />}
+                                {action === "bake" && <Palette size={15} aria-hidden="true" />}
+                                {action === "review" && <AlertTriangle size={15} aria-hidden="true" />}
+                                {actionCopy.button}
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
@@ -9627,8 +9687,10 @@ function DiagnosticList({
                   {action === "repair" && <Wrench size={15} aria-hidden="true" />}
                   {action === "environment" && <Globe2 size={15} aria-hidden="true" />}
                   {action === "materials" && <Palette size={15} aria-hidden="true" />}
+                  {action === "views" && <MapPin size={15} aria-hidden="true" />}
                   {action === "navigation" && <MapPin size={15} aria-hidden="true" />}
                   {action === "rooms" && <Layers3 size={15} aria-hidden="true" />}
+                  {action === "interactions" && <Video size={15} aria-hidden="true" />}
                   {action === "optimize" && <Activity size={15} aria-hidden="true" />}
                   {action === "bake" && <Palette size={15} aria-hidden="true" />}
                   {action === "review" && <AlertTriangle size={15} aria-hidden="true" />}
@@ -9648,8 +9710,10 @@ type ImportNextStepAction =
   | "apply-textures"
   | "environment"
   | "materials"
+  | "views"
   | "navigation"
   | "rooms"
+  | "interactions"
   | "optimize"
   | "bake"
   | "review"
@@ -9701,6 +9765,9 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   ) {
     return "repair";
   }
+  if (["missing-views"].includes(code)) {
+    return "views";
+  }
   if (
     [
       "no-named-floor-meshes",
@@ -9730,6 +9797,15 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
     ].includes(code)
   ) {
     return "rooms";
+  }
+  if (
+    [
+      "video-textures-missing-source",
+      "video-textures-missing-target",
+      "video-textures-target-missing"
+    ].includes(code)
+  ) {
+    return "interactions";
   }
   if (
     [
@@ -9767,6 +9843,37 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
     ].includes(code)
   ) {
     return "review";
+  }
+  return undefined;
+}
+
+function publishActionForIssue(code: string): ImportNextStepAction | undefined {
+  const diagnosticCode = code.startsWith("diagnostic-") ? code.slice("diagnostic-".length) : code;
+  const diagnosticAction = importActionForDiagnostic(diagnosticCode);
+  if (diagnosticAction) {
+    return diagnosticAction;
+  }
+  if (code === "no-starting-views") {
+    return "views";
+  }
+  if (code === "missing-assets") {
+    return "repair";
+  }
+  if (
+    [
+      "large-uncompressed-model",
+      "mobile-triangle-budget",
+      "mobile-mesh-budget",
+      "mobile-total-size-budget",
+      "missing-gpu-texture-compression",
+      "oversized-textures",
+      "desktop-triangle-budget"
+    ].includes(code)
+  ) {
+    return "optimize";
+  }
+  if (code === "missing-navigation-bounds") {
+    return "navigation";
   }
   return undefined;
 }
@@ -9828,6 +9935,14 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
       button: "Open Materials"
     };
   }
+  if (action === "views") {
+    return {
+      action,
+      title: "Create views",
+      detail: "Open Views to create a starting camera and client-facing room viewpoints.",
+      button: "Open Views"
+    };
+  }
   if (action === "navigation") {
     return {
       action,
@@ -9842,6 +9957,14 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
       title: "Map rooms",
       detail: "Open Rooms to create room labels, floorplan areas, and links from room buttons to saved walk views.",
       button: "Open Rooms"
+    };
+  }
+  if (action === "interactions") {
+    return {
+      action,
+      title: "Fix interactions",
+      detail: "Open Interactions to finish video screens, hotspots, links, and object toggles.",
+      button: "Open Interactions"
     };
   }
   return {
@@ -9864,8 +9987,10 @@ function ImportNextSteps({
   onBake,
   onEnvironment,
   onMaterials,
+  onViews,
   onNavigation,
   onRooms,
+  onInteractions,
   pendingTextureSuggestionCount = 0,
   onApplyTextureSuggestions
 }: {
@@ -9880,8 +10005,10 @@ function ImportNextSteps({
   onBake: () => void;
   onEnvironment: () => void;
   onMaterials: () => void;
+  onViews: () => void;
   onNavigation: () => void;
   onRooms: () => void;
+  onInteractions: () => void;
   pendingTextureSuggestionCount?: number;
   onApplyTextureSuggestions?: () => void;
 }) {
@@ -9930,10 +10057,14 @@ function ImportNextSteps({
               ? onEnvironment
             : step.action === "materials"
               ? onMaterials
+            : step.action === "views"
+              ? onViews
             : step.action === "navigation"
               ? onNavigation
               : step.action === "rooms"
                 ? onRooms
+            : step.action === "interactions"
+              ? onInteractions
             : step.action === "optimize"
               ? onOptimize
               : step.action === "bake"
@@ -9952,8 +10083,10 @@ function ImportNextSteps({
               {step.action === "apply-textures" && <Palette size={15} aria-hidden="true" />}
               {step.action === "environment" && <Globe2 size={15} aria-hidden="true" />}
               {step.action === "materials" && <Palette size={15} aria-hidden="true" />}
+              {step.action === "views" && <MapPin size={15} aria-hidden="true" />}
               {step.action === "navigation" && <MapPin size={15} aria-hidden="true" />}
               {step.action === "rooms" && <Layers3 size={15} aria-hidden="true" />}
+              {step.action === "interactions" && <Video size={15} aria-hidden="true" />}
               {step.action === "optimize" && <Activity size={15} aria-hidden="true" />}
               {step.action === "bake" && <Palette size={15} aria-hidden="true" />}
               {step.action === "review" && <AlertTriangle size={15} aria-hidden="true" />}
