@@ -1755,6 +1755,92 @@ function likelyNonWalkSurfaceName(name) {
   ].some((keyword) => normalized.includes(keyword));
 }
 
+function likelyWalkSurfaceName(name) {
+  const normalized = String(name || "").toLowerCase();
+  return [
+    "floor",
+    "flooring",
+    "ground",
+    "slab",
+    "tile",
+    "tiles",
+    "parquet",
+    "woodfloor",
+    "pavement",
+    "patio",
+    "terrace",
+    "balcony",
+    "deck",
+    "walk",
+    "navmesh"
+  ].some((keyword) => normalized.includes(keyword));
+}
+
+function flatSurfaceNavigationRisk(graph, sceneBounds) {
+  if (!graph || !sceneBounds) {
+    return undefined;
+  }
+  const sceneArea = Math.max(1, boundsArea(sceneBounds));
+  const sceneHeight = Math.max(0.001, sceneBounds.max[1] - sceneBounds.min[1]);
+  const lowBandTop = sceneBounds.min[1] + Math.max(1.4, sceneHeight * 0.45);
+  const flatSurfaces = [];
+  const flatNonWalkSurfaces = [];
+  const walkLikeLevels = new Map();
+  for (const node of graph.nodes ?? []) {
+    if (!node.bounds) {
+      continue;
+    }
+    const size = boundsSize(node.bounds);
+    if (!size) {
+      continue;
+    }
+    const width = Math.abs(size[0]);
+    const height = Math.abs(size[1]);
+    const depth = Math.abs(size[2]);
+    const area = width * depth;
+    const minAxis = Math.min(width, depth);
+    const centerY = (node.bounds.min[1] + node.bounds.max[1]) / 2;
+    const flat = height <= Math.max(0.12, minAxis * 0.08);
+    if (!flat || area < 0.08 || centerY > lowBandTop) {
+      continue;
+    }
+    const name = `${node.name ?? ""} ${node.meshName ?? ""}`;
+    const exterior = likelyExteriorPlaneName(name) && area > sceneArea * 0.18;
+    if (exterior) {
+      continue;
+    }
+    const entry = {
+      name: node.name || node.meshName || "Flat surface",
+      area,
+      centerY,
+      walkLike: likelyWalkSurfaceName(name),
+      nonWalk: likelyNonWalkSurfaceName(name)
+    };
+    flatSurfaces.push(entry);
+    if (entry.nonWalk && !entry.walkLike) {
+      flatNonWalkSurfaces.push(entry);
+    }
+    if (entry.walkLike && !entry.nonWalk && area >= Math.max(0.45, sceneArea * 0.004)) {
+      const level = Math.round(centerY / 0.18) * 0.18;
+      const current = walkLikeLevels.get(level) ?? { level, count: 0, area: 0 };
+      current.count += 1;
+      current.area += area;
+      walkLikeLevels.set(level, current);
+    }
+  }
+  return {
+    flatSurfaceCount: flatSurfaces.length,
+    flatNonWalkSurfaceCount: flatNonWalkSurfaces.length,
+    flatNonWalkExamples: flatNonWalkSurfaces
+      .sort((a, b) => b.area - a.area)
+      .slice(0, 4)
+      .map((surface) => surface.name),
+    walkLikeLevels: [...walkLikeLevels.values()]
+      .filter((level) => level.area >= 0.45)
+      .sort((a, b) => a.level - b.level)
+  };
+}
+
 function dominantFlatPlane(graph, sceneBounds) {
   if (!graph || !sceneBounds) {
     return undefined;
@@ -2262,6 +2348,7 @@ function createDiagnostics(manifest, report, graphs, controls) {
   const size = boundsSize(bounds);
   const largestDimension = size ? Math.max(...size.map(Math.abs)) : 0;
   const flatPlane = dominantFlatPlane(graph, bounds);
+  const flatSurfaceRisk = flatSurfaceNavigationRisk(graph, bounds);
   const focusedBounds = graphFocusBounds(graph);
   const repeatedInstances = repeatedLargeMeshInstances(graph, bounds);
   const modelScale = manifest.rendering?.modelScale ?? 1;
@@ -3093,6 +3180,31 @@ function createDiagnostics(manifest, report, graphs, controls) {
       title: "No named floor meshes found",
       message: "Click-to-move will fall back to geometric floor detection, which can include tabletops, roofs, or large flat objects.",
       action: "Add floor keywords that match your model object names, create a dedicated navmesh object, or add a walk zone in Controls."
+    });
+  }
+
+  if ((flatSurfaceRisk?.flatNonWalkSurfaceCount ?? 0) >= 4 && !hasWalkZones) {
+    const examples = flatSurfaceRisk.flatNonWalkExamples.join(", ");
+    diagnostics.push({
+      severity: "warning",
+      code: "flat-object-surfaces-may-catch-clicks",
+      title: "Flat furniture/object surfaces may catch clicks",
+      message: `${flatSurfaceRisk.flatNonWalkSurfaceCount} low flat object surface(s) look like tabletops, counters, beds, cabinets, or decor${examples ? `, including ${examples}` : ""}.`,
+      action: "Add explicit walk zones for real floors or mark those objects as collision/ignored in Objects so click-to-move does not treat them like walkable floor."
+    });
+  }
+
+  if ((flatSurfaceRisk?.walkLikeLevels?.length ?? 0) >= 3 && !hasWalkZones) {
+    const levels = flatSurfaceRisk.walkLikeLevels
+      .slice(0, 5)
+      .map((level) => level.level.toFixed(2))
+      .join(", ");
+    diagnostics.push({
+      severity: "info",
+      code: "multiple-floor-heights-detected",
+      title: "Multiple floor heights detected",
+      message: `Floor-like surfaces appear at ${flatSurfaceRisk.walkLikeLevels.length} height levels${levels ? ` (${levels})` : ""}.`,
+      action: "Use explicit walk zones and door/step passes for stairs, thresholds, balconies, or split levels so click navigation does not hop between unrelated surfaces."
     });
   }
 
