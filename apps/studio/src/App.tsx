@@ -6180,6 +6180,7 @@ function App() {
                 onInteractions={() => setSelectedTab("interactions")}
                 onOptimize={() => setSelectedTab("optimization")}
                 onPublish={() => setSelectedTab("publish")}
+                onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })}
                 onCopyReport={() => void copyText(viewerQaReportText(manifest, bundleStats, viewerUrl(activeProjectId)))}
               />
             </div>
@@ -10834,6 +10835,7 @@ function ViewerQaChecklist({
   onInteractions,
   onOptimize,
   onPublish,
+  onReviewDiagnostics,
   onCopyReport
 }: {
   manifest: SceneManifest;
@@ -10847,6 +10849,7 @@ function ViewerQaChecklist({
   onInteractions: () => void;
   onOptimize: () => void;
   onPublish: () => void;
+  onReviewDiagnostics: () => void;
   onCopyReport: () => void;
 }) {
   const diagnostics = stats?.diagnostics ?? [];
@@ -10916,9 +10919,27 @@ function ViewerQaChecklist({
     "mobile-materials",
     "mobile-meshes"
   ];
+  const sourceExportCodes = [
+    "malformed-model",
+    "invalid-default-scene",
+    "default-scene-has-no-renderable-meshes",
+    "invalid-scene-node-references",
+    "invalid-node-child-references",
+    "invalid-node-mesh-references",
+    "invalid-position-accessor-shapes",
+    "invalid-index-accessor-shapes",
+    "invalid-material-references",
+    "invalid-texture-references",
+    "missing-model-resources",
+    "unsafe-gltf-resource-paths",
+    "unsupported-required-extensions",
+    "stale-object-overrides",
+    "invalid-object-navigation-behavior"
+  ];
   const visualIssue = materialCodes.find((code) => diagnosticCodes.has(code));
   const lightingIssue = lightingCodes.find((code) => diagnosticCodes.has(code));
   const interactionIssue = interactionCodes.find((code) => diagnosticCodes.has(code));
+  const sourceIssue = sourceExportCodes.find((code) => diagnosticCodes.has(code));
   const performanceDiagnosticIssue = performanceDiagnosticCodes.find((code) => diagnosticCodes.has(code));
   const performancePublishIssue = [
     ...(stats?.publishReadiness?.blockers ?? []),
@@ -10937,6 +10958,16 @@ function ViewerQaChecklist({
   const hasNavigationSetup = Boolean(manifest.navigation.bounds) && walkZones.length > 0 && manifest.views.some((view) => view.kind === "walk");
   const publishStatus = stats?.publishReadiness?.status;
   const checks = [
+    {
+      id: "source",
+      label: "Source export health",
+      detail: sourceIssue
+        ? "The GLB/export structure, resources, or saved overrides need source review before repair work is trusted."
+        : "No blocking source-export diagnostics are listed for this bundle.",
+      status: sourceIssue && errorCodes.has(sourceIssue) ? "blocked" : sourceIssue ? "warn" : "ready",
+      button: sourceIssue ? "Review Diagnostics" : "Open Viewer",
+      onClick: sourceIssue ? onReviewDiagnostics : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+    },
     {
       id: "visuals",
       label: "Visual match",
@@ -11059,6 +11090,7 @@ function ViewerQaChecklist({
               {check.button === "Open Interactions" && <Video size={15} aria-hidden="true" />}
               {check.button === "Open Optimization" && <Activity size={15} aria-hidden="true" />}
               {check.button === "Open Publish" && <ExternalLink size={15} aria-hidden="true" />}
+              {check.button === "Review Diagnostics" && <AlertTriangle size={15} aria-hidden="true" />}
               {check.button}
             </button>
           </div>
@@ -11071,6 +11103,25 @@ function ViewerQaChecklist({
 function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, viewerUrl: string): string {
   const diagnostics = stats?.diagnostics ?? [];
   const actionableDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "info").slice(0, 6);
+  const sourceExportDiagnostics = diagnostics.filter((diagnostic) =>
+    [
+      "malformed-model",
+      "invalid-default-scene",
+      "default-scene-has-no-renderable-meshes",
+      "invalid-scene-node-references",
+      "invalid-node-child-references",
+      "invalid-node-mesh-references",
+      "invalid-position-accessor-shapes",
+      "invalid-index-accessor-shapes",
+      "invalid-material-references",
+      "invalid-texture-references",
+      "missing-model-resources",
+      "unsafe-gltf-resource-paths",
+      "unsupported-required-extensions",
+      "stale-object-overrides",
+      "invalid-object-navigation-behavior"
+    ].includes(diagnostic.code)
+  );
   const coverage = navigationCoverage(manifest);
   const videoTextureCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
   const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;
@@ -11095,6 +11146,7 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     `- Lightmaps: ${stats?.lightmapAssetCount ?? 0}/${stats?.lightmapMaterialCount ?? 0}`,
     `- Geometry compression: ${stats ? geometryCompressionLabel(stats) : "unknown"}`,
     `- Texture compression: ${stats ? textureCompressionLabel(stats) : "unknown"}`,
+    `- Source/export issues: ${sourceExportDiagnostics.length}`,
     `- Publish gate: ${publishReadiness?.status ?? "not analyzed"}`,
     "",
     "Navigation setup:",
@@ -11121,6 +11173,7 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     ...(publishIssues.length > 0 ? publishIssues.map((issue) => `- ${issue}`) : ["- No publish blockers or warnings listed."]),
     "",
     "Manual test results:",
+    "- Source export / model structure: ",
     "- Visual match vs reference viewer: ",
     "- Baked lighting / lightmap quality: ",
     "- WASD / mouse drag / wheel movement: ",

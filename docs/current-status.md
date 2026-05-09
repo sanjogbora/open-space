@@ -178,6 +178,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.
 - Studio Import's viewer QA checklist now tracks TV screens, hotspots, links, and object toggles as a separate interaction test area.
 - Studio Import's viewer QA checklist now tracks mobile performance and routes optimization/compression/mobile-budget risks to Optimization.
+- Studio Import's viewer QA checklist now tracks source-export health so malformed GLBs, missing resources, invalid references, and stale overrides are separated from normal repair work.
 - Studio diagnostic cards now include direct action buttons that route each warning to the right repair surface, such as Controls, Materials, Rooms, Environment, Optimization, Bake, or source review.
 - Studio Publish quality-gate warnings now include direct repair actions, so publish blockers can jump to Views, Import Repair, Controls, Materials, Interactions, Optimization, or Bake.
 - Studio Publish readiness checklist rows now include direct fix actions for failed checks instead of only showing status text.
