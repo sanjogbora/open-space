@@ -2124,7 +2124,10 @@ export class WalkthroughViewer {
     } else {
       this.pendingFloorSamples += 1;
     }
-    const requiredSamples = Math.abs(levelDelta) >= Math.max(0.55, this.cameraHeight * 0.32) ? 2 : 4;
+    const activeNavigation =
+      Boolean(this.moveTarget) || this.movePath.length > 0 || Math.abs(this.wheelVelocity) > 0.01 || this.keys.size > 0;
+    const largeLevelChange = Math.abs(levelDelta) >= Math.max(0.55, this.cameraHeight * 0.32);
+    const requiredSamples = activeNavigation ? (largeLevelChange ? 5 : 8) : largeLevelChange ? 3 : 5;
     return this.pendingFloorSamples >= requiredSamples ? floorY : referenceFloorY;
   }
 
@@ -3180,8 +3183,8 @@ export class WalkthroughViewer {
     if (delta <= 0 || Math.abs(targetY - currentY) < 0.0001) {
       return targetY;
     }
-    const maxRise = Math.max(0.34, this.cameraHeight * 0.34) * delta;
-    const maxDrop = Math.max(0.52, this.cameraHeight * 0.48) * delta;
+    const maxRise = Math.max(0.22, this.cameraHeight * 0.22) * delta;
+    const maxDrop = Math.max(0.34, this.cameraHeight * 0.32) * delta;
     return THREE.MathUtils.clamp(targetY, currentY - maxDrop, currentY + maxRise);
   }
 
