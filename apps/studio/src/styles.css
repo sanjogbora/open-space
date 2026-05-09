@@ -707,6 +707,18 @@ button.list-row {
   line-height: 1.5;
 }
 
+.json-details {
+  display: grid;
+  gap: 10px;
+}
+
+.json-details summary {
+  cursor: pointer;
+  color: #52636f;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .publish-panel {
   display: grid;
   align-content: start;
@@ -1873,6 +1885,10 @@ button.list-row {
   color: #667681;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.zone-details-toggle span {
+  flex: 1;
 }
 
 .zone-editor-list {

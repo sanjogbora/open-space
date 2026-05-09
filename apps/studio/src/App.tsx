@@ -2274,6 +2274,7 @@ function App() {
   const [navigationPaintShape, setNavigationPaintShape] = useState<NavigationPaintShape>("rectangle");
   const [navigationPolygonDraft, setNavigationPolygonDraft] = useState<NavigationPolygonDraft | null>(null);
   const [showGeneratedNavigationZones, setShowGeneratedNavigationZones] = useState(false);
+  const [showNavigationZoneList, setShowNavigationZoneList] = useState(false);
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
 
@@ -8862,6 +8863,23 @@ function App() {
                         </div>
                       </div>
                     )}
+                    <div className="zone-helper-strip zone-details-toggle">
+                      <strong>{visibleNavigationZones.length} visible zone(s)</strong>
+                      <span>
+                        Use the map and guided repair buttons for normal fixes. Open details only for labels, exact
+                        sizes, zone roles, or polygon points.
+                      </span>
+                      <div className="inline-actions">
+                        <button
+                          type="button"
+                          className="button secondary compact-button"
+                          onClick={() => setShowNavigationZoneList((current) => !current)}
+                        >
+                          {showNavigationZoneList ? "Hide Details" : "Show Details"}
+                        </button>
+                      </div>
+                    </div>
+                    {showNavigationZoneList && (
                     <div className="zone-editor-list">
                       {visibleNavigationZones.map((zone) => {
                         const advancedOpen = expandedNavigationZoneIds.has(zone.id);
@@ -9086,6 +9104,7 @@ function App() {
                         </p>
                       )}
                     </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -9098,7 +9117,10 @@ function App() {
                 <FileJson size={18} aria-hidden="true" />
                 <h2>controls.json</h2>
               </div>
-              <pre className="json-preview">{JSON.stringify(controlsDoc, null, 2)}</pre>
+              <details className="json-details">
+                <summary>Show raw controls JSON</summary>
+                <pre className="json-preview">{JSON.stringify(controlsDoc, null, 2)}</pre>
+              </details>
             </div>
           </section>
         )}
