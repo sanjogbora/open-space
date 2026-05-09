@@ -132,6 +132,35 @@ function studioRepairUrl(manifestUrl: string, failure: NavigationFailure): strin
   return url.href;
 }
 
+function navigationRepairLabel(failure: NavigationFailure): string {
+  if (failure.repairAction === "add-walk-zone") {
+    return "Add walk patch";
+  }
+  if (failure.repairAction === "add-door-pass") {
+    return "Add door pass";
+  }
+  if (failure.repairAction === "adjust-blocker") {
+    return "Adjust blocker";
+  }
+  if (failure.repairAction === "tune-steps") {
+    return "Tune step limits";
+  }
+  return "Inspect clicked area";
+}
+
+function navigationDebugLabel(failure: NavigationFailure): string {
+  if (failure.repairAction === "add-walk-zone") {
+    return "Show walk areas";
+  }
+  if (failure.repairAction === "add-door-pass") {
+    return "Show door passes";
+  }
+  if (failure.repairAction === "adjust-blocker") {
+    return "Show blockers";
+  }
+  return "Show zones";
+}
+
 function isMaterialVariantInteraction(
   interaction: SceneInteraction
 ): interaction is MaterialVariantInteraction {
@@ -666,11 +695,14 @@ function App() {
             <div>
               <strong>Navigation blocked</strong>
               <span>{navigationFailure.message}</span>
+              <div className="navigation-repair-pill">
+                Recommended fix: {navigationRepairLabel(navigationFailure)}
+              </div>
               <small>{navigationFailure.repairHint}</small>
             </div>
             <div className="navigation-toast-actions">
               <button type="button" onClick={() => setDebugZones(true)}>
-                Show zones
+                {navigationDebugLabel(navigationFailure)}
               </button>
               {navigationRepairUrl && (
                 <a href={navigationRepairUrl} target="_blank" rel="noreferrer">

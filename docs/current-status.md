@@ -10,6 +10,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - If a clicked point is slightly outside a walk zone, the viewer now searches nearby reachable floor points before failing.
 - Door/opening clicks keep a projected floor target for routing or repair even when the first target is outside the current walk zone.
 - Viewer repair links include camera position so Studio can orient door-pass repair zones toward the attempted route.
+- Viewer navigation blocked messages now show a recommended repair type and context-specific zone/debug action.
 - Studio now scrolls directly to the guided repair card when opened from a viewer Navigation blocked / Fix in Studio link.
 - Studio door-pass repair can also add a missing target-side walk patch so the clicked room becomes reachable.
 - Auto-generated walk zones now fall back to detected floor geometry when they miss a valid room floor, while authored zones remain strict.

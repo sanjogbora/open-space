@@ -617,6 +617,18 @@ button {
   line-height: 1.35;
 }
 
+.navigation-repair-pill {
+  width: fit-content;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border: 1px solid rgba(7, 135, 255, 0.4);
+  border-radius: 999px;
+  color: #ffffff;
+  background: rgba(7, 135, 255, 0.22);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .navigation-toast-actions {
   display: flex;
   flex-wrap: wrap;
