@@ -1916,10 +1916,30 @@ export class WalkthroughViewer {
     const flatCompletionDelta = target.clone().sub(this.camera.position);
     flatCompletionDelta.y = 0;
     const flatCompletionDistance = flatCompletionDelta.length();
-    if (flatCompletionDistance < 0.035 && verticalDistance < 0.12) {
-      this.camera.position.copy(target);
-      this.stableFloorY = target.y - this.cameraHeight;
-      this.resetPendingFloorTransition();
+    const flatReached = flatCompletionDistance < 0.035;
+    const verticalSnapThreshold = 0.025;
+    const verticalSettleThreshold = 0.12;
+    if (flatReached && (verticalDistance < verticalSettleThreshold || this.movePath.length > 0)) {
+      this.camera.position.x = target.x;
+      this.camera.position.z = target.z;
+      const verticalSettled = verticalDistance <= verticalSnapThreshold;
+      if (verticalSettled) {
+        this.camera.position.y = target.y;
+        this.stableFloorY = target.y - this.cameraHeight;
+        this.resetPendingFloorTransition();
+      } else {
+        const smoothing = this.floorHeightSmoothing();
+        const previousFloorY = this.stableFloorY ?? this.camera.position.y - this.cameraHeight;
+        this.camera.position.y = this.clampVerticalCameraDelta(
+          this.camera.position.y,
+          damp(this.camera.position.y, target.y, smoothing, delta),
+          delta
+        );
+        this.stableFloorY = damp(previousFloorY, target.y - this.cameraHeight, smoothing, delta);
+      }
+      if (!verticalSettled && this.movePath.length === 0) {
+        return;
+      }
       this.clickMoveVelocity = 0;
       const nextWaypoint = this.movePath.shift();
       if (nextWaypoint) {

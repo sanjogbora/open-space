@@ -26,6 +26,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer navigation failures now distinguish oversized step/level changes from ordinary wall or route blocks.
 - Viewer exposes height-glide and floor-bump controls so imported models with ridges or raised thresholds can be tuned without code changes.
 - Click-to-move targets and route waypoints now normalize small floor bumps to the current walking level, reducing camera hop at rugs, slab lips, and minor thresholds.
+- Click-to-move waypoint arrival now keeps horizontal route progress while small eye-height differences settle smoothly instead of snapping at each waypoint.
 - Studio Controls includes movement presets for smooth interiors, threshold/stair-heavy models, and stricter clean-floor navigation.
 - Studio Controls now exposes body radius, so narrow doorways and over-blocked routes can be tuned without changing viewer code.
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.
