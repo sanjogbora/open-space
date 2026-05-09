@@ -6178,6 +6178,7 @@ function App() {
                 onViews={() => setSelectedTab("views")}
                 onBake={openBakeWorkflow}
                 onInteractions={() => setSelectedTab("interactions")}
+                onOptimize={() => setSelectedTab("optimization")}
                 onPublish={() => setSelectedTab("publish")}
                 onCopyReport={() => void copyText(viewerQaReportText(manifest, bundleStats, viewerUrl(activeProjectId)))}
               />
@@ -10831,6 +10832,7 @@ function ViewerQaChecklist({
   onViews,
   onBake,
   onInteractions,
+  onOptimize,
   onPublish,
   onCopyReport
 }: {
@@ -10843,6 +10845,7 @@ function ViewerQaChecklist({
   onViews: () => void;
   onBake: () => void;
   onInteractions: () => void;
+  onOptimize: () => void;
   onPublish: () => void;
   onCopyReport: () => void;
 }) {
@@ -10893,9 +10896,35 @@ function ViewerQaChecklist({
     "video-textures-missing-target",
     "video-textures-target-missing"
   ];
+  const performanceDiagnosticCodes = [
+    "missing-geometry-compression",
+    "missing-texture-compression",
+    "oversized-texture-dimensions",
+    "many-large-textures",
+    "repeated-large-mesh-instances"
+  ];
+  const performancePublishCodes = [
+    "large-uncompressed-model",
+    "mobile-triangle-budget",
+    "mobile-mesh-budget",
+    "mobile-total-size-budget",
+    "missing-gpu-texture-compression",
+    "oversized-textures",
+    "mobile-total-bytes",
+    "mobile-model-bytes",
+    "mobile-triangles",
+    "mobile-materials",
+    "mobile-meshes"
+  ];
   const visualIssue = materialCodes.find((code) => diagnosticCodes.has(code));
   const lightingIssue = lightingCodes.find((code) => diagnosticCodes.has(code));
   const interactionIssue = interactionCodes.find((code) => diagnosticCodes.has(code));
+  const performanceDiagnosticIssue = performanceDiagnosticCodes.find((code) => diagnosticCodes.has(code));
+  const performancePublishIssue = [
+    ...(stats?.publishReadiness?.blockers ?? []),
+    ...(stats?.publishReadiness?.warnings ?? [])
+  ].find((issue) => performancePublishCodes.includes(issue.code));
+  const performanceIssue = performanceDiagnosticIssue ?? performancePublishIssue?.code;
   const navigationIssue = navigationCodes.find((code) => diagnosticCodes.has(code));
   const roomIssue = roomCodes.find((code) => diagnosticCodes.has(code));
   const videoTextureCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
@@ -10975,6 +11004,18 @@ function ViewerQaChecklist({
       onClick: interactionIssue || interactionCount === 0 ? onInteractions : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
     },
     {
+      id: "performance",
+      label: "Mobile performance",
+      detail: performanceIssue
+        ? "Optimization, compression, or mobile budget warnings should be reviewed before sharing."
+        : stats
+          ? `Check load time and smoothness; ${stats.triangleCount} triangles, ${stats.meshCount} meshes, ${formatBytes(stats.totalBytes)} total bundle.`
+          : "Run analysis before checking mobile performance.",
+      status: performanceIssue && (performanceDiagnosticIssue ? errorCodes.has(performanceDiagnosticIssue) : false) ? "blocked" : performanceIssue || !stats ? "warn" : "ready",
+      button: performanceIssue || !stats ? "Open Optimization" : "Open Viewer",
+      onClick: performanceIssue || !stats ? onOptimize : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+    },
+    {
       id: "publish",
       label: "Client readiness",
       detail:
@@ -11016,6 +11057,7 @@ function ViewerQaChecklist({
               {check.button === "Open Rooms" && <Layers3 size={15} aria-hidden="true" />}
               {check.button === "Open Views" && <MapPin size={15} aria-hidden="true" />}
               {check.button === "Open Interactions" && <Video size={15} aria-hidden="true" />}
+              {check.button === "Open Optimization" && <Activity size={15} aria-hidden="true" />}
               {check.button === "Open Publish" && <ExternalLink size={15} aria-hidden="true" />}
               {check.button}
             </button>
@@ -11044,12 +11086,15 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     `Viewer: ${viewerUrl}`,
     "",
     "Scene stats:",
+    `- Total bundle: ${formatBytes(stats?.totalBytes ?? 0)}`,
     `- Model size: ${formatBytes(stats?.modelBytes ?? 0)}`,
     `- Triangles: ${stats?.triangleCount ?? 0}`,
     `- Meshes: ${stats?.meshCount ?? 0}`,
     `- Materials: ${stats?.materialCount ?? 0}`,
     `- Textured materials: ${stats?.texturedMaterialCount ?? 0}/${stats?.materialCount ?? 0}`,
     `- Lightmaps: ${stats?.lightmapAssetCount ?? 0}/${stats?.lightmapMaterialCount ?? 0}`,
+    `- Geometry compression: ${stats ? geometryCompressionLabel(stats) : "unknown"}`,
+    `- Texture compression: ${stats ? textureCompressionLabel(stats) : "unknown"}`,
     `- Publish gate: ${publishReadiness?.status ?? "not analyzed"}`,
     "",
     "Navigation setup:",
@@ -11083,6 +11128,7 @@ function viewerQaReportText(manifest: SceneManifest, stats: BundleStats | null, 
     "- Doorway entry and wall/window blocking: ",
     "- Room buttons, minimap, and top view: ",
     "- TV screens, hotspots, links, and toggles: ",
+    "- Mobile load/performance: ",
     "- Most annoying issue: "
   ];
   return lines.join("\n");
