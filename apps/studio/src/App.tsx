@@ -499,6 +499,7 @@ interface PublishCheck {
   ready: boolean;
   detail: string;
   blocking?: boolean;
+  action?: ImportNextStepAction;
 }
 
 interface VideoSurfaceCandidate {
@@ -2841,7 +2842,8 @@ function App() {
         label: "Starting views",
         ready: (manifest?.views.length ?? 0) > 0,
         detail: `${manifest?.views.length ?? 0} configured`,
-        blocking: true
+        blocking: true,
+        action: "views"
       },
       {
         id: "assets",
@@ -2851,21 +2853,24 @@ function App() {
           bundleStats && bundleStats.missingAssetCount > 0
             ? `${bundleStats.missingAssetCount} missing`
             : "All present",
-        blocking: true
+        blocking: true,
+        action: "repair"
       },
       {
         id: "diagnostics",
         label: "Blocking diagnostics",
         ready: errorDiagnostics.length === 0,
         detail: errorDiagnostics.length > 0 ? `${errorDiagnostics.length} error(s)` : "No errors",
-        blocking: true
+        blocking: true,
+        action: errorDiagnostics[0] ? importActionForDiagnostic(errorDiagnostics[0].code) ?? "review" : "review"
       },
       {
         id: "navigation",
         label: "Navigation hard checks",
         ready: navigationErrorCount === 0,
         detail: navigationErrorCount > 0 ? `${navigationErrorCount} error(s)` : "No errors",
-        blocking: true
+        blocking: true,
+        action: "navigation"
       },
       {
         id: "production",
@@ -2878,19 +2883,26 @@ function App() {
             : bundleStats.publishReadiness?.status === "warning"
               ? `${bundleStats.publishReadiness.warnings.length} warning(s)`
               : "Ready",
-        blocking: true
+        blocking: true,
+        action: publishBlockers[0]
+          ? publishActionForIssue(publishBlockers[0].code) ?? "review"
+          : bundleStats?.publishReadiness?.warnings[0]
+            ? publishActionForIssue(bundleStats.publishReadiness.warnings[0].code) ?? "review"
+            : "review"
       },
       {
         id: "geometry",
         label: "Geometry compression",
         ready: geometryCompressionLabel(bundleStats) !== "None",
-        detail: geometryCompressionLabel(bundleStats)
+        detail: geometryCompressionLabel(bundleStats),
+        action: "optimize"
       },
       {
         id: "texture",
         label: "Texture transfer compression",
         ready: textureCompressionLabel(bundleStats) !== "None" || (bundleStats?.imageCount ?? 0) === 0,
-        detail: (bundleStats?.imageCount ?? 0) === 0 ? "No textures" : textureCompressionLabel(bundleStats)
+        detail: (bundleStats?.imageCount ?? 0) === 0 ? "No textures" : textureCompressionLabel(bundleStats),
+        action: "optimize"
       }
     ];
   }, [bundleStats, manifest, navigationIssues]);
@@ -5953,8 +5965,28 @@ function App() {
                       check.ready ? "readiness-row ready" : check.blocking ? "readiness-row blocked" : "readiness-row warn"
                     }
                   >
-                    <span>{check.label}</span>
-                    <strong>{check.detail}</strong>
+                    <div>
+                      <span>{check.label}</span>
+                      <strong>{check.detail}</strong>
+                    </div>
+                    {!check.ready && check.action && (
+                      <button
+                        type="button"
+                        className="button secondary compact-button readiness-action"
+                        onClick={() => runImportDiagnosticAction(check.action!)}
+                      >
+                        {check.action === "repair" && <Wrench size={15} aria-hidden="true" />}
+                        {check.action === "materials" && <Palette size={15} aria-hidden="true" />}
+                        {check.action === "views" && <MapPin size={15} aria-hidden="true" />}
+                        {check.action === "navigation" && <MapPin size={15} aria-hidden="true" />}
+                        {check.action === "rooms" && <Layers3 size={15} aria-hidden="true" />}
+                        {check.action === "interactions" && <Video size={15} aria-hidden="true" />}
+                        {check.action === "optimize" && <Activity size={15} aria-hidden="true" />}
+                        {check.action === "bake" && <Palette size={15} aria-hidden="true" />}
+                        {check.action === "review" && <AlertTriangle size={15} aria-hidden="true" />}
+                        {nextStepCopy(check.action).button}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

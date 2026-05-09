@@ -147,6 +147,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
 - Studio diagnostic cards now include direct action buttons that route each warning to the right repair surface, such as Controls, Materials, Rooms, Environment, Optimization, Bake, or source review.
 - Studio Publish quality-gate warnings now include direct repair actions, so publish blockers can jump to Views, Import Repair, Controls, Materials, Interactions, Optimization, or Bake.
+- Studio Publish readiness checklist rows now include direct fix actions for failed checks instead of only showing status text.
 - Studio Import now treats disconnected loose texture folders as a source-export review issue instead of implying generic repair can always attach them.
 - Studio Import now routes navigation-specific diagnostics directly to the guided Controls editor instead of hiding them behind the generic repair action.
 - Studio Import now routes exterior/terrain context diagnostics directly to Environment and visual/texture diagnostics directly to Materials.
