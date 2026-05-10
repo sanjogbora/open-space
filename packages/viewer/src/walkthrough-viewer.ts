@@ -3430,12 +3430,12 @@ export class WalkthroughViewer {
       }
       const recoveredTarget = this.findReachableTargetNear(nextTarget, this.camera.position);
       if (recoveredTarget) {
-        const markerPoint = this.floorMarkerPointForTarget(recoveredTarget.target);
-        if (recoveredTarget.route) {
-          this.startClickRoute(recoveredTarget.route, markerPoint);
-        } else {
-          this.startClickMove(recoveredTarget.target, markerPoint);
-        }
+        this.startRecoveredNavigationTarget(recoveredTarget);
+        return true;
+      }
+      const approachTarget = this.findReachableApproachTarget(nextTarget, this.camera.position);
+      if (approachTarget) {
+        this.startRecoveredNavigationTarget(approachTarget);
         return true;
       }
       this.emitNavigationFailure(
@@ -3458,12 +3458,12 @@ export class WalkthroughViewer {
       }
       const recoveredTarget = this.findReachableTargetNear(nextTarget, this.camera.position);
       if (recoveredTarget) {
-        const markerPoint = this.floorMarkerPointForTarget(recoveredTarget.target);
-        if (recoveredTarget.route) {
-          this.startClickRoute(recoveredTarget.route, markerPoint);
-        } else {
-          this.startClickMove(recoveredTarget.target, markerPoint);
-        }
+        this.startRecoveredNavigationTarget(recoveredTarget);
+        return true;
+      }
+      const approachTarget = this.findReachableApproachTarget(nextTarget, this.camera.position);
+      if (approachTarget) {
+        this.startRecoveredNavigationTarget(approachTarget);
         return true;
       }
       const bestFailureDetail = this.routeSearchFailureDetail ?? routeFailureDetail;
@@ -3523,6 +3523,15 @@ export class WalkthroughViewer {
     return markerPoint;
   }
 
+  private startRecoveredNavigationTarget(recoveredTarget: RecoveredNavigationTarget): void {
+    const markerPoint = this.floorMarkerPointForTarget(recoveredTarget.target);
+    if (recoveredTarget.route) {
+      this.startClickRoute(recoveredTarget.route, markerPoint);
+    } else {
+      this.startClickMove(recoveredTarget.target, markerPoint);
+    }
+  }
+
   private normalizeClickRouteHeights(route: THREE.Vector3[]): THREE.Vector3[] {
     const normalized: THREE.Vector3[] = [];
     let origin = this.camera.position;
@@ -3559,25 +3568,65 @@ export class WalkthroughViewer {
   ): RecoveredNavigationTarget | undefined {
     const candidates = this.nearbyNavigationCandidates(target);
     for (const candidate of candidates) {
-      const directFailure = this.navigationFailureDetail(candidate, origin);
-      if (directFailure) {
-        if (directFailure.reason === "blocked-collision" || directFailure.reason === "blocked-step") {
-          const route = this.findNavigationRoute(candidate, origin);
-          if (route) {
-            return { target: candidate, route };
-          }
-        }
-        continue;
-      }
-      if (!this.navigationRouteFailureDetail(candidate, origin)) {
-        return { target: candidate };
-      }
-      const route = this.findNavigationRoute(candidate, origin);
-      if (route) {
-        return { target: candidate, route };
+      const reachable = this.reachableNavigationTargetForCandidate(candidate, origin);
+      if (reachable) {
+        return reachable;
       }
     }
     return undefined;
+  }
+
+  private findReachableApproachTarget(
+    target: THREE.Vector3,
+    origin: THREE.Vector3
+  ): RecoveredNavigationTarget | undefined {
+    const flatDelta = target.clone().sub(origin);
+    flatDelta.y = 0;
+    const distance = flatDelta.length();
+    if (distance < Math.max(0.9, this.collisionBodyRadius() * 3.5)) {
+      return undefined;
+    }
+
+    for (const fraction of [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42, 0.34, 0.26, 0.18]) {
+      const candidate = origin.clone().add(flatDelta.clone().multiplyScalar(fraction));
+      candidate.y = target.y;
+      const floorY = this.sampleGeometryFloorY(candidate, {
+        maxDelta: Math.max(
+          this.controls.maxStepDown ?? this.maxStepDown,
+          this.controls.maxStepUp ?? this.maxStepUp,
+          this.cameraHeight * 0.5
+        )
+      });
+      if (typeof floorY === "number") {
+        candidate.y = floorY + this.cameraHeight;
+      }
+      const reachable = this.reachableNavigationTargetForCandidate(candidate, origin);
+      if (reachable) {
+        return reachable;
+      }
+    }
+    return undefined;
+  }
+
+  private reachableNavigationTargetForCandidate(
+    candidate: THREE.Vector3,
+    origin: THREE.Vector3
+  ): RecoveredNavigationTarget | undefined {
+    const directFailure = this.navigationFailureDetail(candidate, origin);
+    if (directFailure) {
+      if (directFailure.reason === "blocked-collision" || directFailure.reason === "blocked-step") {
+        const route = this.findNavigationRoute(candidate, origin);
+        if (route) {
+          return { target: candidate, route };
+        }
+      }
+      return undefined;
+    }
+    if (!this.navigationRouteFailureDetail(candidate, origin)) {
+      return { target: candidate };
+    }
+    const route = this.findNavigationRoute(candidate, origin);
+    return route ? { target: candidate, route } : undefined;
   }
 
   private nearbyNavigationCandidates(target: THREE.Vector3): THREE.Vector3[] {

@@ -60,6 +60,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Bundle analysis now warns when saved object overrides are stale after reimport or contain invalid navigation behavior values.
 - Viewer initial-camera repair avoids likely exterior/grass planes when it can recover to a better navigation surface.
 - Viewer doorway recovery treats named/transparent door panels as portal surfaces, then validates the floor beyond through normal bounds and route checks.
+- When a clicked room target is disconnected, the viewer now tries a last reachable approach point along the route, so room-entry clicks can still glide the user up to the doorway/current island instead of doing nothing.
 - Bundle analysis warns when the first camera view appears to start on a dominant exterior/terrain plane.
 - Bundle analysis warns when the first camera view misses the focused building footprint in terrain-heavy scenes.
 - Publish readiness now carries terrain-dominance, poor first-view, focused-bounds, and missing navigation-name diagnostics into the Publish tab.
