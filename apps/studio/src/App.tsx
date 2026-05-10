@@ -6725,6 +6725,16 @@ function App() {
                 <h2>Optimization Profiles</h2>
               </div>
 
+              <VisualGuideCard
+                title="Performance review"
+                detail="Optimize only after the model looks correct, then compare the optimized artifact before publishing."
+                steps={[
+                  "Choose Mobile for weak devices, Balanced for normal sharing, or Desktop for richer scenes.",
+                  "Run optimization and compare size, triangle, material, and texture warnings.",
+                  "Switch between Original and Optimized if the viewer quality changes too much."
+                ]}
+              />
+
               <div className="publish-action-card">
                 <div>
                   <strong>Optimize Scene Bundle</strong>
@@ -6914,6 +6924,16 @@ function App() {
                 <Globe2 size={18} aria-hidden="true" />
                 <h2>Publish</h2>
               </div>
+
+              <VisualGuideCard
+                title="Client-ready publish"
+                detail="Treat publishing as the final gate after visual, movement, room, interaction, lighting, and mobile checks are clear."
+                steps={[
+                  "Fix every blocking readiness row before creating a share link.",
+                  "Publish a versioned bundle and open the generated URL.",
+                  "Copy the embed or deployment checklist only after the published viewer passes the same manual test."
+                ]}
+              />
 
               <div className="publish-action-card">
                 <div>
@@ -7320,6 +7340,16 @@ function App() {
                     <Trash2 size={17} aria-hidden="true" />
                   </button>
                 </div>
+
+                <VisualGuideCard
+                  title="Camera view setup"
+                  detail="Saved views should match the room buttons and give users reliable starting points."
+                  steps={[
+                    "Create one walk view per important room or doorway decision point.",
+                    "Use a top view for plan navigation and a walk view for each bottom button.",
+                    "After editing positions, reopen the viewer and click each room button."
+                  ]}
+                />
 
                 <div className="field-grid">
                   <label>
@@ -9075,6 +9105,16 @@ function App() {
                 <h2>Objects</h2>
                 <small>{sceneGraph?.nodes.length ?? 0}</small>
               </div>
+              <VisualGuideCard
+                className="compact"
+                title="Object cleanup"
+                detail="Use object roles when one mesh is confusing navigation, top view, or presentation."
+                steps={[
+                  "Hide ceiling-heavy or exterior-only objects from top view when they cover the plan.",
+                  "Mark floors as Walk on, walls or furniture as Collision, and helper meshes as Ignore navigation.",
+                  "Retest blocked clicks after changing any object role."
+                ]}
+              />
               {sceneGraph?.nodes.map((node) => {
                 const override = objectsDoc?.objects.find((object) => object.id === node.id);
                 return (
@@ -10663,6 +10703,15 @@ function App() {
                 <Globe2 size={18} aria-hidden="true" />
                 <h2>Environment</h2>
               </div>
+              <VisualGuideCard
+                title="Exterior and window backdrop"
+                detail="Set the outside context before judging whether the model looks hollow or unfinished."
+                steps={[
+                  "Use Interior for enclosed units, Exterior for grass or landscape outside windows, and Review for scale/debug checks.",
+                  "Keep ground and enclosure on when windows or balconies expose empty space.",
+                  "Adjust ground height so the landscape sits below floors without cutting through the model."
+                ]}
+              />
               <div className="environment-preset-card">
                 <div>
                   <strong>Environment presets</strong>

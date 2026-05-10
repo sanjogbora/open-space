@@ -200,7 +200,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Repair Center now has a primary hero action for the next visual fix, and empty progress tiles are disabled so the overview does not create dead clicks.
 - Repair Center cards now say which visual panel they open, such as Import repair, Materials review, Controls zone map, Rooms map, screen planner, Bake setup, or the viewer.
 - Repair Center cards now include a visual verification cue so users know how to confirm each fix worked before moving on.
-- Studio target panels now show visual guide cards for Import, Materials, Rooms, Interactions, and Controls so Repair Center handoffs stay guided after the jump.
+- Studio target panels now show visual guide cards for Import, Materials, Rooms, Interactions, Controls, Views, Objects, Environment, Optimization, and Publish so Repair Center handoffs stay guided after the jump.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
 - Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.
