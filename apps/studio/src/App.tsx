@@ -259,6 +259,12 @@ interface NavigationRepairDiagnosis {
   checks: string[];
 }
 
+interface NavigationRepairPlanStep {
+  badge: string;
+  title: string;
+  detail: string;
+}
+
 interface NavigationQaIssue {
   id: string;
   severity: "error" | "warning" | "info";
@@ -1048,6 +1054,49 @@ function navigationRepairDiagnosis(
       "If the model geometry is unusual, inspect the object role and generated zones."
     ]
   };
+}
+
+function navigationRepairPlanSteps(
+  draft: NavigationRepairDraft,
+  recommendation: NavigationRepairRecommendation | null
+): NavigationRepairPlanStep[] {
+  let failureTitle = "The click needs review";
+  let failureDetail = "Studio could not classify that movement cleanly from the viewer data.";
+
+  if (draft.reason === "route-not-found") {
+    failureTitle = "The room is not connected";
+    failureDetail = "The target floor exists, but there is no trusted path through the doorway or opening yet.";
+  } else if (draft.reason === "outside-walk-zone" || draft.reason === "no-walkable-hit") {
+    failureTitle = "The click is outside trusted floor";
+    failureDetail = "The viewer does not currently treat that spot as a place where someone can stand.";
+  } else if (draft.reason === "blocked-step") {
+    failureTitle = "A height change stopped movement";
+    failureDetail = "The route crosses a threshold, step, or ridge that is larger than the current movement limits.";
+  } else if (draft.reason === "blocked-collision") {
+    failureTitle = draft.blockerName ? `${draft.blockerName} is blocking the route` : "An object is blocking the route";
+    failureDetail = "The viewer found wall-like geometry or a block zone before it could reach the clicked point.";
+  } else if (draft.reason === "outside-bounds") {
+    failureTitle = "The click is outside the allowed boundary";
+    failureDetail = "The point is beyond the project's navigation bounds, so the viewer refuses to move there.";
+  }
+
+  return [
+    {
+      badge: "1",
+      title: failureTitle,
+      detail: failureDetail
+    },
+    {
+      badge: "2",
+      title: recommendation?.primaryLabel ?? "Apply a repair",
+      detail: recommendation?.detail ?? "Use the recommended action or the zone map if this area should be reachable."
+    },
+    {
+      badge: "3",
+      title: "Save and retry",
+      detail: "Save Changes, open the debug viewer, and repeat the same click to confirm the path now works."
+    }
+  ];
 }
 
 function navigationRepairActionLabel(action: string | undefined): string {
@@ -9379,6 +9428,17 @@ function App() {
                             </button>
                           </div>
                         )}
+                        <div className="repair-playbook" aria-label="Simple repair steps">
+                          {navigationRepairPlanSteps(navigationRepairDraft, repairRecommendation).map((step) => (
+                            <div key={step.badge} className="repair-playbook-step">
+                              <span aria-hidden="true">{step.badge}</span>
+                              <div>
+                                <strong>{step.title}</strong>
+                                <p>{step.detail}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                         <div className="repair-action-grid" aria-label="Navigation repair actions">
                           {viewerRepairCanBridgeIslands && (
                             <button

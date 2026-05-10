@@ -1918,6 +1918,53 @@ button.list-row {
   color: #49697a;
 }
 
+.repair-playbook {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.repair-playbook-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid #d6e3ec;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.repair-playbook-step > span {
+  width: 26px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #087fe7;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.repair-playbook-step strong,
+.repair-playbook-step p {
+  margin: 0;
+}
+
+.repair-playbook-step strong {
+  color: #182026;
+  font-size: 13px;
+}
+
+.repair-playbook-step p {
+  margin-top: 4px;
+  color: #52636f;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .repair-diagnosis {
   display: grid;
   grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
@@ -3355,6 +3402,7 @@ code {
   .editor-layout,
   .bundle-grid,
   .repair-diagnosis,
+  .repair-playbook,
   .repair-action-grid,
   .navigation-repair-path {
     grid-template-columns: 1fr;

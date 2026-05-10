@@ -35,6 +35,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Controls now exposes body radius, so narrow doorways and over-blocked routes can be tuned without changing viewer code.
 - Studio advanced rendering controls now expose tone mapping and exposure, and the viewer applies those settings so visual mismatch against reference GLB viewers can be tuned without code changes.
 - Click-to-move now holds eye height across transient raised strips when the destination is on the same level, reducing threshold/ridge bounce during smooth room-to-room glides.
+- Studio's viewer repair card now shows a three-step plain-language playbook before the advanced blocker/coordinate details, so non-technical users can understand why a click failed and what to try first.
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
