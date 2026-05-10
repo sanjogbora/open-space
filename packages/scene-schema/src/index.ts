@@ -138,10 +138,14 @@ export interface QualityProfile {
   antialias: boolean;
 }
 
+export type ToneMappingMode = "none" | "linear" | "reinhard" | "cineon" | "aces";
+
 export interface RenderingConfig {
   doubleSidedMaterials?: boolean;
   relightUnlitMaterials?: boolean;
   modelScale?: number;
+  toneMapping?: ToneMappingMode;
+  exposure?: number;
 }
 
 export interface EnvironmentConfig {
@@ -468,6 +472,18 @@ export function isRenderingConfig(value: unknown): value is RenderingConfig {
   }
   return (
     (value["doubleSidedMaterials"] === undefined || typeof value["doubleSidedMaterials"] === "boolean") &&
+    (value["relightUnlitMaterials"] === undefined || typeof value["relightUnlitMaterials"] === "boolean") &&
+    (value["toneMapping"] === undefined ||
+      value["toneMapping"] === "none" ||
+      value["toneMapping"] === "linear" ||
+      value["toneMapping"] === "reinhard" ||
+      value["toneMapping"] === "cineon" ||
+      value["toneMapping"] === "aces") &&
+    (value["exposure"] === undefined ||
+      (typeof value["exposure"] === "number" &&
+        Number.isFinite(value["exposure"]) &&
+        value["exposure"] > 0 &&
+        value["exposure"] <= 4)) &&
     (value["modelScale"] === undefined ||
       (typeof value["modelScale"] === "number" &&
         Number.isFinite(value["modelScale"]) &&

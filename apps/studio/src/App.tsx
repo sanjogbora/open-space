@@ -9710,6 +9710,38 @@ function App() {
                           <span>Relight flat/unlit materials</span>
                         </label>
                         <label>
+                          <span>Tone Mapping</span>
+                          <select
+                            value={manifest.rendering?.toneMapping ?? "aces"}
+                            onChange={(event) => {
+                              const toneMapping = event.target.value as "none" | "linear" | "reinhard" | "cineon" | "aces";
+                              updateRendering((rendering) => ({
+                                ...rendering,
+                                toneMapping
+                              }));
+                            }}
+                          >
+                            <option value="aces">ACES cinematic</option>
+                            <option value="linear">Linear match</option>
+                            <option value="reinhard">Reinhard soft</option>
+                            <option value="cineon">Cineon filmic</option>
+                            <option value="none">None/raw</option>
+                          </select>
+                        </label>
+                        <NumberField
+                          label="Exposure"
+                          min={0.1}
+                          max={4}
+                          step={0.05}
+                          value={manifest.rendering?.exposure ?? 1.05}
+                          onChange={(value) =>
+                            updateRendering((rendering) => ({
+                              ...rendering,
+                              exposure: value
+                            }))
+                          }
+                        />
+                        <label>
                           <span>Floor Keywords</span>
                           <input
                             value={keywordList(manifest.navigation.floorMeshNames)}

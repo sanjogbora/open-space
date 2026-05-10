@@ -223,8 +223,8 @@ export class WalkthroughViewer {
       powerPreference: "high-performance"
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMapping = this.rendererToneMapping();
+    this.renderer.toneMappingExposure = this.rendererExposure();
     this.renderer.shadowMap.enabled = selectedQuality?.shadows ?? true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setClearColor("#d8dde2", 1);
@@ -248,6 +248,29 @@ export class WalkthroughViewer {
     this.installEvents();
     this.resize();
     this.applyInitialCamera();
+  }
+
+  private rendererToneMapping(): THREE.ToneMapping {
+    switch (this.manifest.rendering?.toneMapping) {
+      case "none":
+        return THREE.NoToneMapping;
+      case "linear":
+        return THREE.LinearToneMapping;
+      case "reinhard":
+        return THREE.ReinhardToneMapping;
+      case "cineon":
+        return THREE.CineonToneMapping;
+      case "aces":
+      default:
+        return THREE.ACESFilmicToneMapping;
+    }
+  }
+
+  private rendererExposure(): number {
+    const exposure = this.manifest.rendering?.exposure;
+    return typeof exposure === "number" && Number.isFinite(exposure)
+      ? THREE.MathUtils.clamp(exposure, 0.1, 4)
+      : 1.05;
   }
 
   async start(): Promise<void> {
