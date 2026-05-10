@@ -228,6 +228,10 @@ function looseTextureNameLooksGeneric(source: string): boolean {
   return usefulTextureTokens(fileName).length === 0;
 }
 
+function materialAssignedTextureCount(material: MaterialOverride): number {
+  return materialTextureFields.filter((field) => Boolean(material[field])).length;
+}
+
 function textureSuggestionConfidence(score: number): TextureSuggestionConfidence {
   return score >= highConfidenceTextureSuggestionScore ? "strong" : "review";
 }
@@ -3858,6 +3862,27 @@ function App() {
         textureSuggestionConfidence(suggestion.score) === "review"
       );
     }).length;
+  }, [bundleStats?.materialTextureSuggestions, materialsDoc]);
+  const materialTextureSuggestionStatusByName = useMemo(() => {
+    const status = new Map<string, { pending: number; review: number }>();
+    if (!materialsDoc || !bundleStats?.materialTextureSuggestions) {
+      return status;
+    }
+    const materialsByName = new Map(materialsDoc.materials.map((material) => [material.name, material]));
+    for (const suggestion of bundleStats.materialTextureSuggestions) {
+      const material = materialsByName.get(suggestion.materialName);
+      if (!material || material[suggestion.field]) {
+        continue;
+      }
+      const current = status.get(suggestion.materialName) ?? { pending: 0, review: 0 };
+      if (textureSuggestionConfidence(suggestion.score) === "strong") {
+        current.pending += 1;
+      } else {
+        current.review += 1;
+      }
+      status.set(suggestion.materialName, current);
+    }
+    return status;
   }, [bundleStats?.materialTextureSuggestions, materialsDoc]);
   const appliedMaterialTextureSuggestionCount = Math.max(
     0,
@@ -8053,17 +8078,28 @@ function App() {
                 <h2>Materials</h2>
                 <small>{materialsDoc?.materials.length ?? 0}</small>
               </div>
-              {materialsDoc?.materials.map((material) => (
-                <button
-                  key={material.id}
-                  type="button"
-                  className={selectedMaterialId === material.id ? "list-row active" : "list-row"}
-                  onClick={() => setSelectedMaterialId(material.id)}
-                >
-                  <span>{material.name}</span>
-                  <small>{material.baseColor ?? "no color"}</small>
-                </button>
-              ))}
+              {materialsDoc?.materials.map((material) => {
+                const suggestionStatus = materialTextureSuggestionStatusByName.get(material.name);
+                const assignedTextureCount = materialAssignedTextureCount(material);
+                const materialStatus = suggestionStatus?.pending
+                  ? `${suggestionStatus.pending} suggested texture${suggestionStatus.pending === 1 ? "" : "s"} ready`
+                  : suggestionStatus?.review
+                    ? `${suggestionStatus.review} texture match${suggestionStatus.review === 1 ? "" : "es"} need review`
+                    : assignedTextureCount > 0
+                      ? `${assignedTextureCount} texture map${assignedTextureCount === 1 ? "" : "s"} assigned`
+                      : "no texture maps";
+                return (
+                  <button
+                    key={material.id}
+                    type="button"
+                    className={selectedMaterialId === material.id ? "list-row active" : "list-row"}
+                    onClick={() => setSelectedMaterialId(material.id)}
+                  >
+                    <span>{material.name}</span>
+                    <small>{materialStatus}</small>
+                  </button>
+                );
+              })}
               {!materialsDoc && <p className="empty-list">No materials generated.</p>}
             </div>
 
