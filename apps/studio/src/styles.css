@@ -328,6 +328,11 @@ h2 {
   width: 100%;
 }
 
+.repair-center-side-actions {
+  display: grid;
+  gap: 8px;
+}
+
 .repair-center-progress {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));

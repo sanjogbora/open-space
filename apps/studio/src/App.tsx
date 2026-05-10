@@ -11966,10 +11966,23 @@ function RepairCenter({
             <span>blockers</span>
             <small>{warningCount} warning{warningCount === 1 ? "" : "s"}</small>
           </div>
-          <button type="button" className="button primary repair-center-next" onClick={() => runRepairCenterItem(currentItem)}>
-            {repairCenterIcon(currentItem.action)}
-            {currentButtonLabel}
-          </button>
+          <div className="repair-center-side-actions">
+            <button type="button" className="button primary repair-center-next" onClick={() => runRepairCenterItem(currentItem)}>
+              {repairCenterIcon(currentItem.action)}
+              {currentButtonLabel}
+            </button>
+            {currentItem.action !== "test" && (
+              <button
+                type="button"
+                className="button secondary repair-center-next"
+                disabled={!stats}
+                onClick={() => window.open(viewerUrl, "_blank", "noopener,noreferrer")}
+              >
+                <ExternalLink size={16} aria-hidden="true" />
+                Test Viewer
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
