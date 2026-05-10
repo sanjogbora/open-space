@@ -11468,6 +11468,8 @@ function ViewerQaChecklist({
   const hiddenTopViewObjectCount = objects?.objects.filter((object) => object.hideInTopView).length ?? 0;
   const navigationRoleObjectCount =
     objects?.objects.filter((object) => object.navigationBehavior && object.navigationBehavior !== "default").length ?? 0;
+  const toneMappingLabel = manifest.rendering?.toneMapping ?? "aces";
+  const exposureLabel = (manifest.rendering?.exposure ?? 1.05).toFixed(2);
   const videoTextureCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
   const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;
   const linkCount = manifest.interactions.filter((interaction) => interaction.kind === "link").length;
@@ -11497,6 +11499,14 @@ function ViewerQaChecklist({
       status: visualIssue && errorCodes.has(visualIssue) ? "blocked" : visualIssue ? "warn" : "ready",
       button: visualIssue ? "Open Materials" : "Open Viewer",
       onClick: visualIssue ? onMaterials : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+    },
+    {
+      id: "render-profile",
+      label: "Render profile",
+      detail: `Tone mapping is ${toneMappingLabel}; exposure is ${exposureLabel}. If a reference GLB viewer looks closer, try Linear match or None/raw before changing materials.`,
+      status: "ready",
+      button: "Open Controls",
+      onClick: onNavigation
     },
     {
       id: "environment",
@@ -11717,6 +11727,8 @@ function viewerQaReportText(
     `- Lightmaps: ${stats?.lightmapAssetCount ?? 0}/${stats?.lightmapMaterialCount ?? 0}`,
     `- Geometry compression: ${stats ? geometryCompressionLabel(stats) : "unknown"}`,
     `- Texture compression: ${stats ? textureCompressionLabel(stats) : "unknown"}`,
+    `- Tone mapping: ${manifest.rendering?.toneMapping ?? "aces"}`,
+    `- Exposure: ${(manifest.rendering?.exposure ?? 1.05).toFixed(2)}`,
     `- Source/export issues: ${sourceExportDiagnostics.length}`,
     `- Publish gate: ${publishReadiness?.status ?? "not analyzed"}`,
     "",
