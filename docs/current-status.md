@@ -186,6 +186,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio stats now expose the strip-texture count beside texture size/compression, making that visual-risk signal visible without opening diagnostics.
 - Studio Asset Health now surfaces texture assignment coverage and routes weak coverage directly to Materials.
 - Studio Asset Health can now copy a texture repair plan with missing paths, loose images, texture suggestions, lightmap asset issues, and the recommended repair order.
+- Studio Materials now shows loose texture previews with Base/Normal/Emissive/Lightmap assignment buttons and warns when generic embedded filenames need human review.
 - Analyzer now counts unused texture image payloads, so GLBs with many disconnected image files are flagged before users judge a flat-looking viewer.
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.

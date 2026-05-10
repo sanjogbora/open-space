@@ -105,6 +105,7 @@ const bakePresetDefaults: Record<BakePreset, { resolution: number; samples: numb
 };
 
 const materialTextureAccept = ".avif,.jpg,.jpeg,.ktx2,.png,.webp,image/avif,image/jpeg,image/png,image/webp";
+const materialTextureFields: readonly MaterialTextureField[] = ["mapUrl", "normalMapUrl", "emissiveMapUrl", "lightMapUrl"];
 const materialTextureFieldLabels: Record<MaterialTextureField, string> = {
   mapUrl: "base texture",
   normalMapUrl: "normal map",
@@ -210,6 +211,21 @@ function materialTextureCandidateScore(materialName: string, source: string): nu
     score += 2;
   }
   return score;
+}
+
+function looseTextureNameLooksGeneric(source: string): boolean {
+  const fileName = source.split(/[\\/]/).pop() ?? source;
+  const normalized = normalizeTextureMatchName(fileName);
+  if (!normalized) {
+    return true;
+  }
+  if (/^(gltf )?embedded \d+$/.test(normalized)) {
+    return true;
+  }
+  if (/^(image|texture|material|map) \d+$/.test(normalized)) {
+    return true;
+  }
+  return usefulTextureTokens(fileName).length === 0;
 }
 
 function textureSuggestionConfidence(score: number): TextureSuggestionConfidence {
@@ -8480,32 +8496,52 @@ function App() {
                         <small>{selectedMaterialTextureCandidates.length}</small>
                       </div>
                       <div className="surface-candidate-list">
-                        {selectedMaterialTextureCandidates.map((candidate) => (
-                          <button
-                            key={`${candidate.field}-${candidate.source}`}
-                            type="button"
-                            className={
-                              selectedMaterial[candidate.field] === candidate.source
-                                ? "surface-candidate active"
-                                : "surface-candidate"
-                            }
-                            onClick={() => applyMaterialTextureCandidate(selectedMaterial.id, candidate)}
-                          >
-                            {canPreviewTextureAsset(candidate.source) && (
-                              <img
-                                className="texture-candidate-thumb"
-                                src={projectAssetPath(activeProjectId, candidate.source)}
-                                alt=""
-                                loading="lazy"
-                              />
-                            )}
-                            <span>{candidate.source}</span>
-                            <small>
-                              Use as {materialTextureFieldLabels[candidate.field]} / {formatBytes(candidate.bytes)} /{" "}
-                              {textureSuggestionConfidenceDetail(candidate.score)} / score {candidate.score}
-                            </small>
-                          </button>
-                        ))}
+                        {selectedMaterialTextureCandidates.map((candidate) => {
+                          const assignedField = materialTextureFields.find((field) => selectedMaterial[field] === candidate.source);
+                          const isGenericTextureName = looseTextureNameLooksGeneric(candidate.source);
+                          return (
+                            <div
+                              key={`${candidate.field}-${candidate.source}`}
+                              className={assignedField ? "surface-candidate texture-candidate-card active" : "surface-candidate texture-candidate-card"}
+                            >
+                              {canPreviewTextureAsset(candidate.source) && (
+                                <img
+                                  className="texture-candidate-thumb"
+                                  src={projectAssetPath(activeProjectId, candidate.source)}
+                                  alt=""
+                                  loading="lazy"
+                                />
+                              )}
+                              <span>{candidate.source}</span>
+                              <small>
+                                Suggested: {materialTextureFieldLabels[candidate.field]} / {formatBytes(candidate.bytes)} /{" "}
+                                {textureSuggestionConfidenceDetail(candidate.score)} / score {candidate.score}
+                              </small>
+                              {assignedField && (
+                                <small className="texture-candidate-assigned">
+                                  Assigned as {materialTextureFieldLabels[assignedField]}
+                                </small>
+                              )}
+                              {isGenericTextureName && (
+                                <small className="texture-candidate-warning">
+                                  Generic embedded filename. Compare the preview before assigning.
+                                </small>
+                              )}
+                              <div className="texture-candidate-actions" aria-label={`Assign ${candidate.source}`}>
+                                {materialTextureFields.map((field) => (
+                                  <button
+                                    key={field}
+                                    type="button"
+                                    className={selectedMaterial[field] === candidate.source ? "active" : ""}
+                                    onClick={() => applyMaterialTextureCandidate(selectedMaterial.id, candidate, field)}
+                                  >
+                                    {materialTextureFieldLabels[field].replace(" texture", "")}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
