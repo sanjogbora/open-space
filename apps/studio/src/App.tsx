@@ -6208,14 +6208,20 @@ function App() {
     manifest.originalSceneUrl ??
     optimizationJob?.sourceSceneUrl ??
     (manifest.sceneUrl && manifest.sceneUrl !== "scene.optimized.glb" ? manifest.sceneUrl : "scene.glb");
+  const scrollToStudioTarget = (selector: string) => {
+    window.setTimeout(() => {
+      document.querySelector(selector)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+  };
+  const openStudioVisualTarget = (tab: StudioTab, selector: string) => {
+    setSelectedTab(tab);
+    scrollToStudioTarget(selector);
+  };
   const openBakeWorkflow = () => {
     if (!selectedMaterial && materialsDoc?.materials[0]) {
       setSelectedMaterialId(materialsDoc.materials[0].id);
     }
-    setSelectedTab("materials");
-    window.setTimeout(() => {
-      document.querySelector(".lightmap-bake-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 0);
+    openStudioVisualTarget("materials", ".lightmap-bake-card");
   };
   const runImportDiagnosticAction = (action: ImportNextStepAction) => {
     if (action === "repair") {
@@ -6227,27 +6233,27 @@ function App() {
       return;
     }
     if (action === "environment") {
-      setSelectedTab("environment");
+      openStudioVisualTarget("environment", ".environment-preview, .environment-panel, .field-grid");
       return;
     }
     if (action === "materials") {
-      setSelectedTab("materials");
+      openStudioVisualTarget("materials", ".texture-candidate-panel, .material-preview-strip");
       return;
     }
     if (action === "views") {
-      setSelectedTab("views");
+      openStudioVisualTarget("views", ".editor-layout, .view-list");
       return;
     }
     if (action === "navigation") {
-      setSelectedTab("controls");
+      openStudioVisualTarget("controls", ".zone-map");
       return;
     }
     if (action === "rooms") {
-      setSelectedTab("rooms");
+      openStudioVisualTarget("rooms", ".room-map");
       return;
     }
     if (action === "interactions") {
-      setSelectedTab("interactions");
+      openStudioVisualTarget("interactions", ".screen-planner-card, .surface-mapper");
       return;
     }
     if (action === "optimize") {
@@ -6259,7 +6265,7 @@ function App() {
       return;
     }
     if (action === "review") {
-      document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" });
+      openStudioVisualTarget("overview", ".diagnostic-list");
       return;
     }
     window.open(viewerUrl(activeProjectId), "_blank", "noopener,noreferrer");
@@ -6489,6 +6495,7 @@ function App() {
             optimizeState={optimizeState}
             bakeState={bakeState}
             viewerUrl={viewerUrl(activeProjectId)}
+            onImport={() => setSelectedTab("import")}
             onAction={runImportDiagnosticAction}
           />
         )}
@@ -11515,6 +11522,7 @@ function RepairCenter({
   optimizeState,
   bakeState,
   viewerUrl,
+  onImport,
   onAction
 }: {
   stats: BundleStats | null;
@@ -11527,6 +11535,7 @@ function RepairCenter({
   optimizeState: OptimizeState;
   bakeState: BakeState;
   viewerUrl: string;
+  onImport: () => void;
   onAction: (action: ImportNextStepAction) => void;
 }) {
   const items = buildRepairCenterItems({
@@ -11571,7 +11580,7 @@ function RepairCenter({
       <div className="repair-center-list">
         {items.map((item, index) => {
           const disabled =
-            (item.action === "repair" && (!apiConnected || repairState === "repairing")) ||
+            (item.id !== "upload" && item.action === "repair" && (!apiConnected || repairState === "repairing")) ||
             (item.action === "optimize" && (!apiConnected || optimizeState === "optimizing")) ||
             (item.action === "bake" && (!apiConnected || bakeState === "baking"));
           const buttonLabel =
@@ -11599,7 +11608,13 @@ function RepairCenter({
                 type="button"
                 className="button secondary repair-center-action"
                 disabled={disabled}
-                onClick={() => (item.action === "test" ? window.open(viewerUrl, "_blank", "noopener,noreferrer") : onAction(item.action))}
+                onClick={() =>
+                  item.id === "upload"
+                    ? onImport()
+                    : item.action === "test"
+                      ? window.open(viewerUrl, "_blank", "noopener,noreferrer")
+                      : onAction(item.action)
+                }
               >
                 {repairCenterIcon(item.action)}
                 {buttonLabel}
