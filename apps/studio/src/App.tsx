@@ -11624,6 +11624,17 @@ function RepairCenter({
     ([stageA], [stageB]) => repairCenterStageRank(stageA) - repairCenterStageRank(stageB)
   );
   const stageSummaries = repairCenterStageSummaries(items, Boolean(stats));
+  const runRepairCenterItem = (item: RepairCenterItem) => {
+    if (item.id === "upload") {
+      onImport();
+      return;
+    }
+    if (item.action === "test") {
+      window.open(viewerUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    onAction(item.action);
+  };
   const scrollToRepairStage = (stage: string) => {
     document
       .querySelector(`[data-repair-stage="${stage}"]`)
@@ -11639,6 +11650,11 @@ function RepairCenter({
     action: "test" as const,
     button: "Open Viewer"
   };
+  const currentButtonLabel = currentItem.id === "upload"
+    ? "Upload Model"
+    : currentItem.action === "test"
+      ? "Open Viewer"
+      : "Start Visual Fix";
 
   return (
     <section className="repair-center-layout">
@@ -11652,10 +11668,16 @@ function RepairCenter({
               : "Fix the first card, save if needed, then come back here for the next item."}
           </p>
         </div>
-        <div className="repair-center-score">
-          <strong>{blockerCount}</strong>
-          <span>blockers</span>
-          <small>{warningCount} warning{warningCount === 1 ? "" : "s"}</small>
+        <div className="repair-center-side">
+          <div className="repair-center-score">
+            <strong>{blockerCount}</strong>
+            <span>blockers</span>
+            <small>{warningCount} warning{warningCount === 1 ? "" : "s"}</small>
+          </div>
+          <button type="button" className="button primary repair-center-next" onClick={() => runRepairCenterItem(currentItem)}>
+            {repairCenterIcon(currentItem.action)}
+            {currentButtonLabel}
+          </button>
         </div>
       </div>
 
@@ -11666,6 +11688,7 @@ function RepairCenter({
             type="button"
             className={`repair-center-progress-step ${summary.severity}`}
             onClick={() => scrollToRepairStage(summary.stage)}
+            disabled={summary.count === 0}
             aria-label={`Show ${summary.stage} repair items: ${summary.label}`}
           >
             <strong>{summary.stage}</strong>
@@ -11710,13 +11733,7 @@ function RepairCenter({
                   <button
                     type="button"
                     className="button secondary repair-center-action"
-                    onClick={() =>
-                      item.id === "upload"
-                        ? onImport()
-                        : item.action === "test"
-                          ? window.open(viewerUrl, "_blank", "noopener,noreferrer")
-                          : onAction(item.action)
-                    }
+                    onClick={() => runRepairCenterItem(item)}
                   >
                     {repairCenterIcon(item.action)}
                     {buttonLabel}

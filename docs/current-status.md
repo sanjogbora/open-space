@@ -197,6 +197,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Repair Center now groups fix cards into visual work sections like Source, Visuals, Movement, Presentation, Lighting, Performance, and Delivery.
 - Repair Center now shows a visual progress strip across work areas so users can see blocked, review, clear, waiting, and test-ready stages at a glance.
 - Repair Center progress tiles now jump to their matching work section, making the overview act as visual navigation instead of a passive status row.
+- Repair Center now has a primary hero action for the next visual fix, and empty progress tiles are disabled so the overview does not create dead clicks.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
 - Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.

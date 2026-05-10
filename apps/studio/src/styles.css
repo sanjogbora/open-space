@@ -295,6 +295,11 @@ h2 {
   line-height: 1.45;
 }
 
+.repair-center-side {
+  display: grid;
+  gap: 8px;
+}
+
 .repair-center-score {
   min-height: 112px;
   display: grid;
@@ -317,6 +322,10 @@ h2 {
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.repair-center-next {
+  width: 100%;
 }
 
 .repair-center-progress {
@@ -377,6 +386,16 @@ h2 {
 .repair-center-progress-step:focus-visible {
   outline: 2px solid rgba(8, 127, 231, 0.28);
   outline-offset: 1px;
+}
+
+.repair-center-progress-step:disabled {
+  cursor: default;
+  opacity: 0.74;
+}
+
+.repair-center-progress-step:disabled:hover,
+.repair-center-progress-step:disabled:focus-visible {
+  outline: none;
 }
 
 .repair-center-list {
