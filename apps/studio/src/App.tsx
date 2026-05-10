@@ -11309,6 +11309,13 @@ interface RepairCenterItem {
   button: string;
 }
 
+interface RepairCenterStageSummary {
+  stage: string;
+  severity: RepairCenterSeverity;
+  label: string;
+  count: number;
+}
+
 function repairCenterStageForAction(action: ImportNextStepAction): string {
   if (action === "repair" || action === "review") {
     return "Source";
@@ -11353,6 +11360,41 @@ function repairCenterSeverityRank(severity: RepairCenterSeverity): number {
 function repairCenterStageRank(stage: string): number {
   const index = repairCenterStageOrder.indexOf(stage);
   return index === -1 ? repairCenterStageOrder.length : index;
+}
+
+function repairCenterStageSummaries(items: readonly RepairCenterItem[], hasStats: boolean): RepairCenterStageSummary[] {
+  return repairCenterStageOrder.map((stage) => {
+    const stageItems = items.filter((item) => item.stage === stage);
+    const hasError = stageItems.some((item) => item.severity === "error");
+    const hasWarning = stageItems.some((item) => item.severity === "warning");
+    const hasReady = stageItems.some((item) => item.severity === "ready");
+    const severity: RepairCenterSeverity = !hasStats && stage !== "Source"
+      ? "info"
+      : hasError
+        ? "error"
+        : hasWarning
+          ? "warning"
+          : hasReady || stageItems.length === 0
+            ? "ready"
+            : "info";
+    const label = !hasStats && stage !== "Source"
+      ? "Waiting"
+      : hasError
+        ? "Blocked"
+        : hasWarning
+          ? "Review"
+          : hasReady
+            ? "Test"
+            : stageItems.length === 0
+              ? "Clear"
+              : "Start";
+    return {
+      stage,
+      severity,
+      label,
+      count: stageItems.length
+    };
+  });
 }
 
 function repairCenterIcon(action: ImportNextStepAction) {
@@ -11581,6 +11623,7 @@ function RepairCenter({
   }, new Map<string, RepairCenterItem[]>())].sort(
     ([stageA], [stageB]) => repairCenterStageRank(stageA) - repairCenterStageRank(stageB)
   );
+  const stageSummaries = repairCenterStageSummaries(items, Boolean(stats));
   const currentItem = items[0] ?? {
     id: "test-viewer",
     stage: "Delivery",
@@ -11609,6 +11652,16 @@ function RepairCenter({
           <span>blockers</span>
           <small>{warningCount} warning{warningCount === 1 ? "" : "s"}</small>
         </div>
+      </div>
+
+      <div className="repair-center-progress" aria-label="Repair Center progress">
+        {stageSummaries.map((summary) => (
+          <div key={summary.stage} className={`repair-center-progress-step ${summary.severity}`}>
+            <strong>{summary.stage}</strong>
+            <span>{summary.label}</span>
+            {summary.count > 0 && <small>{summary.count}</small>}
+          </div>
+        ))}
       </div>
 
       <div className="repair-center-list">
