@@ -6270,6 +6270,21 @@ function App() {
     }
     window.open(viewerUrl(activeProjectId), "_blank", "noopener,noreferrer");
   };
+  const runRepairCenterAction = (action: ImportNextStepAction) => {
+    if (action === "repair") {
+      openStudioVisualTarget("import", ".import-repair-card");
+      return;
+    }
+    if (action === "apply-textures") {
+      openStudioVisualTarget("materials", ".texture-candidate-panel, .material-preview-strip");
+      return;
+    }
+    if (action === "optimize") {
+      openStudioVisualTarget("optimization", ".optimization-action-controls, .publish-action-card");
+      return;
+    }
+    runImportDiagnosticAction(action);
+  };
 
   return (
     <main className="studio-shell">
@@ -6490,13 +6505,12 @@ function App() {
             publishChecks={publishChecks}
             pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
             reviewTextureSuggestionCount={reviewMaterialTextureSuggestionCount}
-            apiConnected={apiConnected}
             repairState={repairState}
             optimizeState={optimizeState}
             bakeState={bakeState}
             viewerUrl={viewerUrl(activeProjectId)}
             onImport={() => setSelectedTab("import")}
-            onAction={runImportDiagnosticAction}
+            onAction={runRepairCenterAction}
           />
         )}
 
@@ -6526,7 +6540,7 @@ function App() {
 
               {uploadError && <p className="error-note">{uploadError}</p>}
               {!apiConnected && <p className="quiet-note">Start the local API before importing models.</p>}
-              <div className="publish-action-card">
+              <div className="publish-action-card import-repair-card">
                 <div>
                   <strong>Auto repair import</strong>
                   <p className="quiet-note">
@@ -11420,12 +11434,12 @@ function buildRepairCenterItems({
     items.push({
       id: "texture-ready",
       stage: "Visuals",
-      title: "Apply confident texture matches",
-      detail: `${pendingTextureSuggestionCount} loose texture match${pendingTextureSuggestionCount === 1 ? "" : "es"} can be assigned automatically before visual review.`,
+      title: "Review confident texture matches",
+      detail: `${pendingTextureSuggestionCount} loose texture match${pendingTextureSuggestionCount === 1 ? "" : "es"} can be assigned after checking the image preview.`,
       visualFix: repairCenterVisualFixForAction("apply-textures"),
       severity: "warning",
       action: "apply-textures",
-      button: `Apply ${pendingTextureSuggestionCount}`
+      button: `Review ${pendingTextureSuggestionCount}`
     });
   }
   if (reviewTextureSuggestionCount > 0) {
@@ -11517,7 +11531,6 @@ function RepairCenter({
   publishChecks,
   pendingTextureSuggestionCount,
   reviewTextureSuggestionCount,
-  apiConnected,
   repairState,
   optimizeState,
   bakeState,
@@ -11530,7 +11543,6 @@ function RepairCenter({
   publishChecks: readonly PublishCheck[];
   pendingTextureSuggestionCount: number;
   reviewTextureSuggestionCount: number;
-  apiConnected: boolean;
   repairState: RepairState;
   optimizeState: OptimizeState;
   bakeState: BakeState;
@@ -11579,17 +11591,13 @@ function RepairCenter({
 
       <div className="repair-center-list">
         {items.map((item, index) => {
-          const disabled =
-            (item.id !== "upload" && item.action === "repair" && (!apiConnected || repairState === "repairing")) ||
-            (item.action === "optimize" && (!apiConnected || optimizeState === "optimizing")) ||
-            (item.action === "bake" && (!apiConnected || bakeState === "baking"));
           const buttonLabel =
             item.action === "repair" && repairState === "repairing"
-              ? "Repairing"
+              ? "View Repair"
               : item.action === "optimize" && optimizeState === "optimizing"
-                ? "Optimizing"
+                ? "View Optimize"
                 : item.action === "bake" && bakeState === "baking"
-                  ? "Baking"
+                  ? "View Bake"
                   : item.button;
           return (
             <div key={item.id} className={`repair-center-card ${item.severity}`}>
@@ -11607,7 +11615,6 @@ function RepairCenter({
               <button
                 type="button"
                 className="button secondary repair-center-action"
-                disabled={disabled}
                 onClick={() =>
                   item.id === "upload"
                     ? onImport()

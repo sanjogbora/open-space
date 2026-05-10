@@ -193,6 +193,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio now has a Repair Center tab that turns diagnostics, texture suggestions, publish checks, and missing setup into one prioritized fix queue.
 - Repair Center cards now describe the visual fix path for each issue, such as painting navigation zones, comparing texture previews, picking screen surfaces, or inspecting bake thumbnails.
 - Repair Center actions now jump closer to the relevant visual tool, such as the navigation zone map, room map, screen planner, texture candidate panel, or bake card.
+- Repair Center uses visual-first routing for repair, texture, bake, and optimization actions, so the user reviews the relevant panel before running one-click automation.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
 - Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.
