@@ -568,7 +568,15 @@ h2 {
   min-width: 0;
 }
 
-.visual-guide-card-heading .button {
+.visual-guide-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.visual-guide-actions .button {
   flex: 0 0 auto;
 }
 

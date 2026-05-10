@@ -6530,8 +6530,11 @@ function App() {
                   "Run Repair so textures, views, bounds, rooms, and diagnostics are refreshed.",
                   "Open Repair Center again and follow the first visible fix card."
                 ]}
-                actionLabel="Repair Center"
-                onAction={() => setSelectedTab("repair")}
+                actionLabel={repairState === "repairing" ? "Repairing" : "Repair"}
+                actionDisabled={!apiConnected || repairState === "repairing"}
+                onAction={() => void repairImport()}
+                secondaryActionLabel="Repair Center"
+                onSecondaryAction={() => setSelectedTab("repair")}
               />
 
               <label className="file-drop">
@@ -6735,8 +6738,11 @@ function App() {
                   "Run optimization and compare size, triangle, material, and texture warnings.",
                   "Switch between Original and Optimized if the viewer quality changes too much."
                 ]}
-                actionLabel="Repair Center"
-                onAction={() => setSelectedTab("repair")}
+                actionLabel={optimizeState === "optimizing" ? "Optimizing" : "Run"}
+                actionDisabled={!apiConnected || optimizeState === "optimizing"}
+                onAction={() => void optimizeProject()}
+                secondaryActionLabel="Repair Center"
+                onSecondaryAction={() => setSelectedTab("repair")}
               />
 
               <div className="publish-action-card">
@@ -6937,8 +6943,11 @@ function App() {
                   "Publish a versioned bundle and open the generated URL.",
                   "Copy the embed or deployment checklist only after the published viewer passes the same manual test."
                 ]}
-                actionLabel="Repair Center"
-                onAction={() => setSelectedTab("repair")}
+                actionLabel={publishState === "publishing" ? "Publishing" : "Publish"}
+                actionDisabled={publishState === "publishing" || hasBlockingPublishErrors}
+                onAction={() => void publishProject()}
+                secondaryActionLabel="Repair Center"
+                onSecondaryAction={() => setSelectedTab("repair")}
               />
 
               <div className="publish-action-card">
@@ -7355,8 +7364,10 @@ function App() {
                     "Use a top view for plan navigation and a walk view for each bottom button.",
                     "After editing positions, reopen the viewer and click each room button."
                   ]}
-                  actionLabel="Repair Center"
-                  onAction={() => setSelectedTab("repair")}
+                  actionLabel="Create Top"
+                  onAction={createOrUpdateTopView}
+                  secondaryActionLabel="Repair Center"
+                  onSecondaryAction={() => setSelectedTab("repair")}
                 />
 
                 <div className="field-grid">
@@ -7501,8 +7512,14 @@ function App() {
                     "Drag room markers on the map to the visible center of each space.",
                     "Link each room to a walk view so bottom buttons and top view agree."
                   ]}
-                  actionLabel="Repair Center"
-                  onAction={() => setSelectedTab("repair")}
+                  actionLabel={enabledNavigationZones(manifest.navigation, "walk").length > 0 ? "From Walks" : "Sync"}
+                  onAction={
+                    enabledNavigationZones(manifest.navigation, "walk").length > 0
+                      ? syncRoomsFromWalkZones
+                      : syncRoomsFromViews
+                  }
+                  secondaryActionLabel="Repair Center"
+                  onSecondaryAction={() => setSelectedTab("repair")}
                 />
                 {manifest.navigation.bounds ? (
                   ((roomMapBounds) => (
@@ -7731,8 +7748,11 @@ function App() {
                   "Select a video surface and choose the mesh or material that looks like a screen.",
                   "Add hotspots, links, or object toggles after the main screen surfaces are tested."
                 ]}
-                actionLabel="Repair Center"
-                onAction={() => setSelectedTab("repair")}
+                actionLabel="Map Likely"
+                actionDisabled={likelyVideoSurfaceCandidates.length === 0}
+                onAction={addLikelyVideoTextures}
+                secondaryActionLabel="Repair Center"
+                onSecondaryAction={() => setSelectedTab("repair")}
               />
               {videoSurfaceCandidates.length > 0 && (
                 <div className="screen-planner-card">
@@ -8229,8 +8249,25 @@ function App() {
                     "Use Base, Normal, Emissive, or Lightmap buttons only after the preview matches.",
                     "Bake or upload lightmaps, then test the viewer against a reference render."
                   ]}
-                  actionLabel="Repair Center"
-                  onAction={() => setSelectedTab("repair")}
+                  actionLabel={
+                    pendingMaterialTextureSuggestionCount > 0
+                      ? `Apply ${pendingMaterialTextureSuggestionCount}`
+                      : bakeState === "baking"
+                        ? "Baking"
+                        : "Bake"
+                  }
+                  actionDisabled={
+                    pendingMaterialTextureSuggestionCount > 0
+                      ? false
+                      : !canRunLightmapBake || bakeState === "baking"
+                  }
+                  onAction={
+                    pendingMaterialTextureSuggestionCount > 0
+                      ? applyMaterialTextureSuggestions
+                      : () => void bakeLightmaps()
+                  }
+                  secondaryActionLabel="Repair Center"
+                  onSecondaryAction={() => setSelectedTab("repair")}
                 />
 
                 <div className="publish-action-card lightmap-bake-card">
@@ -9128,8 +9165,10 @@ function App() {
                   "Mark floors as Walk on, walls or furniture as Collision, and helper meshes as Ignore navigation.",
                   "Retest blocked clicks after changing any object role."
                 ]}
-                actionLabel="Repair Center"
-                onAction={() => setSelectedTab("repair")}
+                actionLabel="Test Viewer"
+                onAction={() => window.open(navigationDebugViewerUrl(activeProjectId), "_blank", "noopener,noreferrer")}
+                secondaryActionLabel="Repair Center"
+                onSecondaryAction={() => setSelectedTab("repair")}
               />
               {sceneGraph?.nodes.map((node) => {
                 const override = objectsDoc?.objects.find((object) => object.id === node.id);
@@ -9284,8 +9323,10 @@ function App() {
                   "Use the zone map to paint a walk patch or door pass where the viewer says movement is blocked.",
                   "Retest with the navigation debug viewer and repeat only the failing doorway or room."
                 ]}
-                actionLabel="Repair Center"
-                onAction={() => setSelectedTab("repair")}
+                actionLabel={navigationQuickFix.button}
+                onAction={runNavigationQuickFix}
+                secondaryActionLabel="Repair Center"
+                onSecondaryAction={() => setSelectedTab("repair")}
               />
 
               {controlsDoc ? (
@@ -10729,8 +10770,10 @@ function App() {
                   "Keep ground and enclosure on when windows or balconies expose empty space.",
                   "Adjust ground height so the landscape sits below floors without cutting through the model."
                 ]}
-                actionLabel="Repair Center"
-                onAction={() => setSelectedTab("repair")}
+                actionLabel="Exterior"
+                onAction={() => applyEnvironmentPreset("exterior")}
+                secondaryActionLabel="Repair Center"
+                onSecondaryAction={() => setSelectedTab("repair")}
               />
               <div className="environment-preset-card">
                 <div>
@@ -11051,14 +11094,20 @@ function VisualGuideCard({
   detail,
   steps,
   actionLabel,
+  actionDisabled = false,
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
   className = ""
 }: {
   title: string;
   detail: string;
   steps: readonly string[];
   actionLabel?: string;
+  actionDisabled?: boolean;
   onAction?: () => void;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
   className?: string;
 }) {
   return (
@@ -11068,11 +11117,25 @@ function VisualGuideCard({
           <strong>{title}</strong>
           <p>{detail}</p>
         </div>
-        {actionLabel && onAction && (
-          <button type="button" className="button secondary compact-button" onClick={onAction}>
-            {actionLabel}
-          </button>
-        )}
+        {(actionLabel && onAction) || (secondaryActionLabel && onSecondaryAction) ? (
+          <div className="visual-guide-actions">
+            {actionLabel && onAction && (
+              <button
+                type="button"
+                className="button primary compact-button"
+                disabled={actionDisabled}
+                onClick={onAction}
+              >
+                {actionLabel}
+              </button>
+            )}
+            {secondaryActionLabel && onSecondaryAction && (
+              <button type="button" className="button secondary compact-button" onClick={onSecondaryAction}>
+                {secondaryActionLabel}
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
       <ol>
         {steps.map((step) => (
