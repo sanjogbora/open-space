@@ -2134,6 +2134,10 @@ export class WalkthroughViewer {
       this.resetPendingFloorTransition();
       return referenceFloorY;
     }
+    if (this.shouldHoldClickMoveFloorHeight(floorY, referenceFloorY)) {
+      this.resetPendingFloorTransition();
+      return referenceFloorY;
+    }
     if (!this.isSupportedFloorHeight(position, floorY, { referenceFloorY })) {
       this.resetPendingFloorTransition();
       return referenceFloorY;
@@ -2153,6 +2157,18 @@ export class WalkthroughViewer {
     const largeLevelChange = Math.abs(levelDelta) >= Math.max(0.55, this.cameraHeight * 0.32);
     const requiredSamples = activeNavigation ? (largeLevelChange ? 5 : 8) : largeLevelChange ? 3 : 5;
     return this.pendingFloorSamples >= requiredSamples ? floorY : referenceFloorY;
+  }
+
+  private shouldHoldClickMoveFloorHeight(floorY: number, referenceFloorY: number): boolean {
+    if (!this.moveTarget || this.movePath.length > 0 || this.keys.size > 0 || Math.abs(this.wheelVelocity) > 0.01) {
+      return false;
+    }
+    const targetFloorY = this.moveTarget.y - this.cameraHeight;
+    const targetMatchesCurrentFloor =
+      Math.abs(targetFloorY - referenceFloorY) <= Math.max(this.floorBumpTolerance(), this.cameraHeight * 0.22);
+    const sampleMatchesTarget =
+      Math.abs(floorY - targetFloorY) <= Math.max(0.16, this.floorBumpTolerance() * 0.5);
+    return targetMatchesCurrentFloor && !sampleMatchesTarget;
   }
 
   private resetPendingFloorTransition(): void {
