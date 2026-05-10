@@ -6368,6 +6368,10 @@ function App() {
               <ExternalLink size={16} aria-hidden="true" />
               Viewer
             </a>
+            <button type="button" className="button secondary" onClick={() => void saveAndOpenViewer()}>
+              <Save size={16} aria-hidden="true" />
+              Save & Test
+            </button>
             <button type="button" className="button secondary" onClick={() => void resetDraft()}>
               <RotateCcw size={16} aria-hidden="true" />
               Reset
