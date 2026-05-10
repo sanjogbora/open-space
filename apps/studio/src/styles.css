@@ -554,6 +554,24 @@ h2 {
   padding: 10px;
 }
 
+.visual-guide-card-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.visual-guide-card-heading > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.visual-guide-card-heading .button {
+  flex: 0 0 auto;
+}
+
 .visual-guide-card strong {
   color: #22313a;
   font-size: 14px;
