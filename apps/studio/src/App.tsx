@@ -11624,6 +11624,11 @@ function RepairCenter({
     ([stageA], [stageB]) => repairCenterStageRank(stageA) - repairCenterStageRank(stageB)
   );
   const stageSummaries = repairCenterStageSummaries(items, Boolean(stats));
+  const scrollToRepairStage = (stage: string) => {
+    document
+      .querySelector(`[data-repair-stage="${stage}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const currentItem = items[0] ?? {
     id: "test-viewer",
     stage: "Delivery",
@@ -11656,17 +11661,23 @@ function RepairCenter({
 
       <div className="repair-center-progress" aria-label="Repair Center progress">
         {stageSummaries.map((summary) => (
-          <div key={summary.stage} className={`repair-center-progress-step ${summary.severity}`}>
+          <button
+            key={summary.stage}
+            type="button"
+            className={`repair-center-progress-step ${summary.severity}`}
+            onClick={() => scrollToRepairStage(summary.stage)}
+            aria-label={`Show ${summary.stage} repair items: ${summary.label}`}
+          >
             <strong>{summary.stage}</strong>
             <span>{summary.label}</span>
             {summary.count > 0 && <small>{summary.count}</small>}
-          </div>
+          </button>
         ))}
       </div>
 
       <div className="repair-center-list">
         {groupedItems.map(([stage, stageItems]) => (
-          <section key={stage} className="repair-center-stage">
+          <section key={stage} className="repair-center-stage" data-repair-stage={stage}>
             <div className="repair-center-stage-heading">
               <strong>{stage}</strong>
               <small>

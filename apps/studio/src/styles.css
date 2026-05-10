@@ -334,6 +334,7 @@ h2 {
   border: 1px solid #dce7ee;
   border-radius: 8px;
   background: #ffffff;
+  text-align: left;
 }
 
 .repair-center-progress-step.error {
@@ -370,6 +371,12 @@ h2 {
   color: #60717c;
   font-size: 11px;
   font-weight: 800;
+}
+
+.repair-center-progress-step:hover,
+.repair-center-progress-step:focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
 }
 
 .repair-center-list {
