@@ -540,6 +540,43 @@ h2 {
   white-space: nowrap;
 }
 
+.visual-guide-card {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid #d6e5ef;
+  border-radius: 8px;
+  background: #f6fbff;
+}
+
+.visual-guide-card.compact {
+  padding: 10px;
+}
+
+.visual-guide-card strong {
+  color: #22313a;
+  font-size: 14px;
+}
+
+.visual-guide-card p,
+.visual-guide-card ol {
+  margin: 0;
+}
+
+.visual-guide-card p,
+.visual-guide-card li {
+  color: #52636f;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.visual-guide-card ol {
+  display: grid;
+  gap: 5px;
+  padding-left: 18px;
+}
+
 .panel,
 .list-panel {
   border: 1px solid #dce2e6;

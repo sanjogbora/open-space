@@ -6522,6 +6522,16 @@ function App() {
                 <h2>Model Import</h2>
               </div>
 
+              <VisualGuideCard
+                title="Import repair path"
+                detail="Start from the original model package, then let Studio rebuild the parts that make the walkthrough usable."
+                steps={[
+                  "Upload a GLB, GLTF, source model, or ZIP with its texture folder.",
+                  "Run Repair so textures, views, bounds, rooms, and diagnostics are refreshed.",
+                  "Open Repair Center again and follow the first visible fix card."
+                ]}
+              />
+
               <label className="file-drop">
                 <input
                   type="file"
@@ -7445,6 +7455,15 @@ function App() {
                     <Trash2 size={17} aria-hidden="true" />
                   </button>
                 </div>
+                <VisualGuideCard
+                  title="Room and top-view setup"
+                  detail="Make the floorplan readable before editing exact numbers."
+                  steps={[
+                    "Sync from walk areas when navigation zones already outline each room.",
+                    "Drag room markers on the map to the visible center of each space.",
+                    "Link each room to a walk view so bottom buttons and top view agree."
+                  ]}
+                />
                 {manifest.navigation.bounds ? (
                   ((roomMapBounds) => (
                   <div className="room-map">
@@ -7663,6 +7682,16 @@ function App() {
                   </button>
                 </div>
               </div>
+              <VisualGuideCard
+                className="compact"
+                title="Screens and clickable points"
+                detail="Use visual candidates first, then edit the selected interaction only when needed."
+                steps={[
+                  "Map likely TV screens when candidates are available.",
+                  "Select a video surface and choose the mesh or material that looks like a screen.",
+                  "Add hotspots, links, or object toggles after the main screen surfaces are tested."
+                ]}
+              />
               {videoSurfaceCandidates.length > 0 && (
                 <div className="screen-planner-card">
                   <div>
@@ -8149,6 +8178,16 @@ function App() {
                   <Palette size={18} aria-hidden="true" />
                   <h2>{selectedMaterial.name}</h2>
                 </div>
+
+                <VisualGuideCard
+                  title="Visual material review"
+                  detail="Judge materials from previews before changing raw values."
+                  steps={[
+                    "Pick a material and compare assigned maps with loose texture candidates.",
+                    "Use Base, Normal, Emissive, or Lightmap buttons only after the preview matches.",
+                    "Bake or upload lightmaps, then test the viewer against a reference render."
+                  ]}
+                />
 
                 <div className="publish-action-card lightmap-bake-card">
                   <div>
@@ -9180,6 +9219,16 @@ function App() {
                 <Settings2 size={18} aria-hidden="true" />
                 <h2>Movement Controls</h2>
               </div>
+
+              <VisualGuideCard
+                title="Navigation repair loop"
+                detail="Keep movement fixes visual: make walkable surfaces, connect doorways, then test in the viewer."
+                steps={[
+                  "Run Auto Fix to create bounds, walk areas, door passes, and exterior blockers.",
+                  "Use the zone map to paint a walk patch or door pass where the viewer says movement is blocked.",
+                  "Retest with the navigation debug viewer and repeat only the failing doorway or room."
+                ]}
+              />
 
               {controlsDoc ? (
                 <>
@@ -10925,6 +10974,32 @@ function NumberField({
         onChange={(event) => onChange(toNumber(event.target.value, value))}
       />
     </label>
+  );
+}
+
+function VisualGuideCard({
+  title,
+  detail,
+  steps,
+  className = ""
+}: {
+  title: string;
+  detail: string;
+  steps: readonly string[];
+  className?: string;
+}) {
+  return (
+    <div className={className ? `visual-guide-card ${className}` : "visual-guide-card"}>
+      <div>
+        <strong>{title}</strong>
+        <p>{detail}</p>
+      </div>
+      <ol>
+        {steps.map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
