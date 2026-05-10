@@ -11905,7 +11905,11 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
   const textureAssignmentDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
     diagnostic.code === "image-textures-unused-by-materials" ||
     diagnostic.code === "few-materials-use-textures" ||
-    diagnostic.code === "many-unused-texture-images"
+    diagnostic.code === "many-unused-texture-images" ||
+    diagnostic.code === "generic-loose-texture-names"
+  );
+  const genericLooseTextureDiagnostic = (stats.diagnostics ?? []).find(
+    (diagnostic) => diagnostic.code === "generic-loose-texture-names"
   );
 
   const lines = [
@@ -11998,7 +12002,11 @@ function AssetHealth({
   const textureAssignmentDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
     diagnostic.code === "image-textures-unused-by-materials" ||
     diagnostic.code === "few-materials-use-textures" ||
-    diagnostic.code === "many-unused-texture-images"
+    diagnostic.code === "many-unused-texture-images" ||
+    diagnostic.code === "generic-loose-texture-names"
+  );
+  const genericLooseTextureDiagnostic = (stats.diagnostics ?? []).find(
+    (diagnostic) => diagnostic.code === "generic-loose-texture-names"
   );
   const hasTextureAssignmentGap =
     Boolean(textureAssignmentDiagnostic) ||
@@ -12064,8 +12072,10 @@ function AssetHealth({
           )}
           {!hasTextureRepairWork && textureSuggestions.length === 0 && hasLooseUnmappedTextures && (
             <p>
-              Texture files are present, but the model does not reference them clearly. Open Materials and assign the
-              right image to each material.
+              {genericLooseTextureDiagnostic?.message ??
+                "Texture files are present, but the model does not reference them clearly."}{" "}
+              Open Materials and assign the right image to each material, or ask for a re-export that preserves original
+              texture paths.
             </p>
           )}
           {hasLightmapRepairWork && (
