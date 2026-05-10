@@ -518,6 +518,15 @@ h2 {
   line-height: 1.35;
 }
 
+.repair-center-destination {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 7px;
+  color: #60717c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .repair-center-action {
   white-space: nowrap;
 }

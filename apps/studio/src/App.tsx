@@ -11459,6 +11459,43 @@ function repairCenterVisualFixForAction(action: ImportNextStepAction): string {
   return "Use the guided card first; raw diagnostics stay available only when deeper source repair is needed.";
 }
 
+function repairCenterDestinationForItem(item: RepairCenterItem): string {
+  if (item.id === "upload") {
+    return "Opens Import upload.";
+  }
+  if (item.action === "repair") {
+    return "Opens Import repair.";
+  }
+  if (item.action === "apply-textures" || item.action === "materials") {
+    return "Opens Materials review.";
+  }
+  if (item.action === "navigation") {
+    return "Opens Controls zone map.";
+  }
+  if (item.action === "rooms") {
+    return "Opens Rooms map.";
+  }
+  if (item.action === "interactions") {
+    return "Opens screen planner.";
+  }
+  if (item.action === "bake") {
+    return "Opens Bake setup.";
+  }
+  if (item.action === "environment") {
+    return "Opens Environment preview.";
+  }
+  if (item.action === "views") {
+    return "Opens Views editor.";
+  }
+  if (item.action === "optimize") {
+    return "Opens Optimization review.";
+  }
+  if (item.action === "test") {
+    return "Opens the viewer.";
+  }
+  return "Opens diagnostics.";
+}
+
 function buildRepairCenterItems({
   stats,
   manifest,
@@ -11729,6 +11766,7 @@ function RepairCenter({
                     </div>
                     <p>{item.detail}</p>
                     <small className="repair-center-visual-fix">Visual fix: {item.visualFix}</small>
+                    <small className="repair-center-destination">{repairCenterDestinationForItem(item)}</small>
                   </div>
                   <button
                     type="button"
