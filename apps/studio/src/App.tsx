@@ -6527,7 +6527,11 @@ function App() {
             bakeState={bakeState}
             onImport={() => setSelectedTab("import")}
             onAction={runRepairCenterAction}
-            onSaveAndTest={() => void saveAndOpenViewer(viewerUrl(activeProjectId))}
+            onSaveAndTest={(navigationDebug = false) =>
+              void saveAndOpenViewer(
+                navigationDebug ? navigationDebugViewerUrl(activeProjectId) : viewerUrl(activeProjectId)
+              )
+            }
           />
         )}
 
@@ -11915,7 +11919,7 @@ function RepairCenter({
   bakeState: BakeState;
   onImport: () => void;
   onAction: (action: ImportNextStepAction) => void;
-  onSaveAndTest: () => void;
+  onSaveAndTest: (navigationDebug?: boolean) => void;
 }) {
   const items = buildRepairCenterItems({
     stats,
@@ -11939,10 +11943,13 @@ function RepairCenter({
       return;
     }
     if (item.action === "test") {
-      onSaveAndTest();
+      onSaveAndTest(false);
       return;
     }
     onAction(item.action);
+  };
+  const saveAndTestRepairItem = (item: RepairCenterItem) => {
+    onSaveAndTest(item.action === "navigation");
   };
   const scrollToRepairStage = (stage: string) => {
     document
@@ -11993,10 +12000,10 @@ function RepairCenter({
                 type="button"
                 className="button secondary repair-center-next"
                 disabled={!stats}
-                onClick={onSaveAndTest}
+                onClick={() => saveAndTestRepairItem(currentItem)}
               >
                 <Save size={16} aria-hidden="true" />
-                Save & Test
+                {currentItem.action === "navigation" ? "Save & Test Nav" : "Save & Test"}
               </button>
             )}
           </div>
