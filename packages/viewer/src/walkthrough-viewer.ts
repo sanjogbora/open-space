@@ -3739,10 +3739,11 @@ export class WalkthroughViewer {
     this.renderer.domElement.focus();
     this.pointerDown = { x: event.clientX, y: event.clientY, time: performance.now() };
     this.lastPointer = { x: event.clientX, y: event.clientY };
-    this.draggingLook =
-      this.controls.enabled &&
-      this.controls.dragLook &&
-      (event.button === 2 || event.pointerType === "touch");
+    if (this.controls.enabled && this.controls.dragLook && (event.button === 2 || event.pointerType === "touch")) {
+      this.beginDragLook();
+    } else {
+      this.draggingLook = false;
+    }
     this.renderer.domElement.setPointerCapture(event.pointerId);
   };
 
@@ -3754,7 +3755,9 @@ export class WalkthroughViewer {
     if (!this.draggingLook && this.pointerDown) {
       const moved = Math.hypot(event.clientX - this.pointerDown.x, event.clientY - this.pointerDown.y);
       if (moved > 4) {
-        this.draggingLook = this.controls.enabled && this.controls.dragLook;
+        if (this.controls.enabled && this.controls.dragLook) {
+          this.beginDragLook();
+        }
       }
     }
 
@@ -3769,6 +3772,12 @@ export class WalkthroughViewer {
     this.pitch -= dy * this.controls.lookSensitivityY;
     this.pitch = THREE.MathUtils.clamp(this.pitch, -1.15, 1.15);
   };
+
+  private beginDragLook(): void {
+    this.draggingLook = true;
+    this.cameraTween = undefined;
+    this.cancelClickMove();
+  }
 
   private handlePointerUp = (event: PointerEvent): void => {
     const down = this.pointerDown;
