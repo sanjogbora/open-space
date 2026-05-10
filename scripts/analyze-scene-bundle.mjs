@@ -1498,6 +1498,19 @@ function normalizeTextureMatchName(value) {
     .trim();
 }
 
+function looseTextureHasGenericName(source) {
+  const name = normalizeTextureMatchName(path.posix.basename(String(source ?? "").replace(/\\/g, "/")));
+  if (!name) {
+    return false;
+  }
+  return (
+    /^(gltf )?embedded \d+$/.test(name) ||
+    /^(image|texture|tex|map|material|mat) \d+$/.test(name) ||
+    /^(gltf )?(image|texture|tex|map|material|mat) embedded \d+$/.test(name) ||
+    /^gltf embedded (image|texture|tex|map|material|mat)? ?\d+$/.test(name)
+  );
+}
+
 function inferMaterialTextureField(source) {
   const normalized = normalizeTextureMatchName(source);
   if (/\b(lightmap|light map|bake|baked|shadow)\b/.test(normalized)) {
@@ -2662,6 +2675,7 @@ function createDiagnostics(manifest, report, graphs, controls) {
     ...report.looseImages,
     ...report.models.flatMap((model) => model.externalResources ?? []).filter((resource) => resource.kind === "texture")
   ].filter((image) => typeof image.width === "number" && typeof image.height === "number");
+  const genericLooseTextureImages = (report.looseImages ?? []).filter((image) => looseTextureHasGenericName(image.source));
   const oversizedTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 4096);
   const largeTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 2048);
   const tinyTextures = textureImages.filter((image) => Math.max(image.width, image.height) > 0 && Math.max(image.width, image.height) <= 256);
@@ -3268,6 +3282,24 @@ function createDiagnostics(manifest, report, graphs, controls) {
         ambiguous > 0
           ? "Keep the original texture folder structure if possible; otherwise choose the intended texture manually before repair."
           : "Run import repair to copy the loose texture files into the exact paths expected by the model."
+    });
+  }
+
+  if (
+    genericLooseTextureImages.length >= 2 &&
+    genericLooseTextureImages.length / Math.max(1, report.looseImageCount ?? 0) >= 0.5 &&
+    ((report.imageCount ?? 0) === 0 || materialTextureUsageRatio < 0.25)
+  ) {
+    const examples = genericLooseTextureImages
+      .slice(0, 4)
+      .map((image) => image.source)
+      .join(", ");
+    diagnostics.push({
+      severity: "warning",
+      code: "generic-loose-texture-names",
+      title: "Loose texture names are not self-describing",
+      message: `${genericLooseTextureImages.length} loose texture file(s) use generic export names${examples ? ` such as ${examples}` : ""}, so automatic material matching cannot safely know which surface each image belongs to.`,
+      action: "Ask for the original GLTF ZIP with the texture paths preserved, re-export a GLB with embedded textures, or review each candidate manually in Materials."
     });
   }
 
@@ -4270,6 +4302,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "vertex-colors-detected",
     "relocatable-texture-resources",
     "loose-textures-not-referenced",
+    "generic-loose-texture-names",
     "model-has-no-texture-images",
     "image-textures-unused-by-materials",
     "few-materials-use-textures",

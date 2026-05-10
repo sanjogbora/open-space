@@ -37,6 +37,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Click-to-move now holds eye height across transient raised strips when the destination is on the same level, reducing threshold/ridge bounce during smooth room-to-room glides.
 - Studio's viewer repair card now shows a three-step plain-language playbook before the advanced blocker/coordinate details, so non-technical users can understand why a click failed and what to try first.
 - Viewer QA now separates texture/material problems from render-profile tuning, with tone mapping and exposure included in the checklist and copied QA report.
+- Import QA now flags loose texture folders with generic names like `gltf_embedded_0.png`, explaining that those files cannot be safely auto-mapped without preserved source paths or manual material review.
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
