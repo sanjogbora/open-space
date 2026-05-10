@@ -11496,6 +11496,43 @@ function repairCenterDestinationForItem(item: RepairCenterItem): string {
   return "Opens diagnostics.";
 }
 
+function repairCenterVerifyForItem(item: RepairCenterItem): string {
+  if (item.id === "upload") {
+    return "After upload, the progress strip should replace Waiting states with specific repair areas.";
+  }
+  if (item.action === "repair") {
+    return "After repair, return here and confirm blocker counts or source warnings decreased.";
+  }
+  if (item.action === "apply-textures" || item.action === "materials") {
+    return "After assigning textures, compare the viewer against the reference model and check that flat/plain surfaces improved.";
+  }
+  if (item.action === "navigation") {
+    return "After saving, open the viewer and click through the doorway or floor area that previously failed.";
+  }
+  if (item.action === "rooms") {
+    return "After mapping rooms, top view should show readable room regions and room buttons should jump to the right view.";
+  }
+  if (item.action === "interactions") {
+    return "After mapping interactions, test the screen/video or hotspot directly in the viewer.";
+  }
+  if (item.action === "bake") {
+    return "After baking, inspect lightmap thumbnails and then compare shadows/lighting in the viewer.";
+  }
+  if (item.action === "environment") {
+    return "After changing context, the first view should no longer open to unwanted grass, empty space, or a confusing exterior.";
+  }
+  if (item.action === "views") {
+    return "After saving views, use the viewer room buttons and top view to confirm the camera framing.";
+  }
+  if (item.action === "optimize") {
+    return "After optimization, rerun analysis and confirm the publish/mobile warnings shrink without visual damage.";
+  }
+  if (item.action === "test") {
+    return "Pass when click-to-move, WASD, wheel movement, rooms, top view, and key interactions work in the viewer.";
+  }
+  return "After reviewing, return to Repair Center and confirm the card is gone or moved lower priority.";
+}
+
 function buildRepairCenterItems({
   stats,
   manifest,
@@ -11766,6 +11803,7 @@ function RepairCenter({
                     </div>
                     <p>{item.detail}</p>
                     <small className="repair-center-visual-fix">Visual fix: {item.visualFix}</small>
+                    <small className="repair-center-verify">Check: {repairCenterVerifyForItem(item)}</small>
                     <small className="repair-center-destination">{repairCenterDestinationForItem(item)}</small>
                   </div>
                   <button
