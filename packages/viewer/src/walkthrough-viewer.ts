@@ -300,9 +300,7 @@ export class WalkthroughViewer {
     }
     this.activeView = view;
     this.applyViewObjectVisibility(view);
-    this.moveTarget = undefined;
-    this.movePath = [];
-    this.moveMarker.visible = false;
+    this.cancelClickMove();
     this.stableFloorY = undefined;
     this.resetPendingFloorTransition();
     this.cameraTween = {
@@ -1862,9 +1860,7 @@ export class WalkthroughViewer {
     if (direction.lengthSq() > 0) {
       direction.normalize().multiplyScalar(this.controls.moveSpeed * delta);
       this.moveCameraBy(direction);
-      this.moveTarget = undefined;
-      this.movePath = [];
-      this.moveMarker.visible = false;
+      this.cancelClickMove();
     }
 
     this.updateWheelMovement(delta);
@@ -1883,6 +1879,7 @@ export class WalkthroughViewer {
       this.wheelVelocity = 0;
       return;
     }
+    this.cancelClickMove();
     forward.normalize().multiplyScalar(this.wheelVelocity * delta);
     const moved = this.moveCameraBy(forward);
     this.wheelVelocity *= moved ? Math.exp(-7 * delta) : Math.exp(-22 * delta);
@@ -1990,6 +1987,10 @@ export class WalkthroughViewer {
     if (this.slideCameraBy(slideDelta, delta)) {
       return;
     }
+    this.cancelClickMove();
+  }
+
+  private cancelClickMove(): void {
     this.moveTarget = undefined;
     this.movePath = [];
     this.clickMoveVelocity = 0;
@@ -3923,9 +3924,7 @@ export class WalkthroughViewer {
     event.preventDefault();
     this.renderer.domElement.focus();
     this.cameraTween = undefined;
-    this.moveTarget = undefined;
-    this.movePath = [];
-    this.moveMarker.visible = false;
+    this.cancelClickMove();
     const intent = -Math.sign(event.deltaY || 0);
     const wheelMoveSpeed = this.wheelMoveSpeed();
     const impulse = THREE.MathUtils.clamp(Math.abs(event.deltaY) * 0.035 * wheelMoveSpeed, 0.25, 3.2 * wheelMoveSpeed);
