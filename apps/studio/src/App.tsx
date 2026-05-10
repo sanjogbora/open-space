@@ -47,6 +47,7 @@ import {
 
 type StudioTab =
   | "overview"
+  | "repair"
   | "import"
   | "optimization"
   | "publish"
@@ -642,6 +643,7 @@ const viewerBaseUrl = "http://127.0.0.1:5173";
 const apiBaseUrl = "http://127.0.0.1:5175";
 const studioTabIds: readonly StudioTab[] = [
   "overview",
+  "repair",
   "import",
   "optimization",
   "publish",
@@ -6346,6 +6348,7 @@ function App() {
         <nav className="tabs" aria-label="Studio sections">
           {[
             ["overview", "Overview"],
+            ["repair", "Repair Center"],
             ["import", "Import"],
             ["optimization", "Optimization"],
             ["publish", "Publish"],
@@ -6472,6 +6475,22 @@ function App() {
               </div>
             </div>
           </section>
+        )}
+
+        {selectedTab === "repair" && (
+          <RepairCenter
+            stats={bundleStats}
+            manifest={manifest}
+            publishChecks={publishChecks}
+            pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
+            reviewTextureSuggestionCount={reviewMaterialTextureSuggestionCount}
+            apiConnected={apiConnected}
+            repairState={repairState}
+            optimizeState={optimizeState}
+            bakeState={bakeState}
+            viewerUrl={viewerUrl(activeProjectId)}
+            onAction={runImportDiagnosticAction}
+          />
         )}
 
         {selectedTab === "import" && (
@@ -11243,6 +11262,310 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
     detail: "The import report has no blocking action. Open the viewer and test walking, click movement, and room buttons.",
     button: "Open Viewer"
   };
+}
+
+type RepairCenterSeverity = "error" | "warning" | "info" | "ready";
+
+interface RepairCenterItem {
+  id: string;
+  stage: string;
+  title: string;
+  detail: string;
+  severity: RepairCenterSeverity;
+  action: ImportNextStepAction;
+  button: string;
+}
+
+function repairCenterStageForAction(action: ImportNextStepAction): string {
+  if (action === "repair" || action === "review") {
+    return "Source";
+  }
+  if (action === "materials" || action === "apply-textures") {
+    return "Visuals";
+  }
+  if (action === "navigation") {
+    return "Movement";
+  }
+  if (action === "rooms" || action === "views") {
+    return "Presentation";
+  }
+  if (action === "interactions") {
+    return "Interactions";
+  }
+  if (action === "bake") {
+    return "Lighting";
+  }
+  if (action === "optimize") {
+    return "Performance";
+  }
+  if (action === "environment") {
+    return "Context";
+  }
+  return "Delivery";
+}
+
+function repairCenterSeverityRank(severity: RepairCenterSeverity): number {
+  if (severity === "error") {
+    return 0;
+  }
+  if (severity === "warning") {
+    return 1;
+  }
+  if (severity === "info") {
+    return 2;
+  }
+  return 3;
+}
+
+function repairCenterIcon(action: ImportNextStepAction) {
+  if (action === "repair") {
+    return <Wrench size={17} aria-hidden="true" />;
+  }
+  if (action === "materials" || action === "apply-textures" || action === "bake") {
+    return <Palette size={17} aria-hidden="true" />;
+  }
+  if (action === "navigation" || action === "views") {
+    return <MapPin size={17} aria-hidden="true" />;
+  }
+  if (action === "rooms") {
+    return <Layers3 size={17} aria-hidden="true" />;
+  }
+  if (action === "interactions") {
+    return <Video size={17} aria-hidden="true" />;
+  }
+  if (action === "environment") {
+    return <Globe2 size={17} aria-hidden="true" />;
+  }
+  if (action === "optimize") {
+    return <Activity size={17} aria-hidden="true" />;
+  }
+  if (action === "test") {
+    return <ExternalLink size={17} aria-hidden="true" />;
+  }
+  return <AlertTriangle size={17} aria-hidden="true" />;
+}
+
+function buildRepairCenterItems({
+  stats,
+  manifest,
+  publishChecks,
+  pendingTextureSuggestionCount,
+  reviewTextureSuggestionCount
+}: {
+  stats: BundleStats | null;
+  manifest: SceneManifest;
+  publishChecks: readonly PublishCheck[];
+  pendingTextureSuggestionCount: number;
+  reviewTextureSuggestionCount: number;
+}): RepairCenterItem[] {
+  const items: RepairCenterItem[] = [];
+  if (!stats) {
+    return [
+      {
+        id: "upload",
+        stage: "Source",
+        title: "Upload a model",
+        detail: "Start with a GLB or ZIP so Studio can analyze visual quality, navigation, rooms, and publish readiness.",
+        severity: "info",
+        action: "repair",
+        button: "Open Import"
+      }
+    ];
+  }
+
+  if (pendingTextureSuggestionCount > 0) {
+    items.push({
+      id: "texture-ready",
+      stage: "Visuals",
+      title: "Apply confident texture matches",
+      detail: `${pendingTextureSuggestionCount} loose texture match${pendingTextureSuggestionCount === 1 ? "" : "es"} can be assigned automatically before visual review.`,
+      severity: "warning",
+      action: "apply-textures",
+      button: `Apply ${pendingTextureSuggestionCount}`
+    });
+  }
+  if (reviewTextureSuggestionCount > 0) {
+    items.push({
+      id: "texture-review",
+      stage: "Visuals",
+      title: "Review texture matches",
+      detail: `${reviewTextureSuggestionCount} weaker texture match${reviewTextureSuggestionCount === 1 ? "" : "es"} need a human check against the preview.`,
+      severity: "warning",
+      action: "materials",
+      button: `Review ${reviewTextureSuggestionCount}`
+    });
+  }
+
+  const diagnosticsByAction = new Map<ImportNextStepAction, NonNullable<BundleStats["diagnostics"]>>();
+  for (const diagnostic of stats.diagnostics ?? []) {
+    if (diagnostic.severity === "info") {
+      continue;
+    }
+    const action = importActionForDiagnostic(diagnostic.code) ?? "review";
+    diagnosticsByAction.set(action, [...(diagnosticsByAction.get(action) ?? []), diagnostic]);
+  }
+  for (const [action, diagnostics] of diagnosticsByAction) {
+    const copy = nextStepCopy(action);
+    const sample = diagnostics.slice(0, 2).map((diagnostic) => diagnostic.title).join("; ");
+    const hasError = diagnostics.some((diagnostic) => diagnostic.severity === "error");
+    items.push({
+      id: `diagnostics-${action}`,
+      stage: repairCenterStageForAction(action),
+      title: copy.title,
+      detail: `${diagnostics.length} issue${diagnostics.length === 1 ? "" : "s"} found${sample ? `: ${sample}` : ""}.`,
+      severity: hasError ? "error" : "warning",
+      action,
+      button: copy.button
+    });
+  }
+
+  for (const check of publishChecks.filter((check) => !check.ready).slice(0, 3)) {
+    const action = check.action ?? "review";
+    const copy = nextStepCopy(action);
+    items.push({
+      id: `publish-${check.id}`,
+      stage: "Delivery",
+      title: check.blocking ? `Publish blocker: ${check.label}` : `Publish warning: ${check.label}`,
+      detail: check.detail,
+      severity: check.blocking ? "error" : "warning",
+      action,
+      button: copy.button
+    });
+  }
+
+  if (manifest.views.length === 0) {
+    items.push({
+      id: "missing-views",
+      stage: "Presentation",
+      title: "Create a starting view",
+      detail: "A walkthrough needs at least one saved camera before it feels client-ready.",
+      severity: "error",
+      action: "views",
+      button: "Open Views"
+    });
+  }
+
+  const uniqueItems = [...new Map(items.map((item) => [item.id, item])).values()];
+  if (uniqueItems.length === 0) {
+    return [
+      {
+        id: "test-viewer",
+        stage: "Delivery",
+        title: "Test the walkthrough",
+        detail: "The automated report has no blocking repair items. Open the viewer and test click movement, WASD, rooms, top view, and publish flow.",
+        severity: "ready",
+        action: "test",
+        button: "Open Viewer"
+      }
+    ];
+  }
+  return uniqueItems.sort((a, b) => repairCenterSeverityRank(a.severity) - repairCenterSeverityRank(b.severity));
+}
+
+function RepairCenter({
+  stats,
+  manifest,
+  publishChecks,
+  pendingTextureSuggestionCount,
+  reviewTextureSuggestionCount,
+  apiConnected,
+  repairState,
+  optimizeState,
+  bakeState,
+  viewerUrl,
+  onAction
+}: {
+  stats: BundleStats | null;
+  manifest: SceneManifest;
+  publishChecks: readonly PublishCheck[];
+  pendingTextureSuggestionCount: number;
+  reviewTextureSuggestionCount: number;
+  apiConnected: boolean;
+  repairState: RepairState;
+  optimizeState: OptimizeState;
+  bakeState: BakeState;
+  viewerUrl: string;
+  onAction: (action: ImportNextStepAction) => void;
+}) {
+  const items = buildRepairCenterItems({
+    stats,
+    manifest,
+    publishChecks,
+    pendingTextureSuggestionCount,
+    reviewTextureSuggestionCount
+  });
+  const blockerCount = items.filter((item) => item.severity === "error").length;
+  const warningCount = items.filter((item) => item.severity === "warning").length;
+  const currentItem = items[0] ?? {
+    id: "test-viewer",
+    stage: "Delivery",
+    title: "Test the walkthrough",
+    detail: "The automated report has no blocking repair items.",
+    severity: "ready" as const,
+    action: "test" as const,
+    button: "Open Viewer"
+  };
+
+  return (
+    <section className="repair-center-layout">
+      <div className="panel repair-center-hero">
+        <div>
+          <span className="eyebrow">Guided setup</span>
+          <h2>{currentItem.severity === "ready" ? "Walkthrough is ready for manual testing" : currentItem.title}</h2>
+          <p>
+            {currentItem.severity === "ready"
+              ? "Studio found no blocking automated repair item. Run the viewer checklist before publishing."
+              : "Fix the first card, save if needed, then come back here for the next item."}
+          </p>
+        </div>
+        <div className="repair-center-score">
+          <strong>{blockerCount}</strong>
+          <span>blockers</span>
+          <small>{warningCount} warning{warningCount === 1 ? "" : "s"}</small>
+        </div>
+      </div>
+
+      <div className="repair-center-list">
+        {items.map((item, index) => {
+          const disabled =
+            (item.action === "repair" && (!apiConnected || repairState === "repairing")) ||
+            (item.action === "optimize" && (!apiConnected || optimizeState === "optimizing")) ||
+            (item.action === "bake" && (!apiConnected || bakeState === "baking"));
+          const buttonLabel =
+            item.action === "repair" && repairState === "repairing"
+              ? "Repairing"
+              : item.action === "optimize" && optimizeState === "optimizing"
+                ? "Optimizing"
+                : item.action === "bake" && bakeState === "baking"
+                  ? "Baking"
+                  : item.button;
+          return (
+            <div key={item.id} className={`repair-center-card ${item.severity}`}>
+              <div className="repair-center-index">
+                {item.severity === "ready" ? <Check size={18} aria-hidden="true" /> : index + 1}
+              </div>
+              <div className="repair-center-main">
+                <div className="repair-center-card-heading">
+                  <span>{item.stage}</span>
+                  <strong>{item.title}</strong>
+                </div>
+                <p>{item.detail}</p>
+              </div>
+              <button
+                type="button"
+                className="button secondary repair-center-action"
+                disabled={disabled}
+                onClick={() => (item.action === "test" ? window.open(viewerUrl, "_blank", "noopener,noreferrer") : onAction(item.action))}
+              >
+                {repairCenterIcon(item.action)}
+                {buttonLabel}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 function ImportNextSteps({

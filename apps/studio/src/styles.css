@@ -267,6 +267,145 @@ h2 {
   gap: 16px;
 }
 
+.repair-center-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.repair-center-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  align-items: center;
+  gap: 16px;
+}
+
+.repair-center-hero h2,
+.repair-center-hero p {
+  margin: 0;
+}
+
+.repair-center-hero h2 {
+  color: #12191f;
+  font-size: 24px;
+}
+
+.repair-center-hero p {
+  margin-top: 6px;
+  color: #52636f;
+  line-height: 1.45;
+}
+
+.repair-center-score {
+  min-height: 112px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 2px;
+  border: 1px solid #d6e5ef;
+  border-radius: 8px;
+  background: #f6fbff;
+}
+
+.repair-center-score strong {
+  color: #087fe7;
+  font-size: 34px;
+}
+
+.repair-center-score span,
+.repair-center-score small {
+  color: #52636f;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.repair-center-list {
+  display: grid;
+  gap: 10px;
+}
+
+.repair-center-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #dce7ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.repair-center-card.error {
+  border-color: #f2b7b5;
+  background: #fff7f6;
+}
+
+.repair-center-card.warning {
+  border-color: #f0d38f;
+  background: #fffaf0;
+}
+
+.repair-center-card.ready {
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.repair-center-index {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #087fe7;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.repair-center-card.error .repair-center-index {
+  background: #c7443e;
+}
+
+.repair-center-card.warning .repair-center-index {
+  background: #b87400;
+}
+
+.repair-center-card.ready .repair-center-index {
+  background: #147c4f;
+}
+
+.repair-center-main {
+  min-width: 0;
+}
+
+.repair-center-card-heading {
+  display: grid;
+  gap: 2px;
+}
+
+.repair-center-card-heading span {
+  color: #60717c;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.repair-center-card-heading strong {
+  color: #182026;
+  font-size: 15px;
+}
+
+.repair-center-card p {
+  margin: 5px 0 0;
+  color: #52636f;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.repair-center-action {
+  white-space: nowrap;
+}
+
 .panel,
 .list-panel {
   border: 1px solid #dce2e6;
@@ -3443,6 +3582,8 @@ code {
   .content-grid,
   .editor-layout,
   .bundle-grid,
+  .repair-center-hero,
+  .repair-center-card,
   .repair-diagnosis,
   .repair-playbook,
   .repair-action-grid,
