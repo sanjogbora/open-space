@@ -5068,14 +5068,14 @@ function App() {
     window.addEventListener("pointerup", handleUp, { once: true });
   };
 
-  const saveDraft = () => {
+  const persistDraft = async () => {
     if (!manifest) {
-      return;
+      return false;
     }
 
     if (apiConnected) {
-      void saveToApi();
-      return;
+      await saveToApi();
+      return true;
     }
     localStorage.setItem(draftKey(activeProjectId, "manifest"), JSON.stringify(manifest, null, 2));
     if (materialsDoc) {
@@ -5088,6 +5088,19 @@ function App() {
       localStorage.setItem(draftKey(activeProjectId, "controls"), JSON.stringify(controlsDoc, null, 2));
     }
     setNotice("saved");
+    return true;
+  };
+
+  const saveDraft = () => {
+    void persistDraft();
+  };
+
+  const saveAndOpenViewer = async (url = viewerUrl(activeProjectId)) => {
+    const saved = await persistDraft();
+    if (!saved) {
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const saveToApi = async () => {
@@ -6508,9 +6521,9 @@ function App() {
             repairState={repairState}
             optimizeState={optimizeState}
             bakeState={bakeState}
-            viewerUrl={viewerUrl(activeProjectId)}
             onImport={() => setSelectedTab("import")}
             onAction={runRepairCenterAction}
+            onSaveAndTest={() => void saveAndOpenViewer(viewerUrl(activeProjectId))}
           />
         )}
 
@@ -11884,9 +11897,9 @@ function RepairCenter({
   repairState,
   optimizeState,
   bakeState,
-  viewerUrl,
   onImport,
-  onAction
+  onAction,
+  onSaveAndTest
 }: {
   stats: BundleStats | null;
   manifest: SceneManifest;
@@ -11896,9 +11909,9 @@ function RepairCenter({
   repairState: RepairState;
   optimizeState: OptimizeState;
   bakeState: BakeState;
-  viewerUrl: string;
   onImport: () => void;
   onAction: (action: ImportNextStepAction) => void;
+  onSaveAndTest: () => void;
 }) {
   const items = buildRepairCenterItems({
     stats,
@@ -11922,7 +11935,7 @@ function RepairCenter({
       return;
     }
     if (item.action === "test") {
-      window.open(viewerUrl, "_blank", "noopener,noreferrer");
+      onSaveAndTest();
       return;
     }
     onAction(item.action);
@@ -11976,10 +11989,10 @@ function RepairCenter({
                 type="button"
                 className="button secondary repair-center-next"
                 disabled={!stats}
-                onClick={() => window.open(viewerUrl, "_blank", "noopener,noreferrer")}
+                onClick={onSaveAndTest}
               >
-                <ExternalLink size={16} aria-hidden="true" />
-                Test Viewer
+                <Save size={16} aria-hidden="true" />
+                Save & Test
               </button>
             )}
           </div>
