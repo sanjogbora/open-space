@@ -191,6 +191,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Analyzer now counts unused texture image payloads, so GLBs with many disconnected image files are flagged before users judge a flat-looking viewer.
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
 - Studio now has a Repair Center tab that turns diagnostics, texture suggestions, publish checks, and missing setup into one prioritized fix queue.
+- Repair Center cards now describe the visual fix path for each issue, such as painting navigation zones, comparing texture previews, picking screen surfaces, or inspecting bake thumbnails.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
 - Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.

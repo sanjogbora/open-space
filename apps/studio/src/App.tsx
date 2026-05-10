@@ -11271,6 +11271,7 @@ interface RepairCenterItem {
   stage: string;
   title: string;
   detail: string;
+  visualFix: string;
   severity: RepairCenterSeverity;
   action: ImportNextStepAction;
   button: string;
@@ -11345,6 +11346,40 @@ function repairCenterIcon(action: ImportNextStepAction) {
   return <AlertTriangle size={17} aria-hidden="true" />;
 }
 
+function repairCenterVisualFixForAction(action: ImportNextStepAction): string {
+  if (action === "apply-textures") {
+    return "Review the thumbnail match, then apply the suggested image automatically.";
+  }
+  if (action === "materials") {
+    return "Compare texture previews and click Base, Normal, Emissive, or Lightmap on the right image.";
+  }
+  if (action === "navigation") {
+    return "Use the zone map to paint walk areas, door passes, and blockers over the floorplan.";
+  }
+  if (action === "rooms") {
+    return "Sync walk areas into room regions, then adjust the room map visually.";
+  }
+  if (action === "interactions") {
+    return "Pick detected TV/screen surfaces and attach video, hotspot, or link behavior.";
+  }
+  if (action === "bake") {
+    return "Choose a quality preset, bake, then inspect lightmap thumbnails before publishing.";
+  }
+  if (action === "environment") {
+    return "Toggle ground, enclosure, and exterior context presets while checking the viewer frame.";
+  }
+  if (action === "views") {
+    return "Save a camera viewpoint and use it as the starting or room view.";
+  }
+  if (action === "optimize") {
+    return "Run a visual quality profile, then compare size, texture, and mobile readiness.";
+  }
+  if (action === "test") {
+    return "Open the viewer and test click movement, WASD, wheel movement, rooms, and top view.";
+  }
+  return "Use the guided card first; raw diagnostics stay available only when deeper source repair is needed.";
+}
+
 function buildRepairCenterItems({
   stats,
   manifest,
@@ -11366,6 +11401,7 @@ function buildRepairCenterItems({
         stage: "Source",
         title: "Upload a model",
         detail: "Start with a GLB or ZIP so Studio can analyze visual quality, navigation, rooms, and publish readiness.",
+        visualFix: "Drop the source file here; Studio will build the repair queue from the analyzed model.",
         severity: "info",
         action: "repair",
         button: "Open Import"
@@ -11379,6 +11415,7 @@ function buildRepairCenterItems({
       stage: "Visuals",
       title: "Apply confident texture matches",
       detail: `${pendingTextureSuggestionCount} loose texture match${pendingTextureSuggestionCount === 1 ? "" : "es"} can be assigned automatically before visual review.`,
+      visualFix: repairCenterVisualFixForAction("apply-textures"),
       severity: "warning",
       action: "apply-textures",
       button: `Apply ${pendingTextureSuggestionCount}`
@@ -11390,6 +11427,7 @@ function buildRepairCenterItems({
       stage: "Visuals",
       title: "Review texture matches",
       detail: `${reviewTextureSuggestionCount} weaker texture match${reviewTextureSuggestionCount === 1 ? "" : "es"} need a human check against the preview.`,
+      visualFix: repairCenterVisualFixForAction("materials"),
       severity: "warning",
       action: "materials",
       button: `Review ${reviewTextureSuggestionCount}`
@@ -11413,6 +11451,7 @@ function buildRepairCenterItems({
       stage: repairCenterStageForAction(action),
       title: copy.title,
       detail: `${diagnostics.length} issue${diagnostics.length === 1 ? "" : "s"} found${sample ? `: ${sample}` : ""}.`,
+      visualFix: repairCenterVisualFixForAction(action),
       severity: hasError ? "error" : "warning",
       action,
       button: copy.button
@@ -11427,6 +11466,7 @@ function buildRepairCenterItems({
       stage: "Delivery",
       title: check.blocking ? `Publish blocker: ${check.label}` : `Publish warning: ${check.label}`,
       detail: check.detail,
+      visualFix: repairCenterVisualFixForAction(action),
       severity: check.blocking ? "error" : "warning",
       action,
       button: copy.button
@@ -11439,6 +11479,7 @@ function buildRepairCenterItems({
       stage: "Presentation",
       title: "Create a starting view",
       detail: "A walkthrough needs at least one saved camera before it feels client-ready.",
+      visualFix: repairCenterVisualFixForAction("views"),
       severity: "error",
       action: "views",
       button: "Open Views"
@@ -11453,6 +11494,7 @@ function buildRepairCenterItems({
         stage: "Delivery",
         title: "Test the walkthrough",
         detail: "The automated report has no blocking repair items. Open the viewer and test click movement, WASD, rooms, top view, and publish flow.",
+        visualFix: repairCenterVisualFixForAction("test"),
         severity: "ready",
         action: "test",
         button: "Open Viewer"
@@ -11501,6 +11543,7 @@ function RepairCenter({
     stage: "Delivery",
     title: "Test the walkthrough",
     detail: "The automated report has no blocking repair items.",
+    visualFix: repairCenterVisualFixForAction("test"),
     severity: "ready" as const,
     action: "test" as const,
     button: "Open Viewer"
@@ -11550,6 +11593,7 @@ function RepairCenter({
                   <strong>{item.title}</strong>
                 </div>
                 <p>{item.detail}</p>
+                <small className="repair-center-visual-fix">Visual fix: {item.visualFix}</small>
               </div>
               <button
                 type="button"

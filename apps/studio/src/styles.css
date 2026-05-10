@@ -402,6 +402,19 @@ h2 {
   line-height: 1.4;
 }
 
+.repair-center-visual-fix {
+  display: block;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border: 1px solid #d6e5ef;
+  border-radius: 7px;
+  color: #355262;
+  background: #f6fbff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .repair-center-action {
   white-space: nowrap;
 }
