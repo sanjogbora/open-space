@@ -3429,10 +3429,11 @@ export class WalkthroughViewer {
       }
       const recoveredTarget = this.findReachableTargetNear(nextTarget, this.camera.position);
       if (recoveredTarget) {
+        const markerPoint = this.floorMarkerPointForTarget(recoveredTarget.target);
         if (recoveredTarget.route) {
-          this.startClickRoute(recoveredTarget.route, recoveredTarget.target);
+          this.startClickRoute(recoveredTarget.route, markerPoint);
         } else {
-          this.startClickMove(recoveredTarget.target, recoveredTarget.target);
+          this.startClickMove(recoveredTarget.target, markerPoint);
         }
         return true;
       }
@@ -3456,10 +3457,11 @@ export class WalkthroughViewer {
       }
       const recoveredTarget = this.findReachableTargetNear(nextTarget, this.camera.position);
       if (recoveredTarget) {
+        const markerPoint = this.floorMarkerPointForTarget(recoveredTarget.target);
         if (recoveredTarget.route) {
-          this.startClickRoute(recoveredTarget.route, recoveredTarget.target);
+          this.startClickRoute(recoveredTarget.route, markerPoint);
         } else {
-          this.startClickMove(recoveredTarget.target, recoveredTarget.target);
+          this.startClickMove(recoveredTarget.target, markerPoint);
         }
         return true;
       }
@@ -3505,6 +3507,19 @@ export class WalkthroughViewer {
     this.moveMarker.visible = true;
     this.moveMarker.position.copy(markerPoint);
     this.moveMarker.position.y += 0.035;
+  }
+
+  private floorMarkerPointForTarget(target: THREE.Vector3): THREE.Vector3 {
+    const markerPoint = target.clone();
+    const floorY = this.sampleGeometryFloorY(target, {
+      maxDelta: Math.max(
+        this.controls.maxStepDown ?? this.maxStepDown,
+        this.controls.maxStepUp ?? this.maxStepUp,
+        this.cameraHeight * 0.5
+      )
+    });
+    markerPoint.y = typeof floorY === "number" ? floorY : target.y - this.cameraHeight;
+    return markerPoint;
   }
 
   private normalizeClickRouteHeights(route: THREE.Vector3[]): THREE.Vector3[] {
