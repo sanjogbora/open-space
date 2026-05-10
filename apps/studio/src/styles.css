@@ -1918,6 +1918,40 @@ button.list-row {
   color: #49697a;
 }
 
+.repair-diagnosis {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #d8e1e8;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.repair-diagnosis strong {
+  color: #182026;
+}
+
+.repair-diagnosis p {
+  margin-top: 4px;
+  color: #315466;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.repair-diagnosis ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #435762;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.repair-diagnosis li + li {
+  margin-top: 5px;
+}
+
 .repair-action-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3320,6 +3354,7 @@ code {
   .content-grid,
   .editor-layout,
   .bundle-grid,
+  .repair-diagnosis,
   .repair-action-grid,
   .navigation-repair-path {
     grid-template-columns: 1fr;

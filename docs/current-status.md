@@ -15,6 +15,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer navigation blocked messages now show a recommended repair type and context-specific zone/debug action.
 - Studio now scrolls directly to the guided repair card when opened from a viewer Navigation blocked / Fix in Studio link.
 - Studio repair cards now echo the viewer's recommended repair action so the viewer and Studio handoff is easier to follow.
+- Studio viewer-repair cards now include a plain-language diagnosis that explains disconnected islands, missing door passes, narrow openings, blocker matches, and step-height failures before showing technical details.
 - Studio viewer-repair cards now offer Auto Bridge directly when a route-not-found click happens while walk/pass areas are split into multiple islands.
 - Studio viewer-repair cards explain when Auto Bridge appears and how many disconnected route islands were detected.
 - Studio Navigation Repair now shows a plain five-step repair path: boundary, walk areas, room links, blockers, and viewer test.

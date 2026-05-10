@@ -253,6 +253,12 @@ interface NavigationRepairRecommendation {
   requiresBlocker?: boolean;
 }
 
+interface NavigationRepairDiagnosis {
+  title: string;
+  detail: string;
+  checks: string[];
+}
+
 interface NavigationQaIssue {
   id: string;
   severity: "error" | "warning" | "info";
@@ -957,6 +963,90 @@ function navigationRepairRecommendation(draft: NavigationRepairDraft): Navigatio
     primaryLabel: draft.point ? "Add Walk Patch" : "Review Zones",
     action: draft.point ? "walk" : "pass",
     requiresPoint: true
+  };
+}
+
+function navigationRepairDiagnosis(
+  draft: NavigationRepairDraft,
+  coverage: NavigationCoverage | null,
+  hasMatchedBlocker: boolean,
+  narrowBodyRepairRadius: number | null
+): NavigationRepairDiagnosis {
+  if (draft.reason === "route-not-found") {
+    return {
+      title: "Why this failed",
+      detail:
+        "The clicked floor looks valid, but the viewer could not find a connected walk path from the current area to that room.",
+      checks: [
+        coverage && coverage.routeComponents > 1
+          ? `${coverage.routeComponents} separate route islands are active, so a doorway connector is probably missing.`
+          : "The current walk areas do not prove a connected route through the doorway.",
+        coverage && coverage.passZones > 0
+          ? `${coverage.passZones} door pass zone(s) exist; expand or move one if it does not cross the opening.`
+          : "No door pass zones exist yet, so separate rooms will stay disconnected.",
+        draft.from && draft.target
+          ? "The viewer sent both the current camera point and clicked target, so Studio can place the connector in the right direction."
+          : "Use the map to place a pass across the physical opening, then save and retry."
+      ]
+    };
+  }
+
+  if (draft.reason === "outside-walk-zone" || draft.reason === "no-walkable-hit") {
+    return {
+      title: "Why this failed",
+      detail:
+        "The click did not land on a floor area that the viewer trusts for walking.",
+      checks: [
+        "Add a walk patch only if a person should be allowed to stand there.",
+        "If the click landed on furniture, a cupboard, glass, or a helper mesh, leave it unwalkable.",
+        coverage && coverage.walkZones > 0
+          ? `${coverage.walkZones} walk area(s) are already active; this click is outside them.`
+          : "No authored walk areas are active yet."
+      ]
+    };
+  }
+
+  if (draft.reason === "blocked-step") {
+    return {
+      title: "Why this failed",
+      detail:
+        "The route crosses a height change larger than the current movement settings allow.",
+      checks: [
+        "Use the Steps preset for thresholds, landings, or simple stair transitions.",
+        "If the model has tiny ridges or slab lips, keep the smooth-interior preset and draw cleaner walk patches.",
+        "If this is furniture or a wall top, keep it blocked."
+      ]
+    };
+  }
+
+  if (draft.reason === "blocked-collision") {
+    return {
+      title: "Why this failed",
+      detail:
+        "The viewer found an object or block zone in the route before it could reach the clicked point.",
+      checks: [
+        hasMatchedBlocker
+          ? "Studio matched the likely model object below, so choose whether it is a wall, walkable surface, or false blocker."
+          : "No exact object match was found; use the clicked point and blocker name in Technical details if needed.",
+        narrowBodyRepairRadius
+          ? `The opening may be narrow; Body ${narrowBodyRepairRadius.toFixed(2)} is available as a quick test.`
+          : "If this is a doorway, add a door pass through the opening before ignoring blockers.",
+        draft.blockerKind === "authored"
+          ? "The blocker came from a Studio zone, so resize or split that block zone around the opening."
+          : "If the object is not actually a wall, mark it ignored from this card."
+      ]
+    };
+  }
+
+  return {
+    title: "Why this failed",
+    detail:
+      "The viewer could not classify this click cleanly from the model data it received.",
+    checks: [
+      "Start by checking whether the clicked area should be walkable.",
+      "If it should be reachable from another room, add a door pass through the opening.",
+      "If the model geometry is unusual, inspect the object role and generated zones."
+    ]
   };
 }
 
@@ -3297,6 +3387,18 @@ function App() {
     const object = objectBySceneNode ?? objectByName;
     return object ? { object, sceneNode } : null;
   }, [navigationRepairDraft?.blockerName, objectsDoc, sceneGraph]);
+  const repairDiagnosis = useMemo(
+    () =>
+      navigationRepairDraft
+        ? navigationRepairDiagnosis(
+            navigationRepairDraft,
+            navigationCoverageSummary,
+            Boolean(navigationRepairObjectMatch),
+            narrowBodyRepairRadius
+          )
+        : null,
+    [navigationCoverageSummary, navigationRepairDraft, navigationRepairObjectMatch, narrowBodyRepairRadius]
+  );
   const primaryNavigationIssue = useMemo(
     () => navigationIssues.find((issue) => issue.severity !== "info"),
     [navigationIssues]
@@ -9239,6 +9341,19 @@ function App() {
                             Dismiss
                           </button>
                         </div>
+                        {repairDiagnosis && (
+                          <div className="repair-diagnosis">
+                            <div>
+                              <strong>{repairDiagnosis.title}</strong>
+                              <p>{repairDiagnosis.detail}</p>
+                            </div>
+                            <ul>
+                              {repairDiagnosis.checks.map((check) => (
+                                <li key={check}>{check}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                         {repairRecommendation && (
                           <div className="repair-recommendation">
                             <div>
