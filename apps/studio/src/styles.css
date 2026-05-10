@@ -324,6 +324,30 @@ h2 {
   gap: 10px;
 }
 
+.repair-center-stage {
+  display: grid;
+  gap: 8px;
+}
+
+.repair-center-stage-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.repair-center-stage-heading strong {
+  color: #24313a;
+  font-size: 13px;
+}
+
+.repair-center-stage-heading small {
+  color: #60717c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .repair-center-card {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) auto;

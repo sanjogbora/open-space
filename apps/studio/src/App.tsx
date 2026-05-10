@@ -11286,6 +11286,17 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
 }
 
 type RepairCenterSeverity = "error" | "warning" | "info" | "ready";
+const repairCenterStageOrder = [
+  "Source",
+  "Visuals",
+  "Movement",
+  "Presentation",
+  "Interactions",
+  "Lighting",
+  "Context",
+  "Performance",
+  "Delivery"
+];
 
 interface RepairCenterItem {
   id: string;
@@ -11337,6 +11348,11 @@ function repairCenterSeverityRank(severity: RepairCenterSeverity): number {
     return 2;
   }
   return 3;
+}
+
+function repairCenterStageRank(stage: string): number {
+  const index = repairCenterStageOrder.indexOf(stage);
+  return index === -1 ? repairCenterStageOrder.length : index;
 }
 
 function repairCenterIcon(action: ImportNextStepAction) {
@@ -11559,6 +11575,12 @@ function RepairCenter({
   });
   const blockerCount = items.filter((item) => item.severity === "error").length;
   const warningCount = items.filter((item) => item.severity === "warning").length;
+  const groupedItems = [...items.reduce((groups, item) => {
+    groups.set(item.stage, [...(groups.get(item.stage) ?? []), item]);
+    return groups;
+  }, new Map<string, RepairCenterItem[]>())].sort(
+    ([stageA], [stageB]) => repairCenterStageRank(stageA) - repairCenterStageRank(stageB)
+  );
   const currentItem = items[0] ?? {
     id: "test-viewer",
     stage: "Delivery",
@@ -11590,45 +11612,56 @@ function RepairCenter({
       </div>
 
       <div className="repair-center-list">
-        {items.map((item, index) => {
-          const buttonLabel =
-            item.action === "repair" && repairState === "repairing"
-              ? "View Repair"
-              : item.action === "optimize" && optimizeState === "optimizing"
-                ? "View Optimize"
-                : item.action === "bake" && bakeState === "baking"
-                  ? "View Bake"
-                  : item.button;
-          return (
-            <div key={item.id} className={`repair-center-card ${item.severity}`}>
-              <div className="repair-center-index">
-                {item.severity === "ready" ? <Check size={18} aria-hidden="true" /> : index + 1}
-              </div>
-              <div className="repair-center-main">
-                <div className="repair-center-card-heading">
-                  <span>{item.stage}</span>
-                  <strong>{item.title}</strong>
-                </div>
-                <p>{item.detail}</p>
-                <small className="repair-center-visual-fix">Visual fix: {item.visualFix}</small>
-              </div>
-              <button
-                type="button"
-                className="button secondary repair-center-action"
-                onClick={() =>
-                  item.id === "upload"
-                    ? onImport()
-                    : item.action === "test"
-                      ? window.open(viewerUrl, "_blank", "noopener,noreferrer")
-                      : onAction(item.action)
-                }
-              >
-                {repairCenterIcon(item.action)}
-                {buttonLabel}
-              </button>
+        {groupedItems.map(([stage, stageItems]) => (
+          <section key={stage} className="repair-center-stage">
+            <div className="repair-center-stage-heading">
+              <strong>{stage}</strong>
+              <small>
+                {stageItems.length} item{stageItems.length === 1 ? "" : "s"}
+              </small>
             </div>
-          );
-        })}
+            {stageItems.map((item) => {
+              const itemIndex = items.findIndex((candidate) => candidate.id === item.id);
+              const buttonLabel =
+                item.action === "repair" && repairState === "repairing"
+                  ? "View Repair"
+                  : item.action === "optimize" && optimizeState === "optimizing"
+                    ? "View Optimize"
+                    : item.action === "bake" && bakeState === "baking"
+                      ? "View Bake"
+                      : item.button;
+              return (
+                <div key={item.id} className={`repair-center-card ${item.severity}`}>
+                  <div className="repair-center-index">
+                    {item.severity === "ready" ? <Check size={18} aria-hidden="true" /> : itemIndex + 1}
+                  </div>
+                  <div className="repair-center-main">
+                    <div className="repair-center-card-heading">
+                      <span>{item.stage}</span>
+                      <strong>{item.title}</strong>
+                    </div>
+                    <p>{item.detail}</p>
+                    <small className="repair-center-visual-fix">Visual fix: {item.visualFix}</small>
+                  </div>
+                  <button
+                    type="button"
+                    className="button secondary repair-center-action"
+                    onClick={() =>
+                      item.id === "upload"
+                        ? onImport()
+                        : item.action === "test"
+                          ? window.open(viewerUrl, "_blank", "noopener,noreferrer")
+                          : onAction(item.action)
+                    }
+                  >
+                    {repairCenterIcon(item.action)}
+                    {buttonLabel}
+                  </button>
+                </div>
+              );
+            })}
+          </section>
+        ))}
       </div>
     </section>
   );
