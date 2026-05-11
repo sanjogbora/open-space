@@ -2913,6 +2913,7 @@ function App() {
   const [selectedObjectId, setSelectedObjectId] = useState("");
   const [apiConnected, setApiConnected] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
+  const [saveError, setSaveError] = useState("");
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadError, setUploadError] = useState("");
   const [lightmapUploadState, setLightmapUploadState] = useState<UploadState>("idle");
@@ -5073,22 +5074,28 @@ function App() {
       return false;
     }
 
-    if (apiConnected) {
-      await saveToApi();
+    setSaveError("");
+    try {
+      if (apiConnected) {
+        await saveToApi();
+        return true;
+      }
+      localStorage.setItem(draftKey(activeProjectId, "manifest"), JSON.stringify(manifest, null, 2));
+      if (materialsDoc) {
+        localStorage.setItem(draftKey(activeProjectId, "materials"), JSON.stringify(materialsDoc, null, 2));
+      }
+      if (objectsDoc) {
+        localStorage.setItem(draftKey(activeProjectId, "objects"), JSON.stringify(objectsDoc, null, 2));
+      }
+      if (controlsDoc) {
+        localStorage.setItem(draftKey(activeProjectId, "controls"), JSON.stringify(controlsDoc, null, 2));
+      }
+      setNotice("saved");
       return true;
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Save failed.");
+      return false;
     }
-    localStorage.setItem(draftKey(activeProjectId, "manifest"), JSON.stringify(manifest, null, 2));
-    if (materialsDoc) {
-      localStorage.setItem(draftKey(activeProjectId, "materials"), JSON.stringify(materialsDoc, null, 2));
-    }
-    if (objectsDoc) {
-      localStorage.setItem(draftKey(activeProjectId, "objects"), JSON.stringify(objectsDoc, null, 2));
-    }
-    if (controlsDoc) {
-      localStorage.setItem(draftKey(activeProjectId, "controls"), JSON.stringify(controlsDoc, null, 2));
-    }
-    setNotice("saved");
-    return true;
   };
 
   const saveDraft = () => {
@@ -5108,34 +5115,30 @@ function App() {
       return;
     }
 
-    await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/manifest`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(manifest)
-    });
-
-    if (materialsDoc) {
-      await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/materials`, {
+    const postJson = async (path: string, body: unknown, label: string) => {
+      const response = await fetch(`${apiBaseUrl}${path}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(materialsDoc)
+        body: JSON.stringify(body)
       });
+      if (!response.ok) {
+        const error = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+        throw new Error(error?.error ?? `${label} save failed with ${response.status}.`);
+      }
+    };
+
+    await postJson(`/api/projects/${activeProjectId}/manifest`, manifest, "Manifest");
+
+    if (materialsDoc) {
+      await postJson(`/api/projects/${activeProjectId}/materials`, materialsDoc, "Materials");
     }
 
     if (objectsDoc) {
-      await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/objects`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(objectsDoc)
-      });
+      await postJson(`/api/projects/${activeProjectId}/objects`, objectsDoc, "Objects");
     }
 
     if (controlsDoc) {
-      await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/controls`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(controlsDoc)
-      });
+      await postJson(`/api/projects/${activeProjectId}/controls`, controlsDoc, "Controls");
     }
 
     const analyzeResponse = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/analyze`, {
@@ -6382,6 +6385,8 @@ function App() {
             </button>
           </div>
         </header>
+
+        {saveError && <p className="error-note save-error-note">{saveError}</p>}
 
         <nav className="tabs" aria-label="Studio sections">
           {[
@@ -9989,7 +9994,7 @@ function App() {
                             type="button"
                             className="button primary"
                             disabled={!apiConnected}
-                            onClick={() => void saveToApi()}
+                            onClick={() => void persistDraft()}
                           >
                             <Save size={16} aria-hidden="true" />
                             Save Changes
