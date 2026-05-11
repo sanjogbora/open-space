@@ -7053,6 +7053,16 @@ function App() {
                 <div className="panel-heading">
                   <Activity size={18} aria-hidden="true" />
                   <h2>Last Optimization Job</h2>
+                  {optimizationJob && optimizationJob.status !== "idle" && (
+                    <button
+                      type="button"
+                      className="button secondary compact-button"
+                      onClick={() => void copyText(optimizationJobReportText(optimizationJob, activeProjectId))}
+                    >
+                      <Copy size={15} aria-hidden="true" />
+                      Copy Report
+                    </button>
+                  )}
                 </div>
                 {optimizationJob && optimizationJob.status !== "idle" ? (
                   <>
@@ -13108,6 +13118,46 @@ function textureDeliveryPlanText(
     "1. Compare the viewer against the source/reference render before resizing textures.",
     "2. Downscale low-importance large textures first, then run optimization again.",
     "3. Use KTX2/Basis for production mobile delivery when available."
+  ];
+  return lines.filter(Boolean).join("\n");
+}
+
+function optimizationJobReportText(job: OptimizationJobDocument, projectId: string): string {
+  const blockedSteps = job.steps.filter((step) => step.status === "blocked" || step.status === "failed");
+  const skippedSteps = job.steps.filter((step) => step.status === "skipped");
+  const lines = [
+    `Open Space optimization report - ${projectId}`,
+    "",
+    `Profile: ${job.profile}`,
+    `Status: ${job.status}`,
+    `Applied to viewer: ${job.applied ? "yes" : "no"}`,
+    `Source model: ${job.sourceSceneUrl ?? "unknown"}`,
+    `Optimized model: ${job.optimizedSceneUrl ?? "not generated"}`,
+    `Completed: ${job.completedAt ?? job.startedAt ?? "unknown"}`,
+    "",
+    "Model transfer:",
+    `- Before: ${formatBytes(job.before?.modelBytes ?? 0)}`,
+    `- After: ${formatBytes(job.after?.modelBytes ?? 0)}`,
+    `- Saved: ${formatBytes(job.after?.savedBytes ?? 0)} (${job.after?.savedPercent ?? 0}%)`,
+    "",
+    "Texture runtime pressure:",
+    `- Texture count: ${job.before?.textureCount ?? 0} -> ${job.after?.textureCount ?? 0}`,
+    `- Decoded texture RAM: ${formatBytes(job.before?.decodedTextureBytes ?? 0)} -> ${formatBytes(job.after?.decodedTextureBytes ?? 0)}`,
+    `- Decoded texture RAM saved: ${formatBytes(job.after?.savedDecodedTextureBytes ?? 0)}`,
+    `- Texture file bytes saved: ${formatBytes(job.after?.savedTextureImageBytes ?? 0)}`,
+    "",
+    "Pipeline steps:",
+    ...job.steps.map((step) => `- ${step.status}: ${step.label}${step.note ? ` - ${step.note}` : ""}`),
+    "",
+    blockedSteps.length > 0 ? "Needs attention:" : "",
+    ...blockedSteps.map((step) => `- ${step.label}: ${step.note ?? step.status}`),
+    skippedSteps.length > 0 ? "Skipped / no-op steps:" : "",
+    ...skippedSteps.map((step) => `- ${step.label}: ${step.note ?? "No change needed."}`),
+    "",
+    "Next checks:",
+    "1. Open the viewer and compare Original vs Optimized.",
+    "2. If texture RAM is still high, use the Texture Delivery Plan to downscale the largest images.",
+    "3. If KTX2/Basis was blocked, install toktx before production mobile delivery."
   ];
   return lines.filter(Boolean).join("\n");
 }
