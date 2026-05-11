@@ -9588,15 +9588,14 @@ function App() {
                           <Wrench size={16} aria-hidden="true" />
                           Auto Fix
                         </button>
-                        <a
+                        <button
+                          type="button"
                           className="button secondary"
-                          href={navigationDebugViewerUrl(activeProjectId)}
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={() => void saveAndOpenViewer(navigationDebugViewerUrl(activeProjectId))}
                         >
-                          <ExternalLink size={16} aria-hidden="true" />
+                          <Save size={16} aria-hidden="true" />
                           Test
-                        </a>
+                        </button>
                         <button
                           type="button"
                           className="button secondary"
@@ -9993,15 +9992,14 @@ function App() {
                             <Save size={16} aria-hidden="true" />
                             Save Changes
                           </button>
-                          <a
+                          <button
+                            type="button"
                             className="button secondary"
-                            href={navigationDebugViewerUrl(activeProjectId)}
-                            target="_blank"
-                            rel="noreferrer"
+                            onClick={() => void saveAndOpenViewer(navigationDebugViewerUrl(activeProjectId))}
                           >
-                            <ExternalLink size={16} aria-hidden="true" />
+                            <Save size={16} aria-hidden="true" />
                             Retry Viewer
-                          </a>
+                          </button>
                         </div>
                       </div>
                     )}
@@ -10237,15 +10235,14 @@ function App() {
                     <div className="publish-row">
                       <span>Navigation zones</span>
                       <div className="inline-actions">
-                        <a
+                        <button
+                          type="button"
                           className="button secondary"
-                          href={navigationDebugViewerUrl(activeProjectId)}
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={() => void saveAndOpenViewer(navigationDebugViewerUrl(activeProjectId))}
                         >
-                          <ExternalLink size={16} aria-hidden="true" />
+                          <Save size={16} aria-hidden="true" />
                           Preview
-                        </a>
+                        </button>
                         <button
                           type="button"
                           className="button secondary"
