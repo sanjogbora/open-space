@@ -3028,6 +3028,7 @@ function App() {
   const [showNavigationZoneList, setShowNavigationZoneList] = useState(false);
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
+  const [applyOptimizedImmediately, setApplyOptimizedImmediately] = useState(true);
 
   useEffect(() => {
     if (!navigationRepairDraft) {
@@ -5401,7 +5402,7 @@ function App() {
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/optimize`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ profile: optimizationProfile, apply: true })
+        body: JSON.stringify({ profile: optimizationProfile, apply: applyOptimizedImmediately })
       });
       if (!response.ok) {
         const error = (await response.json()) as { error?: string };
@@ -6873,7 +6874,7 @@ function App() {
                 <div>
                   <strong>Optimize Scene Bundle</strong>
                   <p className="quiet-note">
-                    Generate an optimized GLB artifact, apply it to the manifest, and refresh bundle stats.
+                    Generate an optimized GLB artifact, then either preview it first or apply it to the viewer manifest.
                   </p>
                 </div>
                 <div className="optimization-action-controls">
@@ -6889,6 +6890,15 @@ function App() {
                     <option value="balanced">Balanced</option>
                     <option value="desktop">Desktop</option>
                   </select>
+                  <label className="toggle-row compact-toggle">
+                    <input
+                      type="checkbox"
+                      checked={applyOptimizedImmediately}
+                      disabled={optimizeState === "optimizing"}
+                      onChange={(event) => setApplyOptimizedImmediately(event.target.checked)}
+                    />
+                    <span>Apply now</span>
+                  </label>
                   <button
                     type="button"
                     className="button primary"
@@ -6896,7 +6906,7 @@ function App() {
                     onClick={() => void optimizeProject()}
                   >
                     <Activity size={16} aria-hidden="true" />
-                    {optimizeState === "optimizing" ? "Optimizing" : "Run"}
+                    {optimizeState === "optimizing" ? "Optimizing" : applyOptimizedImmediately ? "Run & Apply" : "Generate Preview"}
                   </button>
                 </div>
               </div>
