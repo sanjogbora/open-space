@@ -356,6 +356,7 @@ interface BundleStats {
   videoBytes: number;
   triangleCount: number;
   meshCount: number;
+  primitiveCount?: number;
   materialCount: number;
   texturedMaterialCount?: number;
   textureCount?: number;
@@ -455,6 +456,7 @@ interface OptimizationDocument {
       maxTotalBytes: number;
       maxModelBytes: number;
       maxTriangles: number;
+      maxDrawPrimitives?: number;
       maxMaterials: number;
       maxMeshes: number;
     };
@@ -462,6 +464,7 @@ interface OptimizationDocument {
       totalBytes: number;
       modelBytes: number;
       triangles: number;
+      drawPrimitives?: number;
       materials: number;
       meshes: number;
     };
@@ -6749,6 +6752,7 @@ function App() {
                   <div className="stat-grid">
                     <Stat label="Model" value={formatBytes(bundleStats.modelBytes)} />
                     <Stat label="Meshes" value={String(bundleStats.meshCount)} />
+                    <Stat label="Draw prims" value={String(bundleStats.primitiveCount ?? bundleStats.meshCount)} />
                     <Stat label="Materials" value={String(bundleStats.materialCount)} />
                     <Stat
                       label="Textured mats"
@@ -6865,6 +6869,7 @@ function App() {
                       <div className="stat-grid">
                         <Stat label="Model" value={formatBytes(profile.metrics.modelBytes)} />
                         <Stat label="Triangles" value={String(profile.metrics.triangles)} />
+                        <Stat label="Draw prims" value={String(profile.metrics.drawPrimitives ?? profile.metrics.meshes)} />
                         <Stat label="Meshes" value={String(profile.metrics.meshes)} />
                         <Stat label="Materials" value={String(profile.metrics.materials)} />
                         <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
@@ -11083,6 +11088,7 @@ function App() {
                       <Stat label="Total" value={formatBytes(bundleStats.totalBytes)} />
                       <Stat label="Model" value={formatBytes(bundleStats.modelBytes)} />
                       <Stat label="Meshes" value={String(bundleStats.meshCount)} />
+                      <Stat label="Draw prims" value={String(bundleStats.primitiveCount ?? bundleStats.meshCount)} />
                       <Stat label="Materials" value={String(bundleStats.materialCount)} />
                       <Stat
                         label="Textured mats"
@@ -11432,6 +11438,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   if (
     [
       "missing-geometry-compression",
+      "high-draw-primitive-count",
       "missing-texture-compression",
       "oversized-texture-dimensions",
       "many-large-textures"
@@ -12389,6 +12396,7 @@ function ViewerQaChecklist({
   ];
   const performanceDiagnosticCodes = [
     "missing-geometry-compression",
+    "high-draw-primitive-count",
     "missing-texture-compression",
     "oversized-texture-dimensions",
     "many-large-textures",
@@ -12397,6 +12405,7 @@ function ViewerQaChecklist({
   const performancePublishCodes = [
     "large-uncompressed-model",
     "mobile-triangle-budget",
+    "mobile-draw-primitive-budget",
     "mobile-mesh-budget",
     "mobile-total-size-budget",
     "missing-gpu-texture-compression",
@@ -12404,6 +12413,7 @@ function ViewerQaChecklist({
     "mobile-total-bytes",
     "mobile-model-bytes",
     "mobile-triangles",
+    "mobile-draw-primitives",
     "mobile-materials",
     "mobile-meshes"
   ];
@@ -12713,6 +12723,7 @@ function viewerQaReportText(
     `- Total bundle: ${formatBytes(stats?.totalBytes ?? 0)}`,
     `- Model size: ${formatBytes(stats?.modelBytes ?? 0)}`,
     `- Triangles: ${stats?.triangleCount ?? 0}`,
+    `- Draw primitives: ${stats?.primitiveCount ?? stats?.meshCount ?? 0}`,
     `- Meshes: ${stats?.meshCount ?? 0}`,
     `- Materials: ${stats?.materialCount ?? 0}`,
     `- Textured materials: ${stats?.texturedMaterialCount ?? 0}/${stats?.materialCount ?? 0}`,

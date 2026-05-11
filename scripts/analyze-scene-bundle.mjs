@@ -25,6 +25,7 @@ const defaultBudget = {
   maxVideoBytes: 45 * 1024 * 1024,
   maxInteractionCount: 80,
   maxMobileTriangles: 4_000_000,
+  maxMobileDrawPrimitives: 500,
   maxMobileMaterials: 180
 };
 
@@ -36,6 +37,7 @@ const optimizationProfiles = [
       maxTotalBytes: 80 * 1024 * 1024,
       maxModelBytes: 36 * 1024 * 1024,
       maxTriangles: 1_500_000,
+      maxDrawPrimitives: 500,
       maxMaterials: 80,
       maxMeshes: 300
     }
@@ -47,6 +49,7 @@ const optimizationProfiles = [
       maxTotalBytes: 140 * 1024 * 1024,
       maxModelBytes: 64 * 1024 * 1024,
       maxTriangles: 4_000_000,
+      maxDrawPrimitives: 900,
       maxMaterials: 160,
       maxMeshes: 700
     }
@@ -58,6 +61,7 @@ const optimizationProfiles = [
       maxTotalBytes: 260 * 1024 * 1024,
       maxModelBytes: 120 * 1024 * 1024,
       maxTriangles: 8_000_000,
+      maxDrawPrimitives: 1800,
       maxMaterials: 320,
       maxMeshes: 1400
     }
@@ -3062,6 +3066,16 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if ((report.primitiveCount ?? 0) > defaultBudget.maxMobileDrawPrimitives) {
+    diagnostics.push({
+      severity: "warning",
+      code: "high-draw-primitive-count",
+      title: "High draw primitive count",
+      message: `${report.primitiveCount.toLocaleString()} draw primitive(s) exceed the mobile target of ${defaultBudget.maxMobileDrawPrimitives.toLocaleString()}.`,
+      action: "Run Optimization with the Mobile or Balanced profile and inspect the draw-call join result before client/mobile delivery."
+    });
+  }
+
   if ((report.staleObjectOverrideCount ?? 0) > 0) {
     diagnostics.push({
       severity: "warning",
@@ -3954,6 +3968,13 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     });
   }
 
+  if (primitiveCount > defaultBudget.maxMobileDrawPrimitives) {
+    warnings.push({
+      code: "mobile-draw-primitive-budget",
+      message: `Draw primitive count exceeds mobile target of ${defaultBudget.maxMobileDrawPrimitives.toLocaleString()}.`
+    });
+  }
+
   if (materialCount > defaultBudget.maxMobileMaterials) {
     warnings.push({
       code: "mobile-material-budget",
@@ -4032,6 +4053,12 @@ function profileWarnings(report, profile) {
       message: `Triangle count is over the ${profile.label} budget.`
     });
   }
+  if (report.primitiveCount > budgets.maxDrawPrimitives) {
+    warnings.push({
+      code: "draw-primitives",
+      message: `Draw primitive count is over the ${profile.label} budget.`
+    });
+  }
   if (report.materialCount > budgets.maxMaterials) {
     warnings.push({
       code: "materials",
@@ -4064,6 +4091,14 @@ function recommendationList(report) {
       priority: "high",
       action: "Merge static meshes that share materials.",
       reason: "High mesh count increases draw calls."
+    });
+  }
+
+  if (report.primitiveCount > optimizationProfiles[0].budgets.maxDrawPrimitives) {
+    recommendations.push({
+      priority: "high",
+      action: "Join compatible primitives and merge safe static batches.",
+      reason: "High draw primitive count can bottleneck mobile GPUs even when triangle count is acceptable."
     });
   }
 
@@ -4134,6 +4169,7 @@ function createOptimizationReport(report) {
         totalBytes: report.totalBytes,
         modelBytes: report.modelBytes,
         triangles: report.triangleCount,
+        drawPrimitives: report.primitiveCount,
         materials: report.materialCount,
         meshes: report.meshCount
       },
@@ -4212,6 +4248,17 @@ function createPublishReadiness(manifest, report, optimizationReport) {
         "Over mobile triangle budget",
         `Triangle count exceeds ${optimizationProfiles[0].budgets.maxTriangles.toLocaleString()} triangles.`,
         "Simplify meshes or split heavy content before mobile delivery."
+      )
+    );
+  }
+
+  if (report.primitiveCount > optimizationProfiles[0].budgets.maxDrawPrimitives) {
+    warnings.push(
+      publishReadinessIssue(
+        "mobile-draw-primitive-budget",
+        "High draw primitive count",
+        `Draw primitive count exceeds ${optimizationProfiles[0].budgets.maxDrawPrimitives.toLocaleString()} draw primitives.`,
+        "Run draw-call optimization or merge compatible static primitives before mobile delivery."
       )
     );
   }
@@ -4323,6 +4370,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "duplicate-node-names",
     "duplicate-material-names",
     "repeated-large-mesh-instances",
+    "high-draw-primitive-count",
     "stale-object-overrides",
     "invalid-object-navigation-behavior"
   ]);
