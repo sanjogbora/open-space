@@ -9186,8 +9186,8 @@ function App() {
                   "Mark floors as Walk on, walls or furniture as Collision, and helper meshes as Ignore navigation.",
                   "Retest blocked clicks after changing any object role."
                 ]}
-                actionLabel="Test Viewer"
-                onAction={() => window.open(navigationDebugViewerUrl(activeProjectId), "_blank", "noopener,noreferrer")}
+                actionLabel="Save & Test"
+                onAction={() => void saveAndOpenViewer(navigationDebugViewerUrl(activeProjectId))}
                 secondaryActionLabel="Repair Center"
                 onSecondaryAction={() => setSelectedTab("repair")}
               />

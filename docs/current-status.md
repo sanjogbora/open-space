@@ -207,6 +207,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Repair Center testing now saves the current Studio draft before opening the viewer, reducing false failures from unsaved navigation/material/room changes.
 - Repair Center navigation fixes now save and open the navigation debug viewer, while non-navigation checks still open the normal viewer.
 - Studio header now includes Save & Test so users can persist edits and open the viewer in one action from any panel.
+- Object cleanup testing now also saves before opening the navigation debug viewer, so object role edits are included in the test.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
 - Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.
