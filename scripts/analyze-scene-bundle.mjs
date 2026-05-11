@@ -4219,6 +4219,64 @@ function recommendationList(report) {
   return recommendations;
 }
 
+function texturePlanForProfile(report, profile) {
+  const currentBytes = report.estimatedTextureMemoryBytes ?? 0;
+  const budgetBytes = profile.budgets.maxTextureMemoryBytes;
+  const textureImages = report.textureMemoryImages ?? [];
+  const profileMaxDimension = profile.id === "mobile" ? 2048 : profile.id === "balanced" ? 3072 : 4096;
+  const globalScale = currentBytes > budgetBytes && currentBytes > 0 ? Math.sqrt(budgetBytes / currentBytes) : 1;
+  const items = textureImages
+    .map((image) => {
+      const maxDimension = Math.max(image.width, image.height);
+      if (maxDimension <= 0 || image.estimatedBytes <= 0) {
+        return undefined;
+      }
+      const scaledTarget = Math.floor((maxDimension * globalScale) / 128) * 128;
+      const targetMaxDimension = Math.max(512, Math.min(maxDimension, profileMaxDimension, scaledTarget || maxDimension));
+      const scale = targetMaxDimension / maxDimension;
+      const targetWidth = Math.max(1, Math.round(image.width * scale));
+      const targetHeight = Math.max(1, Math.round(image.height * scale));
+      const estimatedBytesAfter = targetWidth * targetHeight * 4;
+      const estimatedSavingsBytes = Math.max(0, image.estimatedBytes - estimatedBytesAfter);
+      if (estimatedSavingsBytes < 1024 * 1024 && maxDimension <= profileMaxDimension) {
+        return undefined;
+      }
+      return {
+        source: image.source,
+        width: image.width,
+        height: image.height,
+        currentBytes: image.estimatedBytes,
+        targetWidth,
+        targetHeight,
+        targetMaxDimension,
+        estimatedBytesAfter,
+        estimatedSavingsBytes,
+        reason:
+          maxDimension > profileMaxDimension
+            ? `Over ${profile.label} ${profileMaxDimension}px edge target`
+            : "Part of decoded texture-memory reduction"
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.estimatedSavingsBytes - a.estimatedSavingsBytes || b.currentBytes - a.currentBytes)
+    .slice(0, 12);
+  const estimatedAfterBytes = Math.max(
+    0,
+    currentBytes - items.reduce((sum, item) => sum + item.estimatedSavingsBytes, 0)
+  );
+  return {
+    profileId: profile.id,
+    label: profile.label,
+    status: currentBytes <= budgetBytes ? "ready" : estimatedAfterBytes <= budgetBytes ? "planned" : "needs-review",
+    budgetBytes,
+    currentBytes,
+    estimatedAfterBytes,
+    estimatedSavingsBytes: Math.max(0, currentBytes - estimatedAfterBytes),
+    maxDimension: profileMaxDimension,
+    items
+  };
+}
+
 function createOptimizationReport(report) {
   const profiles = optimizationProfiles.map((profile) => {
     const warnings = profileWarnings(report, profile);
@@ -4245,6 +4303,7 @@ function createOptimizationReport(report) {
     generatedAt: report.generatedAt,
     source: path.basename(manifestPath),
     profiles,
+    texturePlans: optimizationProfiles.map((profile) => texturePlanForProfile(report, profile)),
     recommendations: recommendationList(report)
   };
 }

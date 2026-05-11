@@ -484,6 +484,28 @@ interface OptimizationDocument {
       message: string;
     }[];
   }[];
+  texturePlans?: readonly {
+    profileId: string;
+    label: string;
+    status: "ready" | "planned" | "needs-review";
+    budgetBytes: number;
+    currentBytes: number;
+    estimatedAfterBytes: number;
+    estimatedSavingsBytes: number;
+    maxDimension: number;
+    items: readonly {
+      source: string;
+      width: number;
+      height: number;
+      currentBytes: number;
+      targetWidth: number;
+      targetHeight: number;
+      targetMaxDimension: number;
+      estimatedBytesAfter: number;
+      estimatedSavingsBytes: number;
+      reason: string;
+    }[];
+  }[];
   recommendations: readonly {
     priority: "high" | "medium" | "low";
     action: string;
@@ -3940,6 +3962,10 @@ function App() {
       pendingMaterialTextureSuggestionCount -
       reviewMaterialTextureSuggestionCount
   );
+  const selectedTexturePlan = useMemo(
+    () => optimizationDoc?.texturePlans?.find((plan) => plan.profileId === optimizationProfile),
+    [optimizationDoc?.texturePlans, optimizationProfile]
+  );
 
   const updateManifest = (updater: (manifest: SceneManifest) => SceneManifest) => {
     setManifest((current) => (current ? updater(current) : current));
@@ -6924,6 +6950,45 @@ function App() {
                   </div>
                 ) : (
                   <p className="quiet-note">No recommendations generated.</p>
+                )}
+              </div>
+
+              <div className="panel stats-panel">
+                <div className="panel-heading">
+                  <Palette size={18} aria-hidden="true" />
+                  <h2>Texture Delivery Plan</h2>
+                </div>
+                {selectedTexturePlan ? (
+                  <div className="asset-health-section">
+                    <span>{selectedTexturePlan.label} texture targets</span>
+                    <div className="stat-grid">
+                      <Stat label="Current RAM" value={formatBytes(selectedTexturePlan.currentBytes)} />
+                      <Stat label="Target RAM" value={formatBytes(selectedTexturePlan.budgetBytes)} />
+                      <Stat label="Planned RAM" value={formatBytes(selectedTexturePlan.estimatedAfterBytes)} />
+                      <Stat label="Max edge" value={`${selectedTexturePlan.maxDimension}px`} />
+                    </div>
+                    {selectedTexturePlan.items.length > 0 ? (
+                      selectedTexturePlan.items.slice(0, 6).map((item) => (
+                        <div key={`${selectedTexturePlan.profileId}-${item.source}`} className="asset-suggestion-row">
+                          {canPreviewTextureAsset(item.source) && (
+                            <img src={projectAssetPath(activeProjectId, item.source)} alt="" loading="lazy" />
+                          )}
+                          <div>
+                            <strong>{item.source}</strong>
+                            <small>
+                              {item.width}x{item.height} to {item.targetWidth}x{item.targetHeight} - save{" "}
+                              {formatBytes(item.estimatedSavingsBytes)}
+                            </small>
+                            <code>{item.reason}</code>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="quiet-note">No texture downscale targets are needed for this profile.</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="quiet-note">Run analysis to generate a texture delivery plan.</p>
                 )}
               </div>
 

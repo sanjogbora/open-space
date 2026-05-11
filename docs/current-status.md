@@ -228,6 +228,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Analyzer and Studio now track draw primitive count as a draw-call pressure signal, route high counts to Optimization, and include the metric in QA reports.
 - Analyzer and Studio now estimate decoded texture RAM, warn when a scene exceeds mobile GPU memory targets, and surface a visual Optimization action from Asset Health.
 - Asset Health now lists the largest decoded texture-memory offenders with previews where available, so users can see which images to downscale or compress first.
+- Optimization now generates a profile-specific texture delivery plan with target dimensions, expected RAM savings, and visual offender rows before any destructive texture resizing is automated.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
 - Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.
