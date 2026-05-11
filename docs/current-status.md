@@ -219,6 +219,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio now routes dominant green/plain-surface imports to Environment first, helping users fix terrain, first-view, ground, or enclosure issues before editing materials.
 - Studio Publish now saves the current manifest/material/object/control edits before creating a versioned bundle, preventing stale client links after last-minute repairs.
 - Viewer Fix in Studio links now use an explicit Studio base URL, so navigation repair handoff keeps working even if the viewer dev server runs on a different port.
+- Studio Optimize, Bake, and Import Repair now also stop on failed saves instead of running jobs against stale scene data.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
 - Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.

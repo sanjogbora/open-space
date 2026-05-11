@@ -5340,8 +5340,11 @@ function App() {
     setOptimizeState("optimizing");
     setOptimizeError("");
     try {
-      if (manifest) {
-        await saveToApi();
+      const saved = await persistDraft();
+      if (!saved) {
+        setOptimizeState("error");
+        setOptimizeError("Save failed. Fix the save error before optimizing.");
+        return;
       }
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/optimize`, {
         method: "POST",
@@ -5382,8 +5385,11 @@ function App() {
     setBakeState("baking");
     setBakeError("");
     try {
-      if (manifest) {
-        await saveToApi();
+      const saved = await persistDraft();
+      if (!saved) {
+        setBakeState("error");
+        setBakeError("Save failed. Fix the save error before baking lightmaps.");
+        return;
       }
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/bake-lightmaps`, {
         method: "POST",
@@ -5474,8 +5480,11 @@ function App() {
     setRepairError("");
     setRepairSummary("");
     try {
-      if (manifest) {
-        await saveToApi();
+      const saved = await persistDraft();
+      if (!saved) {
+        setRepairState("error");
+        setRepairError("Save failed. Fix the save error before running import repair.");
+        return;
       }
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/repair-import`, {
         method: "POST"
