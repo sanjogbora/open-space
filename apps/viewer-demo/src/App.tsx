@@ -28,6 +28,7 @@ import {
 import "./styles.css";
 
 const defaultManifestUrl = "/scenes/demo/scene.manifest.json";
+const studioBaseUrl = import.meta.env.VITE_STUDIO_URL ?? "http://127.0.0.1:5174";
 
 const qualityOptions: readonly { id: ViewerQuality; label: string }[] = [
   { id: "mobile", label: "Mobile" },
@@ -99,10 +100,7 @@ function studioRepairUrl(manifestUrl: string, failure: NavigationFailure): strin
   if (!projectId) {
     return null;
   }
-  const url = new URL(window.location.href);
-  if (url.port === "5173") {
-    url.port = "5174";
-  }
+  const url = new URL(studioBaseUrl, window.location.href);
   url.pathname = "/";
   url.search = "";
   url.hash = "";
