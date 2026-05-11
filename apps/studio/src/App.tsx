@@ -5260,8 +5260,11 @@ function App() {
     setPublishState("publishing");
     setPublishError("");
     try {
-      if (manifest) {
-        await saveToApi();
+      const saved = await persistDraft();
+      if (!saved) {
+        setPublishState("error");
+        setPublishError("Save failed. Fix the save error before publishing.");
+        return;
       }
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/publish`, {
         method: "POST"
@@ -7010,7 +7013,7 @@ function App() {
               <div className="publish-action-card">
                 <div>
                   <strong>{manifest.branding.clientName ?? manifest.branding.title}</strong>
-                  <p className="quiet-note">Create a static versioned bundle for sharing or embedding.</p>
+                  <p className="quiet-note">Save the current Studio edits, then create a static versioned bundle for sharing or embedding.</p>
                   {firstPublishCheckIssue && (
                     <div className={hasBlockingPublishErrors ? "publish-next-issue blocked" : "publish-next-issue"}>
                       <span>{hasBlockingPublishErrors ? "Publish blocked" : "Before client delivery"}</span>
