@@ -4294,7 +4294,7 @@ function App() {
       window.setTimeout(() => document.querySelector(".zone-map")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
       return;
     }
-    window.open(navigationDebugViewerUrl(activeProjectId), "_blank", "noopener,noreferrer");
+    void saveAndOpenViewer(navigationDebugViewerUrl(activeProjectId));
   };
 
   const runNavigationQuickFix = () => runNavigationQuickFixAction(navigationQuickFix);
