@@ -26,6 +26,7 @@ const defaultBudget = {
   maxInteractionCount: 80,
   maxMobileTriangles: 4_000_000,
   maxMobileDrawPrimitives: 500,
+  maxMobileTextureMemoryBytes: 256 * 1024 * 1024,
   maxMobileMaterials: 180
 };
 
@@ -38,6 +39,7 @@ const optimizationProfiles = [
       maxModelBytes: 36 * 1024 * 1024,
       maxTriangles: 1_500_000,
       maxDrawPrimitives: 500,
+      maxTextureMemoryBytes: 256 * 1024 * 1024,
       maxMaterials: 80,
       maxMeshes: 300
     }
@@ -50,6 +52,7 @@ const optimizationProfiles = [
       maxModelBytes: 64 * 1024 * 1024,
       maxTriangles: 4_000_000,
       maxDrawPrimitives: 900,
+      maxTextureMemoryBytes: 512 * 1024 * 1024,
       maxMaterials: 160,
       maxMeshes: 700
     }
@@ -62,11 +65,17 @@ const optimizationProfiles = [
       maxModelBytes: 120 * 1024 * 1024,
       maxTriangles: 8_000_000,
       maxDrawPrimitives: 1800,
+      maxTextureMemoryBytes: 1024 * 1024 * 1024,
       maxMaterials: 320,
       maxMeshes: 1400
     }
   }
 ];
+
+function formatMegabytes(bytes) {
+  const value = bytes / 1024 / 1024;
+  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} MB`;
+}
 
 function isExternalAsset(source) {
   return (
@@ -3425,6 +3434,16 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if ((report.estimatedTextureMemoryBytes ?? 0) > defaultBudget.maxMobileTextureMemoryBytes) {
+    diagnostics.push({
+      severity: "warning",
+      code: "high-texture-memory-estimate",
+      title: "High estimated texture memory",
+      message: `${formatMegabytes(report.estimatedTextureMemoryBytes)} estimated decoded RGBA texture memory exceeds the mobile target of ${formatMegabytes(defaultBudget.maxMobileTextureMemoryBytes)}.`,
+      action: "Downscale less visible textures, remove unused texture images, or run KTX2/Basis compression before mobile delivery."
+    });
+  }
+
   if (!bounds) {
     diagnostics.push({
       severity: "warning",
@@ -3907,6 +3926,11 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     ...models.flatMap((model) => model.embeddedImages ?? []),
     ...models.flatMap((model) => model.externalResources ?? []).filter((resource) => resource.kind === "texture")
   ].filter((image) => typeof image.width === "number" && typeof image.height === "number");
+  const estimatedTexturePixels = textureImages.reduce(
+    (sum, image) => sum + Math.max(0, image.width ?? 0) * Math.max(0, image.height ?? 0),
+    0
+  );
+  const estimatedTextureMemoryBytes = estimatedTexturePixels * 4;
   const relocatedTextureCandidates = missingResourceRelocationCandidates(models, looseImages);
   const maxTextureDimension = textureImages.reduce(
     (max, image) => Math.max(max, image.width ?? 0, image.height ?? 0),
@@ -3975,6 +3999,13 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     });
   }
 
+  if (estimatedTextureMemoryBytes > defaultBudget.maxMobileTextureMemoryBytes) {
+    warnings.push({
+      code: "mobile-texture-memory-budget",
+      message: `Estimated decoded texture memory exceeds mobile target of ${formatMegabytes(defaultBudget.maxMobileTextureMemoryBytes)}.`
+    });
+  }
+
   if (materialCount > defaultBudget.maxMobileMaterials) {
     warnings.push({
       code: "mobile-material-budget",
@@ -4015,6 +4046,8 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     maxTextureDimension,
     oversizedTextureCount,
     extremeAspectTextureCount,
+    estimatedTexturePixels,
+    estimatedTextureMemoryBytes,
     embeddedImageCount: models.reduce((sum, model) => sum + (model.embeddedImageCount ?? 0), 0),
     looseImageCount: looseImages.length,
     looseImages: looseImages.slice(0, 40),
@@ -4059,6 +4092,12 @@ function profileWarnings(report, profile) {
       message: `Draw primitive count is over the ${profile.label} budget.`
     });
   }
+  if ((report.estimatedTextureMemoryBytes ?? 0) > budgets.maxTextureMemoryBytes) {
+    warnings.push({
+      code: "texture-memory",
+      message: `Estimated decoded texture memory is over the ${profile.label} budget.`
+    });
+  }
   if (report.materialCount > budgets.maxMaterials) {
     warnings.push({
       code: "materials",
@@ -4099,6 +4138,14 @@ function recommendationList(report) {
       priority: "high",
       action: "Join compatible primitives and merge safe static batches.",
       reason: "High draw primitive count can bottleneck mobile GPUs even when triangle count is acceptable."
+    });
+  }
+
+  if ((report.estimatedTextureMemoryBytes ?? 0) > optimizationProfiles[0].budgets.maxTextureMemoryBytes) {
+    recommendations.push({
+      priority: "high",
+      action: "Downscale oversized texture sets and convert delivery textures to KTX2/Basis.",
+      reason: "Decoded texture memory is above the mobile GPU target."
     });
   }
 
@@ -4170,6 +4217,7 @@ function createOptimizationReport(report) {
         modelBytes: report.modelBytes,
         triangles: report.triangleCount,
         drawPrimitives: report.primitiveCount,
+        textureMemoryBytes: report.estimatedTextureMemoryBytes,
         materials: report.materialCount,
         meshes: report.meshCount
       },
@@ -4259,6 +4307,17 @@ function createPublishReadiness(manifest, report, optimizationReport) {
         "High draw primitive count",
         `Draw primitive count exceeds ${optimizationProfiles[0].budgets.maxDrawPrimitives.toLocaleString()} draw primitives.`,
         "Run draw-call optimization or merge compatible static primitives before mobile delivery."
+      )
+    );
+  }
+
+  if ((report.estimatedTextureMemoryBytes ?? 0) > optimizationProfiles[0].budgets.maxTextureMemoryBytes) {
+    warnings.push(
+      publishReadinessIssue(
+        "mobile-texture-memory-budget",
+        "High decoded texture memory",
+        `Estimated decoded texture memory is ${formatMegabytes(report.estimatedTextureMemoryBytes)}, above the ${formatMegabytes(optimizationProfiles[0].budgets.maxTextureMemoryBytes)} mobile target.`,
+        "Downscale large texture sets and run KTX2/Basis texture compression before mobile delivery."
       )
     );
   }
@@ -4361,6 +4420,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "extreme-texture-aspect-ratios",
     "tiny-texture-dimensions",
     "many-large-textures",
+    "high-texture-memory-estimate",
     "missing-texture-compression",
     "some-lightmap-secondary-uvs-missing",
     "tiny-lightmap-assets",

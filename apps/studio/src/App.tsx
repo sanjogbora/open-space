@@ -373,6 +373,8 @@ interface BundleStats {
   maxTextureDimension?: number;
   oversizedTextureCount?: number;
   extremeAspectTextureCount?: number;
+  estimatedTexturePixels?: number;
+  estimatedTextureMemoryBytes?: number;
   looseImageCount?: number;
   compression?: {
     meshopt?: boolean;
@@ -457,6 +459,7 @@ interface OptimizationDocument {
       maxModelBytes: number;
       maxTriangles: number;
       maxDrawPrimitives?: number;
+      maxTextureMemoryBytes?: number;
       maxMaterials: number;
       maxMeshes: number;
     };
@@ -465,6 +468,7 @@ interface OptimizationDocument {
       modelBytes: number;
       triangles: number;
       drawPrimitives?: number;
+      textureMemoryBytes?: number;
       materials: number;
       meshes: number;
     };
@@ -6762,6 +6766,7 @@ function App() {
                     <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
                     <Stat label="Embedded images" value={String(bundleStats.embeddedImageCount ?? 0)} />
                     <Stat label="Max texture" value={`${bundleStats.maxTextureDimension ?? 0}px`} />
+                    <Stat label="Texture RAM" value={formatBytes(bundleStats.estimatedTextureMemoryBytes ?? 0)} />
                     <Stat label="Strip textures" value={String(bundleStats.extremeAspectTextureCount ?? 0)} />
                     <Stat
                       label="Lightmaps"
@@ -6783,6 +6788,7 @@ function App() {
                     onApplyTextureSuggestions={applyMaterialTextureSuggestions}
                     onRepair={() => void repairImport()}
                     onMaterials={() => setSelectedTab("materials")}
+                    onOptimize={() => setSelectedTab("optimization")}
                     onBake={openBakeWorkflow}
                     onReviewTextureSuggestion={reviewMaterialTextureSuggestion}
                     onCopyPlan={() => void copyText(assetHealthRepairPlanText(bundleStats, activeProjectId))}
@@ -6870,6 +6876,7 @@ function App() {
                         <Stat label="Model" value={formatBytes(profile.metrics.modelBytes)} />
                         <Stat label="Triangles" value={String(profile.metrics.triangles)} />
                         <Stat label="Draw prims" value={String(profile.metrics.drawPrimitives ?? profile.metrics.meshes)} />
+                        <Stat label="Texture RAM" value={formatBytes(profile.metrics.textureMemoryBytes ?? 0)} />
                         <Stat label="Meshes" value={String(profile.metrics.meshes)} />
                         <Stat label="Materials" value={String(profile.metrics.materials)} />
                         <Stat label="Geometry compression" value={geometryCompressionLabel(bundleStats)} />
@@ -11099,6 +11106,7 @@ function App() {
                       <Stat label="Images" value={String(bundleStats.imageCount ?? 0)} />
                       <Stat label="Embedded images" value={String(bundleStats.embeddedImageCount ?? 0)} />
                       <Stat label="Max texture" value={`${bundleStats.maxTextureDimension ?? 0}px`} />
+                      <Stat label="Texture RAM" value={formatBytes(bundleStats.estimatedTextureMemoryBytes ?? 0)} />
                       <Stat label="Oversized" value={String(bundleStats.oversizedTextureCount ?? 0)} />
                       <Stat label="Strip textures" value={String(bundleStats.extremeAspectTextureCount ?? 0)} />
                       <Stat label="Loose images" value={String(bundleStats.looseImageCount ?? 0)} />
@@ -11439,6 +11447,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
     [
       "missing-geometry-compression",
       "high-draw-primitive-count",
+      "high-texture-memory-estimate",
       "missing-texture-compression",
       "oversized-texture-dimensions",
       "many-large-textures"
@@ -12397,6 +12406,7 @@ function ViewerQaChecklist({
   const performanceDiagnosticCodes = [
     "missing-geometry-compression",
     "high-draw-primitive-count",
+    "high-texture-memory-estimate",
     "missing-texture-compression",
     "oversized-texture-dimensions",
     "many-large-textures",
@@ -12406,6 +12416,7 @@ function ViewerQaChecklist({
     "large-uncompressed-model",
     "mobile-triangle-budget",
     "mobile-draw-primitive-budget",
+    "mobile-texture-memory-budget",
     "mobile-mesh-budget",
     "mobile-total-size-budget",
     "missing-gpu-texture-compression",
@@ -12414,6 +12425,7 @@ function ViewerQaChecklist({
     "mobile-model-bytes",
     "mobile-triangles",
     "mobile-draw-primitives",
+    "mobile-texture-memory",
     "mobile-materials",
     "mobile-meshes"
   ];
@@ -12727,6 +12739,7 @@ function viewerQaReportText(
     `- Meshes: ${stats?.meshCount ?? 0}`,
     `- Materials: ${stats?.materialCount ?? 0}`,
     `- Textured materials: ${stats?.texturedMaterialCount ?? 0}/${stats?.materialCount ?? 0}`,
+    `- Estimated texture RAM: ${formatBytes(stats?.estimatedTextureMemoryBytes ?? 0)}`,
     `- Lightmaps: ${stats?.lightmapAssetCount ?? 0}/${stats?.lightmapMaterialCount ?? 0}`,
     `- Geometry compression: ${stats ? geometryCompressionLabel(stats) : "unknown"}`,
     `- Texture compression: ${stats ? textureCompressionLabel(stats) : "unknown"}`,
@@ -12919,6 +12932,7 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
     "Current texture health:",
     `- Materials using textures: ${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0}`,
     `- Images in model: ${stats.imageCount ?? 0}`,
+    `- Estimated decoded texture RAM: ${formatBytes(stats.estimatedTextureMemoryBytes ?? 0)}`,
     `- Loose texture-folder images: ${looseImages.length}`,
     `- Missing referenced GLTF resources: ${missingResources.length}`,
     `- Missing manifest assets: ${missingAssets.length}`,
@@ -12972,6 +12986,7 @@ function AssetHealth({
   onApplyTextureSuggestions,
   onRepair,
   onMaterials,
+  onOptimize,
   onBake,
   onReviewTextureSuggestion,
   onCopyPlan
@@ -12986,6 +13001,7 @@ function AssetHealth({
   onApplyTextureSuggestions?: () => void;
   onRepair?: () => void;
   onMaterials?: () => void;
+  onOptimize?: () => void;
   onBake?: () => void;
   onReviewTextureSuggestion?: (suggestion: MaterialTextureSuggestion) => void;
   onCopyPlan?: () => void;
@@ -13009,6 +13025,9 @@ function AssetHealth({
   const genericLooseTextureDiagnostic = (stats.diagnostics ?? []).find(
     (diagnostic) => diagnostic.code === "generic-loose-texture-names"
   );
+  const highTextureMemoryDiagnostic = (stats.diagnostics ?? []).find(
+    (diagnostic) => diagnostic.code === "high-texture-memory-estimate"
+  );
   const hasTextureAssignmentGap =
     Boolean(textureAssignmentDiagnostic) ||
     ((stats.imageCount ?? 0) > 0 &&
@@ -13022,6 +13041,7 @@ function AssetHealth({
     missingAssets.length > 0 ||
     missingResources.length > 0 ||
     hasLightmapRepairWork ||
+    Boolean(highTextureMemoryDiagnostic) ||
     looseImages.length > 0 ||
     hasTextureAssignmentGap ||
     textureSuggestions.length > 0 ||
@@ -13047,8 +13067,19 @@ function AssetHealth({
           </button>
         )}
       </div>
-      {(hasTextureRepairWork || hasLightmapRepairWork || textureSuggestions.length > 0 || hasLooseUnmappedTextures || hasTextureAssignmentGap) && (
+      {(hasTextureRepairWork ||
+        hasLightmapRepairWork ||
+        Boolean(highTextureMemoryDiagnostic) ||
+        textureSuggestions.length > 0 ||
+        hasLooseUnmappedTextures ||
+        hasTextureAssignmentGap) && (
         <div className="asset-repair-plan">
+          {highTextureMemoryDiagnostic && (
+            <p>
+              {highTextureMemoryDiagnostic.message} Open Optimization to downscale texture delivery or prepare KTX2/Basis
+              compression before publishing.
+            </p>
+          )}
           {hasTextureRepairWork && (
             <p>
               Some referenced texture files are missing from the paths stored in the model. Run repair after importing
@@ -13104,6 +13135,12 @@ function AssetHealth({
               <button type="button" className="button secondary compact-button" onClick={onMaterials}>
                 <Palette size={15} aria-hidden="true" />
                 Open Materials
+              </button>
+            )}
+            {highTextureMemoryDiagnostic && onOptimize && (
+              <button type="button" className="button secondary compact-button" onClick={onOptimize}>
+                <Activity size={15} aria-hidden="true" />
+                Open Optimization
               </button>
             )}
             {hasLightmapRepairWork && onBake && (
