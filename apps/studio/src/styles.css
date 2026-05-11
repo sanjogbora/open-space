@@ -3053,17 +3053,47 @@ button.list-row {
   border-radius: 0;
 }
 
-.zone-map-repair-point {
+.zone-map-repair-route {
   position: absolute;
   z-index: 3;
-  width: 16px;
-  height: 16px;
-  border: 3px solid #ffffff;
+  height: 4px;
   border-radius: 999px;
-  background: #ffbf2f;
-  box-shadow: 0 0 0 3px rgba(255, 191, 47, 0.35), 0 8px 18px rgba(109, 73, 0, 0.24);
+  background: linear-gradient(90deg, rgba(8, 127, 231, 0.22), rgba(255, 191, 47, 0.82));
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8), 0 8px 18px rgba(8, 48, 78, 0.2);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.zone-map-repair-marker {
+  position: absolute;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #087fe7;
+  box-shadow: 0 0 0 3px rgba(8, 127, 231, 0.22), 0 8px 18px rgba(8, 48, 78, 0.22);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
   transform: translate(-50%, -50%);
   pointer-events: none;
+}
+
+.zone-map-repair-marker.target {
+  background: #118c5b;
+  box-shadow: 0 0 0 3px rgba(17, 140, 91, 0.22), 0 8px 18px rgba(8, 74, 49, 0.2);
+}
+
+.zone-map-repair-marker.blocked {
+  background: #ffbf2f;
+  color: #3e2b00;
+  box-shadow: 0 0 0 3px rgba(255, 191, 47, 0.35), 0 8px 18px rgba(109, 73, 0, 0.24);
 }
 
 .zone-map-draft-point {

@@ -215,6 +215,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio diagnostic action fallback now saves before opening the viewer.
 - Viewer click-route height normalization now ignores unsupported intermediate floor-height jumps, reducing camera bobbing over ridges or small geometry during routed movement.
 - Studio saves now check API response status and keep Save & Test from opening the viewer when manifest/material/object/control writes fail.
+- Studio navigation repair now draws the viewer's attempted route, camera start, clicked target, and blocked point on the zone map so fixes are visual instead of coordinate-only.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
 - Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.

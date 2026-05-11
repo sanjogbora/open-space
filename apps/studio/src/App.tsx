@@ -1209,6 +1209,35 @@ function pointMapStyle(
   };
 }
 
+function pointMapPercent(
+  point: Vec3,
+  bounds: NonNullable<SceneManifest["navigation"]["bounds"]>
+) {
+  const width = Math.max(0.001, bounds.max[0] - bounds.min[0]);
+  const depth = Math.max(0.001, bounds.max[2] - bounds.min[2]);
+  return {
+    left: ((point[0] - bounds.min[0]) / width) * 100,
+    top: 100 - ((point[2] - bounds.min[2]) / depth) * 100
+  };
+}
+
+function repairRouteLineStyle(
+  from: Vec3,
+  target: Vec3,
+  bounds: NonNullable<SceneManifest["navigation"]["bounds"]>
+) {
+  const start = pointMapPercent(from, bounds);
+  const end = pointMapPercent(target, bounds);
+  const dx = end.left - start.left;
+  const dy = end.top - start.top;
+  return {
+    left: `${start.left}%`,
+    top: `${start.top}%`,
+    width: `${Math.hypot(dx, dy)}%`,
+    transform: `rotate(${Math.atan2(dy, dx)}rad)`
+  };
+}
+
 function roomBoundsMapStyle(
   roomBounds: NonNullable<RoomDefinition["bounds"]>,
   bounds: NonNullable<SceneManifest["navigation"]["bounds"]>
@@ -10428,12 +10457,43 @@ function App() {
                             }
                           }}
                         >
+                          {navigationRepairDraft?.from && navigationRepairDraft.target && (
+                            <span
+                              className="zone-map-repair-route"
+                              style={repairRouteLineStyle(
+                                navigationRepairDraft.from,
+                                navigationRepairDraft.target,
+                                manifest.navigation.bounds
+                              )}
+                              title="Viewer attempted route"
+                            />
+                          )}
+                          {navigationRepairDraft?.from && (
+                            <span
+                              className="zone-map-repair-marker start"
+                              style={pointMapStyle(navigationRepairDraft.from, manifest.navigation.bounds)}
+                              title="Camera start"
+                            >
+                              Start
+                            </span>
+                          )}
+                          {navigationRepairDraft?.target && (
+                            <span
+                              className="zone-map-repair-marker target"
+                              style={pointMapStyle(navigationRepairDraft.target, manifest.navigation.bounds)}
+                              title="Clicked target"
+                            >
+                              Target
+                            </span>
+                          )}
                           {navigationRepairDraft?.point && (
                             <span
-                              className="zone-map-repair-point"
-                              style={pointMapStyle(navigationRepairDraft.point, manifest.navigation.bounds!)}
+                              className="zone-map-repair-marker blocked"
+                              style={pointMapStyle(navigationRepairDraft.point, manifest.navigation.bounds)}
                               title="Viewer blocked point"
-                            />
+                            >
+                              Blocked
+                            </span>
                           )}
                           {navigationPolygonDraft?.points.map(([x, z], pointIndex) => (
                             <span
