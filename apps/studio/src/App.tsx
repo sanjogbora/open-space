@@ -640,7 +640,7 @@ interface ToolStatusDocument {
 }
 
 const viewerBaseUrl = import.meta.env.VITE_VIEWER_URL ?? "http://127.0.0.1:5173";
-const apiBaseUrl = "http://127.0.0.1:5175";
+const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:5175";
 const studioTabIds: readonly StudioTab[] = [
   "overview",
   "repair",
