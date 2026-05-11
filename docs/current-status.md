@@ -224,6 +224,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio API calls can now use `VITE_API_URL`, making local and deployed Studio previews easier to point at the intended API service.
 - Studio and Viewer now include `.env.example` files documenting `VITE_API_URL`, `VITE_VIEWER_URL`, and `VITE_STUDIO_URL`.
 - Studio normalizes configured viewer/API base URLs so trailing slashes do not produce malformed generated links.
+- Viewer normalizes the configured Studio repair URL so `Fix in Studio` links stay clean with or without a trailing slash.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
 - Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.

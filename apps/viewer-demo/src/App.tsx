@@ -28,7 +28,7 @@ import {
 import "./styles.css";
 
 const defaultManifestUrl = "/scenes/demo/scene.manifest.json";
-const studioBaseUrl = import.meta.env.VITE_STUDIO_URL ?? "http://127.0.0.1:5174";
+const studioBaseUrl = cleanBaseUrl(import.meta.env.VITE_STUDIO_URL ?? "http://127.0.0.1:5174");
 
 const qualityOptions: readonly { id: ViewerQuality; label: string }[] = [
   { id: "mobile", label: "Mobile" },
@@ -39,6 +39,10 @@ const qualityOptions: readonly { id: ViewerQuality; label: string }[] = [
 function getInitialManifestUrl(): string {
   const params = new URLSearchParams(window.location.search);
   return params.get("scene") ?? defaultManifestUrl;
+}
+
+function cleanBaseUrl(value: string): string {
+  return value.replace(/\/+$/, "");
 }
 
 function isGeneratedOrAbsoluteUrl(value: string): boolean {
