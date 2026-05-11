@@ -3931,6 +3931,20 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     0
   );
   const estimatedTextureMemoryBytes = estimatedTexturePixels * 4;
+  const textureMemoryImages = textureImages
+    .map((image) => {
+      const width = Math.max(0, image.width ?? 0);
+      const height = Math.max(0, image.height ?? 0);
+      return {
+        source: image.source ?? image.label ?? "Embedded texture",
+        width,
+        height,
+        estimatedBytes: width * height * 4,
+        ...(typeof image.bytes === "number" ? { bytes: image.bytes } : {})
+      };
+    })
+    .filter((image) => image.estimatedBytes > 0)
+    .sort((a, b) => b.estimatedBytes - a.estimatedBytes || a.source.localeCompare(b.source));
   const relocatedTextureCandidates = missingResourceRelocationCandidates(models, looseImages);
   const maxTextureDimension = textureImages.reduce(
     (max, image) => Math.max(max, image.width ?? 0, image.height ?? 0),
@@ -4048,6 +4062,7 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     extremeAspectTextureCount,
     estimatedTexturePixels,
     estimatedTextureMemoryBytes,
+    textureMemoryImages: textureMemoryImages.slice(0, 40),
     embeddedImageCount: models.reduce((sum, model) => sum + (model.embeddedImageCount ?? 0), 0),
     looseImageCount: looseImages.length,
     looseImages: looseImages.slice(0, 40),

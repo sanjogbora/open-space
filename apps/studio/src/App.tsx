@@ -375,6 +375,13 @@ interface BundleStats {
   extremeAspectTextureCount?: number;
   estimatedTexturePixels?: number;
   estimatedTextureMemoryBytes?: number;
+  textureMemoryImages?: readonly {
+    source: string;
+    width: number;
+    height: number;
+    estimatedBytes: number;
+    bytes?: number;
+  }[];
   looseImageCount?: number;
   compression?: {
     meshopt?: boolean;
@@ -12904,6 +12911,7 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
   const looseImages = stats.looseImages ?? [];
+  const textureMemoryImages = stats.textureMemoryImages ?? [];
   const lightmapAssets = stats.lightmapAssets ?? [];
   const missingLightmapAssets = lightmapAssets.filter((asset) => !asset.exists);
   const tinyLightmapAssets = lightmapAssets.filter(
@@ -12933,6 +12941,10 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
     `- Materials using textures: ${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0}`,
     `- Images in model: ${stats.imageCount ?? 0}`,
     `- Estimated decoded texture RAM: ${formatBytes(stats.estimatedTextureMemoryBytes ?? 0)}`,
+    ...textureMemoryImages.slice(0, 5).map(
+      (image) =>
+        `  - ${image.source}: ${image.width}x${image.height}, ${formatBytes(image.estimatedBytes)} decoded`
+    ),
     `- Loose texture-folder images: ${looseImages.length}`,
     `- Missing referenced GLTF resources: ${missingResources.length}`,
     `- Missing manifest assets: ${missingAssets.length}`,
@@ -13010,6 +13022,7 @@ function AssetHealth({
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
   const looseImages = stats.looseImages ?? [];
+  const textureMemoryImages = stats.textureMemoryImages ?? [];
   const lightmapAssets = stats.lightmapAssets ?? [];
   const missingLightmapAssets = lightmapAssets.filter((asset) => !asset.exists);
   const tinyLightmapAssets = lightmapAssets.filter(
@@ -13179,6 +13192,21 @@ function AssetHealth({
                 : ""}
             </small>
           </div>
+        </div>
+      )}
+      {highTextureMemoryDiagnostic && textureMemoryImages.length > 0 && (
+        <div className="asset-health-section">
+          <span>Largest decoded textures</span>
+          {textureMemoryImages.slice(0, 5).map((image) => (
+            <div key={image.source} className="asset-texture-row">
+              {canPreviewTextureAsset(image.source) && (
+                <img src={projectAssetPath(projectId, image.source)} alt="" loading="lazy" />
+              )}
+              <code>
+                {image.source} - {image.width}x{image.height} - {formatBytes(image.estimatedBytes)}
+              </code>
+            </div>
+          ))}
         </div>
       )}
       {missingAssets.length > 0 && (
