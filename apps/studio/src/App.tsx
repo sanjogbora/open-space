@@ -6985,6 +6985,12 @@ function App() {
                       <Stat label="Planned RAM" value={formatBytes(selectedTexturePlan.estimatedAfterBytes)} />
                       <Stat label="Max edge" value={`${selectedTexturePlan.maxDimension}px`} />
                     </div>
+                    {selectedTexturePlan.items.length > 0 && toolStatus?.tools.toktx?.ready === false && (
+                      <p className="quiet-note">
+                        WebP resizing can run now. KTX2/Basis GPU compression needs {toolStatus.tools.toktx.command}:{" "}
+                        {toolStatus.tools.toktx.action}
+                      </p>
+                    )}
                     {selectedTexturePlan.items.length > 0 ? (
                       selectedTexturePlan.items.slice(0, 6).map((item) => (
                         <div key={`${selectedTexturePlan.profileId}-${item.source}`} className="asset-suggestion-row">
