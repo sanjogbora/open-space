@@ -6281,7 +6281,7 @@ function App() {
       openStudioVisualTarget("overview", ".diagnostic-list");
       return;
     }
-    window.open(viewerUrl(activeProjectId), "_blank", "noopener,noreferrer");
+    void saveAndOpenViewer(viewerUrl(activeProjectId));
   };
   const runRepairCenterAction = (action: ImportNextStepAction) => {
     if (action === "repair") {
@@ -6639,7 +6639,6 @@ function App() {
               <ImportNextSteps
                 stats={bundleStats}
                 apiConnected={apiConnected}
-                viewerUrl={`http://127.0.0.1:5173/?scene=${encodeURIComponent(projectScenePath(activeProjectId))}`}
                 repairState={repairState}
                 optimizeState={optimizeState}
                 bakeState={bakeState}
@@ -6655,6 +6654,7 @@ function App() {
                 pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
                 reviewTextureSuggestionCount={reviewMaterialTextureSuggestionCount}
                 onApplyTextureSuggestions={applyMaterialTextureSuggestions}
+                onTest={() => void saveAndOpenViewer(viewerUrl(activeProjectId))}
               />
               <ViewerQaChecklist
                 manifest={manifest}
@@ -6673,6 +6673,8 @@ function App() {
                 onObjects={() => setSelectedTab("objects")}
                 onPublish={() => setSelectedTab("publish")}
                 onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })}
+                onSaveAndTest={() => void saveAndOpenViewer(viewerUrl(activeProjectId))}
+                onSaveAndTestNavigation={() => void saveAndOpenViewer(navigationDebugViewerUrl(activeProjectId))}
                 onCopyReport={() =>
                   void copyText(
                     viewerQaReportText(
@@ -12079,7 +12081,6 @@ function RepairCenter({
 function ImportNextSteps({
   stats,
   apiConnected,
-  viewerUrl,
   repairState,
   optimizeState,
   bakeState,
@@ -12094,11 +12095,11 @@ function ImportNextSteps({
   onInteractions,
   pendingTextureSuggestionCount = 0,
   reviewTextureSuggestionCount = 0,
-  onApplyTextureSuggestions
+  onApplyTextureSuggestions,
+  onTest
 }: {
   stats: BundleStats | null;
   apiConnected: boolean;
-  viewerUrl: string;
   repairState: RepairState;
   optimizeState: OptimizeState;
   bakeState: BakeState;
@@ -12114,6 +12115,7 @@ function ImportNextSteps({
   pendingTextureSuggestionCount?: number;
   reviewTextureSuggestionCount?: number;
   onApplyTextureSuggestions?: () => void;
+  onTest: () => void;
 }) {
   const diagnostics = stats?.diagnostics ?? [];
   const priority = diagnostics.filter((diagnostic) => diagnostic.severity !== "info");
@@ -12185,9 +12187,9 @@ function ImportNextSteps({
               ? onOptimize
               : step.action === "bake"
                 ? onBake
-                : step.action === "review"
-                  ? () => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })
-                  : () => window.open(viewerUrl, "_blank", "noopener,noreferrer");
+              : step.action === "review"
+                ? () => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })
+                : onTest;
         return (
           <div key={step.action} className={`import-next-step ${step.action}`}>
             <div>
@@ -12233,6 +12235,8 @@ function ViewerQaChecklist({
   onObjects,
   onPublish,
   onReviewDiagnostics,
+  onSaveAndTest,
+  onSaveAndTestNavigation,
   onCopyReport
 }: {
   manifest: SceneManifest;
@@ -12251,6 +12255,8 @@ function ViewerQaChecklist({
   onObjects: () => void;
   onPublish: () => void;
   onReviewDiagnostics: () => void;
+  onSaveAndTest: () => void;
+  onSaveAndTestNavigation: () => void;
   onCopyReport: () => void;
 }) {
   const diagnostics = stats?.diagnostics ?? [];
@@ -12393,7 +12399,7 @@ function ViewerQaChecklist({
         : "No blocking source-export diagnostics are listed for this bundle.",
       status: sourceIssue && errorCodes.has(sourceIssue) ? "blocked" : sourceIssue ? "warn" : "ready",
       button: sourceIssue ? "Review Diagnostics" : "Open Viewer",
-      onClick: sourceIssue ? onReviewDiagnostics : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+      onClick: sourceIssue ? onReviewDiagnostics : onSaveAndTest
     },
     {
       id: "visuals",
@@ -12403,7 +12409,7 @@ function ViewerQaChecklist({
         : "Open the viewer and compare textures, colors, glass, ceiling, and exterior context.",
       status: visualIssue && errorCodes.has(visualIssue) ? "blocked" : visualIssue ? "warn" : "ready",
       button: visualIssue ? "Open Materials" : "Open Viewer",
-      onClick: visualIssue ? onMaterials : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+      onClick: visualIssue ? onMaterials : onSaveAndTest
     },
     {
       id: "render-profile",
@@ -12423,7 +12429,7 @@ function ViewerQaChecklist({
           : "Environment is in neutral/interior mode; confirm windows and outside areas do not look empty.",
       status: environmentIssue && errorCodes.has(environmentIssue) ? "blocked" : environmentIssue ? "warn" : "ready",
       button: environmentIssue ? "Open Environment" : "Open Viewer",
-      onClick: environmentIssue ? onEnvironment : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+      onClick: environmentIssue ? onEnvironment : onSaveAndTest
     },
     {
       id: "views",
@@ -12433,7 +12439,7 @@ function ViewerQaChecklist({
         : `${manifest.views.length} saved view(s): ${walkViewCount} walk, ${topViewCount} top. Check first load, room buttons, and top-view framing.`,
       status: viewIssue ? "blocked" : manifest.views.length === 0 || walkViewCount === 0 ? "warn" : "ready",
       button: viewIssue || manifest.views.length === 0 || walkViewCount === 0 ? "Open Views" : "Open Viewer",
-      onClick: viewIssue || manifest.views.length === 0 || walkViewCount === 0 ? onViews : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+      onClick: viewIssue || manifest.views.length === 0 || walkViewCount === 0 ? onViews : onSaveAndTest
     },
     {
       id: "objects",
@@ -12445,7 +12451,7 @@ function ViewerQaChecklist({
           : "Object graph is not loaded yet; run analysis before checking top-view hiding or navigation roles.",
       status: objectIssue && errorCodes.has(objectIssue) ? "blocked" : objectIssue || !objects ? "warn" : "ready",
       button: objectIssue || !objects || topViewCount > 0 ? "Open Objects" : "Open Viewer",
-      onClick: objectIssue || !objects || topViewCount > 0 ? onObjects : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+      onClick: objectIssue || !objects || topViewCount > 0 ? onObjects : onSaveAndTest
     },
     {
       id: "lighting",
@@ -12457,7 +12463,7 @@ function ViewerQaChecklist({
           : "No lightmapped materials are configured yet; bake lighting when the scene needs Shapespark-like realism.",
       status: lightingIssue && errorCodes.has(lightingIssue) ? "blocked" : lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? "warn" : "ready",
       button: lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? "Open Bake" : "Open Viewer",
-      onClick: lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? onBake : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+      onClick: lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? onBake : onSaveAndTest
     },
     {
       id: "movement",
@@ -12467,7 +12473,7 @@ function ViewerQaChecklist({
         : "Set bounds, walk views, and at least one walk zone before testing movement.",
       status: hasNavigationSetup ? "ready" : "blocked",
       button: hasNavigationSetup ? "Debug Viewer" : "Open Controls",
-      onClick: hasNavigationSetup ? () => window.open(navigationViewerUrl, "_blank", "noopener,noreferrer") : onNavigation
+      onClick: hasNavigationSetup ? onSaveAndTestNavigation : onNavigation
     },
     {
       id: "doors",
@@ -12479,7 +12485,7 @@ function ViewerQaChecklist({
           : "If rooms are separate, draw green door passes before testing entry between rooms.",
       status: navigationIssue && errorCodes.has(navigationIssue) ? "blocked" : navigationIssue || passZones.length === 0 ? "warn" : "ready",
       button: navigationIssue || passZones.length === 0 ? "Open Controls" : "Debug Viewer",
-      onClick: navigationIssue || passZones.length === 0 ? onNavigation : () => window.open(navigationViewerUrl, "_blank", "noopener,noreferrer")
+      onClick: navigationIssue || passZones.length === 0 ? onNavigation : onSaveAndTestNavigation
     },
     {
       id: "rooms",
@@ -12501,7 +12507,7 @@ function ViewerQaChecklist({
           : "No TV screens, hotspots, links, or object toggles are configured yet.",
       status: interactionIssue && errorCodes.has(interactionIssue) ? "blocked" : interactionIssue || interactionCount === 0 ? "warn" : "ready",
       button: interactionIssue || interactionCount === 0 ? "Open Interactions" : "Open Viewer",
-      onClick: interactionIssue || interactionCount === 0 ? onInteractions : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+      onClick: interactionIssue || interactionCount === 0 ? onInteractions : onSaveAndTest
     },
     {
       id: "performance",
@@ -12513,7 +12519,7 @@ function ViewerQaChecklist({
           : "Run analysis before checking mobile performance.",
       status: performanceIssue && (performanceDiagnosticIssue ? errorCodes.has(performanceDiagnosticIssue) : false) ? "blocked" : performanceIssue || !stats ? "warn" : "ready",
       button: performanceIssue || !stats ? "Open Optimization" : "Open Viewer",
-      onClick: performanceIssue || !stats ? onOptimize : () => window.open(viewerUrl, "_blank", "noopener,noreferrer")
+      onClick: performanceIssue || !stats ? onOptimize : onSaveAndTest
     },
     {
       id: "publish",
