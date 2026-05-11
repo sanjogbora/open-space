@@ -14,6 +14,19 @@ Command:
 pnpm.cmd dev:studio
 ```
 
+Optional local URL overrides:
+
+```txt
+VITE_API_URL=http://127.0.0.1:5175
+VITE_VIEWER_URL=http://127.0.0.1:5173
+```
+
+Viewer-to-Studio repair links can be configured from `apps/viewer-demo/.env`:
+
+```txt
+VITE_STUDIO_URL=http://127.0.0.1:5174
+```
+
 ## Current Scope
 
 - Project shell for the demo residence.
