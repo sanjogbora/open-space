@@ -11326,13 +11326,13 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
     [
       "dominant-flat-plane",
       "initial-view-on-dominant-plane",
+      "dominant-green-placeholder-material",
     ].includes(code)
   ) {
     return "environment";
   }
   if (
     [
-      "dominant-green-placeholder-material",
       "model-has-no-texture-images",
       "loose-textures-not-referenced",
       "generic-loose-texture-names",
@@ -12330,7 +12330,6 @@ function ViewerQaChecklist({
     diagnostics.filter((diagnostic) => diagnostic.severity === "error").map((diagnostic) => diagnostic.code)
   );
   const materialCodes = [
-    "dominant-green-placeholder-material",
     "model-has-no-texture-images",
     "loose-textures-not-referenced",
     "generic-loose-texture-names",
@@ -12412,6 +12411,7 @@ function ViewerQaChecklist({
   const environmentCodes = [
     "dominant-flat-plane",
     "initial-view-on-dominant-plane",
+    "dominant-green-placeholder-material",
     "focused-model-small-in-scene",
     "initial-view-misses-focused-model"
   ];
