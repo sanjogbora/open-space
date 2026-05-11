@@ -3574,15 +3574,21 @@ export class WalkthroughViewer {
   private normalizeClickRouteHeights(route: THREE.Vector3[]): THREE.Vector3[] {
     const normalized: THREE.Vector3[] = [];
     let origin = this.camera.position;
-    for (const waypoint of route) {
-      const next = this.normalizeClickTargetHeight(waypoint, origin);
+    route.forEach((waypoint, index) => {
+      const next = this.normalizeClickTargetHeight(waypoint, origin, {
+        intermediateRoutePoint: index < route.length - 1
+      });
       normalized.push(next);
       origin = next;
-    }
+    });
     return normalized;
   }
 
-  private normalizeClickTargetHeight(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3 {
+  private normalizeClickTargetHeight(
+    target: THREE.Vector3,
+    origin: THREE.Vector3,
+    options: { intermediateRoutePoint?: boolean } = {}
+  ): THREE.Vector3 {
     if (this.geometryFloorMeshes.length === 0) {
       return target.clone();
     }
@@ -3597,7 +3603,18 @@ export class WalkthroughViewer {
     const targetFloorY = typeof floorY === "number" ? floorY : next.y - this.cameraHeight;
     const originFloorY = this.stableFloorY ?? origin.y - this.cameraHeight;
     const bumpTolerance = this.floorBumpTolerance();
-    next.y = (Math.abs(targetFloorY - originFloorY) <= bumpTolerance * 1.5 ? originFloorY : targetFloorY) + this.cameraHeight;
+    const floorDelta = targetFloorY - originFloorY;
+    let resolvedFloorY = Math.abs(floorDelta) <= bumpTolerance * 1.5 ? originFloorY : targetFloorY;
+    if (resolvedFloorY !== originFloorY) {
+      const supportedLevel = this.isSupportedFloorHeight(next, targetFloorY, { referenceFloorY: originFloorY });
+      const intermediateStepLikeChange =
+        options.intermediateRoutePoint &&
+        Math.abs(floorDelta) <= Math.max(this.controls.maxStepUp ?? this.maxStepUp, bumpTolerance * 2.2);
+      if (!supportedLevel || intermediateStepLikeChange) {
+        resolvedFloorY = originFloorY;
+      }
+    }
+    next.y = resolvedFloorY + this.cameraHeight;
     return next;
   }
 
