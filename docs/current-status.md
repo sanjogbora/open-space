@@ -230,6 +230,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Asset Health now lists the largest decoded texture-memory offenders with previews where available, so users can see which images to downscale or compress first.
 - Optimization now generates a profile-specific texture delivery plan with target dimensions, expected RAM savings, and visual offender rows before any destructive texture resizing is automated.
 - Studio can copy the texture delivery plan as a checklist for source-model cleanup or production texture optimization.
+- Optimizer jobs now record before/after decoded texture RAM and texture image bytes, so Studio history shows whether WebP resizing actually reduced runtime texture pressure.
 - Studio Import now includes a viewer QA checklist for visual match, movement basics, doorway/wall rules, rooms/top view, and publish readiness.
 - Studio Import can now copy a QA report with scene stats, navigation setup, current diagnostics, publish issues, and manual test result prompts.
 - Studio Import's viewer QA checklist now tracks baked-lighting readiness separately and routes lightmap/normal issues to the bake workflow.

@@ -525,11 +525,19 @@ interface OptimizationJobDocument {
   optimizedSceneUrl?: string;
   before?: {
     modelBytes: number;
+    textureImageBytes?: number;
+    decodedTextureBytes?: number;
+    textureCount?: number;
   };
   after?: {
     modelBytes: number;
     savedBytes: number;
     savedPercent: number;
+    textureImageBytes?: number;
+    decodedTextureBytes?: number;
+    textureCount?: number;
+    savedTextureImageBytes?: number;
+    savedDecodedTextureBytes?: number;
   };
   steps: readonly {
     id: string;
@@ -7047,6 +7055,10 @@ function App() {
                       <Stat label="Status" value={optimizationJob.status} />
                       <Stat label="Before" value={formatBytes(optimizationJob.before?.modelBytes ?? 0)} />
                       <Stat label="After" value={formatBytes(optimizationJob.after?.modelBytes ?? 0)} />
+                      <Stat label="Texture before" value={formatBytes(optimizationJob.before?.decodedTextureBytes ?? 0)} />
+                      <Stat label="Texture after" value={formatBytes(optimizationJob.after?.decodedTextureBytes ?? 0)} />
+                      <Stat label="Texture saved" value={formatBytes(optimizationJob.after?.savedDecodedTextureBytes ?? 0)} />
+                      <Stat label="Texture files saved" value={formatBytes(optimizationJob.after?.savedTextureImageBytes ?? 0)} />
                     </div>
                     <div className="publish-row">
                       <span>Artifact</span>
@@ -7082,7 +7094,10 @@ function App() {
                           <strong>{job.profile}</strong>
                           <span>{job.completedAt ?? job.startedAt ?? job.id}</span>
                         </div>
-                        <small>{formatBytes(job.after?.savedBytes ?? 0)} saved</small>
+                        <small>
+                          {formatBytes(job.after?.savedBytes ?? 0)} model /{" "}
+                          {formatBytes(job.after?.savedDecodedTextureBytes ?? 0)} texture RAM saved
+                        </small>
                       </div>
                     ))}
                   </div>

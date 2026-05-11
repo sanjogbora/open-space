@@ -185,6 +185,7 @@ async function optimizeGlb(sourcePath, outputPath, profile) {
     weld({ overwrite: false }),
     resample()
   );
+  const beforeTextureStats = await documentTextureStats(document);
   const drawCallOptimizationStep = await applyDrawCallOptimization(document, profile);
   const meshSimplificationStep = await applyMeshSimplification(document, profile);
   await document.transform(
@@ -197,13 +198,31 @@ async function optimizeGlb(sourcePath, outputPath, profile) {
       slots: /^(?!normalTexture).*$/i
     })
   );
+  const afterTextureStats = await documentTextureStats(document);
+  const textureCompressionStep = {
+    id: "texture-compression",
+    label: "Compress texture images to WebP",
+    status:
+      afterTextureStats.imageBytes < beforeTextureStats.imageBytes ||
+      afterTextureStats.decodedTextureBytes < beforeTextureStats.decodedTextureBytes
+        ? "completed"
+        : "skipped",
+    before: beforeTextureStats,
+    after: afterTextureStats,
+    savedImageBytes: Math.max(0, beforeTextureStats.imageBytes - afterTextureStats.imageBytes),
+    savedDecodedTextureBytes: Math.max(0, beforeTextureStats.decodedTextureBytes - afterTextureStats.decodedTextureBytes),
+    note:
+      beforeTextureStats.textureCount > 0
+        ? `Profile ${profile} resized eligible color textures to ${textureLimit[0]}px and WebP quality ${textureQuality}.`
+        : "No embedded texture images were found for WebP conversion."
+  };
   const gpuTextureStep = await applyKtxCompression(document, profile);
   await document.transform(
     reorder({ encoder: MeshoptEncoder, target: "size" }),
     meshopt({ encoder: MeshoptEncoder, level })
   );
   await io.write(outputPath, document);
-  return { drawCallOptimizationStep, meshSimplificationStep, gpuTextureStep };
+  return { drawCallOptimizationStep, meshSimplificationStep, textureCompressionStep, gpuTextureStep };
 }
 
 function countDocumentTriangles(document) {
@@ -340,6 +359,44 @@ function percentChange(before, after) {
     return 0;
   }
   return Number((((before - after) / before) * 100).toFixed(2));
+}
+
+async function documentTextureStats(document) {
+  let textureCount = 0;
+  let imageBytes = 0;
+  let decodedTextureBytes = 0;
+  let maxTextureDimension = 0;
+  let decodedTextureCount = 0;
+  for (const texture of document.getRoot().listTextures()) {
+    const image = texture.getImage();
+    if (!image) {
+      continue;
+    }
+    textureCount += 1;
+    imageBytes += image.byteLength;
+    const mimeType = texture.getMimeType();
+    if (mimeType === "image/ktx2" || mimeType === "image/basis") {
+      continue;
+    }
+    try {
+      const metadata = await sharp(image).metadata();
+      if (typeof metadata.width !== "number" || typeof metadata.height !== "number") {
+        continue;
+      }
+      decodedTextureCount += 1;
+      decodedTextureBytes += metadata.width * metadata.height * 4;
+      maxTextureDimension = Math.max(maxTextureDimension, metadata.width, metadata.height);
+    } catch {
+      // The analyzer reports unreadable texture payloads; optimization keeps moving.
+    }
+  }
+  return {
+    textureCount,
+    imageBytes,
+    decodedTextureBytes,
+    maxTextureDimension,
+    decodedTextureCount
+  };
 }
 
 function mimeExtension(mimeType) {
@@ -542,7 +599,8 @@ if (sourcePath.toLowerCase().endsWith(".glb")) {
   const compactBytes = compactGlbJson(sourceBytes);
   await writeFile(outputPath, compactBytes);
 }
-const { drawCallOptimizationStep, meshSimplificationStep, gpuTextureStep } = await optimizeGlb(sourcePath, outputPath, profile);
+const { drawCallOptimizationStep, meshSimplificationStep, textureCompressionStep, gpuTextureStep } =
+  await optimizeGlb(sourcePath, outputPath, profile);
 const afterInfo = await stat(outputPath);
 
 if (applyOptimized) {
@@ -566,12 +624,20 @@ const job = {
   sourceSceneUrl,
   optimizedSceneUrl,
   before: {
-    modelBytes: beforeInfo.size
+    modelBytes: beforeInfo.size,
+    textureImageBytes: textureCompressionStep.before.imageBytes,
+    decodedTextureBytes: textureCompressionStep.before.decodedTextureBytes,
+    textureCount: textureCompressionStep.before.textureCount
   },
   after: {
     modelBytes: afterInfo.size,
     savedBytes: Math.max(0, beforeInfo.size - afterInfo.size),
-    savedPercent: percentChange(beforeInfo.size, afterInfo.size)
+    savedPercent: percentChange(beforeInfo.size, afterInfo.size),
+    textureImageBytes: textureCompressionStep.after.imageBytes,
+    decodedTextureBytes: textureCompressionStep.after.decodedTextureBytes,
+    textureCount: textureCompressionStep.after.textureCount,
+    savedTextureImageBytes: textureCompressionStep.savedImageBytes,
+    savedDecodedTextureBytes: textureCompressionStep.savedDecodedTextureBytes
   },
   steps: [
     {
@@ -601,11 +667,7 @@ const job = {
       label: "Reorder mesh data for transmission size",
       status: "completed"
     },
-    {
-      id: "texture-compression",
-      label: "Compress texture images to WebP",
-      status: "completed"
-    },
+    textureCompressionStep,
     gpuTextureStep,
     {
       id: "mesh-compression",

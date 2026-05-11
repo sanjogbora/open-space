@@ -4223,7 +4223,7 @@ function texturePlanForProfile(report, profile) {
   const currentBytes = report.estimatedTextureMemoryBytes ?? 0;
   const budgetBytes = profile.budgets.maxTextureMemoryBytes;
   const textureImages = report.textureMemoryImages ?? [];
-  const profileMaxDimension = profile.id === "mobile" ? 2048 : profile.id === "balanced" ? 3072 : 4096;
+  const profileMaxDimension = profile.id === "mobile" ? 1024 : profile.id === "balanced" ? 2048 : 4096;
   const globalScale = currentBytes > budgetBytes && currentBytes > 0 ? Math.sqrt(budgetBytes / currentBytes) : 1;
   const items = textureImages
     .map((image) => {
