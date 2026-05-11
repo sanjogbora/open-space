@@ -6957,6 +6957,16 @@ function App() {
                 <div className="panel-heading">
                   <Palette size={18} aria-hidden="true" />
                   <h2>Texture Delivery Plan</h2>
+                  {selectedTexturePlan && (
+                    <button
+                      type="button"
+                      className="button secondary compact-button"
+                      onClick={() => void copyText(textureDeliveryPlanText(selectedTexturePlan, activeProjectId))}
+                    >
+                      <Copy size={15} aria-hidden="true" />
+                      Copy Plan
+                    </button>
+                  )}
                 </div>
                 {selectedTexturePlan ? (
                   <div className="asset-health-section">
@@ -13049,6 +13059,35 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
     ...tinyLightmapAssets.slice(0, 8).map((asset) => `- Tiny ${asset.source} (${formatBytes(asset.bytes ?? 0)})`)
   ];
 
+  return lines.filter(Boolean).join("\n");
+}
+
+function textureDeliveryPlanText(
+  plan: NonNullable<OptimizationDocument["texturePlans"]>[number],
+  projectId: string
+): string {
+  const lines = [
+    `Open Space texture delivery plan - ${projectId}`,
+    "",
+    `Profile: ${plan.label}`,
+    `Status: ${plan.status}`,
+    `Current decoded texture RAM: ${formatBytes(plan.currentBytes)}`,
+    `Target decoded texture RAM: ${formatBytes(plan.budgetBytes)}`,
+    `Planned decoded texture RAM: ${formatBytes(plan.estimatedAfterBytes)}`,
+    `Planned RAM savings: ${formatBytes(plan.estimatedSavingsBytes)}`,
+    `Max texture edge target: ${plan.maxDimension}px`,
+    "",
+    plan.items.length > 0 ? "Resize / compression targets:" : "No texture downscale targets are needed for this profile.",
+    ...plan.items.map(
+      (item) =>
+        `- ${item.source}: ${item.width}x${item.height} -> ${item.targetWidth}x${item.targetHeight}; save ${formatBytes(item.estimatedSavingsBytes)} decoded RAM; ${item.reason}`
+    ),
+    "",
+    "Next steps:",
+    "1. Compare the viewer against the source/reference render before resizing textures.",
+    "2. Downscale low-importance large textures first, then run optimization again.",
+    "3. Use KTX2/Basis for production mobile delivery when available."
+  ];
   return lines.filter(Boolean).join("\n");
 }
 
