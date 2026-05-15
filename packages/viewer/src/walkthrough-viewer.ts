@@ -974,7 +974,7 @@ export class WalkthroughViewer {
   }
 
   private registerTopViewHiddenObject(object: THREE.Object3D): void {
-    const override = this.objectOverrides.get(object.name);
+    const override = this.objectOverrideForNode(object);
     const materialNames =
       object instanceof THREE.Mesh
         ? (Array.isArray(object.material) ? object.material : [object.material]).map((material) => material.name).join(" ")
@@ -1172,8 +1172,7 @@ export class WalkthroughViewer {
   }
 
   private applyObjectOverride(node: THREE.Object3D): void {
-    const byName = this.objectOverrides.get(node.name);
-    const override = byName;
+    const override = this.objectOverrideForNode(node);
     if (!override) {
       return;
     }
@@ -1181,10 +1180,66 @@ export class WalkthroughViewer {
   }
 
   private objectNavigationBehavior(node: THREE.Object3D): ObjectOverride["navigationBehavior"] {
-    const override = this.objectOverrides.get(node.name);
+    const override = this.objectOverrideForNode(node);
     return override?.navigationBehavior && override.navigationBehavior !== "default"
       ? override.navigationBehavior
       : undefined;
+  }
+
+  private objectOverrideForNode(node: THREE.Object3D): ObjectOverride | undefined {
+    const direct = this.objectOverrideBySceneName(node);
+    if (direct) {
+      return direct;
+    }
+    let current = node.parent;
+    while (current) {
+      const inherited = this.objectOverrideBySceneName(current);
+      if (inherited) {
+        return inherited;
+      }
+      current = current.parent;
+    }
+    return this.objectOverrideByLooseName(node);
+  }
+
+  private objectOverrideBySceneName(node: THREE.Object3D): ObjectOverride | undefined {
+    const candidates = [
+      node.name,
+      typeof node.userData["name"] === "string" ? node.userData["name"] : ""
+    ].filter((name) => name.trim().length > 0);
+    for (const name of candidates) {
+      const override = this.objectOverrides.get(name);
+      if (override) {
+        return override;
+      }
+    }
+    return undefined;
+  }
+
+  private objectOverrideByLooseName(node: THREE.Object3D): ObjectOverride | undefined {
+    const names = [node.name, node.parent?.name ?? "", `${node.userData["name"] ?? ""}`]
+      .map(normalizedObjectOverrideName)
+      .filter((name) => name.length >= 4);
+    if (names.length === 0) {
+      return undefined;
+    }
+    const uniqueOverrides = new Set(this.objectOverrides.values());
+    for (const override of uniqueOverrides) {
+      const overrideNames = [override.id, override.name].map(normalizedObjectOverrideName);
+      if (
+        overrideNames.some((overrideName) =>
+          names.some(
+            (name) =>
+              overrideName === name ||
+              (overrideName.length >= 4 && name.includes(overrideName)) ||
+              (name.length >= 4 && overrideName.includes(name))
+          )
+        )
+      ) {
+        return override;
+      }
+    }
+    return undefined;
   }
 
   private isLikelyExteriorSurfaceName(name: string): boolean {
@@ -4303,6 +4358,15 @@ function closestPointOnPolygon2D(point: THREE.Vector2, polygon: readonly THREE.V
     }
   }
   return closest;
+}
+
+function normalizedObjectOverrideName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[_\-.]+/g, " ")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function isGeneratedViewerNavigationZone(zone: NavigationZone): boolean {
