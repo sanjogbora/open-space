@@ -12019,6 +12019,10 @@ function isTextureConnectionDiagnostic(code: string): boolean {
   ].includes(code);
 }
 
+function isLightmapArtifactDiagnostic(code: string): boolean {
+  return ["missing-lightmap-assets", "tiny-lightmap-assets"].includes(code);
+}
+
 function importActionForDiagnostic(code: string): ImportNextStepAction | undefined {
   if (isSceneFramingDiagnostic(code)) {
     return "repair";
@@ -12119,11 +12123,12 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "missing-normal-attributes",
       "invalid-normal-accessor-shapes",
       "lightmaps-missing-secondary-uvs",
-      "some-lightmap-secondary-uvs-missing",
-      "missing-lightmap-assets",
-      "tiny-lightmap-assets"
+      "some-lightmap-secondary-uvs-missing"
     ].includes(code)
   ) {
+    return "bake";
+  }
+  if (isLightmapArtifactDiagnostic(code)) {
     return "bake";
   }
   if (
@@ -12553,6 +12558,9 @@ function repairCenterDestinationForItem(item: RepairCenterItem): string {
   if (item.id === "texture-connection") {
     return "Opens Materials texture previews.";
   }
+  if (item.id === "lightmap-artifacts") {
+    return "Opens Bake lightmap review.";
+  }
   if (item.action === "repair") {
     return "Opens Import repair.";
   }
@@ -12598,6 +12606,9 @@ function repairCenterVerifyForItem(item: RepairCenterItem): string {
   }
   if (item.id === "texture-connection") {
     return "After review, compare against the reference viewer and confirm walls, floors, wood, fabric, and decor textures are actually assigned.";
+  }
+  if (item.id === "lightmap-artifacts") {
+    return "After rebake or relink, inspect thumbnails first, then compare soft shadows and seams in the viewer.";
   }
   if (item.action === "repair") {
     return "After repair, return here and confirm blocker counts or source warnings decreased.";
@@ -12714,6 +12725,9 @@ function buildRepairCenterItems({
   const textureConnectionDiagnostics = (stats.diagnostics ?? []).filter(
     (diagnostic) => diagnostic.severity !== "info" && isTextureConnectionDiagnostic(diagnostic.code)
   );
+  const lightmapArtifactDiagnostics = (stats.diagnostics ?? []).filter(
+    (diagnostic) => diagnostic.severity !== "info" && isLightmapArtifactDiagnostic(diagnostic.code)
+  );
   if (sceneFramingDiagnostics.length > 0) {
     const first = sceneFramingDiagnostics[0]!;
     items.push({
@@ -12756,6 +12770,19 @@ function buildRepairCenterItems({
       button: suggestions > 0 ? "Review Matches" : "Review Textures"
     });
   }
+  if (lightmapArtifactDiagnostics.length > 0) {
+    const first = lightmapArtifactDiagnostics[0]!;
+    items.push({
+      id: "lightmap-artifacts",
+      stage: "Lighting",
+      title: "Review baked lightmap output",
+      detail: `${lightmapArtifactDiagnostics.length} lightmap issue${lightmapArtifactDiagnostics.length === 1 ? "" : "s"} found: ${first.title}. ${first.message}`,
+      visualFix: "Open Bake, inspect the generated lightmap thumbnails for blank/tiny/flat images, then rebake or relink only the failing material lightmaps before publishing.",
+      severity: lightmapArtifactDiagnostics.some((diagnostic) => diagnostic.severity === "error") ? "error" : "warning",
+      action: "bake",
+      button: "Review Bake"
+    });
+  }
   for (const diagnostic of stats.diagnostics ?? []) {
     if (diagnostic.severity === "info") {
       continue;
@@ -12770,6 +12797,9 @@ function buildRepairCenterItems({
       continue;
     }
     if (isTextureConnectionDiagnostic(diagnostic.code)) {
+      continue;
+    }
+    if (isLightmapArtifactDiagnostic(diagnostic.code)) {
       continue;
     }
     const action = importActionForDiagnostic(diagnostic.code) ?? "review";
