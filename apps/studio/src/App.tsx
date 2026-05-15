@@ -727,6 +727,14 @@ interface PublishHandoffStep {
   actionLabel: string;
 }
 
+interface HostingHandoffStep {
+  id: "validate" | "local" | "bucket" | "cache" | "domain";
+  label: string;
+  detail: string;
+  status: ClientDeliveryStep["status"];
+  actionLabel: string;
+}
+
 interface VideoSurfaceCandidate {
   id: string;
   meshName: string;
@@ -4486,6 +4494,64 @@ function App() {
     publishHistory?.activeVersion,
     publishState
   ]);
+  const publishHostingSteps = useMemo<HostingHandoffStep[]>(() => {
+    const hasPublishedVersion = Boolean(publishHandoffEntry);
+    const hasDeploymentPath = Boolean(publishHandoffEntry?.deploymentPath);
+    const packageStatus: ClientDeliveryStep["status"] = hasDeploymentPath
+      ? "ready"
+      : hasPublishedVersion
+        ? "todo"
+        : "blocked";
+    return [
+      {
+        id: "validate",
+        label: "Validate bundle",
+        detail: hasDeploymentPath
+          ? "Dry-run command is ready for CI or local QA."
+          : hasPublishedVersion
+            ? "Republish if deployment metadata is missing."
+            : "Publish a version before validating delivery.",
+        status: packageStatus,
+        actionLabel: hasDeploymentPath ? "Copy Validate" : "Waiting"
+      },
+      {
+        id: "local",
+        label: "Local package",
+        detail: hasDeploymentPath
+          ? "Copy a command that prepares a static deploy folder."
+          : "Create a versioned package before local deploy.",
+        status: packageStatus,
+        actionLabel: hasDeploymentPath ? "Copy Local" : "Waiting"
+      },
+      {
+        id: "bucket",
+        label: "S3/R2 upload",
+        detail: hasDeploymentPath
+          ? "Copy an object-storage upload command for production."
+          : "Publish first, then choose bucket credentials outside Studio.",
+        status: packageStatus,
+        actionLabel: hasDeploymentPath ? "Copy Upload" : "Waiting"
+      },
+      {
+        id: "cache",
+        label: "CDN cache",
+        detail: hasDeploymentPath
+          ? "Copy upload with immutable cache headers for heavy assets."
+          : "Cache headers can be prepared after the package exists.",
+        status: packageStatus,
+        actionLabel: hasDeploymentPath ? "Copy Cache" : "Waiting"
+      },
+      {
+        id: "domain",
+        label: "Domain handoff",
+        detail: hasDeploymentPath
+          ? "Copy the client checklist for launch URL, embed, and QA."
+          : "Custom domains need the published checklist first.",
+        status: hasDeploymentPath ? "ready" : hasPublishedVersion ? "todo" : "blocked",
+        actionLabel: hasDeploymentPath ? "Copy Handoff" : "Waiting"
+      }
+    ];
+  }, [publishHandoffEntry]);
   const clientDeliverySteps = useMemo<ClientDeliveryStep[]>(() => {
     const hasPublishedVersion = Boolean(latestPublishedEntry);
     const hasLiveVersion = Boolean(activePublishedEntry);
@@ -9476,6 +9542,61 @@ function App() {
                         {step.actionLabel}
                       </button>
                     )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="publish-hosting-board" aria-label="Hosting handoff">
+                {publishHostingSteps.map((step) => (
+                  <div key={step.id} className={`publish-hosting-step ${step.status}`}>
+                    <span className="publish-hosting-icon">
+                      {step.status === "ready" ? (
+                        <Check size={15} aria-hidden="true" />
+                      ) : step.status === "blocked" ? (
+                        <AlertTriangle size={15} aria-hidden="true" />
+                      ) : (
+                        <Globe2 size={15} aria-hidden="true" />
+                      )}
+                    </span>
+                    <div className="publish-hosting-main">
+                      <strong>{step.label}</strong>
+                      <p>{step.detail}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="button secondary compact-button publish-hosting-action"
+                      disabled={!publishHandoffEntry?.deploymentPath}
+                      onClick={() => {
+                        if (!publishHandoffEntry?.deploymentPath) {
+                          return;
+                        }
+                        if (step.id === "validate") {
+                          void copyText(publishedValidateDeployCommand(publishHandoffEntry));
+                          return;
+                        }
+                        if (step.id === "local") {
+                          void copyText(publishedLocalDeployCommand(publishHandoffEntry));
+                          return;
+                        }
+                        if (step.id === "bucket") {
+                          void copyText(publishedBucketDeployCommand(publishHandoffEntry));
+                          return;
+                        }
+                        if (step.id === "cache") {
+                          void copyText(publishedBucketDeployWithCacheCommand(publishHandoffEntry));
+                          return;
+                        }
+                        void copyText(
+                          publishedDeploymentChecklist(
+                            publishHandoffEntry,
+                            manifest.branding.clientName ?? manifest.branding.title
+                          )
+                        );
+                      }}
+                    >
+                      <Copy size={15} aria-hidden="true" />
+                      {step.actionLabel}
+                    </button>
                   </div>
                 ))}
               </div>

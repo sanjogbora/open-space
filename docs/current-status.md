@@ -63,6 +63,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Repair Center now includes a visual issue map that groups Source, Visuals, Movement, Presentation, Lighting, Performance, and Delivery fixes before the detailed cards.
 - Studio Publish now shows a visual client-share checklist for clearing blockers, creating a version, setting the live link, and testing the exact viewer a client will open.
 - Studio Publish now adds a visual handoff board for quality gate, draft testing, version creation, live link selection, and deployment checklist before dense version details.
+- Studio Publish now adds a visual hosting handoff board for bundle validation, local static package, S3/R2 upload, CDN cache headers, and domain handoff before dense deploy commands.
 - Studio Optimization now shows a visual setup board for profile budget, texture RAM, GPU compression, preview artifact, and applied viewer model before detailed profile tables.
 - Studio Optimization now adds symptom-first fix cards for slow loads, mobile crashes, oversized textures, and optimized-preview quality checks before raw profile tables.
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.

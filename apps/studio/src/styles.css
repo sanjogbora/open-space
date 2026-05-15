@@ -2172,6 +2172,93 @@ button.list-row {
   white-space: nowrap;
 }
 
+.publish-hosting-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.publish-hosting-step {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid #dbe6ed;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.publish-hosting-step.ready {
+  border-color: rgba(42, 151, 99, 0.28);
+  background: #f5fbf7;
+}
+
+.publish-hosting-step.blocked {
+  border-color: rgba(190, 62, 62, 0.3);
+  background: #fff5f5;
+}
+
+.publish-hosting-step.active,
+.publish-hosting-step.todo {
+  border-color: rgba(33, 132, 220, 0.24);
+  background: #f6fbff;
+}
+
+.publish-hosting-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cfdde5;
+  border-radius: 50%;
+  color: #1f7fc8;
+  background: #ffffff;
+}
+
+.publish-hosting-step.ready .publish-hosting-icon {
+  color: #177548;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.publish-hosting-step.blocked .publish-hosting-icon {
+  color: #9a2d2d;
+  border-color: #efc3c3;
+  background: #fffafa;
+}
+
+.publish-hosting-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.publish-hosting-main strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #24313a;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.publish-hosting-main p {
+  min-width: 0;
+  margin: 0;
+  color: #52636f;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.publish-hosting-action {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+  white-space: nowrap;
+}
+
 .publish-next-issue {
   display: grid;
   gap: 3px;
@@ -6316,6 +6403,7 @@ code {
   .repair-center-issue-map,
   .client-share-board,
   .publish-handoff-board,
+  .publish-hosting-board,
   .source-qa-grid,
   .import-symptom-board,
   .diagnostic-action-map,
@@ -6373,6 +6461,7 @@ code {
   .repair-followup,
   .client-share-step,
   .publish-handoff-step,
+  .publish-hosting-step,
   .source-qa-heading,
   .toggle-grid,
   .bake-setup-board,
