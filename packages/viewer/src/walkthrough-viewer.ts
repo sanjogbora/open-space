@@ -2143,7 +2143,7 @@ export class WalkthroughViewer {
       this.resetPendingFloorTransition();
       return referenceFloorY;
     }
-    if (!this.isSupportedFloorHeight(position, floorY, { referenceFloorY })) {
+    if (!this.isSupportedFloorHeight(position, floorY, { referenceFloorY, sampledFloorY: floorY })) {
       this.resetPendingFloorTransition();
       return referenceFloorY;
     }
@@ -3271,10 +3271,14 @@ export class WalkthroughViewer {
   private isSupportedFloorHeight(
     position: THREE.Vector3,
     floorY: number,
-    options: { referenceFloorY?: number } = {}
+    options: { referenceFloorY?: number; sampledFloorY?: number } = {}
   ): boolean {
     const supportRadius = THREE.MathUtils.clamp(this.collisionBodyRadius() * 1.6, 0.22, 0.55);
     const tolerance = Math.max(0.08, this.floorBumpTolerance() * 0.55);
+    const referenceDelta =
+      typeof options.referenceFloorY === "number" ? Math.abs(floorY - options.referenceFloorY) : Number.POSITIVE_INFINITY;
+    const isSmallRaisedFeature = referenceDelta <= Math.max(0.72, this.cameraHeight * 0.36);
+    const centerSupported = typeof options.sampledFloorY !== "number" || Math.abs(options.sampledFloorY - floorY) <= tolerance;
     const offsets = [
       [supportRadius, 0],
       [-supportRadius, 0],
@@ -3302,7 +3306,10 @@ export class WalkthroughViewer {
     if (supported >= 3) {
       return true;
     }
-    return supported >= 2 && referenceMatches <= 1;
+    if (isSmallRaisedFeature) {
+      return false;
+    }
+    return centerSupported && supported >= 2 && referenceMatches <= 1;
   }
 
   private isWalkableHit(hit: THREE.Intersection): boolean {
