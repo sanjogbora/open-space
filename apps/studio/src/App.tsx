@@ -2957,6 +2957,8 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     "unsupported-required-extensions",
     "missing-model-resources",
     "case-mismatched-model-resources",
+    "large-coordinate-units",
+    "scene-far-from-origin",
     "relocatable-texture-resources",
     "stale-object-overrides",
     "invalid-object-navigation-behavior",
@@ -11626,6 +11628,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "focused-model-small-in-scene",
       "initial-view-misses-focused-model",
       "large-coordinate-units",
+      "scene-far-from-origin",
       "missing-scene-bounds",
       "missing-model-resources",
       "relocatable-texture-resources",
@@ -12049,6 +12052,9 @@ function diagnosticVisualSymptom(code: string): string | null {
   }
   if (["invalid-node-transforms", "zero-scale-nodes", "negative-scale-nodes", "suspicious-node-scales"].includes(code)) {
     return "parts may look flattened, mirrored, huge, tiny, or the auto bounds/navigation may be wrong.";
+  }
+  if (["large-coordinate-units", "scene-far-from-origin", "missing-scene-bounds"].includes(code)) {
+    return "first view, top view, room map, click targets, or movement bounds may frame the wrong area.";
   }
   if (["invalid-position-accessor-shapes", "invalid-index-accessor-shapes"].includes(code)) {
     return "geometry may look missing, torn, spiky, or impossible to click/walk on reliably.";
@@ -12760,6 +12766,9 @@ function ViewerQaChecklist({
     "invalid-index-accessor-shapes",
     "invalid-material-references",
     "invalid-texture-references",
+    "large-coordinate-units",
+    "scene-far-from-origin",
+    "missing-scene-bounds",
     "missing-model-resources",
     "unsafe-gltf-resource-paths",
     "unsupported-required-extensions",
@@ -13026,6 +13035,9 @@ function viewerQaReportText(
       "invalid-index-accessor-shapes",
       "invalid-material-references",
       "invalid-texture-references",
+      "large-coordinate-units",
+      "scene-far-from-origin",
+      "missing-scene-bounds",
       "missing-model-resources",
       "unsafe-gltf-resource-paths",
       "unsupported-required-extensions",

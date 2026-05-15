@@ -2598,6 +2598,8 @@ function createDiagnostics(manifest, report, graphs, controls) {
   const bounds = graphBounds(graph);
   const size = boundsSize(bounds);
   const largestDimension = size ? Math.max(...size.map(Math.abs)) : 0;
+  const footprintCenter = boundsFootprintCenter(bounds);
+  const footprintCenterDistance = footprintCenter ? Math.hypot(footprintCenter[0], footprintCenter[1]) : 0;
   const flatPlane = dominantFlatPlane(graph, bounds);
   const flatSurfaceRisk = flatSurfaceNavigationRisk(graph, bounds);
   const focusedBounds = graphFocusBounds(graph);
@@ -3597,6 +3599,18 @@ function createDiagnostics(manifest, report, graphs, controls) {
       message: `The model spans about ${largestDimension.toFixed(1)} units. This often means the file was exported in centimeters or millimeters.`,
       action: "Set rendering.modelScale to 0.01 or 0.001, then regenerate views."
     });
+  } else if (
+    largestDimension > 1 &&
+    footprintCenterDistance > Math.max(250, largestDimension * 8) &&
+    modelScale === 1
+  ) {
+    diagnostics.push({
+      severity: "warning",
+      code: "scene-far-from-origin",
+      title: "Model is far from the origin",
+      message: `The model center is about ${footprintCenterDistance.toFixed(1)} units from world origin while the model spans about ${largestDimension.toFixed(1)} units.`,
+      action: "Move the source model near 0,0,0 or run import repair to regenerate focused bounds, camera views, rooms, and navigation from the building footprint."
+    });
   } else if (modelScale !== 1) {
     diagnostics.push({
       severity: "info",
@@ -4592,6 +4606,9 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "dominant-flat-plane",
     "initial-view-on-dominant-plane",
     "focused-model-small-in-scene",
+    "missing-scene-bounds",
+    "large-coordinate-units",
+    "scene-far-from-origin",
     "no-named-floor-meshes",
     "ambiguous-flat-walk-surfaces",
     "flat-object-surfaces-may-catch-clicks",
