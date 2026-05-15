@@ -1945,7 +1945,7 @@ export class WalkthroughViewer {
     const hasIntermediateWaypoint = this.movePath.length > 0;
     const arrivalRadius = hasIntermediateWaypoint
       ? Math.max(0.18, this.collisionBodyRadius() * 0.72)
-      : 0.035;
+      : Math.max(0.075, this.collisionBodyRadius() * 0.28);
     const flatReached = flatCompletionDistance < arrivalRadius;
     const verticalSnapThreshold = 0.025;
     const verticalSettleThreshold = hasIntermediateWaypoint ? Math.max(0.18, this.floorBumpTolerance() * 0.65) : 0.12;
@@ -1996,8 +1996,9 @@ export class WalkthroughViewer {
         this.yaw = dampAngle(this.yaw, Math.atan2(flatDelta.x, -flatDelta.z), 2.7, delta);
         this.pitch = damp(this.pitch, THREE.MathUtils.clamp(this.pitch, -0.18, 0.12), 1.4, delta);
       }
-      const desiredSpeed = THREE.MathUtils.clamp(flatDistance * 1.1, 0.18, clickMoveSpeed);
-      const acceleration = flatDistance < 0.85 ? 4.5 : 2.8;
+      const minimumSpeed = hasIntermediateWaypoint ? 0.18 : 0.045;
+      const desiredSpeed = THREE.MathUtils.clamp(flatDistance * 1.15, minimumSpeed, clickMoveSpeed);
+      const acceleration = flatDistance < 0.85 ? (hasIntermediateWaypoint ? 4.5 : 3.25) : 2.8;
       this.clickMoveVelocity = damp(this.clickMoveVelocity, desiredSpeed, acceleration, delta);
       const step = Math.min(flatDistance, this.clickMoveVelocity * delta);
       flatDelta.normalize().multiplyScalar(step);
