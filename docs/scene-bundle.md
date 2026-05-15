@@ -88,6 +88,7 @@ node scripts/deploy-published-bundle.mjs apps/viewer-demo/public/published/<proj
 - `objects.json` entries can set `navigationBehavior` to `walk`, `collision`, or `ignore` when automatic floor/wall detection needs an explicit object-level override.
 - `navigation.bounds` drives the viewer minimap scale when present.
 - `navigation` defines camera height, floor mesh naming, collision mesh naming, and optional movement bounds.
+- `rendering.modelScale` and `rendering.modelOffset` are runtime transforms applied to the loaded GLB before navigation is evaluated. Import Repair uses them to normalize unit scale and recenter far-from-origin models without modifying the original asset.
 - `qualityProfiles` define runtime pixel ratio, shadow, and antialiasing settings.
 
 ## Next Bundle Additions

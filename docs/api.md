@@ -38,6 +38,7 @@ POST /api/projects/demo/publish/active
 - Reads the demo bundle from `apps/viewer-demo/public/scenes/demo`.
 - Writes manifest/material/object/control edits to both viewer and Studio demo bundles.
 - Writes uploaded GLB models to both demo bundles.
+- Import Repair can regenerate views, rooms, navigation zones, bounds, model scale, and viewer-side model offset for difficult uploads.
 - Runs `pnpm.cmd analyze:demo` after API saves.
 - Returns fresh stats and optimization reports after analysis.
 - Runs local optimization jobs that emit `scene.optimized.glb`, write `optimization-job.json`, optionally apply the optimized model to the manifest, and refresh analysis.
