@@ -1144,6 +1144,39 @@ function objectNavigationBehaviorLabel(behavior: ObjectOverride["navigationBehav
   return "Auto";
 }
 
+function objectNavigationBehaviorDetail(behavior: NonNullable<ObjectOverride["navigationBehavior"]>): {
+  title: string;
+  detail: string;
+  action: string;
+} {
+  if (behavior === "walk") {
+    return {
+      title: "Walkable Floor",
+      detail: "Use for real floors, patios, landings, or flat areas people can stand on.",
+      action: "Let clicks land here"
+    };
+  }
+  if (behavior === "collision") {
+    return {
+      title: "Wall / Blocker",
+      detail: "Use for walls, columns, cabinets, closed doors, glass, or furniture that should stop movement.",
+      action: "Stop movement here"
+    };
+  }
+  if (behavior === "ignore") {
+    return {
+      title: "Ignore For Movement",
+      detail: "Use for helper meshes, decor, transparent panels, or objects that accidentally block a doorway.",
+      action: "Do not block or walk"
+    };
+  }
+  return {
+    title: "Auto Detection",
+    detail: "Use the analyzer's default decision from object names, material hints, and generated navigation zones.",
+    action: "Use detected role"
+  };
+}
+
 function normalizedObjectMatchName(value: string): string {
   return value
     .toLowerCase()
@@ -12710,6 +12743,40 @@ function App() {
                 {selectedObjectOverride && (
                   <div className="object-detail">
                     <h3>Navigation Behavior</h3>
+                    <div className="object-role-decision-board" aria-label="Object movement role">
+                      {(["default", "walk", "collision", "ignore"] as const).map((behavior) => {
+                        const detail = objectNavigationBehaviorDetail(behavior);
+                        const isActive = (selectedObjectOverride.navigationBehavior ?? "default") === behavior;
+                        return (
+                          <button
+                            key={behavior}
+                            type="button"
+                            className={isActive ? `object-role-decision active ${behavior}` : `object-role-decision ${behavior}`}
+                            onClick={() =>
+                              updateObject(selectedObjectOverride.id, (object) => ({
+                                ...object,
+                                navigationBehavior: behavior
+                              }))
+                            }
+                          >
+                            <span>
+                              {isActive ? (
+                                <Check size={15} aria-hidden="true" />
+                              ) : behavior === "collision" ? (
+                                <AlertTriangle size={15} aria-hidden="true" />
+                              ) : behavior === "ignore" ? (
+                                <EyeOff size={15} aria-hidden="true" />
+                              ) : (
+                                <Layers3 size={15} aria-hidden="true" />
+                              )}
+                            </span>
+                            <strong>{detail.title}</strong>
+                            <small>{detail.detail}</small>
+                            <em>{detail.action}</em>
+                          </button>
+                        );
+                      })}
+                    </div>
                     <label>
                       <span>Object role</span>
                       <select
