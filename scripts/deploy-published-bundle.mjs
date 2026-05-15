@@ -438,6 +438,7 @@ async function writeDeployReport(mode, target, checks, reportDir = sourceDir, ex
     largestAssets: largestAssets(checks),
     cachePolicy: cachePolicySummary(),
     deploymentWarnings: deploymentWarnings(checks, viewerBase, publicBase),
+    runtime: deployment.runtime ?? null,
     qualityGate: deployment.qualityGate ?? null,
     qualityGateSummary: qualityGateSummary(),
     qualityGateOverride: allowBlockedQualityGate,

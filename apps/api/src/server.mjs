@@ -2916,12 +2916,41 @@ function publishQualityGate(stats) {
   };
 }
 
+function publishRuntimeSummary(manifest, stats) {
+  const rendering = manifest.rendering ?? {};
+  return {
+    sceneUrl: manifest.sceneUrl ?? "scene.glb",
+    originalSceneUrl: manifest.originalSceneUrl ?? manifest.sceneUrl ?? "scene.glb",
+    modelScale: rendering.modelScale ?? 1,
+    ...(Array.isArray(rendering.modelOffset)
+      ? {
+          modelOffset: rendering.modelOffset,
+          modelOffsetDistance: Math.hypot(rendering.modelOffset[0], rendering.modelOffset[2])
+        }
+      : {}),
+    toneMapping: rendering.toneMapping ?? "aces",
+    exposure: rendering.exposure ?? 1.05,
+    doubleSidedMaterials: rendering.doubleSidedMaterials === true,
+    relightUnlitMaterials: rendering.relightUnlitMaterials !== false,
+    viewCount: manifest.views?.length ?? 0,
+    walkViewCount: (manifest.views ?? []).filter((view) => view.kind === "walk").length,
+    topViewCount: (manifest.views ?? []).filter((view) => view.kind === "top").length,
+    interactionCount: manifest.interactions?.length ?? 0,
+    roomCount: manifest.rooms?.length ?? 0,
+    navigationZoneCount: manifest.navigation?.zones?.length ?? 0,
+    ...(typeof stats?.focusedFootprintCenterDistance === "number"
+      ? { focusedFootprintCenterDistance: stats.focusedFootprintCenterDistance }
+      : {})
+  };
+}
+
 async function publishProject(projectId) {
   await runAnalyze(projectId);
   const publishedAt = new Date().toISOString();
   const version = publishedAt.replace(/[-:.]/g, "").replace("T", "-").replace("Z", "z");
   const source = targetDirs(projectId)[0];
   const stats = await readJson(path.join(source, "stats.json"));
+  const manifest = await readJson(path.join(source, "scene.manifest.json"));
   const publishBlockers = publishBlockersFromStats(stats);
   if (publishBlockers.length > 0) {
     throw badRequest(`Publish blocked: ${publishBlockers.join("; ")}.`);
@@ -2946,6 +2975,7 @@ async function publishProject(projectId) {
     assetCount: assets.length,
     totalBytes,
     qualityGate: publishQualityGate(stats),
+    runtime: publishRuntimeSummary(manifest, stats),
     assets,
     headers: [
       {
@@ -2977,7 +3007,8 @@ async function publishProject(projectId) {
       diagnosticCount: deployment.qualityGate.diagnosticCount,
       blockers: (deployment.qualityGate.blockers ?? []).slice(0, 8),
       warnings: (deployment.qualityGate.warnings ?? []).slice(0, 8)
-    }
+    },
+    runtime: deployment.runtime
   };
   const history = await publishHistory(projectId);
   const nextHistory = {
