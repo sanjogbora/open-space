@@ -202,6 +202,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Repair Center now surfaces dominant green/plain-placeholder imports as a dedicated visual repair card that opens Materials review instead of burying the issue in generic diagnostics.
 - Repair Center now surfaces disconnected texture-folder issues as a dedicated visual card with thumbnail-review guidance instead of grouping them into a generic material warning.
 - Repair Center now surfaces missing or tiny lightmap artifacts as a dedicated lighting card that opens Bake thumbnail review and rebake/relink guidance.
+- Repair Center now surfaces malformed or structurally invalid GLB/GLTF exports as a dedicated Source card that points users to source re-export before viewer-side repairs.
 - API texture repair scores duplicate loose texture candidates by relative path and texture-folder context before copying.
 - Analyzer now flags embedded GLB textures and sidecar texture files that cannot be decoded, so broken image payloads are reported instead of only showing flat or strange-colored surfaces in the viewer.
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.

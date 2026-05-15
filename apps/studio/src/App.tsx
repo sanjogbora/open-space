@@ -3195,6 +3195,16 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     "invalid-normal-accessor-shapes",
     "invalid-uv-accessor-shapes",
     "invalid-index-accessor-shapes",
+    "missing-position-attributes",
+    "invalid-accessor-references",
+    "invalid-buffer-view-references",
+    "invalid-buffer-view-ranges",
+    "invalid-accessor-buffer-views",
+    "invalid-accessor-byte-ranges",
+    "undersized-model-buffers",
+    "missing-position-bounds",
+    "invalid-position-bounds",
+    "collapsed-position-bounds",
     "invalid-material-references",
     "invalid-texture-references",
     "unsafe-gltf-resource-paths",
@@ -3253,6 +3263,7 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     "Source QA diagnostics:",
     `- Blocking source issues: ${errorCount}`,
     `- Source warnings: ${warningCount}`,
+    `- Source structure issues: ${sourceDiagnostics.filter((diagnostic) => isSourceStructureDiagnostic(diagnostic.code)).length}`,
     sourceDiagnostics.length === 0
       ? "- No source/export diagnostics are currently flagged."
       : "",
@@ -3264,7 +3275,7 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     ),
     "",
     "Recommended order:",
-    sourceDiagnostics.some((diagnostic) => diagnostic.code === "malformed-model" || diagnostic.code.startsWith("invalid-"))
+    sourceDiagnostics.some((diagnostic) => isSourceStructureDiagnostic(diagnostic.code))
       ? "1. Re-export the source scene from Blender/SketchUp/Revit/etc. as a valid glTF 2.0/GLB, then reimport."
       : "1. Source structure does not show a hard GLB validity blocker.",
     missingResources.length > 0
@@ -12023,6 +12034,30 @@ function isLightmapArtifactDiagnostic(code: string): boolean {
   return ["missing-lightmap-assets", "tiny-lightmap-assets"].includes(code);
 }
 
+function isSourceStructureDiagnostic(code: string): boolean {
+  return [
+    "malformed-model",
+    "invalid-default-scene",
+    "default-scene-has-no-renderable-meshes",
+    "invalid-scene-node-references",
+    "invalid-node-child-references",
+    "invalid-node-mesh-references",
+    "invalid-node-transforms",
+    "missing-position-attributes",
+    "invalid-accessor-references",
+    "invalid-position-accessor-shapes",
+    "invalid-index-accessor-shapes",
+    "invalid-buffer-view-references",
+    "invalid-buffer-view-ranges",
+    "invalid-accessor-buffer-views",
+    "invalid-accessor-byte-ranges",
+    "undersized-model-buffers",
+    "missing-position-bounds",
+    "invalid-position-bounds",
+    "collapsed-position-bounds"
+  ].includes(code);
+}
+
 function importActionForDiagnostic(code: string): ImportNextStepAction | undefined {
   if (isSceneFramingDiagnostic(code)) {
     return "repair";
@@ -12131,20 +12166,14 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   if (isLightmapArtifactDiagnostic(code)) {
     return "bake";
   }
+  if (isSourceStructureDiagnostic(code)) {
+    return "review";
+  }
   if (
     [
-      "malformed-model",
-      "invalid-default-scene",
-      "default-scene-has-no-renderable-meshes",
-      "invalid-scene-node-references",
-      "invalid-node-child-references",
-      "invalid-node-mesh-references",
-      "invalid-node-transforms",
       "zero-scale-nodes",
       "negative-scale-nodes",
       "suspicious-node-scales",
-      "invalid-position-accessor-shapes",
-      "invalid-index-accessor-shapes",
       "invalid-material-references",
       "invalid-texture-references",
       "stale-object-overrides",
@@ -12561,6 +12590,9 @@ function repairCenterDestinationForItem(item: RepairCenterItem): string {
   if (item.id === "lightmap-artifacts") {
     return "Opens Bake lightmap review.";
   }
+  if (item.id === "source-structure") {
+    return "Opens source export diagnostics.";
+  }
   if (item.action === "repair") {
     return "Opens Import repair.";
   }
@@ -12609,6 +12641,9 @@ function repairCenterVerifyForItem(item: RepairCenterItem): string {
   }
   if (item.id === "lightmap-artifacts") {
     return "After rebake or relink, inspect thumbnails first, then compare soft shadows and seams in the viewer.";
+  }
+  if (item.id === "source-structure") {
+    return "After re-export, reimport and confirm the card is gone before spending time on materials, rooms, or navigation.";
   }
   if (item.action === "repair") {
     return "After repair, return here and confirm blocker counts or source warnings decreased.";
@@ -12728,6 +12763,22 @@ function buildRepairCenterItems({
   const lightmapArtifactDiagnostics = (stats.diagnostics ?? []).filter(
     (diagnostic) => diagnostic.severity !== "info" && isLightmapArtifactDiagnostic(diagnostic.code)
   );
+  const sourceStructureDiagnostics = (stats.diagnostics ?? []).filter(
+    (diagnostic) => diagnostic.severity !== "info" && isSourceStructureDiagnostic(diagnostic.code)
+  );
+  if (sourceStructureDiagnostics.length > 0) {
+    const first = sourceStructureDiagnostics[0]!;
+    items.push({
+      id: "source-structure",
+      stage: "Source",
+      title: "Re-export source model",
+      detail: `${sourceStructureDiagnostics.length} source structure issue${sourceStructureDiagnostics.length === 1 ? "" : "s"} found: ${first.title}. ${first.message}`,
+      visualFix: "Use Source QA to copy the exact broken GLB/GLTF evidence, re-export from the source tool as valid glTF 2.0/GLB, then reimport before editing viewer materials, rooms, or navigation.",
+      severity: sourceStructureDiagnostics.some((diagnostic) => diagnostic.severity === "error") ? "error" : "warning",
+      action: "review",
+      button: "Review Export"
+    });
+  }
   if (sceneFramingDiagnostics.length > 0) {
     const first = sceneFramingDiagnostics[0]!;
     items.push({
@@ -12800,6 +12851,9 @@ function buildRepairCenterItems({
       continue;
     }
     if (isLightmapArtifactDiagnostic(diagnostic.code)) {
+      continue;
+    }
+    if (isSourceStructureDiagnostic(diagnostic.code)) {
       continue;
     }
     const action = importActionForDiagnostic(diagnostic.code) ?? "review";
