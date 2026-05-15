@@ -3156,6 +3156,13 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function footprintAreaFromSize(size: readonly [number, number, number] | undefined): number | undefined {
+  if (!size) {
+    return undefined;
+  }
+  return Math.abs(size[0] * size[2]);
+}
+
 function geometryCompressionLabel(stats: BundleStats | null): string {
   if (stats?.compression?.meshopt) {
     return "Meshopt";
@@ -13708,6 +13715,27 @@ function AssetHealth({
   const highTextureMemoryDiagnostic = (stats.diagnostics ?? []).find(
     (diagnostic) => diagnostic.code === "high-texture-memory-estimate"
   );
+  const sceneFramingDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
+    [
+      "dominant-flat-plane",
+      "initial-view-on-dominant-plane",
+      "initial-view-misses-focused-model",
+      "focused-model-small-in-scene",
+      "scene-far-from-origin",
+      "large-coordinate-units"
+    ].includes(diagnostic.code)
+  );
+  const sceneArea = footprintAreaFromSize(stats.sceneBoundsSize);
+  const focusedArea = footprintAreaFromSize(stats.focusedBoundsSize);
+  const focusedShare =
+    typeof sceneArea === "number" && sceneArea > 0 && typeof focusedArea === "number"
+      ? Math.min(1, Math.max(0, focusedArea / sceneArea))
+      : undefined;
+  const hasModelOffset = Boolean(stats.modelOffset?.some((value) => Math.abs(value) > 0.01));
+  const hasSceneFramingWork =
+    Boolean(sceneFramingDiagnostic) ||
+    Boolean(hasModelOffset) ||
+    (typeof focusedShare === "number" && typeof sceneArea === "number" && sceneArea > 40 && focusedShare < 0.55);
   const hasTextureAssignmentGap =
     Boolean(textureAssignmentDiagnostic) ||
     ((stats.imageCount ?? 0) > 0 &&
@@ -13718,6 +13746,7 @@ function AssetHealth({
   const hasLightmapRepairWork = missingLightmapAssets.length > 0 || tinyLightmapAssets.length > 0;
   const hasLooseUnmappedTextures = looseImages.length > 0 && textureSuggestions.length === 0;
   const hasDetails =
+    hasSceneFramingWork ||
     missingAssets.length > 0 ||
     missingResources.length > 0 ||
     hasLightmapRepairWork ||
@@ -13748,12 +13777,22 @@ function AssetHealth({
         )}
       </div>
       {(hasTextureRepairWork ||
+        hasSceneFramingWork ||
         hasLightmapRepairWork ||
         Boolean(highTextureMemoryDiagnostic) ||
         textureSuggestions.length > 0 ||
         hasLooseUnmappedTextures ||
         hasTextureAssignmentGap) && (
         <div className="asset-repair-plan">
+          {hasSceneFramingWork && (
+            <p>
+              {sceneFramingDiagnostic?.message ??
+                (hasModelOffset
+                  ? `The viewer applies a ${stats.modelOffset?.map((value) => value.toFixed(1)).join(", ")} model offset so camera views and navigation frame the building.`
+                  : "The focused building footprint is smaller than the full scene footprint, so exterior terrain or helper planes may affect framing.")}{" "}
+              Run repair after import changes to rebuild focused camera views, bounds, rooms, and navigation.
+            </p>
+          )}
           {highTextureMemoryDiagnostic && (
             <p>
               {highTextureMemoryDiagnostic.message} Open Optimization to downscale texture delivery or prepare KTX2/Basis
@@ -13829,7 +13868,41 @@ function AssetHealth({
                 Bake Lightmaps
               </button>
             )}
+            {hasSceneFramingWork && onRepair && !hasTextureRepairWork && (
+              <button type="button" className="button secondary compact-button" disabled={!canRunRepair} onClick={onRepair}>
+                <Wrench size={15} aria-hidden="true" />
+                {repairState === "repairing" ? "Repairing" : "Repair Framing"}
+              </button>
+            )}
           </div>
+        </div>
+      )}
+      {hasSceneFramingWork && (
+        <div className="asset-health-section scene-framing-section">
+          <span>Scene framing</span>
+          <div className="scene-framing-grid">
+            <div>
+              <strong>{formatRuntimeNumber(stats.sceneLargestDimension ?? 0, 1)}</strong>
+              <small>full scene span</small>
+            </div>
+            <div>
+              <strong>{formatRuntimeNumber(stats.focusedLargestDimension ?? stats.sceneLargestDimension ?? 0, 1)}</strong>
+              <small>focused span</small>
+            </div>
+            <div>
+              <strong>
+                {typeof focusedShare === "number" ? `${Math.max(1, Math.round(focusedShare * 100))}%` : "n/a"}
+              </strong>
+              <small>building share</small>
+            </div>
+            <div>
+              <strong>{formatRuntimeNumber(stats.modelOffsetDistance ?? stats.sceneFootprintCenterDistance ?? 0, 1)}</strong>
+              <small>{hasModelOffset ? "offset applied" : "origin distance"}</small>
+            </div>
+          </div>
+          {stats.modelOffset && (
+            <code>Runtime offset: {formatRuntimeVec3(stats.modelOffset)}</code>
+          )}
         </div>
       )}
       {hasLightmapRepairWork && (

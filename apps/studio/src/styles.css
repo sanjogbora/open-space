@@ -1812,6 +1812,46 @@ button.list-row {
   white-space: nowrap;
 }
 
+.scene-framing-section {
+  padding: 8px;
+  border: 1px solid rgba(60, 101, 126, 0.16);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.scene-framing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.scene-framing-grid div {
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid #e3e8eb;
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.scene-framing-grid strong,
+.scene-framing-grid small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.scene-framing-grid strong {
+  color: #16252d;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.scene-framing-grid small {
+  margin-top: 2px;
+  color: #667681;
+  font-size: 11px;
+}
+
 .asset-coverage-row {
   display: grid;
   gap: 3px;
