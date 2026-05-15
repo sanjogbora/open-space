@@ -14966,6 +14966,102 @@ function repairCenterVerifyForItem(item: RepairCenterItem): string {
   return "After reviewing, return to Repair Center and confirm the card is gone or moved lower priority.";
 }
 
+function repairCenterChangeForItem(item: RepairCenterItem): string {
+  if (item.id === "upload") {
+    return "Adds the model to Studio and creates the first automated repair queue.";
+  }
+  if (item.id === "source-structure") {
+    return "Does not change the current project until a cleaner source export is uploaded.";
+  }
+  if (item.action === "apply-textures") {
+    return "Fills empty material texture slots from high-confidence loose-image matches.";
+  }
+  if (item.action === "materials") {
+    return "Changes only the material or texture slot the user reviews and applies.";
+  }
+  if (item.action === "navigation") {
+    return "Updates walk areas, door passes, blockers, or movement bounds.";
+  }
+  if (item.action === "objects") {
+    return "Updates object visibility, top-view cleanup, or navigation roles.";
+  }
+  if (item.action === "rooms") {
+    return "Updates room regions, room labels, and linked room views.";
+  }
+  if (item.action === "views") {
+    return "Updates the saved camera viewpoints clients use to start and switch rooms.";
+  }
+  if (item.action === "interactions") {
+    return "Maps screens, videos, hotspots, links, or object toggles.";
+  }
+  if (item.action === "bake") {
+    return "Creates or reviews baked lightmap assets before they are used in the viewer.";
+  }
+  if (item.action === "environment") {
+    return "Updates the outside ground, sky, enclosure, or review background.";
+  }
+  if (item.action === "optimize") {
+    return "Creates an optimized preview bundle before it is applied to the viewer.";
+  }
+  if (item.action === "test") {
+    return "Saves current Studio edits and opens the viewer for manual QA.";
+  }
+  if (item.action === "repair") {
+    return "Rebuilds generated bounds, focused views, room regions, navigation, and missing-path repair data.";
+  }
+  return "Routes to the relevant review panel without hiding the raw diagnostic evidence.";
+}
+
+function repairCenterRiskForItem(item: RepairCenterItem): { label: string; detail: string; tone: RepairCenterSeverity } {
+  if (item.id === "source-structure") {
+    return {
+      label: "Source fix",
+      detail: "Best fixed by re-exporting the original model before editing viewer setup.",
+      tone: "error"
+    };
+  }
+  if (item.action === "apply-textures") {
+    return {
+      label: "Low",
+      detail: "Only applies confident empty-slot matches; weaker matches stay for manual review.",
+      tone: "ready"
+    };
+  }
+  if (item.action === "materials" || item.action === "objects" || item.action === "interactions" || item.action === "environment") {
+    return {
+      label: "Manual",
+      detail: "User picks the visible target before saving, so the change is controlled.",
+      tone: "warning"
+    };
+  }
+  if (item.action === "navigation" || item.action === "rooms" || item.action === "views" || item.action === "repair") {
+    return {
+      label: "Medium",
+      detail: "Can affect movement or framing; save and test the viewer after applying.",
+      tone: "warning"
+    };
+  }
+  if (item.action === "bake" || item.action === "optimize") {
+    return {
+      label: "Preview first",
+      detail: "Creates reviewable output before it should be trusted for client delivery.",
+      tone: "warning"
+    };
+  }
+  if (item.action === "test") {
+    return {
+      label: "No edit",
+      detail: "Opens the viewer for QA and should not change project data beyond saving draft edits.",
+      tone: "ready"
+    };
+  }
+  return {
+    label: "Review",
+    detail: "Open the guided panel and confirm visually before saving or publishing.",
+    tone: "info"
+  };
+}
+
 function buildRepairCenterItems({
   stats,
   manifest,
@@ -15309,6 +15405,7 @@ function RepairCenter({
     : currentItem.action === "test"
       ? "Open Viewer"
       : "Start Visual Fix";
+  const currentRisk = repairCenterRiskForItem(currentItem);
 
   return (
     <section className="repair-center-layout">
@@ -15344,6 +15441,31 @@ function RepairCenter({
                 {currentItem.action === "navigation" ? "Save & Test Nav" : "Save & Test"}
               </button>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="repair-center-fix-preview" aria-label="Current visual fix preview">
+        <div className={`repair-center-preview-card ${currentItem.severity}`}>
+          <span>{repairCenterIcon(currentItem.action)}</span>
+          <div>
+            <strong>Current fix</strong>
+            <p>{currentItem.visualFix}</p>
+          </div>
+        </div>
+        <div className="repair-center-preview-grid">
+          <div>
+            <small>What changes</small>
+            <strong>{repairCenterChangeForItem(currentItem)}</strong>
+          </div>
+          <div className={`repair-center-risk ${currentRisk.tone}`}>
+            <small>Risk</small>
+            <strong>{currentRisk.label}</strong>
+            <p>{currentRisk.detail}</p>
+          </div>
+          <div>
+            <small>Visual check</small>
+            <strong>{repairCenterVerifyForItem(currentItem)}</strong>
           </div>
         </div>
       </div>

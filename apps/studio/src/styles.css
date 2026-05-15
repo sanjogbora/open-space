@@ -333,6 +333,114 @@ h2 {
   gap: 8px;
 }
 
+.repair-center-fix-preview {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.6fr);
+  gap: 10px;
+}
+
+.repair-center-preview-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #dce7ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.repair-center-preview-card.error {
+  border-color: #f2b7b5;
+  background: #fff7f6;
+}
+
+.repair-center-preview-card.warning {
+  border-color: #f0d38f;
+  background: #fffaf0;
+}
+
+.repair-center-preview-card.ready {
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.repair-center-preview-card > span {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cfdde5;
+  border-radius: 50%;
+  color: #087fe7;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.repair-center-preview-card strong,
+.repair-center-preview-grid strong {
+  color: #182026;
+  font-size: 13px;
+}
+
+.repair-center-preview-card p {
+  margin: 4px 0 0;
+  color: #355262;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.repair-center-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.repair-center-preview-grid > div {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 11px;
+  border: 1px solid #dce7ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.repair-center-preview-grid small {
+  color: #60717c;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.repair-center-preview-grid strong {
+  line-height: 1.35;
+}
+
+.repair-center-risk.error {
+  border-color: #f2b7b5;
+  background: #fff7f6;
+}
+
+.repair-center-risk.warning {
+  border-color: #f0d38f;
+  background: #fffaf0;
+}
+
+.repair-center-risk.ready {
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.repair-center-risk p {
+  margin: 0;
+  color: #52636f;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .repair-center-progress {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
@@ -5696,6 +5804,8 @@ code {
   .editor-layout,
   .bundle-grid,
   .repair-center-hero,
+  .repair-center-fix-preview,
+  .repair-center-preview-grid,
   .repair-center-card,
   .repair-center-issue-map,
   .client-share-board,
