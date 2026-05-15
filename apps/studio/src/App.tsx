@@ -5309,6 +5309,65 @@ function App() {
       reviewMaterialTextureSuggestionCount
     ]
   );
+  const materialTriageSteps = useMemo(
+    () => [
+      {
+        id: "flat",
+        label: "Looks flat",
+        detail:
+          materialFilterCounts.untextured > 0
+            ? `${materialFilterCounts.untextured} material${materialFilterCounts.untextured === 1 ? "" : "s"} have no texture maps.`
+            : "Use when the model looks poorer than the reference viewer.",
+        status: materialFilterCounts.untextured > 0 ? "warning" : "ready",
+        action: materialFilterCounts.suggested > 0 ? "Show Matches" : "Show No Textures"
+      },
+      {
+        id: "green",
+        label: "Green/plain surface",
+        detail:
+          materialFilterCounts.plainGreen > 0
+            ? `${materialFilterCounts.plainGreen} placeholder-like surface${materialFilterCounts.plainGreen === 1 ? "" : "s"} need review.`
+            : "Use when a grass/placeholder color dominates the viewer.",
+        status: materialFilterCounts.plainGreen > 0 ? "warning" : "ready",
+        action: "Show Plain"
+      },
+      {
+        id: "folder",
+        label: "Texture folder",
+        detail:
+          pendingMaterialTextureSuggestionCount > 0
+            ? `${pendingMaterialTextureSuggestionCount} safe match${pendingMaterialTextureSuggestionCount === 1 ? "" : "es"} ready to review.`
+            : reviewMaterialTextureSuggestionCount > 0
+              ? `${reviewMaterialTextureSuggestionCount} possible match${reviewMaterialTextureSuggestionCount === 1 ? "" : "es"} need review.`
+              : "No loose texture matches are pending.",
+        status:
+          pendingMaterialTextureSuggestionCount > 0
+            ? "active"
+            : reviewMaterialTextureSuggestionCount > 0
+              ? "warning"
+              : "ready",
+        action: "Review Matches"
+      },
+      {
+        id: "lighting",
+        label: "Baked shadows",
+        detail:
+          materialFilterCounts.lightmaps > 0
+            ? `${materialFilterCounts.lightmaps} lightmapped material${materialFilterCounts.lightmaps === 1 ? "" : "s"} assigned.`
+            : "Bake or relink lightmaps for Shapespark-style lighting.",
+        status: materialFilterCounts.lightmaps > 0 ? "ready" : "warning",
+        action: materialFilterCounts.lightmaps > 0 ? "Show Lightmaps" : "Open Bake"
+      }
+    ],
+    [
+      materialFilterCounts.lightmaps,
+      materialFilterCounts.plainGreen,
+      materialFilterCounts.suggested,
+      materialFilterCounts.untextured,
+      pendingMaterialTextureSuggestionCount,
+      reviewMaterialTextureSuggestionCount
+    ]
+  );
   const filteredMaterialRows = useMemo(() => {
     const query = normalizeTextureMatchName(materialSearchQuery);
     return materialReviewRows.filter((row) => {
@@ -10594,6 +10653,51 @@ function App() {
                           <Palette size={15} aria-hidden="true" />
                         ) : (
                           <AlertTriangle size={15} aria-hidden="true" />
+                        )}
+                      </span>
+                      <strong>{step.label}</strong>
+                      <small>{step.detail}</small>
+                      <em>{step.action}</em>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="material-triage-board" aria-label="Material symptom fixes">
+                  {materialTriageSteps.map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      className={`material-triage-card ${step.status}`}
+                      onClick={() => {
+                        setMaterialSearchQuery("");
+                        if (step.id === "flat") {
+                          setMaterialListFilter(materialFilterCounts.suggested > 0 ? "suggested" : "untextured");
+                          return;
+                        }
+                        if (step.id === "green") {
+                          setMaterialListFilter("plain-green");
+                          return;
+                        }
+                        if (step.id === "folder") {
+                          setMaterialListFilter("suggested");
+                          return;
+                        }
+                        if (step.id === "lighting") {
+                          if (materialFilterCounts.lightmaps > 0) {
+                            setMaterialListFilter("lightmaps");
+                            return;
+                          }
+                          openBakeWorkflow();
+                        }
+                      }}
+                    >
+                      <span>
+                        {step.status === "ready" ? (
+                          <Check size={15} aria-hidden="true" />
+                        ) : step.status === "active" ? (
+                          <Palette size={15} aria-hidden="true" />
+                        ) : (
+                          <Wrench size={15} aria-hidden="true" />
                         )}
                       </span>
                       <strong>{step.label}</strong>
