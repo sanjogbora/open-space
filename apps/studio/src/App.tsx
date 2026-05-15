@@ -13630,6 +13630,10 @@ function RepairCenter({
     ([stageA], [stageB]) => repairCenterStageRank(stageA) - repairCenterStageRank(stageB)
   );
   const stageSummaries = repairCenterStageSummaries(items, Boolean(stats));
+  const stagePreviewItems = stageSummaries.map((summary) => ({
+    summary,
+    item: items.find((candidate) => candidate.stage === summary.stage)
+  }));
   const runRepairCenterItem = (item: RepairCenterItem) => {
     if (item.id === "upload") {
       onImport();
@@ -13716,6 +13720,36 @@ function RepairCenter({
             <strong>{summary.stage}</strong>
             <span>{summary.label}</span>
             {summary.count > 0 && <small>{summary.count}</small>}
+          </button>
+        ))}
+      </div>
+
+      <div className="repair-center-issue-map" aria-label="Visual repair map">
+        {stagePreviewItems.map(({ summary, item }) => (
+          <button
+            key={summary.stage}
+            type="button"
+            className={`repair-center-map-card ${summary.severity}`}
+            onClick={() => scrollToRepairStage(summary.stage)}
+            disabled={!item}
+          >
+            <span className="repair-center-map-icon">
+              {item ? repairCenterIcon(item.action) : <Check size={17} aria-hidden="true" />}
+            </span>
+            <span className="repair-center-map-main">
+              <strong>{summary.stage}</strong>
+              <small>{summary.label}</small>
+              <p>
+                {item
+                  ? item.title
+                  : stats
+                    ? "No visual fix needed here."
+                    : summary.stage === "Source"
+                      ? "Upload a model first."
+                      : "Waiting for analysis."}
+              </p>
+              {item && <em>{item.visualFix}</em>}
+            </span>
           </button>
         ))}
       </div>

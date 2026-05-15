@@ -403,6 +403,114 @@ h2 {
   outline: none;
 }
 
+.repair-center-issue-map {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.repair-center-map-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #dce7ee;
+  border-radius: 8px;
+  background: #ffffff;
+  text-align: left;
+}
+
+.repair-center-map-card.error {
+  border-color: #f2b7b5;
+  background: #fff7f6;
+}
+
+.repair-center-map-card.warning {
+  border-color: #f0d38f;
+  background: #fffaf0;
+}
+
+.repair-center-map-card.ready {
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.repair-center-map-card:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.repair-center-map-card:not(:disabled):hover,
+.repair-center-map-card:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.repair-center-map-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d4e2ea;
+  border-radius: 50%;
+  color: #087fe7;
+  background: #ffffff;
+}
+
+.repair-center-map-card.error .repair-center-map-icon {
+  color: #9a2d2d;
+  border-color: #efc3c3;
+  background: #fffafa;
+}
+
+.repair-center-map-card.warning .repair-center-map-icon {
+  color: #7b4c00;
+  border-color: #f3d0a1;
+  background: #fffaf0;
+}
+
+.repair-center-map-card.ready .repair-center-map-icon {
+  color: #147c4f;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.repair-center-map-main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.repair-center-map-main strong {
+  color: #182026;
+  font-size: 13px;
+}
+
+.repair-center-map-main small {
+  color: #60717c;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.repair-center-map-main p {
+  margin: 0;
+  color: #355262;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.repair-center-map-main em {
+  color: #52636f;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.35;
+}
+
 .repair-center-list {
   display: grid;
   gap: 10px;
@@ -4364,6 +4472,7 @@ code {
   .bundle-grid,
   .repair-center-hero,
   .repair-center-card,
+  .repair-center-issue-map,
   .client-share-board,
   .repair-diagnosis,
   .repair-playbook,
