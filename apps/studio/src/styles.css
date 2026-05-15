@@ -3950,7 +3950,7 @@ button.list-row {
 }
 
 .job-history-row.lightmap-row {
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 48px minmax(0, 1fr) auto auto;
 }
 
 .job-history-row.lightmap-row.warning {
@@ -3983,6 +3983,10 @@ button.list-row {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.lightmap-review-button {
+  white-space: nowrap;
 }
 
 .lightmap-quality-pill {

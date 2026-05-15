@@ -6110,6 +6110,29 @@ function App() {
     }
   };
 
+  const reviewLightmapMaterial = (materialName: string) => {
+    const normalizedTarget = normalizeTextureMatchName(materialName);
+    const matchedMaterial = materialsDoc?.materials.find((material) => {
+      const normalizedName = normalizeTextureMatchName(material.name);
+      return (
+        normalizedName === normalizedTarget ||
+        (normalizedName.length >= 3 && normalizedTarget.includes(normalizedName)) ||
+        (normalizedTarget.length >= 3 && normalizedName.includes(normalizedTarget))
+      );
+    });
+    if (matchedMaterial) {
+      setSelectedMaterialId(matchedMaterial.id);
+    }
+    setMaterialListFilter("lightmaps");
+    setMaterialSearchQuery(materialName);
+    window.setTimeout(() => {
+      document.querySelector(".material-diagnosis-card, .material-preview-strip")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }, 0);
+  };
+
   const switchModelSource = async (sceneUrl: string) => {
     if (!apiConnected) {
       setOptimizeState("error");
@@ -9520,6 +9543,13 @@ function App() {
                                   {lightmap.resolution ? `${lightmap.resolution}px / ` : ""}
                                   {formatBytes(lightmap.bytes ?? 0)}
                                 </small>
+                                <button
+                                  type="button"
+                                  className="button secondary compact-button lightmap-review-button"
+                                  onClick={() => reviewLightmapMaterial(lightmap.materialName)}
+                                >
+                                  Review Material
+                                </button>
                               </div>
                             );
                             })}
