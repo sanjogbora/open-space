@@ -2268,6 +2268,85 @@ button.list-row {
   background: rgba(255, 255, 255, 0.58);
 }
 
+.asset-health-roadmap {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.asset-health-roadmap-step {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid rgba(111, 75, 0, 0.18);
+  border-radius: 7px;
+  color: #6f4b00;
+  background: rgba(255, 255, 255, 0.62);
+  text-align: left;
+}
+
+.asset-health-roadmap-step.ready {
+  color: #147c4f;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.asset-health-roadmap-step.active {
+  color: #095b88;
+  border-color: #b8dcf0;
+  background: #eef8ff;
+}
+
+.asset-health-roadmap-step:disabled {
+  cursor: default;
+  opacity: 0.74;
+}
+
+.asset-health-roadmap-step:not(:disabled):hover,
+.asset-health-roadmap-step:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.asset-health-roadmap-step span {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.asset-health-roadmap-step strong,
+.asset-health-roadmap-step small,
+.asset-health-roadmap-step em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-health-roadmap-step strong {
+  font-size: 12px;
+}
+
+.asset-health-roadmap-step small,
+.asset-health-roadmap-step em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.asset-health-roadmap-step em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .asset-health-actions {
   display: flex;
   flex-wrap: wrap;
@@ -4678,6 +4757,7 @@ code {
   .client-share-board,
   .source-qa-grid,
   .diagnostic-action-map,
+  .asset-health-roadmap,
   .repair-diagnosis,
   .repair-playbook,
   .repair-action-grid,

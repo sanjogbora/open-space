@@ -15029,6 +15029,48 @@ function AssetHealth({
     hasTextureAssignmentGap ||
     textureSuggestions.length > 0 ||
     externalResources.length > 0;
+  const assetHealthSteps = [
+    {
+      id: "paths",
+      label: "Texture paths",
+      detail: hasTextureRepairWork
+        ? `${missingResources.length + missingAssets.length} referenced file${missingResources.length + missingAssets.length === 1 ? "" : "s"} missing`
+        : "Referenced model files are present",
+      status: hasTextureRepairWork ? "warning" : "ready",
+      action: onRepair ? "Repair Paths" : "Review"
+    },
+    {
+      id: "assignments",
+      label: "Material maps",
+      detail: pendingTextureSuggestionCount > 0
+        ? `${pendingTextureSuggestionCount} safe match${pendingTextureSuggestionCount === 1 ? "" : "es"} ready`
+        : reviewTextureSuggestionCount > 0
+          ? `${reviewTextureSuggestionCount} match${reviewTextureSuggestionCount === 1 ? "" : "es"} need review`
+          : hasTextureAssignmentGap
+            ? `${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0} material(s) textured`
+            : "Coverage looks usable",
+      status: pendingTextureSuggestionCount > 0 ? "active" : reviewTextureSuggestionCount > 0 || hasTextureAssignmentGap ? "warning" : "ready",
+      action: pendingTextureSuggestionCount > 0 ? "Apply Matches" : "Open Materials"
+    },
+    {
+      id: "memory",
+      label: "Texture memory",
+      detail: highTextureMemoryDiagnostic
+        ? formatBytes(stats.estimatedTextureMemoryBytes ?? 0)
+        : "No high memory warning",
+      status: highTextureMemoryDiagnostic ? "warning" : "ready",
+      action: "Open Optimization"
+    },
+    {
+      id: "lightmaps",
+      label: "Lightmaps",
+      detail: hasLightmapRepairWork
+        ? `${missingLightmapAssets.length + tinyLightmapAssets.length} issue${missingLightmapAssets.length + tinyLightmapAssets.length === 1 ? "" : "s"}`
+        : `${stats.lightmapAssetCount ?? 0}/${stats.lightmapMaterialCount ?? 0} linked`,
+      status: hasLightmapRepairWork ? "warning" : "ready",
+      action: "Open Bake"
+    }
+  ];
 
   if (!hasDetails) {
     return (
@@ -15049,6 +15091,55 @@ function AssetHealth({
             Copy Plan
           </button>
         )}
+      </div>
+      <div className="asset-health-roadmap" aria-label="Asset repair roadmap">
+        {assetHealthSteps.map((step) => (
+          <button
+            key={step.id}
+            type="button"
+            className={`asset-health-roadmap-step ${step.status}`}
+            disabled={
+              (step.id === "paths" && !hasTextureRepairWork) ||
+              (step.id === "assignments" && !hasTextureAssignmentGap && textureSuggestions.length === 0) ||
+              (step.id === "memory" && !highTextureMemoryDiagnostic) ||
+              (step.id === "lightmaps" && !hasLightmapRepairWork)
+            }
+            onClick={() => {
+              if (step.id === "paths" && hasTextureRepairWork && onRepair) {
+                onRepair();
+                return;
+              }
+              if (step.id === "assignments") {
+                if (pendingTextureSuggestionCount > 0 && onApplyTextureSuggestions) {
+                  onApplyTextureSuggestions();
+                  return;
+                }
+                onMaterials?.();
+                return;
+              }
+              if (step.id === "memory") {
+                onOptimize?.();
+                return;
+              }
+              if (step.id === "lightmaps") {
+                onBake?.();
+              }
+            }}
+          >
+            <span>
+              {step.status === "ready" ? (
+                <Check size={15} aria-hidden="true" />
+              ) : step.id === "memory" ? (
+                <Activity size={15} aria-hidden="true" />
+              ) : (
+                <Palette size={15} aria-hidden="true" />
+              )}
+            </span>
+            <strong>{step.label}</strong>
+            <small>{step.detail}</small>
+            <em>{step.action}</em>
+          </button>
+        ))}
       </div>
       {(hasTextureRepairWork ||
         hasSceneFramingWork ||

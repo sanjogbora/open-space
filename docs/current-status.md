@@ -46,6 +46,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Bake lightmap previews now link directly to the matching material review, with the Materials list filtered to lightmapped materials.
 - Studio Import now summarizes Source QA into visual export-structure, missing-resource, framing, material-reference, and saved-override cards before raw diagnostics.
 - Studio diagnostics now show grouped visual fix areas and likely user-visible symptoms before the raw diagnostic details.
+- Asset Health now shows a visual texture repair roadmap for path repair, material map assignment, texture memory, and lightmap asset issues before detailed file lists.
 - Repair Center now includes a visual issue map that groups Source, Visuals, Movement, Presentation, Lighting, Performance, and Delivery fixes before the detailed cards.
 - Studio Publish now shows a visual client-share checklist for clearing blockers, creating a version, setting the live link, and testing the exact viewer a client will open.
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.
