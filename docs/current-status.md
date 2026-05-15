@@ -73,6 +73,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio navigation repair can now match the clicked object name, not only blocker names, so object/surface click failures can offer visual role actions like Ignore Object, Make Walkable, or Keep As Wall.
 - Studio navigation repair now shows a clicked-object review card when automatic object matching fails, opening the Objects panel with the clicked name prefilled instead of leaving the user in coordinate details.
 - Studio Objects now gives the selected object a visual movement-role chooser for Auto Detection, Walkable Floor, Wall/Blocker, and Ignore For Movement, reducing reliance on raw dropdown labels.
+- Studio Objects now confirms movement-role changes and keeps a Save & Test Navigation action beside the role chooser so object fixes can be verified immediately.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
 - Grid fallback routes now cache sampled floor height per cell, reject over-height step transitions, and slightly prefer level routes to reduce camera bouncing over ridges or multi-level gaps.

@@ -5980,6 +5980,19 @@ function App() {
     );
   };
 
+  const setObjectNavigationBehavior = (
+    objectId: string,
+    objectName: string,
+    behavior: NonNullable<ObjectOverride["navigationBehavior"]>
+  ) => {
+    updateObject(objectId, (object) => ({
+      ...object,
+      navigationBehavior: behavior
+    }));
+    const detail = objectNavigationBehaviorDetail(behavior);
+    setObjectReviewMessage(`${objectName} set to ${detail.title}. Save & Test to verify movement in the viewer.`);
+  };
+
   const hideCeilingCandidatesInTopView = () => {
     const ceilingRows = objectReviewRows.filter((row) => row.isCeilingOrRoof);
     if (ceilingRows.length === 0) {
@@ -12753,10 +12766,7 @@ function App() {
                             type="button"
                             className={isActive ? `object-role-decision active ${behavior}` : `object-role-decision ${behavior}`}
                             onClick={() =>
-                              updateObject(selectedObjectOverride.id, (object) => ({
-                                ...object,
-                                navigationBehavior: behavior
-                              }))
+                              setObjectNavigationBehavior(selectedObjectOverride.id, selectedObject.name, behavior)
                             }
                           >
                             <span>
@@ -12782,10 +12792,11 @@ function App() {
                       <select
                         value={selectedObjectOverride.navigationBehavior ?? "default"}
                         onChange={(event) =>
-                          updateObject(selectedObjectOverride.id, (object) => ({
-                            ...object,
-                            navigationBehavior: event.target.value as NonNullable<ObjectOverride["navigationBehavior"]>
-                          }))
+                          setObjectNavigationBehavior(
+                            selectedObjectOverride.id,
+                            selectedObject.name,
+                            event.target.value as NonNullable<ObjectOverride["navigationBehavior"]>
+                          )
                         }
                       >
                         <option value="default">Default detection</option>
@@ -12794,6 +12805,18 @@ function App() {
                         <option value="ignore">Ignore navigation</option>
                       </select>
                     </label>
+                    <div className="object-role-test-card">
+                      <span>After changing movement role</span>
+                      <strong>Save and retry the exact blocked click</strong>
+                      <button
+                        type="button"
+                        className="button secondary compact-button"
+                        onClick={() => void saveAndOpenViewer(navigationDebugViewerUrl(activeProjectId))}
+                      >
+                        <Save size={15} aria-hidden="true" />
+                        Save & Test Navigation
+                      </button>
+                    </div>
                   </div>
                 )}
 
