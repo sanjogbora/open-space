@@ -243,6 +243,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Asset Health can now copy a texture repair plan with missing paths, loose images, texture suggestions, lightmap asset issues, and the recommended repair order.
 - Studio Materials now shows loose texture previews with Base/Normal/Emissive/Lightmap assignment buttons and warns when generic embedded filenames need human review.
 - Studio Materials list now shows per-material texture status so users can see assigned maps, ready suggestions, and review-needed matches before opening each material.
+- Studio Materials now shows a selected-material texture decision board for base image, match confidence, filename safety, and baked lighting before raw texture URL fields.
 - Analyzer now counts unused texture image payloads, so GLBs with many disconnected image files are flagged before users judge a flat-looking viewer.
 - Studio Import shows recommended next actions so non-technical users do not need to interpret every diagnostic manually.
 - Studio now has a Repair Center tab that turns diagnostics, texture suggestions, publish checks, and missing setup into one prioritized fix queue.

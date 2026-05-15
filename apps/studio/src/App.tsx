@@ -5144,6 +5144,62 @@ function App() {
       return source ? [{ field, label, source }] : [];
     });
   }, [selectedMaterial]);
+  const selectedMaterialTextureReviewSteps = useMemo(() => {
+    if (!selectedMaterial) {
+      return [];
+    }
+    const assignedCount = selectedMaterialTexturePreviews.length;
+    const bestCandidate = selectedMaterialTextureCandidates[0];
+    const strongCandidateCount = selectedMaterialTextureCandidates.filter(
+      (candidate) => textureSuggestionConfidence(candidate.score) === "strong"
+    ).length;
+    const reviewCandidateCount = selectedMaterialTextureCandidates.length - strongCandidateCount;
+    const genericCandidateCount = selectedMaterialTextureCandidates.filter((candidate) =>
+      looseTextureNameLooksGeneric(candidate.source)
+    ).length;
+    return [
+      {
+        id: "base",
+        label: "Base image",
+        detail: selectedMaterial.mapUrl
+          ? "Base texture is assigned."
+          : bestCandidate
+            ? `${materialTextureFieldLabels[bestCandidate.field]} candidate found.`
+            : "No base texture or loose candidate.",
+        status: selectedMaterial.mapUrl ? "ready" : bestCandidate ? "active" : "warning",
+        action: selectedMaterial.mapUrl ? "Preview" : bestCandidate ? "Review Candidate" : "Upload"
+      },
+      {
+        id: "confidence",
+        label: "Match confidence",
+        detail:
+          strongCandidateCount > 0
+            ? `${strongCandidateCount} safe candidate${strongCandidateCount === 1 ? "" : "s"}`
+            : reviewCandidateCount > 0
+              ? `${reviewCandidateCount} candidate${reviewCandidateCount === 1 ? "" : "s"} need review`
+              : `${assignedCount} assigned map${assignedCount === 1 ? "" : "s"}`,
+        status: strongCandidateCount > 0 ? "active" : reviewCandidateCount > 0 ? "warning" : assignedCount > 0 ? "ready" : "warning",
+        action: selectedMaterialTextureCandidates.length > 0 ? "Compare" : "No Candidates"
+      },
+      {
+        id: "names",
+        label: "Filename safety",
+        detail:
+          genericCandidateCount > 0
+            ? `${genericCandidateCount} generic filename${genericCandidateCount === 1 ? "" : "s"}`
+            : "Candidate names look specific.",
+        status: genericCandidateCount > 0 ? "warning" : "ready",
+        action: genericCandidateCount > 0 ? "Inspect Names" : "Names OK"
+      },
+      {
+        id: "lighting",
+        label: "Baked lighting",
+        detail: selectedMaterial.lightMapUrl ? "Lightmap is linked." : "No lightmap on this material.",
+        status: selectedMaterial.lightMapUrl ? "ready" : "warning",
+        action: selectedMaterial.lightMapUrl ? "Preview" : "Open Bake"
+      }
+    ];
+  }, [selectedMaterial, selectedMaterialTextureCandidates, selectedMaterialTexturePreviews.length]);
   const pendingMaterialTextureSuggestionCount = useMemo(() => {
     if (!materialsDoc || !bundleStats?.materialTextureSuggestions) {
       return 0;
@@ -11563,6 +11619,46 @@ function App() {
 
                 <div className="object-detail">
                   <h3>Texture Maps</h3>
+                  <div className="texture-review-board" aria-label="Selected material texture review">
+                    {selectedMaterialTextureReviewSteps.map((step) => (
+                      <button
+                        key={step.id}
+                        type="button"
+                        className={`texture-review-card ${step.status}`}
+                        onClick={() => {
+                          if (step.id === "lighting" && !selectedMaterial.lightMapUrl) {
+                            openBakeWorkflow();
+                            return;
+                          }
+                          if (step.id === "base" && !selectedMaterial.mapUrl && selectedMaterialTextureCandidates.length === 0) {
+                            document.querySelector(".material-upload-fields")?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center"
+                            });
+                            return;
+                          }
+                          const targetSelector =
+                            step.id === "base" && selectedMaterial.mapUrl
+                              ? ".material-preview-strip"
+                              : ".texture-candidate-panel";
+                          document.querySelector(targetSelector)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }}
+                      >
+                        <span>
+                          {step.status === "ready" ? (
+                            <Check size={15} aria-hidden="true" />
+                          ) : step.status === "active" ? (
+                            <Palette size={15} aria-hidden="true" />
+                          ) : (
+                            <AlertTriangle size={15} aria-hidden="true" />
+                          )}
+                        </span>
+                        <strong>{step.label}</strong>
+                        <small>{step.detail}</small>
+                        <em>{step.action}</em>
+                      </button>
+                    ))}
+                  </div>
                   <div className="material-preview-strip">
                     {selectedMaterialTexturePreviews.length > 0 ? (
                       selectedMaterialTexturePreviews.map((preview) => (
@@ -11636,7 +11732,7 @@ function App() {
                       </div>
                     </div>
                   )}
-                  <div className="field-grid">
+                  <div className="field-grid material-upload-fields">
                     <label>
                       <span>Base Texture URL</span>
                       <input

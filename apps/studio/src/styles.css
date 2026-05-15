@@ -2856,6 +2856,80 @@ button.list-row {
   background: #f8fbfd;
 }
 
+.texture-review-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.texture-review-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid #f0d099;
+  border-radius: 8px;
+  color: #7a4e08;
+  background: #fff8ed;
+  text-align: left;
+}
+
+.texture-review-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.texture-review-card.active {
+  color: #07538f;
+  border-color: #bddcf7;
+  background: #eff7ff;
+}
+
+.texture-review-card:hover,
+.texture-review-card:focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.texture-review-card span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.texture-review-card strong,
+.texture-review-card small,
+.texture-review-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.texture-review-card strong {
+  font-size: 12px;
+}
+
+.texture-review-card small,
+.texture-review-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.texture-review-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .collision-ignore-panel {
   display: grid;
   gap: 10px;
@@ -6178,6 +6252,7 @@ code {
   .import-symptom-board,
   .diagnostic-action-map,
   .asset-health-roadmap,
+  .texture-review-board,
   .repair-diagnosis,
   .repair-playbook,
   .repair-action-grid,
@@ -6235,6 +6310,7 @@ code {
   .bake-setup-board,
   .bake-triage-board,
   .material-setup-board,
+  .texture-review-board,
   .movement-setup-board,
   .movement-preset-grid,
   .movement-comfort-card,
