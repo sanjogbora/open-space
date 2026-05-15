@@ -190,6 +190,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio advanced navigation settings now expose the runtime model offset with a plain-language explanation and reset action for source models that have been fixed upstream.
 - Studio graph-derived tools now apply both model scale and model offset when proposing navigation bounds, door pass zones, and room labels from scene graph data.
 - Viewer floor tracking now requires stronger support before accepting small raised surfaces as a new floor level, reducing camera bobbing over ridges, furniture edges, or tiny walls during movement.
+- Studio Controls now includes a Ridge Safe movement preset for messy imported floors where the camera should ignore tiny slab lips and glide more slowly.
 - API texture repair scores duplicate loose texture candidates by relative path and texture-folder context before copying.
 - Analyzer now flags embedded GLB textures and sidecar texture files that cannot be decoded, so broken image payloads are reported instead of only showing flat or strange-colored surfaces in the viewer.
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.

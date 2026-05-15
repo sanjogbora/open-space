@@ -744,6 +744,20 @@ const movementPresets: readonly {
     }
   },
   {
+    id: "ridge-safe",
+    label: "Ridge Safe",
+    detail: "Least bobbing on messy imported floors.",
+    movement: {
+      clickMoveSpeed: 0.92,
+      wheelMoveSpeed: 0.82,
+      collisionRadius: 0.28,
+      maxStepUp: 0.3,
+      maxStepDown: 0.68,
+      floorHeightSmoothing: 0.75,
+      floorBumpTolerance: 0.62
+    }
+  },
+  {
     id: "steps",
     label: "Steps",
     detail: "More forgiving for thresholds and simple stairs.",
@@ -9687,6 +9701,7 @@ function App() {
                 steps={[
                   "Run Auto Fix to create bounds, walk areas, door passes, and exterior blockers.",
                   "Use the zone map to paint a walk patch or door pass where the viewer says movement is blocked.",
+                  "If the camera bobs over ridges or tiny walls, apply Ridge Safe before editing zones.",
                   "Retest with the navigation debug viewer and repeat only the failing doorway or room."
                 ]}
                 actionLabel={navigationQuickFix.button}
