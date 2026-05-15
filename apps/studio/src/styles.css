@@ -1120,7 +1120,18 @@ textarea:focus {
   gap: 5px;
 }
 
+.material-bulk-actions {
+  display: grid;
+  gap: 5px;
+}
+
 .object-bulk-actions small {
+  color: #667681;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.material-bulk-actions small {
   color: #667681;
   font-size: 12px;
   line-height: 1.35;

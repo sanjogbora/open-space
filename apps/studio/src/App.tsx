@@ -4464,6 +4464,22 @@ function App() {
       return matchesFilter && (!query || row.searchText.includes(query));
     });
   }, [materialListFilter, materialReviewRows, materialSearchQuery]);
+  const filteredMaterialTextureSuggestionCount = useMemo(() => {
+    if (!materialsDoc || !bundleStats?.materialTextureSuggestions) {
+      return 0;
+    }
+    const visibleMaterialNames = new Set(filteredMaterialRows.map((row) => row.material.name));
+    const materialsByName = new Map(materialsDoc.materials.map((material) => [material.name, material]));
+    return bundleStats.materialTextureSuggestions.filter((suggestion) => {
+      const material = materialsByName.get(suggestion.materialName);
+      return (
+        visibleMaterialNames.has(suggestion.materialName) &&
+        material &&
+        !material[suggestion.field] &&
+        textureSuggestionConfidence(suggestion.score) === "strong"
+      );
+    }).length;
+  }, [bundleStats?.materialTextureSuggestions, filteredMaterialRows, materialsDoc]);
   const appliedMaterialTextureSuggestionCount = Math.max(
     0,
     (bundleStats?.materialTextureSuggestions?.length ?? 0) -
@@ -6297,12 +6313,18 @@ function App() {
     setNotice("saved");
   };
 
-  const applyMaterialTextureSuggestions = () => {
+  const applyMaterialTextureSuggestions = (options?: { materialNames?: Set<string>; scopeLabel?: string }) => {
     const suggestions = (bundleStats?.materialTextureSuggestions ?? []).filter(
-      (suggestion) => textureSuggestionConfidence(suggestion.score) === "strong"
+      (suggestion) =>
+        textureSuggestionConfidence(suggestion.score) === "strong" &&
+        (!options?.materialNames || options.materialNames.has(suggestion.materialName))
     );
     if (suggestions.length === 0) {
-      setRepairSummary("No high-confidence texture suggestions are ready to apply. Open Materials to review weaker matches manually.");
+      setRepairSummary(
+        options?.scopeLabel
+          ? `No high-confidence texture suggestions are ready in ${options.scopeLabel}. Try All or review weaker matches manually.`
+          : "No high-confidence texture suggestions are ready to apply. Open Materials to review weaker matches manually."
+      );
       return;
     }
     const suggestionsByMaterial = new Map<string, typeof suggestions>();
@@ -6348,7 +6370,7 @@ function App() {
     });
     setRepairSummary(
       appliedCount > 0
-        ? `Applied ${appliedCount} high-confidence texture suggestion(s). Save changes, then re-open the viewer to inspect materials.`
+        ? `Applied ${appliedCount} high-confidence texture suggestion(s)${options?.scopeLabel ? ` in ${options.scopeLabel}` : ""}. Save changes, then re-open the viewer to inspect materials.`
         : "No high-confidence texture suggestions were applied because the suggested material fields are already filled."
     );
     setNotice("saved");
@@ -9069,6 +9091,27 @@ function App() {
                       <strong>{count}</strong>
                     </button>
                   ))}
+                </div>
+                <div className="material-bulk-actions">
+                  <button
+                    type="button"
+                    className="button secondary compact-button"
+                    disabled={filteredMaterialTextureSuggestionCount === 0}
+                    onClick={() =>
+                      applyMaterialTextureSuggestions({
+                        materialNames: new Set(filteredMaterialRows.map((row) => row.material.name)),
+                        scopeLabel: "the current material filter"
+                      })
+                    }
+                  >
+                    <Check size={15} aria-hidden="true" />
+                    Apply Visible Suggestions
+                  </button>
+                  <small>
+                    {filteredMaterialTextureSuggestionCount > 0
+                      ? `${filteredMaterialTextureSuggestionCount} high-confidence suggestion${filteredMaterialTextureSuggestionCount === 1 ? "" : "s"} visible in this filtered list.`
+                      : "No high-confidence suggestions are visible in this filtered list."}
+                  </small>
                 </div>
               </div>
               {filteredMaterialRows.map(({ material, suggestionStatus, assignedTextureCount, isPlainGreen, isTransparent, hasLightmap }) => {
