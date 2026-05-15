@@ -4237,7 +4237,11 @@ export class WalkthroughViewer {
       names.add(interaction.targetObjectName);
     }
     if (interaction.targetObjectId) {
+      names.add(interaction.targetObjectId);
       const override = this.objectOverrides.get(interaction.targetObjectId);
+      if (override?.id) {
+        names.add(override.id);
+      }
       if (override?.name) {
         names.add(override.name);
       }
@@ -4246,13 +4250,47 @@ export class WalkthroughViewer {
       return [];
     }
 
+    const normalizedNames = [...names].map(normalizedObjectOverrideName).filter((name) => name.length >= 4);
     const targets: THREE.Object3D[] = [];
     this.scene.traverse((node) => {
-      if (names.has(node.name)) {
+      if (this.objectMatchesToggleTarget(node, names, normalizedNames)) {
         targets.push(node);
       }
     });
-    return targets;
+    return uniqueObjectList(targets);
+  }
+
+  private objectMatchesToggleTarget(
+    node: THREE.Object3D,
+    exactNames: ReadonlySet<string>,
+    normalizedNames: readonly string[]
+  ): boolean {
+    const override = this.objectOverrideForNode(node);
+    const directNames = [
+      node.name,
+      typeof node.userData["name"] === "string" ? node.userData["name"] : "",
+      override?.id ?? "",
+      override?.name ?? ""
+    ].filter((name) => name.trim().length > 0);
+    if (directNames.some((name) => exactNames.has(name))) {
+      return true;
+    }
+
+    const sceneNames = [node.name, node.parent?.name ?? "", `${node.userData["name"] ?? ""}`]
+      .map(normalizedObjectOverrideName)
+      .filter((name) => name.length >= 4);
+    if (sceneNames.length === 0 || normalizedNames.length === 0) {
+      return false;
+    }
+
+    return normalizedNames.some((targetName) =>
+      sceneNames.some(
+        (sceneName) =>
+          sceneName === targetName ||
+          (targetName.length >= 4 && sceneName.includes(targetName)) ||
+          (sceneName.length >= 4 && targetName.includes(sceneName))
+      )
+    );
   }
 
   private handleKeyDown = (event: KeyboardEvent): void => {

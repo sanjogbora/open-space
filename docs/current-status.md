@@ -111,6 +111,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Top views can hide ceiling/roof shell meshes so uploaded apartments are inspectable from above.
 - Object overrides now include a per-object `hideInTopView` flag, and Studio exposes it so ceiling/roof/helper objects can be hidden only in floor-plan/top views.
 - Viewer top-view hiding now preserves the user's live object visibility choices when switching back to walkthrough views, so ceiling/shell cleanup does not undo object toggles.
+- Viewer object toggles now use the same exact, parent, and loose-name matching as object role overrides, so screen/door/ceiling interactions keep working across messy GLB node names.
 - Object overrides now include a per-object navigation behavior, and Studio can mark objects as default-detected, walkable, collision, or ignored for viewer navigation.
 - Studio Objects now shows navigation-role chips and top-view hiding hints in the object list, making movement-affecting objects easier to audit.
 - Repair Center now surfaces ceiling, top-view, and object-role diagnostics as a dedicated Objects review card instead of burying them in source diagnostics.
