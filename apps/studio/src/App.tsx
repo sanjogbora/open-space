@@ -7826,6 +7826,55 @@ function App() {
 
   const videoCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
   const movementComfort = movementComfortStatus(controlsDoc, manifest);
+  const movementTriageSteps = [
+    {
+      id: "bounce",
+      label: "Camera jumps",
+      detail:
+        movementComfort.tone === "warning"
+          ? movementComfort.detail
+          : "Use when ridges, rugs, or thresholds make the camera bob.",
+      status: movementComfort.tone === "warning" ? "warning" : "ready",
+      action: "Ridge Safe"
+    },
+    {
+      id: "door",
+      label: "Door feels blocked",
+      detail:
+        navigationIssues.some((issue) => issue.id.startsWith("narrow-pass-"))
+          ? "A door pass looks narrower than the body radius."
+          : "Use when a visible doorway blocks click movement.",
+      status: navigationIssues.some(
+        (issue) =>
+          issue.id.startsWith("narrow-pass-") ||
+          issue.id.startsWith("blocked-pass-") ||
+          issue.id.startsWith("blocked-walk-")
+      )
+        ? "warning"
+        : "ready",
+      action: navigationIssues.some((issue) => issue.id.startsWith("narrow-pass-")) ? "Widen Doors" : "Door Fix"
+    },
+    {
+      id: "levels",
+      label: "Thresholds or steps",
+      detail:
+        (controlsDoc?.movement.maxStepUp ?? 0.38) < 0.45
+          ? "Step Up is strict for raised thresholds or simple stairs."
+          : "Use when a raised strip should be walkable.",
+      status: (controlsDoc?.movement.maxStepUp ?? 0.38) < 0.45 ? "warning" : "ready",
+      action: "Steps"
+    },
+    {
+      id: "wheel",
+      label: "Mouse wheel move",
+      detail:
+        controlsDoc?.movement.wheelMoveSpeed && controlsDoc.movement.wheelMoveSpeed > 0
+          ? `Wheel glide ${controlsDoc.movement.wheelMoveSpeed.toFixed(2)} is enabled.`
+          : "Enable wheel glide so scroll moves forward/back.",
+      status: controlsDoc?.movement.wheelMoveSpeed && controlsDoc.movement.wheelMoveSpeed > 0 ? "ready" : "warning",
+      action: "Enable Wheel"
+    }
+  ];
   const variantCount = materialVariantInteractions.reduce(
     (sum, interaction) => sum + interaction.variants.length,
     0
@@ -12021,6 +12070,55 @@ function App() {
                         <li key={line}>{line.replace(/^- /, "")}</li>
                       ))}
                     </ul>
+                  </div>
+
+                  <div className="movement-triage-board" aria-label="Movement symptom fixes">
+                    {movementTriageSteps.map((step) => (
+                      <button
+                        key={step.id}
+                        type="button"
+                        className={`movement-triage-card ${step.status}`}
+                        onClick={() => {
+                          if (step.id === "bounce") {
+                            applyMovementPreset("ridge-safe");
+                            return;
+                          }
+                          if (step.id === "door") {
+                            if (navigationIssues.some((issue) => issue.id.startsWith("narrow-pass-"))) {
+                              widenNarrowPassZones();
+                              return;
+                            }
+                            openNavigationPaintTool("pass");
+                            return;
+                          }
+                          if (step.id === "levels") {
+                            applyMovementPreset("steps");
+                            return;
+                          }
+                          if (step.id === "wheel") {
+                            updateControls((current) => ({
+                              ...current,
+                              movement: {
+                                ...current.movement,
+                                dragLook: true,
+                                wheelMoveSpeed: Math.max(current.movement.wheelMoveSpeed ?? 0, 0.82)
+                              }
+                            }));
+                          }
+                        }}
+                      >
+                        <span>
+                          {step.status === "ready" ? (
+                            <Check size={15} aria-hidden="true" />
+                          ) : (
+                            <Wrench size={15} aria-hidden="true" />
+                          )}
+                        </span>
+                        <strong>{step.label}</strong>
+                        <small>{step.detail}</small>
+                        <em>{step.action}</em>
+                      </button>
+                    ))}
                   </div>
 
                   <div className="field-grid">

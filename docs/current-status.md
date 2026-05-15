@@ -222,6 +222,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Repair Center now groups terrain, far-origin, scale, and first-camera framing diagnostics into one visual Repair scene framing card instead of scattering them across generic environment/source fixes.
 - Source QA, Viewer QA, and Asset Health copyable reports now include the same plain-language scene framing evidence and repair action as the visual Studio card.
 - Studio Controls and Viewer QA now show a Movement Comfort summary with the closest preset, glide/body/step values, and bobbing risk guidance for messy imported floors.
+- Studio Controls now adds symptom-first movement fix cards for camera jumps, blocked doors, thresholds/steps, and wheel movement before raw numeric tuning.
 - Viewer click recovery now also snaps failed targets to nearby authored walk/pass zones before giving up, making doorway and just-off-floor clicks more forgiving.
 - Viewer click movement now decelerates more gently at the final target instead of carrying a high minimum speed into the last few centimeters.
 - Repair Center now surfaces dominant green/plain-placeholder imports as a dedicated visual repair card that opens Materials review instead of burying the issue in generic diagnostics.

@@ -1124,6 +1124,74 @@ textarea:focus {
   line-height: 1.45;
 }
 
+.movement-triage-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.movement-triage-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid #f0d099;
+  border-radius: 8px;
+  color: #7a4e08;
+  background: #fff8ed;
+  text-align: left;
+}
+
+.movement-triage-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.movement-triage-card:hover,
+.movement-triage-card:focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.movement-triage-card span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.movement-triage-card strong,
+.movement-triage-card small,
+.movement-triage-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movement-triage-card strong {
+  font-size: 12px;
+}
+
+.movement-triage-card small,
+.movement-triage-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.movement-triage-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .compact-toggle {
   min-height: 38px;
   align-self: end;
@@ -5872,6 +5940,7 @@ code {
   .movement-setup-board,
   .movement-preset-grid,
   .movement-comfort-card,
+  .movement-triage-board,
   .navigation-doorway-board,
   .object-setup-board,
   .view-setup-board,
