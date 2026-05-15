@@ -2943,6 +2943,10 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     "invalid-scene-node-references",
     "invalid-node-child-references",
     "invalid-node-mesh-references",
+    "invalid-node-transforms",
+    "zero-scale-nodes",
+    "negative-scale-nodes",
+    "suspicious-node-scales",
     "invalid-position-accessor-shapes",
     "invalid-normal-accessor-shapes",
     "invalid-uv-accessor-shapes",
@@ -2987,8 +2991,10 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
       ? "- No source/export diagnostics are currently flagged."
       : "",
     ...sourceDiagnostics.slice(0, 16).map(
-      (diagnostic) =>
-        `- ${diagnostic.severity.toUpperCase()} ${diagnostic.code}: ${diagnostic.title} - ${diagnostic.message}${diagnostic.action ? ` Action: ${diagnostic.action}` : ""}`
+      (diagnostic) => {
+        const symptom = diagnosticVisualSymptom(diagnostic.code);
+        return `- ${diagnostic.severity.toUpperCase()} ${diagnostic.code}: ${diagnostic.title} - ${diagnostic.message}${symptom ? ` Likely symptom: ${symptom}` : ""}${diagnostic.action ? ` Action: ${diagnostic.action}` : ""}`;
+      }
     ),
     "",
     "Recommended order:",
@@ -12026,6 +12032,74 @@ function repairCenterVisualFixForAction(action: ImportNextStepAction): string {
   return "Use the guided card first; raw diagnostics stay available only when deeper source repair is needed.";
 }
 
+function diagnosticVisualSymptom(code: string): string | null {
+  if (
+    [
+      "malformed-model",
+      "invalid-default-scene",
+      "default-scene-has-no-renderable-meshes",
+      "invalid-scene-node-references",
+      "invalid-node-child-references",
+      "invalid-node-mesh-references"
+    ].includes(code)
+  ) {
+    return "the model may open blank, partial, or differently from the source viewer.";
+  }
+  if (["invalid-node-transforms", "zero-scale-nodes", "negative-scale-nodes", "suspicious-node-scales"].includes(code)) {
+    return "parts may look flattened, mirrored, huge, tiny, or the auto bounds/navigation may be wrong.";
+  }
+  if (["invalid-position-accessor-shapes", "invalid-index-accessor-shapes"].includes(code)) {
+    return "geometry may look missing, torn, spiky, or impossible to click/walk on reliably.";
+  }
+  if (["invalid-material-references", "invalid-texture-references", "textures-without-images"].includes(code)) {
+    return "surfaces may render as flat colors, black/green placeholders, or missing textures.";
+  }
+  if (
+    [
+      "missing-model-resources",
+      "unsafe-gltf-resource-paths",
+      "unsupported-required-extensions",
+      "embedded-texture-decode-failed",
+      "sidecar-texture-decode-failed"
+    ].includes(code)
+  ) {
+    return "textures, buffers, or model features may be missing even if the file technically loads.";
+  }
+  if (
+    [
+      "model-has-no-texture-images",
+      "loose-textures-not-referenced",
+      "generic-loose-texture-names",
+      "image-textures-unused-by-materials",
+      "few-materials-use-textures",
+      "many-unused-texture-images",
+      "dominant-untextured-material"
+    ].includes(code)
+  ) {
+    return "the model can look much poorer than the reference because material images are not actually assigned.";
+  }
+  if (["tiny-texture-dimensions", "extreme-texture-aspect-ratios", "textured-primitives-missing-uvs"].includes(code)) {
+    return "textures may look blurry, stretched, shimmering, or mismatched on the surface.";
+  }
+  if (["no-named-ceiling-meshes"].includes(code)) {
+    return "ceiling or roof handling may need manual object review, especially for top view.";
+  }
+  if (["repeated-large-mesh-instances"].includes(code)) {
+    return "the scene may load slowly or feel heavy because duplicated geometry dominates the model.";
+  }
+  return null;
+}
+
+function diagnosticVisualSymptomSummary(diagnostics: readonly { code: string }[]): string | null {
+  for (const diagnostic of diagnostics) {
+    const symptom = diagnosticVisualSymptom(diagnostic.code);
+    if (symptom) {
+      return symptom;
+    }
+  }
+  return null;
+}
+
 function repairCenterDestinationForItem(item: RepairCenterItem): string {
   if (item.id === "upload") {
     return "Opens Import upload.";
@@ -12165,12 +12239,13 @@ function buildRepairCenterItems({
   for (const [action, diagnostics] of diagnosticsByAction) {
     const copy = nextStepCopy(action);
     const sample = diagnostics.slice(0, 2).map((diagnostic) => diagnostic.title).join("; ");
+    const symptom = diagnosticVisualSymptomSummary(diagnostics);
     const hasError = diagnostics.some((diagnostic) => diagnostic.severity === "error");
     items.push({
       id: `diagnostics-${action}`,
       stage: repairCenterStageForAction(action),
       title: copy.title,
-      detail: `${diagnostics.length} issue${diagnostics.length === 1 ? "" : "s"} found${sample ? `: ${sample}` : ""}.`,
+      detail: `${diagnostics.length} issue${diagnostics.length === 1 ? "" : "s"} found${sample ? `: ${sample}` : ""}.${symptom ? ` Likely symptom: ${symptom}` : ""}`,
       visualFix: repairCenterVisualFixForAction(action),
       severity: hasError ? "error" : "warning",
       action,
@@ -12668,6 +12743,10 @@ function ViewerQaChecklist({
     "invalid-scene-node-references",
     "invalid-node-child-references",
     "invalid-node-mesh-references",
+    "invalid-node-transforms",
+    "zero-scale-nodes",
+    "negative-scale-nodes",
+    "suspicious-node-scales",
     "invalid-position-accessor-shapes",
     "invalid-index-accessor-shapes",
     "invalid-material-references",
@@ -12930,6 +13009,10 @@ function viewerQaReportText(
       "invalid-scene-node-references",
       "invalid-node-child-references",
       "invalid-node-mesh-references",
+      "invalid-node-transforms",
+      "zero-scale-nodes",
+      "negative-scale-nodes",
+      "suspicious-node-scales",
       "invalid-position-accessor-shapes",
       "invalid-index-accessor-shapes",
       "invalid-material-references",
@@ -13014,7 +13097,10 @@ function viewerQaReportText(
     "Top risks:",
     ...(actionableDiagnostics.length > 0
       ? actionableDiagnostics.map(
-          (diagnostic) => `- ${diagnostic.severity.toUpperCase()}: ${diagnostic.title} - ${diagnostic.message}`
+          (diagnostic) => {
+            const symptom = diagnosticVisualSymptom(diagnostic.code);
+            return `- ${diagnostic.severity.toUpperCase()}: ${diagnostic.title} - ${diagnostic.message}${symptom ? ` Likely symptom: ${symptom}` : ""}`;
+          }
         )
       : ["- No blocking or warning diagnostics listed."]),
     "",
