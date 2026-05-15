@@ -64,6 +64,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Publish now shows a visual client-share checklist for clearing blockers, creating a version, setting the live link, and testing the exact viewer a client will open.
 - Studio Publish now adds a visual handoff board for quality gate, draft testing, version creation, live link selection, and deployment checklist before dense version details.
 - Studio Optimization now shows a visual setup board for profile budget, texture RAM, GPU compression, preview artifact, and applied viewer model before detailed profile tables.
+- Studio Optimization now adds symptom-first fix cards for slow loads, mobile crashes, oversized textures, and optimized-preview quality checks before raw profile tables.
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.

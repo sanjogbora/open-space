@@ -5545,6 +5545,70 @@ function App() {
     selectedTexturePlan,
     toolStatus?.tools.toktx?.ready
   ]);
+  const optimizationSymptomSteps = useMemo(() => {
+    const profileWarningCount = selectedOptimizationProfile?.warnings.length ?? 0;
+    const texturePlanItems = selectedTexturePlan?.items.length ?? 0;
+    const textureOverBudget = selectedTexturePlan
+      ? selectedTexturePlan.currentBytes > selectedTexturePlan.budgetBytes
+      : false;
+    const hasOptimizedPreview = Boolean(optimizationJob?.optimizedSceneUrl);
+    const optimizedApplied = manifest?.sceneUrl === "scene.optimized.glb";
+    return [
+      {
+        id: "slow-load",
+        label: "Loads slowly",
+        detail:
+          profileWarningCount > 0
+            ? `${profileWarningCount} ${optimizationProfile} budget warning${profileWarningCount === 1 ? "" : "s"} found.`
+            : hasOptimizedPreview
+              ? "An optimized preview is ready to compare."
+              : "Generate a compressed preview before applying it.",
+        status: profileWarningCount > 0 || !hasOptimizedPreview ? "warning" : "ready",
+        action: hasOptimizedPreview ? "Compare" : "Generate"
+      },
+      {
+        id: "mobile-crash",
+        label: "Mobile crashes",
+        detail: textureOverBudget
+          ? `Texture RAM is above the ${selectedTexturePlan?.label ?? optimizationProfile} budget.`
+          : profileWarningCount > 0
+            ? "Profile warnings can still break weaker devices."
+            : "Switch to Mobile and generate a lighter preview.",
+        status: textureOverBudget || profileWarningCount > 0 || optimizationProfile !== "mobile" ? "warning" : "ready",
+        action: optimizationProfile === "mobile" ? "Mobile Set" : "Use Mobile"
+      },
+      {
+        id: "huge-textures",
+        label: "Textures huge",
+        detail:
+          texturePlanItems > 0
+            ? `${texturePlanItems} texture resize target${texturePlanItems === 1 ? "" : "s"} need review.`
+            : (bundleStats?.imageCount ?? 0) > 0
+              ? "No large texture resize targets for this profile."
+              : "No image textures found in this bundle.",
+        status: texturePlanItems > 0 ? "warning" : "ready",
+        action: texturePlanItems > 0 ? "Open Plan" : "Textures OK"
+      },
+      {
+        id: "quality-changed",
+        label: "Quality changed",
+        detail: optimizedApplied
+          ? "Viewer uses optimized GLB; switch back if it looks worse."
+          : hasOptimizedPreview
+            ? "Preview exists; compare before applying to the viewer."
+            : "Generate a preview, then compare with the original.",
+        status: optimizedApplied ? "ready" : hasOptimizedPreview ? "active" : "warning",
+        action: optimizedApplied ? "Original" : hasOptimizedPreview ? "Apply Preview" : "Generate"
+      }
+    ];
+  }, [
+    bundleStats?.imageCount,
+    manifest?.sceneUrl,
+    optimizationJob?.optimizedSceneUrl,
+    optimizationProfile,
+    selectedOptimizationProfile,
+    selectedTexturePlan
+  ]);
 
   const updateManifest = (updater: (manifest: SceneManifest) => SceneManifest) => {
     setManifest((current) => (current ? updater(current) : current));
@@ -8751,6 +8815,65 @@ function App() {
                 ))}
               </div>
 
+              <div className="optimization-symptom-board" aria-label="Optimization symptom fixes">
+                {optimizationSymptomSteps.map((step) => (
+                  <button
+                    key={step.id}
+                    type="button"
+                    className={`optimization-symptom-card ${step.status}`}
+                    onClick={() => {
+                      if (step.id === "slow-load") {
+                        if (!optimizationJob?.optimizedSceneUrl) {
+                          void optimizeProject();
+                          return;
+                        }
+                        document.querySelector(".model-source-actions")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                        return;
+                      }
+                      if (step.id === "mobile-crash") {
+                        setOptimizationProfile("mobile");
+                        document.querySelector(".optimization-action-controls")?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "center"
+                        });
+                        return;
+                      }
+                      if (step.id === "huge-textures") {
+                        document.querySelector(".texture-delivery-plan")?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "center"
+                        });
+                        return;
+                      }
+                      if (step.id === "quality-changed") {
+                        if (manifest.sceneUrl === "scene.optimized.glb") {
+                          void switchModelSource(originalSceneUrl);
+                          return;
+                        }
+                        if (optimizationJob?.optimizedSceneUrl) {
+                          void switchModelSource("scene.optimized.glb");
+                          return;
+                        }
+                        void optimizeProject();
+                      }
+                    }}
+                  >
+                    <span>
+                      {step.status === "ready" ? (
+                        <Check size={15} aria-hidden="true" />
+                      ) : step.status === "active" ? (
+                        <Activity size={15} aria-hidden="true" />
+                      ) : (
+                        <Wrench size={15} aria-hidden="true" />
+                      )}
+                    </span>
+                    <strong>{step.label}</strong>
+                    <small>{step.detail}</small>
+                    <em>{step.action}</em>
+                  </button>
+                ))}
+              </div>
+
               {optimizeError && <p className="error-note">{optimizeError}</p>}
 
               {optimizationDoc ? (
@@ -8811,7 +8934,7 @@ function App() {
                 )}
               </div>
 
-              <div className="panel stats-panel">
+              <div className="panel stats-panel texture-delivery-plan">
                 <div className="panel-heading">
                   <Palette size={18} aria-hidden="true" />
                   <h2>Texture Delivery Plan</h2>
