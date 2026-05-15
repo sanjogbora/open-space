@@ -1046,6 +1046,32 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
           };
         })()
       : undefined;
+  const transparentMaterialIndices = new Set(
+    materials
+      .map((material, index) => (materialIsTransparent(material) ? index : undefined))
+      .filter((index) => typeof index === "number")
+  );
+  const transparentTriangleCount = materialTriangleCounts.reduce(
+    (sum, count, index) => sum + (transparentMaterialIndices.has(index) ? count : 0),
+    0
+  );
+  const dominantTransparentMaterial = materialTriangleCounts
+    .map((count, index) => ({ count, index }))
+    .filter((item) => item.count > 0 && transparentMaterialIndices.has(item.index))
+    .sort((a, b) => b.count - a.count)[0];
+  const dominantTransparentMaterialInfo =
+    dominantTransparentMaterial && triangleCount > 0
+      ? (() => {
+          const material = materials[dominantTransparentMaterial.index] ?? {};
+          return {
+            index: dominantTransparentMaterial.index,
+            name: material.name || `Material ${dominantTransparentMaterial.index}`,
+            triangleCount: dominantTransparentMaterial.count,
+            triangleShare: dominantTransparentMaterial.count / triangleCount,
+            baseColor: factorToHex(material.pbrMetallicRoughness?.baseColorFactor)
+          };
+        })()
+      : undefined;
 
   return {
     format,
@@ -1103,7 +1129,10 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     nonTrianglePrimitiveCount,
     vertexColorPrimitiveCount,
     ...(dominantMaterialInfo ? { dominantMaterial: dominantMaterialInfo } : {}),
-    transparentMaterialCount: materials.filter(materialIsTransparent).length,
+    ...(dominantTransparentMaterialInfo ? { dominantTransparentMaterial: dominantTransparentMaterialInfo } : {}),
+    transparentMaterialCount: transparentMaterialIndices.size,
+    transparentTriangleCount,
+    transparentTriangleShare: triangleCount > 0 ? transparentTriangleCount / triangleCount : 0,
     doubleSidedMaterialCount: materials.filter((material) => material?.doubleSided === true).length,
     unlitMaterialCount: materials.filter((material) => Boolean(material?.extensions?.KHR_materials_unlit)).length,
     transmissionMaterialCount: materials.filter((material) =>
@@ -2680,6 +2709,9 @@ function createDiagnostics(manifest, report, graphs, controls) {
     (sum, model) => sum + (model.transparentMaterialCount ?? 0),
     0
   );
+  const dominantTransparentSurfaceModels = report.models
+    .filter((model) => (model.transparentTriangleShare ?? 0) >= 0.45 && (model.triangleCount ?? 0) > 1000)
+    .sort((a, b) => (b.transparentTriangleShare ?? 0) - (a.transparentTriangleShare ?? 0));
   const transmissionMaterialCount = report.models.reduce(
     (sum, model) => sum + (model.transmissionMaterialCount ?? 0),
     0
@@ -3331,6 +3363,18 @@ function createDiagnostics(manifest, report, graphs, controls) {
       title: "Many transparent materials",
       message: `${transparentMaterialCount} material(s) use alpha blending/masking or opacity below 1.`,
       action: "Check glass/window materials in the viewer; heavy transparency can cause sorting artifacts and slower mobile rendering."
+    });
+  }
+
+  if (dominantTransparentSurfaceModels.length > 0) {
+    const model = dominantTransparentSurfaceModels[0];
+    const material = model.dominantTransparentMaterial;
+    diagnostics.push({
+      severity: "warning",
+      code: "dominant-transparent-surface",
+      title: "Large transparent surface coverage",
+      message: `${Math.round((model.transparentTriangleShare ?? 0) * 100)}% of model triangles use transparent materials${material?.name ? `, led by ${material.name}` : ""}.`,
+      action: "Open Materials and inspect glass, wall, ceiling, and floor opacity. If opaque surfaces look see-through or hollow, set opacity back to 1 or re-export with correct alpha settings."
     });
   }
 
@@ -4573,6 +4617,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "invalid-uv-accessor-shapes",
     "mostly-unlit-materials",
     "vertex-colors-detected",
+    "dominant-transparent-surface",
     "relocatable-texture-resources",
     "loose-textures-not-referenced",
     "generic-loose-texture-names",

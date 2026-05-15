@@ -11612,6 +11612,8 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "missing-uv-attributes",
       "mostly-unlit-materials",
       "vertex-colors-detected",
+      "many-transparent-materials",
+      "dominant-transparent-surface",
       "dominant-untextured-material",
       "extreme-texture-aspect-ratios",
       "tiny-texture-dimensions"
@@ -12073,9 +12075,14 @@ function diagnosticVisualSymptom(code: string): string | null {
       "image-textures-unused-by-materials",
       "few-materials-use-textures",
       "many-unused-texture-images",
+      "many-transparent-materials",
+      "dominant-transparent-surface",
       "dominant-untextured-material"
     ].includes(code)
   ) {
+    if (code === "many-transparent-materials" || code === "dominant-transparent-surface") {
+      return "walls, ceilings, floors, or windows may look see-through, hollow, or sorted in the wrong order.";
+    }
     return "the model can look much poorer than the reference because material images are not actually assigned.";
   }
   if (["tiny-texture-dimensions", "extreme-texture-aspect-ratios", "textured-primitives-missing-uvs"].includes(code)) {
@@ -12679,6 +12686,8 @@ function ViewerQaChecklist({
     "sidecar-texture-decode-failed",
     "textured-primitives-missing-uvs",
     "dominant-untextured-material",
+    "many-transparent-materials",
+    "dominant-transparent-surface",
     "tiny-texture-dimensions",
     "extreme-texture-aspect-ratios"
   ];
