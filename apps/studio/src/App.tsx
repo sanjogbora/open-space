@@ -3994,6 +3994,88 @@ function App() {
         : [],
     [manifest, navigationCoverageSummary, primaryNavigationIssue]
   );
+  const doorwayNavigationSteps = useMemo(() => {
+    const routeIssue = navigationIssues.find((issue) => issue.id === "disconnected-route-zones");
+    const passIssue = navigationIssues.find(
+      (issue) =>
+        issue.id === "missing-pass-zones" ||
+        issue.id.startsWith("one-sided-pass-") ||
+        issue.id.startsWith("orphan-pass-")
+    );
+    const narrowIssue = navigationIssues.find((issue) => issue.id.startsWith("narrow-pass-"));
+    const blockerIssue = navigationIssues.find(
+      (issue) => issue.id.startsWith("blocked-pass-") || issue.id.startsWith("blocked-walk-")
+    );
+    const boundsIssue = navigationIssues.find(
+      (issue) => issue.id.startsWith("walk-zone-bounds-") || issue.id.startsWith("pass-zone-bounds-")
+    );
+    const narrowCount = navigationIssues.filter((issue) => issue.id.startsWith("narrow-pass-")).length;
+    const blockedCount = navigationIssues.filter(
+      (issue) => issue.id.startsWith("blocked-pass-") || issue.id.startsWith("blocked-walk-")
+    ).length;
+    const passRepairCount = navigationIssues.filter(
+      (issue) =>
+        issue.id === "missing-pass-zones" ||
+        issue.id.startsWith("one-sided-pass-") ||
+        issue.id.startsWith("orphan-pass-")
+    ).length;
+    const boundsCount = navigationIssues.filter(
+      (issue) => issue.id.startsWith("walk-zone-bounds-") || issue.id.startsWith("pass-zone-bounds-")
+    ).length;
+    return [
+      {
+        id: "islands",
+        label: "Route islands",
+        detail:
+          (navigationCoverageSummary?.routeComponents ?? 0) > 1
+            ? `${navigationCoverageSummary?.routeComponents ?? 0} disconnected route islands`
+            : "Walk and pass areas are connected",
+        status: routeIssue ? "warning" : "ready",
+        issue: routeIssue,
+        action: routeIssue ? "Auto Bridge" : "Connected"
+      },
+      {
+        id: "passes",
+        label: "Door passes",
+        detail: passRepairCount > 0
+          ? `${passRepairCount} connector issue${passRepairCount === 1 ? "" : "s"}`
+          : `${navigationCoverageSummary?.passZones ?? 0} door pass${(navigationCoverageSummary?.passZones ?? 0) === 1 ? "" : "es"}`,
+        status: passIssue ? "warning" : "ready",
+        issue: passIssue,
+        action: passIssue ? "Draw Door Pass" : "Passes OK"
+      },
+      {
+        id: "clearance",
+        label: "Door clearance",
+        detail: narrowCount > 0
+          ? `${narrowCount} narrow pass${narrowCount === 1 ? "" : "es"}`
+          : `Body radius ${(controlsDoc?.movement.collisionRadius ?? 0.28).toFixed(2)}`,
+        status: narrowIssue ? "warning" : "ready",
+        issue: narrowIssue,
+        action: narrowIssue ? "Widen Passes" : "Clearance OK"
+      },
+      {
+        id: "blockers",
+        label: "Blockers",
+        detail: blockedCount > 0
+          ? `${blockedCount} overlap${blockedCount === 1 ? "" : "s"} near walk/pass zones`
+          : "No blocker overlap in routes",
+        status: blockerIssue ? "warning" : "ready",
+        issue: blockerIssue,
+        action: blockerIssue ? "Review Blockers" : "Clear"
+      },
+      {
+        id: "bounds",
+        label: "Bounds",
+        detail: boundsCount > 0
+          ? `${boundsCount} reachable zone${boundsCount === 1 ? "" : "s"} outside bounds`
+          : "Reachable zones are inside bounds",
+        status: boundsIssue ? "warning" : "ready",
+        issue: boundsIssue,
+        action: boundsIssue ? "Fit Bounds" : "Bounds OK"
+      }
+    ];
+  }, [controlsDoc?.movement.collisionRadius, navigationCoverageSummary, navigationIssues]);
   const navigationQuickFix = useMemo(
     () => navigationQuickFixForIssue(primaryNavigationIssue),
     [primaryNavigationIssue]
@@ -10865,6 +10947,22 @@ function App() {
                           <span>{navigationCoverageSummary.routeComponents} route island(s)</span>
                         </div>
                       )}
+                      <div className="navigation-doorway-board" aria-label="Doorway navigation health">
+                        {doorwayNavigationSteps.map((step) => (
+                          <button
+                            key={step.id}
+                            type="button"
+                            className={`navigation-doorway-card ${step.status}`}
+                            disabled={!step.issue}
+                            onClick={() => step.issue && runNavigationQuickFixAction(navigationQuickFixForIssue(step.issue))}
+                          >
+                            <span>{step.status === "ready" ? <Check size={15} aria-hidden="true" /> : <MapPin size={15} aria-hidden="true" />}</span>
+                            <strong>{step.label}</strong>
+                            <small>{step.detail}</small>
+                            <em>{step.action}</em>
+                          </button>
+                        ))}
+                      </div>
                       {navigationRepairPathSteps.length > 0 && (
                         <div className="navigation-repair-path" aria-label="Navigation repair path">
                           {navigationRepairPathSteps.map((step) => (

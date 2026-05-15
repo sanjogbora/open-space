@@ -3204,6 +3204,85 @@ button.list-row {
   color: #49697a;
 }
 
+.navigation-doorway-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.navigation-doorway-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid #d8e3eb;
+  border-radius: 8px;
+  color: #24313a;
+  background: #ffffff;
+  text-align: left;
+}
+
+.navigation-doorway-card.warning {
+  color: #7a4e08;
+  border-color: #f0d099;
+  background: #fff8ed;
+}
+
+.navigation-doorway-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.navigation-doorway-card:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.navigation-doorway-card:not(:disabled):hover,
+.navigation-doorway-card:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.navigation-doorway-card span {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.navigation-doorway-card strong,
+.navigation-doorway-card small,
+.navigation-doorway-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navigation-doorway-card strong {
+  font-size: 12px;
+}
+
+.navigation-doorway-card small,
+.navigation-doorway-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.navigation-doorway-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .repair-playbook {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4812,6 +4891,7 @@ code {
   .toggle-grid,
   .movement-preset-grid,
   .movement-comfort-card,
+  .navigation-doorway-board,
   .vector-field {
     grid-template-columns: 1fr;
   }
