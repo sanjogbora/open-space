@@ -10347,6 +10347,76 @@ function App() {
                             }))
                           }
                         />
+                        <NumberField
+                          label="Model Offset X"
+                          min={-100000}
+                          max={100000}
+                          step={0.01}
+                          value={manifest.rendering?.modelOffset?.[0] ?? 0}
+                          onChange={(value) =>
+                            updateRendering((rendering) => {
+                              const current = rendering.modelOffset ?? [0, 0, 0];
+                              return {
+                                ...rendering,
+                                modelOffset: [value, current[1] ?? 0, current[2] ?? 0] as Vec3
+                              };
+                            })
+                          }
+                        />
+                        <NumberField
+                          label="Model Offset Y"
+                          min={-100000}
+                          max={100000}
+                          step={0.01}
+                          value={manifest.rendering?.modelOffset?.[1] ?? 0}
+                          onChange={(value) =>
+                            updateRendering((rendering) => {
+                              const current = rendering.modelOffset ?? [0, 0, 0];
+                              return {
+                                ...rendering,
+                                modelOffset: [current[0] ?? 0, value, current[2] ?? 0] as Vec3
+                              };
+                            })
+                          }
+                        />
+                        <NumberField
+                          label="Model Offset Z"
+                          min={-100000}
+                          max={100000}
+                          step={0.01}
+                          value={manifest.rendering?.modelOffset?.[2] ?? 0}
+                          onChange={(value) =>
+                            updateRendering((rendering) => {
+                              const current = rendering.modelOffset ?? [0, 0, 0];
+                              return {
+                                ...rendering,
+                                modelOffset: [current[0] ?? 0, current[1] ?? 0, value] as Vec3
+                              };
+                            })
+                          }
+                        />
+                        <div className="model-offset-note">
+                          <div>
+                            <strong>Runtime model offset</strong>
+                            <p>
+                              Import Repair uses this to recenter far-away source models without rewriting the GLB. Reset it only if the model was fixed in the source file.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="button secondary compact-button"
+                            disabled={!manifest.rendering?.modelOffset?.some((value) => Math.abs(value) > 0.01)}
+                            onClick={() =>
+                              updateRendering((rendering) => {
+                                const { modelOffset: _modelOffset, ...nextRendering } = rendering;
+                                return nextRendering;
+                              })
+                            }
+                          >
+                            <RotateCcw size={15} aria-hidden="true" />
+                            Reset Offset
+                          </button>
+                        </div>
                         <label className="toggle-row compact-toggle">
                           <input
                             type="checkbox"
