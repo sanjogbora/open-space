@@ -2779,6 +2779,76 @@ function publishedDeploymentChecklist(entry: PublishEntry, title: string): strin
   return lines.filter(Boolean).join("\n");
 }
 
+function publishReadinessReportText({
+  projectId,
+  title,
+  manifest,
+  stats,
+  publishChecks,
+  draftViewerUrl,
+  liveViewerUrl
+}: {
+  projectId: string;
+  title: string;
+  manifest: SceneManifest;
+  stats: BundleStats | null;
+  publishChecks: readonly PublishCheck[];
+  draftViewerUrl: string;
+  liveViewerUrl?: string;
+}): string {
+  const blockers = stats?.publishReadiness?.blockers ?? [];
+  const warnings = stats?.publishReadiness?.warnings ?? [];
+  const failedChecks = publishChecks.filter((check) => !check.ready);
+  const lines = [
+    `Open Space pre-publish readiness - ${title}`,
+    `Project: ${projectId}`,
+    `Generated: ${new Date().toISOString()}`,
+    `Draft viewer: ${draftViewerUrl}`,
+    liveViewerUrl ? `Live viewer: ${liveViewerUrl}` : "",
+    "",
+    "Publish gate:",
+    `- Status: ${stats?.publishReadiness?.status ?? "not analyzed"}`,
+    `- Blockers: ${blockers.length}`,
+    `- Warnings: ${warnings.length}`,
+    `- Diagnostics: ${stats?.diagnostics?.length ?? 0}`,
+    "",
+    "Scene summary:",
+    `- Views: ${manifest.views.length}`,
+    `- Walk views: ${manifest.views.filter((view) => view.kind === "walk").length}`,
+    `- Rooms: ${manifest.rooms?.length ?? 0}`,
+    `- Interactions: ${manifest.interactions.length}`,
+    `- Bundle: ${formatBytes(stats?.totalBytes ?? 0)}`,
+    `- Model: ${formatBytes(stats?.modelBytes ?? 0)}`,
+    `- Triangles: ${stats?.triangleCount ?? 0}`,
+    `- Draw primitives: ${stats?.primitiveCount ?? stats?.meshCount ?? 0}`,
+    `- Texture RAM: ${formatBytes(stats?.estimatedTextureMemoryBytes ?? 0)}`,
+    `- Lightmaps: ${stats?.lightmapAssetCount ?? 0}/${stats?.lightmapMaterialCount ?? 0}`,
+    "",
+    "Readiness rows:",
+    ...publishChecks.map(
+      (check) =>
+        `- ${check.ready ? "ready" : check.blocking ? "blocked" : "warning"}: ${check.label} - ${check.detail}${check.action ? `; action: ${nextStepCopy(check.action).button}` : ""}`
+    ),
+    "",
+    failedChecks.length > 0 ? "Next fixes:" : "Next fixes: none",
+    ...failedChecks.map(
+      (check) => `- ${check.label}: ${check.detail}${check.action ? ` -> ${nextStepCopy(check.action).button}` : ""}`
+    ),
+    "",
+    blockers.length > 0 ? "Publish blockers:" : "",
+    ...blockers.map((issue) => `- ${issue.title}: ${issue.message}${issue.action ? ` Action: ${issue.action}` : ""}`),
+    warnings.length > 0 ? "Publish warnings:" : "",
+    ...warnings.map((issue) => `- ${issue.title}: ${issue.message}${issue.action ? ` Action: ${issue.action}` : ""}`),
+    "",
+    "Manual QA before sharing:",
+    "- Open the draft viewer and test WASD, mouse drag, mouse wheel movement, and click-to-move.",
+    "- Try entering rooms through doors and verify walls/windows/cupboards reject movement.",
+    "- Check top view, room buttons, TV/video screens, hotspots, baked lighting, and mobile performance."
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
 function lightmapBakePlanText({
   projectId,
   settings,
@@ -7141,6 +7211,28 @@ function App() {
               <div className="panel-heading">
                 <Globe2 size={18} aria-hidden="true" />
                 <h2>Publish</h2>
+                <button
+                  type="button"
+                  className="button secondary compact-button"
+                  onClick={() =>
+                    void copyText(
+                      publishReadinessReportText({
+                        projectId: activeProjectId,
+                        title: manifest.branding.clientName ?? manifest.branding.title,
+                        manifest,
+                        stats: bundleStats,
+                        publishChecks,
+                        draftViewerUrl: viewerUrl(activeProjectId),
+                        ...(publishHistory?.activeVersion
+                          ? { liveViewerUrl: livePublishedViewerUrl(activeProjectId, publishHistory) }
+                          : {})
+                      })
+                    )
+                  }
+                >
+                  <Copy size={15} aria-hidden="true" />
+                  Copy Readiness
+                </button>
               </div>
 
               <VisualGuideCard

@@ -165,6 +165,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - The deploy script now maps WebAssembly, Basis, KTX2, AVIF, WebP, video, and GLB assets to explicit content types when applying per-asset S3 cache headers.
 - The deploy script now supports S3-compatible endpoint, profile, and region options for R2/Spaces/MinIO-style hosting, and Studio shows a copy-ready compatible command.
 - Studio Publish now provides a copyable deployment checklist per version with viewer URL, embed snippet, quality gate counts, validation commands, production upload commands, and post-upload QA steps.
+- Studio Publish can now copy a pre-publish readiness report with current blockers, warnings, scene metrics, direct next actions, draft/live links, and manual QA prompts before creating a share link.
 - Reimport analysis preserves material edits and object visibility by stable material/object names.
 - Viewer supports in-viewport object picking with object/material details.
 - Studio Interactions can create and edit hotspots, external scene links, and object toggles.
