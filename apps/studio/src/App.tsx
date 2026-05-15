@@ -5313,6 +5313,22 @@ function App() {
         : undefined,
     [selectedObject, selectedObjectOverride]
   );
+  const objectToggleTargetOptions = useMemo<ObjectOverride[]>(() => {
+    const options = new Map<string, ObjectOverride>();
+    objectsDoc?.objects.forEach((object) => {
+      options.set(object.id, object);
+    });
+    sceneGraph?.nodes.forEach((node) => {
+      if (!options.has(node.id)) {
+        options.set(node.id, {
+          id: node.id,
+          name: node.name,
+          visible: true
+        });
+      }
+    });
+    return [...options.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [objectsDoc, sceneGraph]);
 
   const selectedMaterial = useMemo(
     () => materialsDoc?.materials.find((material) => material.id === selectedMaterialId),
@@ -8139,8 +8155,7 @@ function App() {
 
   const addObjectToggle = () => {
     updateManifest((current) => {
-      const selectedOverride = objectsDoc?.objects.find((object) => object.id === selectedObjectId);
-      const nextToggle = createObjectToggle(objectToggleInteractions.length + 1, selectedOverride);
+      const nextToggle = createObjectToggle(objectToggleInteractions.length + 1, selectedObjectEditableOverride);
       window.setTimeout(() => setSelectedInteractionId(nextToggle.id), 0);
       return {
         ...current,
@@ -11005,7 +11020,7 @@ function App() {
                     <select
                       value={selectedObjectToggle.targetObjectId ?? ""}
                       onChange={(event) => {
-                        const object = objectsDoc?.objects.find((item) => item.id === event.target.value);
+                        const object = objectToggleTargetOptions.find((item) => item.id === event.target.value);
                         updateObjectToggle(selectedObjectToggle.id, (interaction) => ({
                           ...interaction,
                           targetObjectId: object?.id ?? "",
@@ -11014,7 +11029,7 @@ function App() {
                       }}
                     >
                       <option value="">Select object</option>
-                      {objectsDoc?.objects.map((object) => (
+                      {objectToggleTargetOptions.map((object) => (
                         <option key={object.id} value={object.id}>
                           {object.name}
                         </option>
