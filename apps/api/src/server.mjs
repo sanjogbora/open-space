@@ -1350,17 +1350,96 @@ function unitScaleForBounds(bounds) {
   return 1;
 }
 
-function scaleVec3(value, scale) {
-  return [value[0] * scale, value[1] * scale, value[2] * scale];
+function scaleVec3(value, scale, offset = [0, 0, 0]) {
+  return [value[0] * scale + offset[0], value[1] * scale + offset[1], value[2] * scale + offset[2]];
 }
 
-function scaleBounds(bounds, scale) {
-  if (!bounds || scale === 1) {
+function scaleBounds(bounds, scale, offset = [0, 0, 0]) {
+  if (!bounds) {
     return bounds;
   }
   return {
-    min: scaleVec3(bounds.min, scale),
-    max: scaleVec3(bounds.max, scale)
+    min: scaleVec3(bounds.min, scale, offset),
+    max: scaleVec3(bounds.max, scale, offset)
+  };
+}
+
+function boundsFootprintCenter(bounds) {
+  if (!bounds) {
+    return undefined;
+  }
+  return [
+    (bounds.min[0] + bounds.max[0]) / 2,
+    (bounds.min[2] + bounds.max[2]) / 2
+  ];
+}
+
+function modelOffsetForBounds(bounds, scale) {
+  const scaledBounds = scaleBounds(bounds, scale);
+  const center = boundsFootprintCenter(scaledBounds);
+  if (!scaledBounds || !center) {
+    return [0, 0, 0];
+  }
+  const largestDimension = Math.max(...boundsSize(scaledBounds));
+  const distance = Math.hypot(center[0], center[1]);
+  return largestDimension > 1 && distance > Math.max(250, largestDimension * 8)
+    ? [-center[0], 0, -center[1]]
+    : [0, 0, 0];
+}
+
+function vectorDelta(next, previous = [0, 0, 0]) {
+  return [next[0] - previous[0], next[1] - previous[1], next[2] - previous[2]];
+}
+
+function isZeroVec3(value) {
+  return !value || value.every((item) => Math.abs(item) < 1e-6);
+}
+
+function shiftVec3(value, offset) {
+  if (!Array.isArray(value) || value.length < 3 || isZeroVec3(offset)) {
+    return value;
+  }
+  return [value[0] + offset[0], value[1] + offset[1], value[2] + offset[2]];
+}
+
+function shiftBounds(bounds, offset) {
+  if (!bounds || isZeroVec3(offset)) {
+    return bounds;
+  }
+  return {
+    min: shiftVec3(bounds.min, offset),
+    max: shiftVec3(bounds.max, offset)
+  };
+}
+
+function shiftNavigationZone(zone, offset) {
+  if (!zone || isZeroVec3(offset)) {
+    return zone;
+  }
+  return {
+    ...zone,
+    center: shiftVec3(zone.center, offset)
+  };
+}
+
+function shiftRoom(room, offset) {
+  if (!room || isZeroVec3(offset)) {
+    return room;
+  }
+  return {
+    ...room,
+    center: shiftVec3(room.center, offset),
+    ...(room.bounds ? { bounds: shiftBounds(room.bounds, offset) } : {})
+  };
+}
+
+function shiftInteraction(interaction, offset) {
+  if (!interaction || isZeroVec3(offset) || !Array.isArray(interaction.position)) {
+    return interaction;
+  }
+  return {
+    ...interaction,
+    position: shiftVec3(interaction.position, offset)
   };
 }
 
@@ -1405,7 +1484,7 @@ function semanticRoomLabelForName(name) {
   return best;
 }
 
-function graphRoomCandidates(graph, modelScale, cameraHeight) {
+function graphRoomCandidates(graph, modelScale, cameraHeight, modelOffset = [0, 0, 0]) {
   const rawBounds = combineGraphBounds(graph);
   const rawArea = rawBounds ? Math.max(1, boundsArea(rawBounds)) : 1;
   const roomKeywords = [
@@ -1472,7 +1551,7 @@ function graphRoomCandidates(graph, modelScale, cameraHeight) {
       if (semanticLabel) {
         score += semanticLabel.score;
       }
-      const scaledBounds = scaleBounds(node.bounds, modelScale);
+      const scaledBounds = scaleBounds(node.bounds, modelScale, modelOffset);
       if (!scaledBounds) {
         return undefined;
       }
@@ -1661,7 +1740,7 @@ function uniqueRoomLabels(rooms) {
   });
 }
 
-function importedRooms(views, roomCandidates, existingRooms = []) {
+function importedRooms(views, roomCandidates, existingRooms = [], offsetDelta = [0, 0, 0]) {
   const hasCustomRooms =
     Array.isArray(existingRooms) &&
     existingRooms.some((room) => {
@@ -1669,7 +1748,7 @@ function importedRooms(views, roomCandidates, existingRooms = []) {
       return id && !id.startsWith("room-") && !id.startsWith("auto-room-");
     });
   if (hasCustomRooms) {
-    return existingRooms;
+    return existingRooms.map((room) => shiftRoom(room, offsetDelta));
   }
   const walkViews = views.filter((view) => view.kind !== "top");
   const usedCandidateIds = new Set();
@@ -1711,8 +1790,8 @@ function importedRooms(views, roomCandidates, existingRooms = []) {
   return uniqueRoomLabels([...rooms, ...extraRooms].slice(0, 14));
 }
 
-function graphWalkZoneCandidates(graph, modelScale) {
-  const focusBounds = scaleBounds(graphFocusBounds(graph), modelScale);
+function graphWalkZoneCandidates(graph, modelScale, modelOffset = [0, 0, 0]) {
+  const focusBounds = scaleBounds(graphFocusBounds(graph), modelScale, modelOffset);
   const focusHeight = focusBounds ? Math.max(0.1, focusBounds.max[1] - focusBounds.min[1]) : 1;
   const genericFloorMaxY = focusBounds ? focusBounds.min[1] + Math.max(0.65, focusHeight * 0.42) : Number.POSITIVE_INFINITY;
   const floorKeywords = [
@@ -1737,7 +1816,7 @@ function graphWalkZoneCandidates(graph, modelScale) {
       const keywordMatched = floorKeywords.some((keyword) => searchName.includes(keyword));
       const exteriorNamed = likelyExteriorPlaneName(searchName);
       const nonWalkNamed = likelyNonWalkSurfaceName(searchName);
-      const scaledBounds = scaleBounds(node.bounds, modelScale);
+      const scaledBounds = scaleBounds(node.bounds, modelScale, modelOffset);
       if (!scaledBounds) {
         return undefined;
       }
@@ -1806,7 +1885,7 @@ function generatedNavigationZone(zone, generatedBy) {
   };
 }
 
-function roomLabelFromZoneContents(zone, graph, modelScale) {
+function roomLabelFromZoneContents(zone, graph, modelScale, modelOffset = [0, 0, 0]) {
   if (!zone || !graph) {
     return undefined;
   }
@@ -1847,7 +1926,7 @@ function roomLabelFromZoneContents(zone, graph, modelScale) {
     if (!node.bounds) {
       continue;
     }
-    const scaledBounds = scaleBounds(node.bounds, modelScale);
+    const scaledBounds = scaleBounds(node.bounds, modelScale, modelOffset);
     if (!scaledBounds) {
       continue;
     }
@@ -1888,7 +1967,15 @@ function zoneRoomLabel(zone, index, semanticLabel) {
   return genericLabel ? `Area ${index + 1}` : label;
 }
 
-function roomCandidatesFromWalkZones(walkZones, bounds, cameraHeight, existingCandidates = [], graph, modelScale = 1) {
+function roomCandidatesFromWalkZones(
+  walkZones,
+  bounds,
+  cameraHeight,
+  existingCandidates = [],
+  graph,
+  modelScale = 1,
+  modelOffset = [0, 0, 0]
+) {
   const existingCenters = existingCandidates
     .map((candidate) => candidate.center)
     .filter((center) => Array.isArray(center) && center.length >= 3);
@@ -1951,7 +2038,7 @@ function roomCandidatesFromWalkZones(walkZones, bounds, cameraHeight, existingCa
         label: zoneRoomLabel(
           zone,
           existingCandidates.length + index,
-          roomLabelFromZoneContents(zone, graph, modelScale)
+          roomLabelFromZoneContents(zone, graph, modelScale, modelOffset)
         ),
         center,
         target,
@@ -2106,7 +2193,7 @@ function expandDoorPassToWalkZones(passZone, walkZones, cameraHeight) {
   return passZone;
 }
 
-function graphPassZoneCandidates(graph, modelScale, cameraHeight, walkZones = []) {
+function graphPassZoneCandidates(graph, modelScale, cameraHeight, walkZones = [], modelOffset = [0, 0, 0]) {
   return (graph?.nodes ?? [])
     .map((node) => {
       if (!node.bounds) {
@@ -2117,12 +2204,12 @@ function graphPassZoneCandidates(graph, modelScale, cameraHeight, walkZones = []
       const normalizedName = searchName.toLowerCase();
       const geometryScore = /wall|partition|ceiling|roof|window|glass|handle|knob/.test(normalizedName)
         ? 0
-        : doorPassGeometryScore(scaleBounds(node.bounds, modelScale), cameraHeight);
+        : doorPassGeometryScore(scaleBounds(node.bounds, modelScale, modelOffset), cameraHeight);
       const score = nameScore + geometryScore;
       if (score <= 0) {
         return undefined;
       }
-      const scaledBounds = scaleBounds(node.bounds, modelScale);
+      const scaledBounds = scaleBounds(node.bounds, modelScale, modelOffset);
       if (!scaledBounds) {
         return undefined;
       }
@@ -2503,13 +2590,24 @@ function isGeneratedNavigationZone(zone) {
   );
 }
 
-function importedNavigationZones(bounds, existingZones = [], graph, modelScale = 1, cameraHeight = 1.65, views = []) {
+function importedNavigationZones(
+  bounds,
+  existingZones = [],
+  graph,
+  modelScale = 1,
+  cameraHeight = 1.65,
+  views = [],
+  modelOffset = [0, 0, 0],
+  offsetDelta = [0, 0, 0]
+) {
   const preservedZones = Array.isArray(existingZones)
-    ? existingZones.filter((zone) => !isGeneratedNavigationZone(zone))
+    ? existingZones
+        .filter((zone) => !isGeneratedNavigationZone(zone))
+        .map((zone) => shiftNavigationZone(zone, offsetDelta))
     : [];
-  const graphZones = graphWalkZoneCandidates(graph, modelScale);
+  const graphZones = graphWalkZoneCandidates(graph, modelScale, modelOffset);
   const passZones = [
-    ...graphPassZoneCandidates(graph, modelScale, cameraHeight, graphZones),
+    ...graphPassZoneCandidates(graph, modelScale, cameraHeight, graphZones, modelOffset),
     ...autoPassZonesBetweenWalkZones(graphZones, cameraHeight)
   ];
   const viewZones = autoWalkZonesForViews(views, [...graphZones, ...passZones, ...preservedZones], bounds, cameraHeight);
@@ -2560,16 +2658,29 @@ async function resetManifestForUploadedModel(
   const rawSceneBounds = combineGraphBounds(graph);
   const rawBounds = graphFocusBounds(graph) ?? rawSceneBounds;
   const modelScale = unitScaleForBounds(rawBounds);
-  const bounds = scaleBounds(rawBounds, modelScale);
+  const modelOffset = modelOffsetForBounds(rawBounds, modelScale);
+  const previousModelOffset = Array.isArray(manifest.rendering?.modelOffset)
+    ? manifest.rendering.modelOffset
+    : [0, 0, 0];
+  const offsetDelta = vectorDelta(modelOffset, previousModelOffset);
+  const bounds = scaleBounds(rawBounds, modelScale, modelOffset);
   const cameraHeight = manifest.navigation?.cameraHeight ?? 1.65;
-  const roomCandidates = graphRoomCandidates(graph, modelScale, cameraHeight);
-  const walkZoneCandidates = graphWalkZoneCandidates(graph, modelScale);
+  const roomCandidates = graphRoomCandidates(graph, modelScale, cameraHeight, modelOffset);
+  const walkZoneCandidates = graphWalkZoneCandidates(graph, modelScale, modelOffset);
   const effectiveRoomCandidates =
     roomCandidates.length >= 2
       ? roomCandidates
       : [
           ...roomCandidates,
-          ...roomCandidatesFromWalkZones(walkZoneCandidates, bounds, cameraHeight, roomCandidates, graph, modelScale)
+          ...roomCandidatesFromWalkZones(
+            walkZoneCandidates,
+            bounds,
+            cameraHeight,
+            roomCandidates,
+            graph,
+            modelScale,
+            modelOffset
+          )
         ].slice(0, 10);
   const views = importedModelViews(bounds, cameraHeight, effectiveRoomCandidates);
   const margin = 0.75;
@@ -2588,7 +2699,16 @@ async function resetManifestForUploadedModel(
         ]
       }
     : manifest.navigation?.bounds;
-  const navigationZones = importedNavigationZones(bounds, manifest.navigation?.zones, graph, modelScale, cameraHeight, views);
+  const navigationZones = importedNavigationZones(
+    bounds,
+    manifest.navigation?.zones,
+    graph,
+    modelScale,
+    cameraHeight,
+    views,
+    modelOffset,
+    offsetDelta
+  );
   const roomMapCandidates = [
     ...effectiveRoomCandidates,
     ...roomCandidatesFromWalkZones(
@@ -2597,19 +2717,22 @@ async function resetManifestForUploadedModel(
       cameraHeight,
       effectiveRoomCandidates,
       graph,
-      modelScale
+      modelScale,
+      modelOffset
     )
   ].slice(0, 14);
+  const { modelOffset: _previousRenderingOffset, ...renderingWithoutOffset } = manifest.rendering ?? {};
 
   const nextManifest = {
     ...manifest,
     sceneUrl,
     originalSceneUrl: manifest.originalSceneUrl ?? sceneUrl,
     rendering: {
-      ...manifest.rendering,
+      ...renderingWithoutOffset,
       doubleSidedMaterials: true,
       relightUnlitMaterials: manifest.rendering?.relightUnlitMaterials ?? true,
-      modelScale
+      modelScale,
+      ...(!isZeroVec3(modelOffset) ? { modelOffset } : {})
     },
     environment: {
       ...manifest.environment,
@@ -2629,8 +2752,10 @@ async function resetManifestForUploadedModel(
         Math.max(12, (generatedGroundSize ?? manifest.environment?.groundSize ?? 90) * 0.48)
     },
     views,
-    rooms: importedRooms(views, roomMapCandidates, manifest.rooms),
-    interactions: options.resetInteractions ? [] : manifest.interactions,
+    rooms: importedRooms(views, roomMapCandidates, manifest.rooms, offsetDelta),
+    interactions: options.resetInteractions
+      ? []
+      : (manifest.interactions ?? []).map((interaction) => shiftInteraction(interaction, offsetDelta)),
     navigation: {
       ...manifest.navigation,
       floorMeshNames: [

@@ -144,6 +144,7 @@ export interface RenderingConfig {
   doubleSidedMaterials?: boolean;
   relightUnlitMaterials?: boolean;
   modelScale?: number;
+  modelOffset?: Vec3;
   toneMapping?: ToneMappingMode;
   exposure?: number;
 }
@@ -487,7 +488,8 @@ export function isRenderingConfig(value: unknown): value is RenderingConfig {
     (value["modelScale"] === undefined ||
       (typeof value["modelScale"] === "number" &&
         Number.isFinite(value["modelScale"]) &&
-        value["modelScale"] > 0))
+        value["modelScale"] > 0)) &&
+    (value["modelOffset"] === undefined || isVec3(value["modelOffset"]))
   );
 }
 

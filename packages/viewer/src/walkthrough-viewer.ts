@@ -132,6 +132,7 @@ export class WalkthroughViewer {
   private readonly textureLoader = new THREE.TextureLoader();
   private readonly moveMarker = createMoveMarker();
   private readonly modelScale: number;
+  private readonly modelOffset: THREE.Vector3;
   private readonly manifestScale: number;
   private readonly cameraHeight: number;
   private readonly hotspots: HotspotBinding[] = [];
@@ -213,6 +214,7 @@ export class WalkthroughViewer {
     this.debug = options.debug ?? false;
     const legacyScale = this.resolveLegacyCoordinateScale();
     this.modelScale = this.manifest.rendering?.modelScale ?? legacyScale;
+    this.modelOffset = toVector3(this.manifest.rendering?.modelOffset ?? [0, 0, 0]);
     this.manifestScale = this.manifest.rendering?.modelScale ? 1 : legacyScale;
     this.cameraHeight = this.manifest.navigation.cameraHeight * this.manifestScale;
 
@@ -424,6 +426,9 @@ export class WalkthroughViewer {
       this.sceneRoot.name = "source-scene";
       if (this.modelScale !== 1) {
         this.sceneRoot.scale.multiplyScalar(this.modelScale);
+      }
+      if (this.modelOffset.lengthSq() > 0) {
+        this.sceneRoot.position.add(this.modelOffset);
       }
       this.prepareLoadedScene(this.sceneRoot);
       this.scene.add(this.sceneRoot);
