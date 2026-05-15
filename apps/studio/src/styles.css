@@ -1010,6 +1010,21 @@ textarea:focus {
   background: #edf1f3;
 }
 
+.object-bulk-actions {
+  display: grid;
+  gap: 5px;
+}
+
+.object-bulk-actions small {
+  color: #667681;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.compact-note {
+  margin: 0;
+}
+
 .mini-actions {
   display: inline-flex;
   align-items: center;

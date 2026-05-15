@@ -3375,6 +3375,7 @@ function App() {
   const [selectedObjectId, setSelectedObjectId] = useState("");
   const [objectSearchQuery, setObjectSearchQuery] = useState("");
   const [objectListFilter, setObjectListFilter] = useState<ObjectListFilter>("all");
+  const [objectReviewMessage, setObjectReviewMessage] = useState("");
   const [apiConnected, setApiConnected] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [saveError, setSaveError] = useState("");
@@ -4272,6 +4273,7 @@ function App() {
     () => ({
       all: objectReviewRows.length,
       ceiling: objectReviewRows.filter((row) => row.isCeilingOrRoof).length,
+      ceilingNeedsTopHidden: objectReviewRows.filter((row) => row.isCeilingOrRoof && !row.isHiddenInTopView).length,
       topHidden: objectReviewRows.filter((row) => row.isHiddenInTopView).length,
       roles: objectReviewRows.filter((row) => row.hasNavigationRole).length,
       hidden: objectReviewRows.filter((row) => row.isHidden).length
@@ -4514,6 +4516,40 @@ function App() {
           }
         : current
     );
+  };
+
+  const hideCeilingCandidatesInTopView = () => {
+    const ceilingRows = objectReviewRows.filter((row) => row.isCeilingOrRoof);
+    if (ceilingRows.length === 0) {
+      setObjectReviewMessage("No ceiling or roof candidates were detected from object names.");
+      return;
+    }
+    const ceilingIds = new Set(ceilingRows.map((row) => row.node.id));
+    setObjectsDoc((current) => {
+      if (!current) {
+        return current;
+      }
+      const existingIds = new Set(current.objects.map((object) => object.id));
+      const additions: ObjectOverride[] = ceilingRows
+        .filter((row) => !existingIds.has(row.node.id))
+        .map((row) => ({
+          id: row.node.id,
+          name: row.node.name,
+          visible: true,
+          hideInTopView: true
+        }));
+      return {
+        ...current,
+        objects: [
+          ...current.objects.map((object) =>
+            ceilingIds.has(object.id) ? { ...object, hideInTopView: true } : object
+          ),
+          ...additions
+        ]
+      };
+    });
+    setObjectListFilter("ceiling");
+    setObjectReviewMessage(`Marked ${ceilingRows.length} ceiling/roof candidate${ceilingRows.length === 1 ? "" : "s"} hidden in top view. Save & Test to verify the floorplan.`);
   };
 
   const updateControls = (updater: (controls: SceneControlsDocument) => SceneControlsDocument) => {
@@ -9915,6 +9951,25 @@ function App() {
                     </button>
                   ))}
                 </div>
+                <div className="object-bulk-actions">
+                  <button
+                    type="button"
+                    className="button secondary compact-button"
+                    disabled={!objectsDoc || objectFilterCounts.ceilingNeedsTopHidden === 0}
+                    onClick={hideCeilingCandidatesInTopView}
+                  >
+                    <EyeOff size={15} aria-hidden="true" />
+                    Hide Ceiling in Top View
+                  </button>
+                  <small>
+                    {objectFilterCounts.ceilingNeedsTopHidden > 0
+                      ? `${objectFilterCounts.ceilingNeedsTopHidden} candidate${objectFilterCounts.ceilingNeedsTopHidden === 1 ? "" : "s"} still visible in top view.`
+                      : objectFilterCounts.ceiling > 0
+                        ? "Ceiling/roof candidates are already hidden in top view."
+                        : "No ceiling/roof candidates detected by name."}
+                  </small>
+                </div>
+                {objectReviewMessage && <p className="success-note compact-note">{objectReviewMessage}</p>}
               </div>
               {filteredObjectRows.map(({ node, override, isCeilingOrRoof, isHiddenInTopView }) => {
                 return (
