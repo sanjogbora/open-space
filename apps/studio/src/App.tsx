@@ -4440,6 +4440,79 @@ function App() {
       };
     });
   }, [materialTextureSuggestionStatusByName, materialsDoc]);
+  const selectedMaterialReviewRow = useMemo(
+    () => materialReviewRows.find((row) => row.material.id === selectedMaterialId),
+    [materialReviewRows, selectedMaterialId]
+  );
+  const selectedMaterialDiagnosis = useMemo(() => {
+    if (!selectedMaterialReviewRow) {
+      return null;
+    }
+    const { assignedTextureCount, hasLightmap, isPlainGreen, isTransparent, isUntextured, suggestionStatus } =
+      selectedMaterialReviewRow;
+    if (suggestionStatus?.pending) {
+      return {
+        tone: "ready",
+        title: "Texture suggestion ready",
+        detail: `${suggestionStatus.pending} high-confidence texture suggestion${suggestionStatus.pending === 1 ? "" : "s"} can be applied after checking the preview.`,
+        action: "Use Apply Visible Suggestions or the texture candidate buttons below."
+      };
+    }
+    if (suggestionStatus?.review) {
+      return {
+        tone: "warning",
+        title: "Texture match needs review",
+        detail: `${suggestionStatus.review} possible texture match${suggestionStatus.review === 1 ? "" : "es"} need a visual check before applying.`,
+        action: "Compare the candidate thumbnails and choose Base, Normal, Emissive, or Lightmap only when the image is clearly correct."
+      };
+    }
+    if (isPlainGreen) {
+      return {
+        tone: "warning",
+        title: "Plain green material",
+        detail: "This material has no texture maps and looks like a placeholder, terrain, or grass-style surface.",
+        action: "Assign the correct base texture, or switch Environment presets if this is generated exterior context."
+      };
+    }
+    if (isUntextured) {
+      return {
+        tone: "warning",
+        title: "No texture maps",
+        detail: "This material is only using color/values, so it may look flat compared with the reference viewer.",
+        action: "Check loose texture candidates or request a cleaner GLB/ZIP export with texture paths preserved."
+      };
+    }
+    if (isTransparent) {
+      return {
+        tone: "warning",
+        title: "Transparency enabled",
+        detail: "Transparent materials can make walls, glass, curtains, or helper planes look hollow or sort incorrectly.",
+        action: "Keep this only for glass/sheer surfaces; otherwise raise Opacity before publishing."
+      };
+    }
+    if (hasLightmap) {
+      return {
+        tone: "ready",
+        title: "Lightmap assigned",
+        detail: "This material has a baked lightmap assigned for the Shapespark-style lighting workflow.",
+        action: "Inspect the thumbnail and viewer shadows after baking or relinking lightmaps."
+      };
+    }
+    if (assignedTextureCount > 0) {
+      return {
+        tone: "ready",
+        title: "Texture maps assigned",
+        detail: `${assignedTextureCount} texture map${assignedTextureCount === 1 ? "" : "s"} are assigned on this material.`,
+        action: "Compare the viewer against the reference render, then only tune roughness, metalness, or opacity if needed."
+      };
+    }
+    return {
+      tone: "ready",
+      title: "Material looks configured",
+      detail: "No obvious material repair issue is flagged for this selection.",
+      action: "Use the viewer/reference comparison to decide whether any manual tuning is needed."
+    };
+  }, [selectedMaterialReviewRow]);
   const materialFilterCounts = useMemo(
     () => ({
       all: materialReviewRows.length,
@@ -9182,6 +9255,17 @@ function App() {
                   secondaryActionLabel="Repair Center"
                   onSecondaryAction={() => setSelectedTab("repair")}
                 />
+
+                {selectedMaterialDiagnosis && (
+                  <div className={`material-diagnosis-card ${selectedMaterialDiagnosis.tone}`}>
+                    <div>
+                      <span>Selected material diagnosis</span>
+                      <strong>{selectedMaterialDiagnosis.title}</strong>
+                      <p>{selectedMaterialDiagnosis.detail}</p>
+                    </div>
+                    <small>{selectedMaterialDiagnosis.action}</small>
+                  </div>
+                )}
 
                 <div className="publish-action-card lightmap-bake-card">
                   <div>
