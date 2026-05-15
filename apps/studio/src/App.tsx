@@ -12218,6 +12218,8 @@ function buildRepairCenterItems({
   reviewTextureSuggestionCount: number;
 }): RepairCenterItem[] {
   const items: RepairCenterItem[] = [];
+  const modelOffset = manifest.rendering?.modelOffset;
+  const hasModelOffset = Boolean(modelOffset?.some((value) => Math.abs(value) > 0.01));
   if (!stats) {
     return [
       {
@@ -12231,6 +12233,19 @@ function buildRepairCenterItems({
         button: "Open Import"
       }
     ];
+  }
+
+  if (hasModelOffset && stats.diagnostics?.some((diagnostic) => diagnostic.code === "scene-far-from-origin")) {
+    items.push({
+      id: "origin-auto-centered",
+      stage: "Source",
+      title: "Model is auto-centered in the viewer",
+      detail: `The source model is far from world origin, but Import Repair now shifts it by ${modelOffset?.map((value) => value.toFixed(1)).join(", ")} in the walkthrough so camera views, room maps, and click movement frame the building.`,
+      visualFix: "Open the viewer and confirm the first view, top view, room buttons, and click-to-move land on the actual building.",
+      severity: "ready",
+      action: "test",
+      button: "Open Viewer"
+    });
   }
 
   if (pendingTextureSuggestionCount > 0) {
@@ -12261,6 +12276,9 @@ function buildRepairCenterItems({
   const diagnosticsByAction = new Map<ImportNextStepAction, NonNullable<BundleStats["diagnostics"]>>();
   for (const diagnostic of stats.diagnostics ?? []) {
     if (diagnostic.severity === "info") {
+      continue;
+    }
+    if (hasModelOffset && diagnostic.code === "scene-far-from-origin") {
       continue;
     }
     const action = importActionForDiagnostic(diagnostic.code) ?? "review";
