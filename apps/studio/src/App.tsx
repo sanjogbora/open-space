@@ -633,6 +633,7 @@ interface PublishEntry {
   cdnBasePath?: string;
   assetCount?: number;
   totalBytes?: number;
+  runtime?: PublishRuntimeSummary;
   qualityGate?: {
     status: "ready" | "warning" | "blocked";
     analyzedAt?: string;
@@ -642,6 +643,25 @@ interface PublishEntry {
     blockers?: readonly PublishReadinessIssue[];
     warnings?: readonly PublishReadinessIssue[];
   };
+}
+
+interface PublishRuntimeSummary {
+  sceneUrl: string;
+  originalSceneUrl: string;
+  modelScale: number;
+  modelOffset?: readonly [number, number, number];
+  modelOffsetDistance?: number;
+  toneMapping: string;
+  exposure: number;
+  doubleSidedMaterials: boolean;
+  relightUnlitMaterials: boolean;
+  viewCount: number;
+  walkViewCount: number;
+  topViewCount: number;
+  interactionCount: number;
+  roomCount: number;
+  navigationZoneCount: number;
+  focusedFootprintCenterDistance?: number;
 }
 
 interface PublishCheck {
@@ -2797,6 +2817,43 @@ function publishedS3CompatibleDeployCommand(entry: PublishEntry): string {
     : "";
 }
 
+function formatRuntimeNumber(value: number, digits = 2): string {
+  if (!Number.isFinite(value)) {
+    return "0";
+  }
+  return value.toFixed(digits).replace(/\.?0+$/, "");
+}
+
+function formatRuntimeVec3(value: readonly [number, number, number], digits = 1): string {
+  return value.map((axis) => formatRuntimeNumber(axis, digits)).join(", ");
+}
+
+function publishedRuntimeChecklistLines(entry: PublishEntry): string[] {
+  const runtime = entry.runtime;
+  if (!runtime) {
+    return [];
+  }
+
+  return [
+    "",
+    "Published runtime:",
+    `- Scene asset: ${runtime.sceneUrl}`,
+    `- Source asset: ${runtime.originalSceneUrl}`,
+    `- Model scale: ${formatRuntimeNumber(runtime.modelScale)}x`,
+    ...(runtime.modelOffset
+      ? [
+          `- Model offset: ${formatRuntimeVec3(runtime.modelOffset)} (${formatRuntimeNumber(
+            runtime.modelOffsetDistance ?? 0,
+            1
+          )} units)`
+        ]
+      : []),
+    `- Render profile: ${runtime.toneMapping}, exposure ${formatRuntimeNumber(runtime.exposure, 2)}`,
+    `- Views: ${runtime.viewCount} total, ${runtime.walkViewCount} walk, ${runtime.topViewCount} top`,
+    `- Rooms/interactions/navigation: ${runtime.roomCount} rooms, ${runtime.interactionCount} interactions, ${runtime.navigationZoneCount} nav zones`
+  ];
+}
+
 function publishedDeploymentChecklist(entry: PublishEntry, title: string): string {
   const gate = entry.qualityGate;
   const lines = [
@@ -2817,6 +2874,7 @@ function publishedDeploymentChecklist(entry: PublishEntry, title: string): strin
     ...(gate?.warnings?.length
       ? ["", "Published warnings:", ...gate.warnings.map((issue) => `- ${issue.title}: ${issue.message}`)]
       : []),
+    ...publishedRuntimeChecklistLines(entry),
     "",
     "Preflight:",
     entry.deploymentPath
@@ -7526,6 +7584,60 @@ function App() {
                               {(entry.qualityGate.blockers?.[0] ?? entry.qualityGate.warnings?.[0]) && (
                                 <small>
                                   {(entry.qualityGate.blockers?.[0] ?? entry.qualityGate.warnings?.[0])?.title}
+                                </small>
+                              )}
+                            </div>
+                          )}
+                          {entry.runtime && (
+                            <div className="publish-runtime-summary" aria-label="Published runtime summary">
+                              <div className="publish-runtime-heading">
+                                <span>What ships</span>
+                                <small>{entry.runtime.sceneUrl}</small>
+                              </div>
+                              <div className="publish-runtime-grid">
+                                <span>
+                                  <strong>{formatRuntimeNumber(entry.runtime.modelScale)}x</strong>
+                                  <small>model scale</small>
+                                </span>
+                                <span>
+                                  <strong>
+                                    {entry.runtime.modelOffset
+                                      ? formatRuntimeNumber(entry.runtime.modelOffsetDistance ?? 0, 1)
+                                      : "0"}
+                                  </strong>
+                                  <small>offset units</small>
+                                </span>
+                                <span>
+                                  <strong>{entry.runtime.toneMapping}</strong>
+                                  <small>tone map</small>
+                                </span>
+                                <span>
+                                  <strong>{formatRuntimeNumber(entry.runtime.exposure, 2)}</strong>
+                                  <small>exposure</small>
+                                </span>
+                                <span>
+                                  <strong>{entry.runtime.viewCount}</strong>
+                                  <small>
+                                    {entry.runtime.walkViewCount} walk / {entry.runtime.topViewCount} top
+                                  </small>
+                                </span>
+                                <span>
+                                  <strong>{entry.runtime.navigationZoneCount}</strong>
+                                  <small>nav zones</small>
+                                </span>
+                                <span>
+                                  <strong>{entry.runtime.roomCount}</strong>
+                                  <small>rooms</small>
+                                </span>
+                                <span>
+                                  <strong>{entry.runtime.interactionCount}</strong>
+                                  <small>interactions</small>
+                                </span>
+                              </div>
+                              {entry.runtime.modelOffset && (
+                                <small>
+                                  Runtime offset {formatRuntimeVec3(entry.runtime.modelOffset)} is applied in the
+                                  viewer.
                                 </small>
                               )}
                             </div>
