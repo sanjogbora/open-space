@@ -12009,22 +12009,27 @@ function isGreenPlaceholderDiagnostic(code: string): boolean {
   return code === "dominant-green-placeholder-material";
 }
 
+function isTextureConnectionDiagnostic(code: string): boolean {
+  return [
+    "loose-textures-not-referenced",
+    "generic-loose-texture-names",
+    "image-textures-unused-by-materials",
+    "few-materials-use-textures",
+    "many-unused-texture-images"
+  ].includes(code);
+}
+
 function importActionForDiagnostic(code: string): ImportNextStepAction | undefined {
   if (isSceneFramingDiagnostic(code)) {
     return "repair";
   }
 
-  if (isGreenPlaceholderDiagnostic(code)) {
+  if (isGreenPlaceholderDiagnostic(code) || isTextureConnectionDiagnostic(code)) {
     return "materials";
   }
   if (
     [
       "model-has-no-texture-images",
-      "loose-textures-not-referenced",
-      "generic-loose-texture-names",
-      "image-textures-unused-by-materials",
-      "few-materials-use-textures",
-      "many-unused-texture-images",
       "case-mismatched-model-resources",
       "embedded-texture-decode-failed",
       "sidecar-texture-decode-failed",
@@ -12545,6 +12550,9 @@ function repairCenterDestinationForItem(item: RepairCenterItem): string {
   if (item.id === "green-placeholder-material") {
     return "Opens Materials review.";
   }
+  if (item.id === "texture-connection") {
+    return "Opens Materials texture previews.";
+  }
   if (item.action === "repair") {
     return "Opens Import repair.";
   }
@@ -12587,6 +12595,9 @@ function repairCenterVerifyForItem(item: RepairCenterItem): string {
   }
   if (item.id === "green-placeholder-material") {
     return "After review, compare against the reference viewer and confirm the building no longer reads as one large green/plain surface.";
+  }
+  if (item.id === "texture-connection") {
+    return "After review, compare against the reference viewer and confirm walls, floors, wood, fabric, and decor textures are actually assigned.";
   }
   if (item.action === "repair") {
     return "After repair, return here and confirm blocker counts or source warnings decreased.";
@@ -12700,6 +12711,9 @@ function buildRepairCenterItems({
   const greenPlaceholderDiagnostic = (stats.diagnostics ?? []).find(
     (diagnostic) => diagnostic.severity !== "info" && isGreenPlaceholderDiagnostic(diagnostic.code)
   );
+  const textureConnectionDiagnostics = (stats.diagnostics ?? []).filter(
+    (diagnostic) => diagnostic.severity !== "info" && isTextureConnectionDiagnostic(diagnostic.code)
+  );
   if (sceneFramingDiagnostics.length > 0) {
     const first = sceneFramingDiagnostics[0]!;
     items.push({
@@ -12725,6 +12739,23 @@ function buildRepairCenterItems({
       button: "Review Surface"
     });
   }
+  if (textureConnectionDiagnostics.length > 0) {
+    const first = textureConnectionDiagnostics[0]!;
+    const suggestions = pendingTextureSuggestionCount + reviewTextureSuggestionCount;
+    items.push({
+      id: "texture-connection",
+      stage: "Visuals",
+      title: suggestions > 0 ? "Connect texture-folder images" : "Texture folder is not connected",
+      detail: `${textureConnectionDiagnostics.length} texture connection issue${textureConnectionDiagnostics.length === 1 ? "" : "s"} found: ${first.title}. ${first.message}`,
+      visualFix:
+        suggestions > 0
+          ? "Open Materials, compare the suggested texture thumbnails, then apply or reject them surface by surface before judging visual quality."
+          : "Open Materials and inspect loose texture previews. If the filenames are generic or no safe matches appear, ask for the original GLTF ZIP with texture paths preserved or re-export a GLB with embedded textures.",
+      severity: textureConnectionDiagnostics.some((diagnostic) => diagnostic.severity === "error") ? "error" : "warning",
+      action: "materials",
+      button: suggestions > 0 ? "Review Matches" : "Review Textures"
+    });
+  }
   for (const diagnostic of stats.diagnostics ?? []) {
     if (diagnostic.severity === "info") {
       continue;
@@ -12736,6 +12767,9 @@ function buildRepairCenterItems({
       continue;
     }
     if (isGreenPlaceholderDiagnostic(diagnostic.code)) {
+      continue;
+    }
+    if (isTextureConnectionDiagnostic(diagnostic.code)) {
       continue;
     }
     const action = importActionForDiagnostic(diagnostic.code) ?? "review";
@@ -13767,10 +13801,7 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
   );
   const textureAssignmentDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
     diagnostic.code === "dominant-green-placeholder-material" ||
-    diagnostic.code === "image-textures-unused-by-materials" ||
-    diagnostic.code === "few-materials-use-textures" ||
-    diagnostic.code === "many-unused-texture-images" ||
-    diagnostic.code === "generic-loose-texture-names"
+    isTextureConnectionDiagnostic(diagnostic.code)
   );
   const genericLooseTextureDiagnostic = (stats.diagnostics ?? []).find(
     (diagnostic) => diagnostic.code === "generic-loose-texture-names"
@@ -13945,10 +13976,7 @@ function AssetHealth({
   const textureSuggestions = stats.materialTextureSuggestions ?? [];
   const textureAssignmentDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
     diagnostic.code === "dominant-green-placeholder-material" ||
-    diagnostic.code === "image-textures-unused-by-materials" ||
-    diagnostic.code === "few-materials-use-textures" ||
-    diagnostic.code === "many-unused-texture-images" ||
-    diagnostic.code === "generic-loose-texture-names"
+    isTextureConnectionDiagnostic(diagnostic.code)
   );
   const genericLooseTextureDiagnostic = (stats.diagnostics ?? []).find(
     (diagnostic) => diagnostic.code === "generic-loose-texture-names"
