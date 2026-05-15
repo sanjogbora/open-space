@@ -167,6 +167,7 @@ export class WalkthroughViewer {
 
   private floorMeshes: THREE.Object3D[] = [];
   private geometryFloorMeshes: THREE.Object3D[] = [];
+  private explicitWalkMeshes: THREE.Object3D[] = [];
   private walkableMeshes: THREE.Object3D[] = [];
   private pickableMeshes: THREE.Object3D[] = [];
   private collisionBlockers: CollisionBlocker[] = [];
@@ -546,10 +547,14 @@ export class WalkthroughViewer {
     this.walkZoneMeshes = zones.walkMeshes;
     this.passZoneMeshes = zones.passMeshes;
     this.generatedWalkZonesOnly = zones.hasWalkZones && !zones.hasAuthoredWalkZones;
-    this.geometryFloorMeshes = fallbackFloors.length > 0 ? fallbackFloors : this.collectFloorMeshes(root);
+    this.explicitWalkMeshes = this.collectExplicitWalkMeshes(root);
+    this.geometryFloorMeshes =
+      fallbackFloors.length > 0
+        ? fallbackFloors
+        : uniqueObjectList([...this.explicitWalkMeshes, ...this.collectFloorMeshes(root)]);
     if (zones.walkMeshes.length > 0) {
       this.floorMeshes = zones.walkMeshes;
-      this.walkableMeshes = [...zones.walkMeshes, ...zones.passMeshes];
+      this.walkableMeshes = uniqueObjectList([...zones.walkMeshes, ...zones.passMeshes, ...this.explicitWalkMeshes]);
     } else {
       this.floorMeshes = this.geometryFloorMeshes;
       this.walkableMeshes = this.collectWalkableMeshes(root);
@@ -1284,7 +1289,6 @@ export class WalkthroughViewer {
         return;
       }
       if (navigationBehavior === "walk") {
-        meshes.push(node);
         return;
       }
       const exteriorName = this.isLikelyExteriorSurfaceName(name);
@@ -1310,6 +1314,19 @@ export class WalkthroughViewer {
       .map((candidate) => candidate.mesh);
   }
 
+  private collectExplicitWalkMeshes(root: THREE.Object3D): THREE.Object3D[] {
+    const meshes: THREE.Object3D[] = [];
+    root.traverse((node) => {
+      if (!(node instanceof THREE.Mesh) || !node.visible) {
+        return;
+      }
+      if (this.objectNavigationBehavior(node) === "walk") {
+        meshes.push(node);
+      }
+    });
+    return meshes;
+  }
+
   private collectPickableMeshes(root: THREE.Object3D): THREE.Object3D[] {
     const floorNames = this.manifest.navigation.floorMeshNames.map((name) => name.toLowerCase());
     const meshes: THREE.Object3D[] = [];
@@ -1318,6 +1335,10 @@ export class WalkthroughViewer {
         return;
       }
       if (!node.visible) {
+        return;
+      }
+      const navigationBehavior = this.objectNavigationBehavior(node);
+      if (navigationBehavior === "ignore" || navigationBehavior === "walk") {
         return;
       }
       const name = node.name.toLowerCase();
@@ -2261,8 +2282,11 @@ export class WalkthroughViewer {
       !insidePassZone
     ) {
       const generatedZoneMissOnFloor = this.generatedWalkZonesOnly && this.canStandOnGeometryFloor(candidate);
+      const explicitWalkMissOnFloor = this.canStandOnExplicitWalkMesh(candidate);
       if (!generatedZoneMissOnFloor) {
-        return { reason: "outside-walk-zone", point: candidate.clone() };
+        if (!explicitWalkMissOnFloor) {
+          return { reason: "outside-walk-zone", point: candidate.clone() };
+        }
       }
     }
 
@@ -3236,6 +3260,27 @@ export class WalkthroughViewer {
     }
     const expectedFloorY = position.y - this.cameraHeight;
     return Math.abs(floorY - expectedFloorY) <= Math.max(0.45, this.cameraHeight * 0.35);
+  }
+
+  private canStandOnExplicitWalkMesh(position: THREE.Vector3): boolean {
+    if (this.explicitWalkMeshes.length === 0) {
+      return false;
+    }
+    const expectedFloorY = position.y - this.cameraHeight;
+    const raycaster = new THREE.Raycaster(
+      new THREE.Vector3(position.x, position.y + 1.2, position.z),
+      new THREE.Vector3(0, -1, 0),
+      0,
+      Math.max(3.2, this.cameraHeight + 2.4)
+    );
+    const hit = raycaster.intersectObjects(this.explicitWalkMeshes, true).find((candidate) => {
+      if (!(candidate.object instanceof THREE.Mesh) || !candidate.face) {
+        return false;
+      }
+      const normal = candidate.face.normal.clone().transformDirection(candidate.object.matrixWorld);
+      return Math.abs(normal.y) >= 0.45 && Math.abs(candidate.point.y - expectedFloorY) <= Math.max(0.45, this.cameraHeight * 0.35);
+    });
+    return Boolean(hit);
   }
 
   private snapCameraToFloor(delta = 1 / 60): void {
@@ -4367,6 +4412,10 @@ function normalizedObjectOverrideName(value: string): string {
     .replace(/[^a-z0-9 ]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function uniqueObjectList<T extends THREE.Object3D>(items: readonly T[]): T[] {
+  return [...new Set(items)];
 }
 
 function isGeneratedViewerNavigationZone(zone: NavigationZone): boolean {

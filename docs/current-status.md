@@ -75,6 +75,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Objects now gives the selected object a visual movement-role chooser for Auto Detection, Walkable Floor, Wall/Blocker, and Ignore For Movement, reducing reliance on raw dropdown labels.
 - Studio Objects now confirms movement-role changes and keeps a Save & Test Navigation action beside the role chooser so object fixes can be verified immediately.
 - Viewer object overrides now match mesh, parent, and loose scene names, so Studio object role fixes keep working when GLB node names, mesh names, and generated object IDs do not line up exactly.
+- Viewer now treats objects explicitly marked Walkable Floor as clickable and standable even when navigation zones exist, and ignored objects no longer catch object-click repair events.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
 - Grid fallback routes now cache sampled floor height per cell, reject over-height step transitions, and slightly prefer level routes to reduce camera bouncing over ridges or multi-level gaps.
