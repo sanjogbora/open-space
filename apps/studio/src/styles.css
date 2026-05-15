@@ -1833,6 +1833,95 @@ button.list-row {
   white-space: nowrap;
 }
 
+.publish-handoff-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.publish-handoff-step {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #dbe6ed;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.publish-handoff-step.ready {
+  border-color: rgba(42, 151, 99, 0.28);
+  background: #f5fbf7;
+}
+
+.publish-handoff-step.blocked {
+  border-color: rgba(190, 62, 62, 0.3);
+  background: #fff5f5;
+}
+
+.publish-handoff-step.active,
+.publish-handoff-step.todo {
+  border-color: rgba(33, 132, 220, 0.24);
+  background: #f6fbff;
+}
+
+.publish-handoff-index {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cfdde5;
+  border-radius: 50%;
+  color: #1f7fc8;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.publish-handoff-step.ready .publish-handoff-index {
+  color: #177548;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.publish-handoff-step.blocked .publish-handoff-index {
+  color: #9a2d2d;
+  border-color: #efc3c3;
+  background: #fffafa;
+}
+
+.publish-handoff-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.publish-handoff-main strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #24313a;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.publish-handoff-main p {
+  min-width: 0;
+  margin: 0;
+  color: #52636f;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.publish-handoff-action {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+  white-space: nowrap;
+}
+
 .publish-next-issue {
   display: grid;
   gap: 3px;
@@ -5610,6 +5699,7 @@ code {
   .repair-center-card,
   .repair-center-issue-map,
   .client-share-board,
+  .publish-handoff-board,
   .source-qa-grid,
   .diagnostic-action-map,
   .asset-health-roadmap,
@@ -5664,6 +5754,7 @@ code {
   .repair-object-card,
   .repair-followup,
   .client-share-step,
+  .publish-handoff-step,
   .source-qa-heading,
   .toggle-grid,
   .bake-setup-board,

@@ -719,6 +719,14 @@ interface ClientDeliveryStep {
   actionLabel: string;
 }
 
+interface PublishHandoffStep {
+  id: "gate" | "draft" | "version" | "live" | "package";
+  label: string;
+  detail: string;
+  status: ClientDeliveryStep["status"];
+  actionLabel: string;
+}
+
 interface VideoSurfaceCandidate {
   id: string;
   meshName: string;
@@ -4339,6 +4347,73 @@ function App() {
   const activePublishedEntry = publishHistory?.activeVersion
     ? publishHistory.versions.find((entry) => entry.version === publishHistory.activeVersion)
     : undefined;
+  const publishHandoffEntry = activePublishedEntry ?? latestPublishedEntry;
+  const publishHandoffSteps = useMemo<PublishHandoffStep[]>(() => {
+    const hasPublishedVersion = Boolean(latestPublishedEntry);
+    const hasLiveVersion = Boolean(activePublishedEntry);
+    const deploymentReady = Boolean(publishHandoffEntry?.deploymentPath);
+    return [
+      {
+        id: "gate",
+        label: "Quality gate",
+        detail: hasBlockingPublishErrors
+          ? firstPublishCheckIssue
+            ? `${firstPublishCheckIssue.label}: ${firstPublishCheckIssue.detail}`
+            : "Clear publish blockers before making a client link."
+          : "No blocking rows are stopping publish.",
+        status: hasBlockingPublishErrors ? "blocked" : "ready",
+        actionLabel: hasBlockingPublishErrors ? "Fix First" : "Copy Report"
+      },
+      {
+        id: "draft",
+        label: "Draft test",
+        detail: hasBlockingPublishErrors
+          ? "Use the draft viewer to inspect fixes before publishing."
+          : "Open the current viewer and test movement, rooms, lights, and screens.",
+        status: hasBlockingPublishErrors ? "active" : "ready",
+        actionLabel: "Open Draft"
+      },
+      {
+        id: "version",
+        label: "Version",
+        detail: hasPublishedVersion
+          ? `Latest static bundle is ${latestPublishedEntry?.version ?? "ready"}.`
+          : "Create the versioned static bundle clients can open.",
+        status: publishState === "publishing" ? "active" : hasPublishedVersion ? "ready" : hasBlockingPublishErrors ? "blocked" : "todo",
+        actionLabel: publishState === "publishing" ? "Publishing" : hasPublishedVersion ? "Publish Again" : "Publish"
+      },
+      {
+        id: "live",
+        label: "Live link",
+        detail: hasLiveVersion
+          ? `Clients open ${activePublishedEntry?.version ?? publishHistory?.activeVersion}.`
+          : hasPublishedVersion
+            ? "Set the latest version as the live client link."
+            : "Publish a version before choosing a live link.",
+        status: hasLiveVersion ? "ready" : hasPublishedVersion ? "todo" : "blocked",
+        actionLabel: hasLiveVersion ? "Copy Link" : hasPublishedVersion ? "Set Live" : "Waiting"
+      },
+      {
+        id: "package",
+        label: "Deploy package",
+        detail: deploymentReady
+          ? "Deployment path and checklist are ready to hand off."
+          : hasPublishedVersion
+            ? "Open the version details after publish to confirm deploy metadata."
+            : "Publish once to generate deploy metadata.",
+        status: deploymentReady ? "ready" : hasPublishedVersion ? "todo" : "blocked",
+        actionLabel: deploymentReady ? "Copy Checklist" : hasPublishedVersion ? "Review Version" : "Waiting"
+      }
+    ];
+  }, [
+    activePublishedEntry,
+    firstPublishCheckIssue,
+    hasBlockingPublishErrors,
+    latestPublishedEntry,
+    publishHandoffEntry?.deploymentPath,
+    publishHistory?.activeVersion,
+    publishState
+  ]);
   const clientDeliverySteps = useMemo<ClientDeliveryStep[]>(() => {
     const hasPublishedVersion = Boolean(latestPublishedEntry);
     const hasLiveVersion = Boolean(activePublishedEntry);
@@ -8758,6 +8833,113 @@ function App() {
                           {step.actionLabel}
                         </a>
                       ))}
+                  </div>
+                ))}
+              </div>
+
+              <div className="publish-handoff-board" aria-label="Visual publish handoff">
+                {publishHandoffSteps.map((step, index) => (
+                  <div key={step.id} className={`publish-handoff-step ${step.status}`}>
+                    <span className="publish-handoff-index">{index + 1}</span>
+                    <div className="publish-handoff-main">
+                      <strong>{step.label}</strong>
+                      <p>{step.detail}</p>
+                    </div>
+                    {step.id === "gate" && (
+                      <button
+                        type="button"
+                        className="button secondary compact-button publish-handoff-action"
+                        onClick={() =>
+                          hasBlockingPublishErrors
+                            ? setSelectedTab("repair")
+                            : void copyText(
+                                publishReadinessReportText({
+                                  projectId: activeProjectId,
+                                  title: manifest.branding.clientName ?? manifest.branding.title,
+                                  manifest,
+                                  stats: bundleStats,
+                                  publishChecks,
+                                  draftViewerUrl: viewerUrl(activeProjectId),
+                                  ...(publishHistory?.activeVersion
+                                    ? { liveViewerUrl: livePublishedViewerUrl(activeProjectId, publishHistory) }
+                                    : {})
+                                })
+                              )
+                        }
+                      >
+                        {hasBlockingPublishErrors ? <Wrench size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
+                        {step.actionLabel}
+                      </button>
+                    )}
+                    {step.id === "draft" && (
+                      <a
+                        className="button secondary compact-button publish-handoff-action"
+                        href={viewerUrl(activeProjectId)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <ExternalLink size={15} aria-hidden="true" />
+                        {step.actionLabel}
+                      </a>
+                    )}
+                    {step.id === "version" && (
+                      <button
+                        type="button"
+                        className="button secondary compact-button publish-handoff-action"
+                        disabled={publishState === "publishing" || hasBlockingPublishErrors}
+                        onClick={() => void publishProject()}
+                      >
+                        <Globe2 size={15} aria-hidden="true" />
+                        {step.actionLabel}
+                      </button>
+                    )}
+                    {step.id === "live" &&
+                      (activePublishedEntry ? (
+                        <button
+                          type="button"
+                          className="button secondary compact-button publish-handoff-action"
+                          onClick={() => void copyText(livePublishedViewerUrl(activeProjectId, publishHistory!))}
+                        >
+                          <Copy size={15} aria-hidden="true" />
+                          {step.actionLabel}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="button secondary compact-button publish-handoff-action"
+                          disabled={!latestPublishedEntry || !apiConnected || activePublishVersion === latestPublishedEntry.version}
+                          onClick={() => latestPublishedEntry && void activatePublishedVersion(latestPublishedEntry)}
+                        >
+                          <Globe2 size={15} aria-hidden="true" />
+                          {activePublishVersion && latestPublishedEntry?.version === activePublishVersion ? "Setting" : step.actionLabel}
+                        </button>
+                      ))}
+                    {step.id === "package" && (
+                      <button
+                        type="button"
+                        className="button secondary compact-button publish-handoff-action"
+                        disabled={!publishHandoffEntry}
+                        onClick={() => {
+                          if (publishHandoffEntry?.deploymentPath) {
+                            void copyText(
+                              publishedDeploymentChecklist(
+                                publishHandoffEntry,
+                                manifest.branding.clientName ?? manifest.branding.title
+                              )
+                            );
+                            return;
+                          }
+                          document.querySelector(".publish-version-list")?.scrollIntoView({ block: "center" });
+                        }}
+                      >
+                        {publishHandoffEntry?.deploymentPath ? (
+                          <Copy size={15} aria-hidden="true" />
+                        ) : (
+                          <FileJson size={15} aria-hidden="true" />
+                        )}
+                        {step.actionLabel}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
