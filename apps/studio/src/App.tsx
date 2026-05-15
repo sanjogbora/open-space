@@ -68,6 +68,7 @@ type OptimizeState = "idle" | "optimizing" | "done" | "error";
 type RepairState = "idle" | "repairing" | "done" | "error";
 type BakeState = "idle" | "baking" | "done" | "error";
 type ObjectListFilter = "all" | "ceiling" | "top-hidden" | "roles" | "hidden";
+type MaterialListFilter = "all" | "suggested" | "untextured" | "plain-green" | "transparent" | "lightmaps";
 type BakePreset = "draft" | "medium" | "high" | "super";
 type LightmapBakeSettings = {
   preset: BakePreset;
@@ -233,6 +234,41 @@ function looseTextureNameLooksGeneric(source: string): boolean {
 
 function materialAssignedTextureCount(material: MaterialOverride): number {
   return materialTextureFields.filter((field) => Boolean(material[field])).length;
+}
+
+function materialSearchText(material: MaterialOverride): string {
+  return normalizeTextureMatchName(
+    [
+      material.name,
+      material.baseColor,
+      material.mapUrl,
+      material.normalMapUrl,
+      material.emissiveMapUrl,
+      material.lightMapUrl
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+}
+
+function isLikelyPlainGreenMaterial(material: MaterialOverride): boolean {
+  const assignedTextureCount = materialAssignedTextureCount(material);
+  const normalizedName = normalizeTextureMatchName(material.name);
+  const color = material.baseColor?.trim().toLowerCase() ?? "";
+  const hex = /^#([0-9a-f]{6})$/.exec(color);
+  const rgb = hex
+    ? {
+        r: Number.parseInt(hex[1]!.slice(0, 2), 16),
+        g: Number.parseInt(hex[1]!.slice(2, 4), 16),
+        b: Number.parseInt(hex[1]!.slice(4, 6), 16)
+      }
+    : null;
+  const looksGreen =
+    normalizedName.includes("green") ||
+    normalizedName.includes("grass") ||
+    normalizedName.includes("terrain") ||
+    Boolean(rgb && rgb.g > 120 && rgb.g > rgb.r * 1.25 && rgb.g > rgb.b * 1.25);
+  return assignedTextureCount === 0 && looksGreen;
 }
 
 function textureSuggestionConfidence(score: number): TextureSuggestionConfidence {
@@ -3372,6 +3408,8 @@ function App() {
   const [controlsDoc, setControlsDoc] = useState<SceneControlsDocument | null>(null);
   const [toolStatus, setToolStatus] = useState<ToolStatusDocument | null>(null);
   const [selectedMaterialId, setSelectedMaterialId] = useState("");
+  const [materialSearchQuery, setMaterialSearchQuery] = useState("");
+  const [materialListFilter, setMaterialListFilter] = useState<MaterialListFilter>("all");
   const [selectedObjectId, setSelectedObjectId] = useState("");
   const [objectSearchQuery, setObjectSearchQuery] = useState("");
   const [objectListFilter, setObjectListFilter] = useState<ObjectListFilter>("all");
@@ -4385,6 +4423,47 @@ function App() {
     }
     return status;
   }, [bundleStats?.materialTextureSuggestions, materialsDoc]);
+  const materialReviewRows = useMemo(() => {
+    return (materialsDoc?.materials ?? []).map((material) => {
+      const suggestionStatus = materialTextureSuggestionStatusByName.get(material.name);
+      const assignedTextureCount = materialAssignedTextureCount(material);
+      return {
+        material,
+        assignedTextureCount,
+        suggestionStatus,
+        searchText: materialSearchText(material),
+        hasSuggestions: Boolean(suggestionStatus?.pending || suggestionStatus?.review),
+        isUntextured: assignedTextureCount === 0,
+        isPlainGreen: isLikelyPlainGreenMaterial(material),
+        isTransparent: typeof material.opacity === "number" && material.opacity < 0.98,
+        hasLightmap: Boolean(material.lightMapUrl)
+      };
+    });
+  }, [materialTextureSuggestionStatusByName, materialsDoc]);
+  const materialFilterCounts = useMemo(
+    () => ({
+      all: materialReviewRows.length,
+      suggested: materialReviewRows.filter((row) => row.hasSuggestions).length,
+      untextured: materialReviewRows.filter((row) => row.isUntextured).length,
+      plainGreen: materialReviewRows.filter((row) => row.isPlainGreen).length,
+      transparent: materialReviewRows.filter((row) => row.isTransparent).length,
+      lightmaps: materialReviewRows.filter((row) => row.hasLightmap).length
+    }),
+    [materialReviewRows]
+  );
+  const filteredMaterialRows = useMemo(() => {
+    const query = normalizeTextureMatchName(materialSearchQuery);
+    return materialReviewRows.filter((row) => {
+      const matchesFilter =
+        materialListFilter === "all" ||
+        (materialListFilter === "suggested" && row.hasSuggestions) ||
+        (materialListFilter === "untextured" && row.isUntextured) ||
+        (materialListFilter === "plain-green" && row.isPlainGreen) ||
+        (materialListFilter === "transparent" && row.isTransparent) ||
+        (materialListFilter === "lightmaps" && row.hasLightmap);
+      return matchesFilter && (!query || row.searchText.includes(query));
+    });
+  }, [materialListFilter, materialReviewRows, materialSearchQuery]);
   const appliedMaterialTextureSuggestionCount = Math.max(
     0,
     (bundleStats?.materialTextureSuggestions?.length ?? 0) -
@@ -8959,11 +9038,40 @@ function App() {
             <div className="list-panel">
               <div className="list-heading">
                 <h2>Materials</h2>
-                <small>{materialsDoc?.materials.length ?? 0}</small>
+                <small>{filteredMaterialRows.length} / {materialsDoc?.materials.length ?? 0}</small>
               </div>
-              {materialsDoc?.materials.map((material) => {
-                const suggestionStatus = materialTextureSuggestionStatusByName.get(material.name);
-                const assignedTextureCount = materialAssignedTextureCount(material);
+              <div className="material-review-tools">
+                <label className="material-search-field">
+                  <span>Find material</span>
+                  <input
+                    type="search"
+                    value={materialSearchQuery}
+                    placeholder="Search wall, floor, green, lightmap..."
+                    onChange={(event) => setMaterialSearchQuery(event.target.value)}
+                  />
+                </label>
+                <div className="material-filter-row" aria-label="Material filters">
+                  {[
+                    ["all", "All", materialFilterCounts.all],
+                    ["suggested", "Suggested", materialFilterCounts.suggested],
+                    ["untextured", "No Textures", materialFilterCounts.untextured],
+                    ["plain-green", "Plain/Green", materialFilterCounts.plainGreen],
+                    ["transparent", "Transparent", materialFilterCounts.transparent],
+                    ["lightmaps", "Lightmaps", materialFilterCounts.lightmaps]
+                  ].map(([id, label, count]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={materialListFilter === id ? "material-filter-chip active" : "material-filter-chip"}
+                      onClick={() => setMaterialListFilter(id as MaterialListFilter)}
+                    >
+                      <span>{label}</span>
+                      <strong>{count}</strong>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {filteredMaterialRows.map(({ material, suggestionStatus, assignedTextureCount, isPlainGreen, isTransparent, hasLightmap }) => {
                 const materialStatus = suggestionStatus?.pending
                   ? `${suggestionStatus.pending} suggested texture${suggestionStatus.pending === 1 ? "" : "s"} ready`
                   : suggestionStatus?.review
@@ -8980,9 +9088,19 @@ function App() {
                   >
                     <span>{material.name}</span>
                     <small>{materialStatus}</small>
+                    <span className="material-chip-row">
+                      {suggestionStatus?.pending ? <span className="material-status-chip ready">Suggested</span> : null}
+                      {suggestionStatus?.review ? <span className="material-status-chip review">Review Match</span> : null}
+                      {isPlainGreen ? <span className="material-status-chip warning">Plain/Green</span> : null}
+                      {isTransparent ? <span className="material-status-chip transparent">Transparent</span> : null}
+                      {hasLightmap ? <span className="material-status-chip lightmap">Lightmap</span> : null}
+                    </span>
                   </button>
                 );
               })}
+              {materialsDoc && filteredMaterialRows.length === 0 && (
+                <p className="empty-list">No materials match this filter. Clear the search or switch back to All.</p>
+              )}
               {!materialsDoc && <p className="empty-list">No materials generated.</p>}
             </div>
 

@@ -953,7 +953,20 @@ textarea:focus {
   background: #f7fafc;
 }
 
+.material-review-tools {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #edf1f3;
+  background: #f7fafc;
+}
+
 .object-search-field {
+  display: grid;
+  gap: 5px;
+}
+
+.material-search-field {
   display: grid;
   gap: 5px;
 }
@@ -964,12 +977,29 @@ textarea:focus {
   font-weight: 800;
 }
 
+.material-search-field span {
+  color: #4c5b64;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .object-search-field input {
   width: 100%;
   min-width: 0;
 }
 
+.material-search-field input {
+  width: 100%;
+  min-width: 0;
+}
+
 .object-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.material-filter-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -987,13 +1017,36 @@ textarea:focus {
   background: #ffffff;
 }
 
+.material-filter-chip {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: 1px solid #d6dde2;
+  border-radius: 999px;
+  color: #294150;
+  background: #ffffff;
+}
+
 .object-filter-chip.active {
   border-color: #087fe7;
   color: #07538f;
   background: #e9f4ff;
 }
 
+.material-filter-chip.active {
+  border-color: #087fe7;
+  color: #07538f;
+  background: #e9f4ff;
+}
+
 .object-filter-chip span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.material-filter-chip span {
   font-size: 12px;
   font-weight: 800;
 }
@@ -1008,6 +1061,58 @@ textarea:focus {
   color: #4c5b64;
   font-size: 11px;
   background: #edf1f3;
+}
+
+.material-filter-chip strong {
+  min-width: 20px;
+  min-height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: #4c5b64;
+  font-size: 11px;
+  background: #edf1f3;
+}
+
+.material-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.material-status-chip {
+  width: fit-content;
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  color: #294150;
+  background: #e7eef3;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.material-status-chip.ready {
+  color: #075438;
+  background: #d9f5e8;
+}
+
+.material-status-chip.review,
+.material-status-chip.lightmap {
+  color: #07538f;
+  background: #dceeff;
+}
+
+.material-status-chip.warning {
+  color: #7a2816;
+  background: #ffe3d9;
+}
+
+.material-status-chip.transparent {
+  color: #594714;
+  background: #fff1c7;
 }
 
 .object-bulk-actions {

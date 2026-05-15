@@ -39,6 +39,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer QA now separates texture/material problems from render-profile tuning, with tone mapping and exposure included in the checklist and copied QA report.
 - Import QA now flags loose texture folders with generic names like `gltf_embedded_0.png`, explaining that those files cannot be safely auto-mapped without preserved source paths or manual material review.
 - Asset Health now repeats that generic-loose-texture warning in the repair plan so users know when to manually review materials or request a cleaner export instead of expecting one-click texture repair.
+- Studio Materials now includes search and visual issue filters for suggested texture matches, untextured materials, plain/green placeholders, transparent materials, and lightmapped materials.
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
