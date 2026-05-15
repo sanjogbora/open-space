@@ -3713,6 +3713,23 @@ export class WalkthroughViewer {
     };
 
     addCandidate(target.clone());
+    const snapDistance = Math.max(2.8, this.collisionBodyRadius() * 8);
+    [...this.walkZoneMeshes, ...this.passZoneMeshes]
+      .map((mesh) => ({
+        mesh,
+        distance: this.navigationMeshDistanceToPoint(mesh, target)
+      }))
+      .filter((entry) => entry.distance <= snapDistance)
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 8)
+      .forEach(({ mesh }) => {
+        const snapped = this.closestPointOnNavigationMesh(mesh, target);
+        if (snapped) {
+          addCandidate(snapped);
+        }
+        addCandidate(this.navigationMeshCenter(mesh, target.y));
+      });
+
     const rings = [0.22, 0.4, 0.65, 0.95, 1.35, 1.8, 2.35];
     const slices = 16;
     for (const radius of rings) {
@@ -3729,6 +3746,32 @@ export class WalkthroughViewer {
     }
 
     return candidates.sort((a, b) => a.distanceToSquared(target) - b.distanceToSquared(target));
+  }
+
+  private closestPointOnNavigationMesh(mesh: THREE.Mesh, target: THREE.Vector3): THREE.Vector3 | undefined {
+    const halfSize = mesh.userData["navigationHalfSize"];
+    if (!(halfSize instanceof THREE.Vector3)) {
+      return undefined;
+    }
+    const local = mesh.worldToLocal(target.clone());
+    const polygon = mesh.userData["navigationPolygon"];
+    let closestLocal: THREE.Vector3;
+    if (Array.isArray(polygon) && polygon.every((point) => point instanceof THREE.Vector2)) {
+      const point = new THREE.Vector2(local.x, local.z);
+      const closest = this.pointInNavigationPolygon(point, polygon, 0)
+        ? point
+        : closestPointOnPolygon2D(point, polygon);
+      closestLocal = new THREE.Vector3(closest.x, local.y, closest.y);
+    } else {
+      closestLocal = new THREE.Vector3(
+        THREE.MathUtils.clamp(local.x, -halfSize.x, halfSize.x),
+        local.y,
+        THREE.MathUtils.clamp(local.z, -halfSize.z, halfSize.z)
+      );
+    }
+    const world = mesh.localToWorld(closestLocal);
+    world.y = target.y;
+    return world;
   }
 
   private navigationFailureMessage(
@@ -4175,6 +4218,40 @@ function pointToSegmentDistance(point: THREE.Vector2, start: THREE.Vector2, end:
     1
   );
   return Math.hypot(point.x - (start.x + segmentX * t), point.y - (start.y + segmentY * t));
+}
+
+function closestPointOnSegment2D(point: THREE.Vector2, start: THREE.Vector2, end: THREE.Vector2): THREE.Vector2 {
+  const segmentX = end.x - start.x;
+  const segmentY = end.y - start.y;
+  const segmentLengthSq = segmentX * segmentX + segmentY * segmentY;
+  if (segmentLengthSq < 0.0001) {
+    return start.clone();
+  }
+  const t = THREE.MathUtils.clamp(
+    ((point.x - start.x) * segmentX + (point.y - start.y) * segmentY) / segmentLengthSq,
+    0,
+    1
+  );
+  return new THREE.Vector2(start.x + segmentX * t, start.y + segmentY * t);
+}
+
+function closestPointOnPolygon2D(point: THREE.Vector2, polygon: readonly THREE.Vector2[]): THREE.Vector2 {
+  let closest = polygon[0]?.clone() ?? point.clone();
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current, current += 1) {
+    const a = polygon[previous];
+    const b = polygon[current];
+    if (!a || !b) {
+      continue;
+    }
+    const candidate = closestPointOnSegment2D(point, a, b);
+    const distance = candidate.distanceToSquared(point);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      closest = candidate;
+    }
+  }
+  return closest;
 }
 
 function isGeneratedViewerNavigationZone(zone: NavigationZone): boolean {
