@@ -3465,6 +3465,48 @@ export class WalkthroughViewer {
     return fallbackFloorHit;
   }
 
+  private findProjectedWalkableHitFromObjectClick(hit: THREE.Intersection): THREE.Intersection | undefined {
+    const rayDirection = this.raycaster.ray.direction.clone().normalize();
+    if (Math.abs(rayDirection.y) > 0.78) {
+      return undefined;
+    }
+    const baseDistance = Number.isFinite(hit.distance)
+      ? hit.distance
+      : this.camera.position.distanceTo(hit.point);
+    const right = new THREE.Vector3().crossVectors(rayDirection, new THREE.Vector3(0, 1, 0)).normalize();
+    if (right.lengthSq() < 0.001) {
+      right.set(1, 0, 0);
+    }
+    const downRay = new THREE.Raycaster(
+      undefined,
+      new THREE.Vector3(0, -1, 0),
+      0,
+      Math.max(5, this.cameraHeight + 3.4)
+    );
+    const depthOffsets = [0, 0.35, 0.75, 1.25, 1.9, 2.7, 3.8];
+    const sideOffsets = [0, -0.28, 0.28, -0.55, 0.55];
+    let fallbackFloorHit: THREE.Intersection | undefined;
+    for (const depthOffset of depthOffsets) {
+      const rayPoint = this.camera.position.clone().addScaledVector(rayDirection, baseDistance + depthOffset);
+      for (const sideOffset of sideOffsets) {
+        const origin = rayPoint.clone().addScaledVector(right, sideOffset);
+        origin.y = Math.max(this.camera.position.y + 0.35, origin.y + this.cameraHeight + 1.25);
+        downRay.set(origin, new THREE.Vector3(0, -1, 0));
+        const floorHit = downRay
+          .intersectObjects(this.walkableMeshes, true)
+          .find((candidate) => this.isWalkableHit(candidate));
+        if (!floorHit) {
+          continue;
+        }
+        fallbackFloorHit ??= floorHit;
+        if (this.floorHitHasReachableTarget(floorHit)) {
+          return floorHit;
+        }
+      }
+    }
+    return fallbackFloorHit;
+  }
+
   private tryMoveToFloorHit(floorHit: THREE.Intersection, event: PointerEvent): boolean {
     const nextTarget = floorHit.point.clone();
     nextTarget.y = floorHit.point.y + this.cameraHeight;
@@ -3998,6 +4040,10 @@ export class WalkthroughViewer {
       const objectName = objectHit.object.name || objectHit.object.parent?.name || "Object";
       const portalFloorHit = this.findWalkableHitBeyondPortalObject(objectHit, objectName);
       if (portalFloorHit && this.tryMoveToFloorHit(portalFloorHit, event)) {
+        return;
+      }
+      const projectedFloorHit = this.findProjectedWalkableHitFromObjectClick(objectHit);
+      if (projectedFloorHit && this.tryMoveToFloorHit(projectedFloorHit, event)) {
         return;
       }
       const nearbyFloorHit = this.findWalkableHitNearObject(objectHit);
