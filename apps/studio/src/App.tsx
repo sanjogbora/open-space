@@ -358,6 +358,14 @@ interface BundleStats {
   meshCount: number;
   primitiveCount?: number;
   materialCount: number;
+  sceneBoundsSize?: readonly [number, number, number];
+  sceneLargestDimension?: number;
+  sceneFootprintCenter?: readonly [number, number];
+  sceneFootprintCenterDistance?: number;
+  focusedBoundsSize?: readonly [number, number, number];
+  focusedLargestDimension?: number;
+  focusedFootprintCenter?: readonly [number, number];
+  focusedFootprintCenterDistance?: number;
   texturedMaterialCount?: number;
   textureCount?: number;
   imageCount?: number;
@@ -2982,6 +2990,15 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     `- Meshes: ${stats.meshCount}`,
     `- Materials: ${stats.materialCount}`,
     `- Triangles: ${stats.triangleCount}`,
+    typeof stats.sceneLargestDimension === "number"
+      ? `- Scene span: ${stats.sceneLargestDimension.toFixed(1)} units`
+      : "",
+    stats.sceneFootprintCenter && typeof stats.sceneFootprintCenterDistance === "number"
+      ? `- Scene footprint center: ${stats.sceneFootprintCenter.map((value) => value.toFixed(1)).join(", ")} (${stats.sceneFootprintCenterDistance.toFixed(1)} units from origin)`
+      : "",
+    stats.focusedFootprintCenter && typeof stats.focusedFootprintCenterDistance === "number"
+      ? `- Focused footprint center: ${stats.focusedFootprintCenter.map((value) => value.toFixed(1)).join(", ")} (${stats.focusedFootprintCenterDistance.toFixed(1)} units from origin)`
+      : "",
     `- Embedded images: ${stats.embeddedImageCount ?? 0}`,
     `- External resources: ${externalResources.length}`,
     `- Missing external resources: ${missingResources.length}`,
@@ -13074,6 +13091,9 @@ function viewerQaReportText(
     `- Draw primitives: ${stats?.primitiveCount ?? stats?.meshCount ?? 0}`,
     `- Meshes: ${stats?.meshCount ?? 0}`,
     `- Materials: ${stats?.materialCount ?? 0}`,
+    `- Scene span: ${typeof stats?.sceneLargestDimension === "number" ? `${stats.sceneLargestDimension.toFixed(1)} units` : "unknown"}`,
+    `- Scene center from origin: ${typeof stats?.sceneFootprintCenterDistance === "number" ? `${stats.sceneFootprintCenterDistance.toFixed(1)} units` : "unknown"}`,
+    `- Focused center from origin: ${typeof stats?.focusedFootprintCenterDistance === "number" ? `${stats.focusedFootprintCenterDistance.toFixed(1)} units` : "unknown"}`,
     `- Textured materials: ${stats?.texturedMaterialCount ?? 0}/${stats?.materialCount ?? 0}`,
     `- Estimated texture RAM: ${formatBytes(stats?.estimatedTextureMemoryBytes ?? 0)}`,
     `- Lightmaps: ${stats?.lightmapAssetCount ?? 0}/${stats?.lightmapMaterialCount ?? 0}`,

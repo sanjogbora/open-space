@@ -4178,6 +4178,15 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     });
   }
 
+  const sceneBounds = graphBounds(graphs[0]);
+  const focusedModelBounds = graphFocusBounds(graphs[0]);
+  const sceneBoundsSize = boundsSize(sceneBounds);
+  const focusedBoundsSize = boundsSize(focusedModelBounds);
+  const sceneFootprintCenter = boundsFootprintCenter(sceneBounds);
+  const focusedFootprintCenter = boundsFootprintCenter(focusedModelBounds);
+  const sceneFootprintCenterDistance = sceneFootprintCenter ? Math.hypot(sceneFootprintCenter[0], sceneFootprintCenter[1]) : undefined;
+  const focusedFootprintCenterDistance = focusedFootprintCenter ? Math.hypot(focusedFootprintCenter[0], focusedFootprintCenter[1]) : undefined;
+
   const report = {
     generatedAt: new Date().toISOString(),
     manifestPath,
@@ -4220,6 +4229,24 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     relocatedTextureCandidateCount: relocatedTextureCandidates.length,
     ambiguousRelocatedTextureCandidateCount: relocatedTextureCandidates.filter((candidate) => candidate.ambiguous).length,
     relocatedTextureCandidates: relocatedTextureCandidates.slice(0, 20),
+    ...(sceneBounds
+      ? {
+          sceneBounds,
+          sceneBoundsSize,
+          sceneLargestDimension: sceneBoundsSize ? Math.max(...sceneBoundsSize.map(Math.abs)) : 0,
+          sceneFootprintCenter,
+          sceneFootprintCenterDistance
+        }
+      : {}),
+    ...(focusedModelBounds
+      ? {
+          focusedModelBounds,
+          focusedBoundsSize,
+          focusedLargestDimension: focusedBoundsSize ? Math.max(...focusedBoundsSize.map(Math.abs)) : 0,
+          focusedFootprintCenter,
+          focusedFootprintCenterDistance
+        }
+      : {}),
     compression,
     warnings,
     assets,
