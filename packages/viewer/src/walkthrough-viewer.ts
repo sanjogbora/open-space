@@ -2166,7 +2166,7 @@ export class WalkthroughViewer {
   }
 
   private shouldHoldClickMoveFloorHeight(floorY: number, referenceFloorY: number): boolean {
-    if (!this.moveTarget || this.movePath.length > 0 || this.keys.size > 0 || Math.abs(this.wheelVelocity) > 0.01) {
+    if (!this.moveTarget || this.keys.size > 0 || Math.abs(this.wheelVelocity) > 0.01) {
       return false;
     }
     const targetFloorY = this.moveTarget.y - this.cameraHeight;
