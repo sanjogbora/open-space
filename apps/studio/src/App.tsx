@@ -3889,6 +3889,10 @@ function App() {
     () => manifest?.views.filter((view) => view.kind === "walk").length ?? 0,
     [manifest]
   );
+  const topViewCount = useMemo(
+    () => manifest?.views.filter((view) => view.kind === "top").length ?? 0,
+    [manifest]
+  );
   const linkedRoomViewCount = useMemo(() => {
     const linkedViewIds = new Set(rooms.map((room) => room.viewId).filter(Boolean));
     return manifest?.views.filter((view) => view.kind === "walk" && linkedViewIds.has(view.id)).length ?? 0;
@@ -3982,6 +3986,62 @@ function App() {
     [controlsDoc?.movement.collisionRadius, manifest]
   );
   const navigationCoverageSummary = useMemo(() => (manifest ? navigationCoverage(manifest) : null), [manifest]);
+  const viewSetupSteps = useMemo(() => {
+    const viewCount = manifest?.views.length ?? 0;
+    const coveredWalkViews = navigationCoverageSummary?.coveredWalkViews ?? 0;
+    return [
+      {
+        id: "saved",
+        label: "Saved views",
+        detail: viewCount > 0 ? `${viewCount} view${viewCount === 1 ? "" : "s"} configured` : "No camera views yet",
+        status: viewCount > 0 ? "ready" : "warning",
+        action: viewCount > 0 ? "Views OK" : "Add View"
+      },
+      {
+        id: "walk",
+        label: "Walk views",
+        detail: walkViewCount > 0 ? `${walkViewCount} walk start${walkViewCount === 1 ? "" : "s"}` : "No walkthrough starts",
+        status: walkViewCount > 0 ? "ready" : "warning",
+        action: walkViewCount > 0 ? "Walk OK" : "Add Walk"
+      },
+      {
+        id: "top",
+        label: "Top view",
+        detail: topViewCount > 0 ? `${topViewCount} top/floorplan view${topViewCount === 1 ? "" : "s"}` : "No top view yet",
+        status: topViewCount > 0 ? "ready" : "warning",
+        action: topViewCount > 0 ? "Top OK" : "Create Top"
+      },
+      {
+        id: "rooms",
+        label: "Room links",
+        detail:
+          walkViewCount > 0
+            ? `${linkedRoomViewCount}/${walkViewCount} linked to rooms`
+            : "Add walk views before room links",
+        status: walkViewCount > 0 && linkedRoomViewCount >= walkViewCount ? "ready" : "warning",
+        action: walkViewCount > 0 ? "Sync Rooms" : "Add Walk"
+      },
+      {
+        id: "zones",
+        label: "Walk coverage",
+        detail:
+          walkViewCount > 0
+            ? `${coveredWalkViews}/${walkViewCount} inside walk areas`
+            : roomWalkZoneCount > 0
+              ? `${roomWalkZoneCount} walk area${roomWalkZoneCount === 1 ? "" : "s"} available`
+              : "No walk coverage yet",
+        status: walkViewCount > 0 && coveredWalkViews >= walkViewCount ? "ready" : "warning",
+        action: walkViewCount > 0 ? "Create Zones" : "Open Controls"
+      }
+    ];
+  }, [
+    linkedRoomViewCount,
+    manifest?.views.length,
+    navigationCoverageSummary?.coveredWalkViews,
+    roomWalkZoneCount,
+    topViewCount,
+    walkViewCount
+  ]);
   const viewerRepairCanBridgeIslands =
     navigationRepairDraft?.reason === "route-not-found" &&
     (navigationCoverageSummary?.routeComponents ?? 0) > 1;
@@ -9005,6 +9065,53 @@ function App() {
                   secondaryActionLabel="Repair Center"
                   onSecondaryAction={() => setSelectedTab("repair")}
                 />
+
+                <div className="view-setup-board" aria-label="View setup health">
+                  {viewSetupSteps.map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      className={`view-setup-card ${step.status}`}
+                      disabled={step.status === "ready"}
+                      onClick={() => {
+                        if (step.id === "saved" || step.id === "walk") {
+                          addView();
+                          return;
+                        }
+                        if (step.id === "top") {
+                          createOrUpdateTopView();
+                          return;
+                        }
+                        if (step.id === "rooms") {
+                          if (walkViewCount > 0) {
+                            syncRoomsFromViews();
+                          } else {
+                            addView();
+                          }
+                          return;
+                        }
+                        if (step.id === "zones") {
+                          if (walkViewCount > 0) {
+                            createWalkZonesFromViews();
+                          } else {
+                            setSelectedTab("controls");
+                          }
+                        }
+                      }}
+                    >
+                      <span>
+                        {step.status === "ready" ? (
+                          <Check size={15} aria-hidden="true" />
+                        ) : (
+                          <MapPin size={15} aria-hidden="true" />
+                        )}
+                      </span>
+                      <strong>{step.label}</strong>
+                      <small>{step.detail}</small>
+                      <em>{step.action}</em>
+                    </button>
+                  ))}
+                </div>
 
                 <div className="field-grid">
                   <label>

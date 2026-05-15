@@ -4654,6 +4654,79 @@ button.list-row {
   box-shadow: 0 0 0 3px rgba(8, 127, 231, 0.2);
 }
 
+.view-setup-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.view-setup-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid #f0d099;
+  border-radius: 8px;
+  color: #7a4e08;
+  background: #fff8ed;
+  text-align: left;
+}
+
+.view-setup-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.view-setup-card:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.view-setup-card:not(:disabled):hover,
+.view-setup-card:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.view-setup-card span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.view-setup-card strong,
+.view-setup-card small,
+.view-setup-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-setup-card strong {
+  font-size: 12px;
+}
+
+.view-setup-card small,
+.view-setup-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.view-setup-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .room-map-area {
   position: absolute;
   z-index: 1;
@@ -5366,6 +5439,7 @@ code {
   .movement-preset-grid,
   .movement-comfort-card,
   .navigation-doorway-board,
+  .view-setup-board,
   .environment-setup-board,
   .vector-field {
     grid-template-columns: 1fr;
