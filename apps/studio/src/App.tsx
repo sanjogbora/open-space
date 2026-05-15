@@ -12541,6 +12541,27 @@ function DiagnosticList({
   const errorCount = diagnostics.filter((diagnostic) => diagnostic.severity === "error").length;
   const warningCount = diagnostics.filter((diagnostic) => diagnostic.severity === "warning").length;
   const infoCount = diagnostics.filter((diagnostic) => diagnostic.severity === "info").length;
+  const diagnosticActionGroups = [
+    ...diagnostics
+      .filter((diagnostic) => diagnostic.severity !== "info")
+      .reduce((groups, diagnostic) => {
+        const action = importActionForDiagnostic(diagnostic.code) ?? "review";
+        const current = groups.get(action) ?? {
+          action,
+          errorCount: 0,
+          warningCount: 0,
+          titles: [] as string[]
+        };
+        groups.set(action, {
+          action,
+          errorCount: current.errorCount + (diagnostic.severity === "error" ? 1 : 0),
+          warningCount: current.warningCount + (diagnostic.severity === "warning" ? 1 : 0),
+          titles: [...current.titles, diagnostic.title]
+        });
+        return groups;
+      }, new Map<ImportNextStepAction, { action: ImportNextStepAction; errorCount: number; warningCount: number; titles: string[] }>())
+      .values()
+  ].sort((a, b) => b.errorCount - a.errorCount || b.warningCount - a.warningCount || a.action.localeCompare(b.action));
   return (
     <div className="diagnostic-list">
       <div className={errorCount > 0 ? "diagnostic-summary blocking" : "diagnostic-summary"}>
@@ -12549,9 +12570,34 @@ function DiagnosticList({
           {warningCount} warning{warningCount === 1 ? "" : "s"} / {infoCount} info
         </span>
       </div>
+      {diagnosticActionGroups.length > 0 && (
+        <div className="diagnostic-action-map" aria-label="Diagnostic fix areas">
+          {diagnosticActionGroups.map((group) => {
+            const actionCopy = nextStepCopy(group.action);
+            const total = group.errorCount + group.warningCount;
+            const severity = group.errorCount > 0 ? "error" : "warning";
+            return (
+              <button
+                key={group.action}
+                type="button"
+                className={`diagnostic-action-group ${severity}`}
+                disabled={!onAction}
+                onClick={() => onAction?.(group.action)}
+              >
+                <span>{repairCenterIcon(group.action)}</span>
+                <strong>{actionCopy.title}</strong>
+                <small>
+                  {total} issue{total === 1 ? "" : "s"} / {group.titles.slice(0, 2).join("; ")}
+                </small>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {diagnostics.map((diagnostic) => {
         const action = importActionForDiagnostic(diagnostic.code);
         const actionCopy = action ? nextStepCopy(action) : undefined;
+        const symptom = diagnosticVisualSymptom(diagnostic.code);
         return (
           <div key={diagnostic.code} className={`diagnostic-card ${diagnostic.severity}`}>
             <AlertTriangle size={17} aria-hidden="true" />
@@ -12559,6 +12605,12 @@ function DiagnosticList({
               <div>
                 <strong>{diagnostic.title}</strong>
                 <p>{diagnostic.message}</p>
+                {symptom && <small className="diagnostic-symptom">Likely symptom: {symptom}</small>}
+                {action && (
+                  <small className="diagnostic-next-fix">
+                    Visual fix: {repairCenterVisualFixForAction(action)}
+                  </small>
+                )}
                 {diagnostic.action && <small>{diagnostic.action}</small>}
               </div>
               {action && actionCopy && onAction && (

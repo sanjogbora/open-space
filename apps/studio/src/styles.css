@@ -2593,6 +2593,73 @@ button.list-row {
   white-space: nowrap;
 }
 
+.diagnostic-action-map {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.diagnostic-action-group {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid #f3d0a1;
+  border-radius: 8px;
+  color: #7b4c00;
+  background: #fff7e8;
+  text-align: left;
+}
+
+.diagnostic-action-group.error {
+  color: #8f1e2b;
+  border-color: #f0bdc5;
+  background: #fff1f3;
+}
+
+.diagnostic-action-group:disabled {
+  cursor: default;
+  opacity: 0.76;
+}
+
+.diagnostic-action-group:not(:disabled):hover,
+.diagnostic-action-group:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.diagnostic-action-group span {
+  width: 30px;
+  height: 30px;
+  grid-row: span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.diagnostic-action-group strong,
+.diagnostic-action-group small {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnostic-action-group strong {
+  font-size: 12px;
+}
+
+.diagnostic-action-group small {
+  font-size: 11px;
+  opacity: 0.84;
+}
+
 .diagnostic-card.error {
   color: #8f1e2b;
   border-color: #f0bdc5;
@@ -2631,6 +2698,16 @@ button.list-row {
 
 .diagnostic-card small {
   opacity: 0.82;
+}
+
+.diagnostic-card .diagnostic-symptom,
+.diagnostic-card .diagnostic-next-fix {
+  margin-top: 5px;
+  padding: 6px 8px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.48);
+  opacity: 0.9;
 }
 
 @media (max-width: 780px) {
@@ -4600,6 +4677,7 @@ code {
   .repair-center-issue-map,
   .client-share-board,
   .source-qa-grid,
+  .diagnostic-action-map,
   .repair-diagnosis,
   .repair-playbook,
   .repair-action-grid,
