@@ -55,7 +55,7 @@ interface HotspotBinding {
 
 interface TopViewHiddenObject {
   object: THREE.Object3D;
-  baseVisible: boolean;
+  visibleOutsideTopView: boolean;
 }
 
 interface CollisionBlocker {
@@ -147,6 +147,7 @@ export class WalkthroughViewer {
   private readonly objectOverrides = new Map<string, ObjectOverride>();
   private readonly objectToggleStates = new Map<string, boolean>();
   private readonly topViewHiddenObjects: TopViewHiddenObject[] = [];
+  private topViewShellHidden = false;
   private controls: SceneControlsDocument["movement"] = {
     enabled: true,
     clickToMove: true,
@@ -995,15 +996,44 @@ export class WalkthroughViewer {
     }
     this.topViewHiddenObjects.push({
       object,
-      baseVisible: object.visible
+      visibleOutsideTopView: object.visible
     });
   }
 
   private applyViewObjectVisibility(view: SceneView | undefined): void {
     const hideTopShell = view?.kind === "top";
+    if (hideTopShell) {
+      if (!this.topViewShellHidden) {
+        this.topViewHiddenObjects.forEach((entry) => {
+          entry.visibleOutsideTopView = entry.object.visible;
+        });
+      }
+      this.topViewHiddenObjects.forEach((entry) => {
+        entry.object.visible = false;
+      });
+      this.topViewShellHidden = true;
+      return;
+    }
+
+    if (!this.topViewShellHidden) {
+      return;
+    }
     this.topViewHiddenObjects.forEach((entry) => {
-      entry.object.visible = hideTopShell ? false : entry.baseVisible;
+      entry.object.visible = entry.visibleOutsideTopView;
     });
+    this.topViewShellHidden = false;
+  }
+
+  private setObjectRuntimeVisibility(object: THREE.Object3D, visible: boolean): void {
+    const topViewHiddenEntry = this.topViewHiddenObjects.find((entry) => entry.object === object);
+    if (topViewHiddenEntry) {
+      topViewHiddenEntry.visibleOutsideTopView = visible;
+    }
+    object.visible = this.topViewShellHidden && topViewHiddenEntry ? false : visible;
+  }
+
+  private isObjectRuntimeVisible(object: THREE.Object3D): boolean {
+    return this.topViewHiddenObjects.find((entry) => entry.object === object)?.visibleOutsideTopView ?? object.visible;
   }
 
   private applyMaterialOverride(material: THREE.Material): void {
@@ -4187,17 +4217,17 @@ export class WalkthroughViewer {
     if (targets.length === 0) {
       return;
     }
-    const currentState = this.objectToggleStates.get(interaction.id) ?? targets.some((target) => target.visible);
+    const currentState = this.objectToggleStates.get(interaction.id) ?? targets.some((target) => this.isObjectRuntimeVisible(target));
     const nextState = !currentState;
     this.objectToggleStates.set(interaction.id, nextState);
     targets.forEach((target) => {
-      target.visible = nextState;
+      this.setObjectRuntimeVisibility(target, nextState);
     });
   }
 
   private setObjectToggleVisibility(interaction: ObjectToggleInteraction, visible: boolean): void {
     this.findObjectToggleTargets(interaction).forEach((target) => {
-      target.visible = visible;
+      this.setObjectRuntimeVisibility(target, visible);
     });
   }
 
