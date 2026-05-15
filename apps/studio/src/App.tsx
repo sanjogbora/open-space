@@ -5982,7 +5982,21 @@ function App() {
   ) => {
     setObjectsDoc((current) => {
       if (!current) {
-        return current;
+        if (!fallbackName) {
+          return current;
+        }
+        return {
+          schemaVersion: "0.1",
+          generator: "studio",
+          source: manifest?.objectsUrl ?? "objects.json",
+          objects: [
+            updater({
+              id: objectId,
+              name: fallbackName,
+              visible: true
+            })
+          ]
+        };
       }
       let found = false;
       const objects = current.objects.map((object) => {
