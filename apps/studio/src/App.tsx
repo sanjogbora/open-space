@@ -11836,11 +11836,27 @@ interface ImportNextStep {
   button: string;
 }
 
+const sceneFramingDiagnosticCodes = new Set([
+  "dominant-flat-plane",
+  "initial-view-on-dominant-plane",
+  "initial-view-misses-focused-model",
+  "focused-model-small-in-scene",
+  "scene-far-from-origin",
+  "large-coordinate-units",
+  "missing-scene-bounds"
+]);
+
+function isSceneFramingDiagnostic(code: string): boolean {
+  return sceneFramingDiagnosticCodes.has(code);
+}
+
 function importActionForDiagnostic(code: string): ImportNextStepAction | undefined {
+  if (isSceneFramingDiagnostic(code)) {
+    return "repair";
+  }
+
   if (
     [
-      "dominant-flat-plane",
-      "initial-view-on-dominant-plane",
       "dominant-green-placeholder-material",
     ].includes(code)
   ) {
@@ -11874,11 +11890,6 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   }
   if (
     [
-      "focused-model-small-in-scene",
-      "initial-view-misses-focused-model",
-      "large-coordinate-units",
-      "scene-far-from-origin",
-      "missing-scene-bounds",
       "missing-model-resources",
       "relocatable-texture-resources",
     ].includes(code)
@@ -12283,6 +12294,9 @@ function repairCenterVisualFixForAction(action: ImportNextStepAction): string {
   if (action === "test") {
     return "Open the viewer and test click movement, WASD, wheel movement, rooms, and top view.";
   }
+  if (action === "repair") {
+    return "Use Import health cards to review the visible symptom, then run repair to rebuild bounds, views, rooms, navigation, and missing paths.";
+  }
   return "Use the guided card first; raw diagnostics stay available only when deeper source repair is needed.";
 }
 
@@ -12302,7 +12316,7 @@ function diagnosticVisualSymptom(code: string): string | null {
   if (["invalid-node-transforms", "zero-scale-nodes", "negative-scale-nodes", "suspicious-node-scales"].includes(code)) {
     return "parts may look flattened, mirrored, huge, tiny, or the auto bounds/navigation may be wrong.";
   }
-  if (["large-coordinate-units", "scene-far-from-origin", "missing-scene-bounds"].includes(code)) {
+  if (isSceneFramingDiagnostic(code)) {
     return "first view, top view, room map, click targets, or movement bounds may frame the wrong area.";
   }
   if (["invalid-position-accessor-shapes", "invalid-index-accessor-shapes"].includes(code)) {
@@ -12366,6 +12380,9 @@ function repairCenterDestinationForItem(item: RepairCenterItem): string {
   if (item.id === "upload") {
     return "Opens Import upload.";
   }
+  if (item.id === "scene-framing") {
+    return "Opens Import scene framing health.";
+  }
   if (item.action === "repair") {
     return "Opens Import repair.";
   }
@@ -12402,6 +12419,9 @@ function repairCenterDestinationForItem(item: RepairCenterItem): string {
 function repairCenterVerifyForItem(item: RepairCenterItem): string {
   if (item.id === "upload") {
     return "After upload, the progress strip should replace Waiting states with specific repair areas.";
+  }
+  if (item.id === "scene-framing") {
+    return "After repair, first load, top view, room buttons, and click-to-move should frame the actual building.";
   }
   if (item.action === "repair") {
     return "After repair, return here and confirm blocker counts or source warnings decreased.";
@@ -12506,11 +12526,33 @@ function buildRepairCenterItems({
   }
 
   const diagnosticsByAction = new Map<ImportNextStepAction, NonNullable<BundleStats["diagnostics"]>>();
+  const sceneFramingDiagnostics = (stats.diagnostics ?? []).filter(
+    (diagnostic) =>
+      diagnostic.severity !== "info" &&
+      isSceneFramingDiagnostic(diagnostic.code) &&
+      !(hasModelOffset && diagnostic.code === "scene-far-from-origin")
+  );
+  if (sceneFramingDiagnostics.length > 0) {
+    const first = sceneFramingDiagnostics[0]!;
+    items.push({
+      id: "scene-framing",
+      stage: "Source",
+      title: "Repair scene framing",
+      detail: `${sceneFramingDiagnostics.length} framing issue${sceneFramingDiagnostics.length === 1 ? "" : "s"} found: ${first.title}. First load, top view, room map, or click targets may be looking at terrain, empty space, or the wrong part of the model.`,
+      visualFix: "Open Import, check the Scene Framing card, then run Repair Framing to rebuild focused views, bounds, rooms, and navigation from the actual building footprint.",
+      severity: sceneFramingDiagnostics.some((diagnostic) => diagnostic.severity === "error") ? "error" : "warning",
+      action: "repair",
+      button: "Repair Framing"
+    });
+  }
   for (const diagnostic of stats.diagnostics ?? []) {
     if (diagnostic.severity === "info") {
       continue;
     }
     if (hasModelOffset && diagnostic.code === "scene-far-from-origin") {
+      continue;
+    }
+    if (isSceneFramingDiagnostic(diagnostic.code)) {
       continue;
     }
     const action = importActionForDiagnostic(diagnostic.code) ?? "review";
@@ -13716,14 +13758,7 @@ function AssetHealth({
     (diagnostic) => diagnostic.code === "high-texture-memory-estimate"
   );
   const sceneFramingDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
-    [
-      "dominant-flat-plane",
-      "initial-view-on-dominant-plane",
-      "initial-view-misses-focused-model",
-      "focused-model-small-in-scene",
-      "scene-far-from-origin",
-      "large-coordinate-units"
-    ].includes(diagnostic.code)
+    isSceneFramingDiagnostic(diagnostic.code)
   );
   const sceneArea = footprintAreaFromSize(stats.sceneBoundsSize);
   const focusedArea = footprintAreaFromSize(stats.focusedBoundsSize);
