@@ -5038,6 +5038,83 @@ function App() {
     () => optimizationDoc?.texturePlans?.find((plan) => plan.profileId === optimizationProfile),
     [optimizationDoc?.texturePlans, optimizationProfile]
   );
+  const selectedOptimizationProfile = useMemo(
+    () => optimizationDoc?.profiles.find((profile) => profile.id === optimizationProfile),
+    [optimizationDoc?.profiles, optimizationProfile]
+  );
+  const optimizationSetupSteps = useMemo(() => {
+    const profileWarningCount = selectedOptimizationProfile?.warnings.length ?? 0;
+    const texturePlanItems = selectedTexturePlan?.items.length ?? 0;
+    const textureOverBudget = selectedTexturePlan
+      ? selectedTexturePlan.currentBytes > selectedTexturePlan.budgetBytes
+      : false;
+    const ktxReady = toolStatus?.tools.toktx?.ready ?? false;
+    const hasOptimizedPreview = Boolean(optimizationJob?.optimizedSceneUrl);
+    const optimizedApplied = manifest?.sceneUrl === "scene.optimized.glb";
+    return [
+      {
+        id: "profile",
+        label: "Profile budget",
+        detail: selectedOptimizationProfile
+          ? profileWarningCount > 0
+            ? `${profileWarningCount} ${optimizationProfile} warning${profileWarningCount === 1 ? "" : "s"}`
+            : `${optimizationProfile} budget is clear`
+          : "Run analysis first",
+        status: selectedOptimizationProfile ? (profileWarningCount > 0 ? "warning" : "ready") : "active",
+        action: selectedOptimizationProfile ? (profileWarningCount > 0 ? "Review" : "Budget OK") : "Analyze"
+      },
+      {
+        id: "textures",
+        label: "Texture RAM",
+        detail: selectedTexturePlan
+          ? texturePlanItems > 0
+            ? `${texturePlanItems} resize target${texturePlanItems === 1 ? "" : "s"}`
+            : "No texture resize targets"
+          : "No texture plan yet",
+        status: textureOverBudget || texturePlanItems > 0 ? "warning" : selectedTexturePlan ? "ready" : "active",
+        action: texturePlanItems > 0 ? "Review Plan" : selectedTexturePlan ? "RAM OK" : "Analyze"
+      },
+      {
+        id: "compression",
+        label: "GPU compression",
+        detail:
+          (bundleStats?.imageCount ?? 0) === 0
+            ? "No image textures"
+            : ktxReady
+              ? "KTX2/Basis tool ready"
+              : "KTX2/Basis not ready",
+        status: (bundleStats?.imageCount ?? 0) === 0 || ktxReady ? "ready" : "warning",
+        action: (bundleStats?.imageCount ?? 0) === 0 || ktxReady ? "Compression OK" : "Read Plan"
+      },
+      {
+        id: "preview",
+        label: "Preview artifact",
+        detail: hasOptimizedPreview
+          ? optimizationJob?.status === "completed"
+            ? "Optimized preview exists"
+            : `Last job ${optimizationJob?.status}`
+          : "No optimized preview yet",
+        status: hasOptimizedPreview ? (optimizationJob?.status === "completed" ? "ready" : "warning") : "active",
+        action: hasOptimizedPreview ? "Preview OK" : "Generate"
+      },
+      {
+        id: "applied",
+        label: "Viewer model",
+        detail: optimizedApplied ? "Viewer uses optimized GLB" : "Viewer uses original GLB",
+        status: optimizedApplied ? "ready" : hasOptimizedPreview ? "active" : "warning",
+        action: optimizedApplied ? "Applied" : hasOptimizedPreview ? "Apply Preview" : "Keep Original"
+      }
+    ];
+  }, [
+    bundleStats?.imageCount,
+    manifest?.sceneUrl,
+    optimizationJob?.optimizedSceneUrl,
+    optimizationJob?.status,
+    optimizationProfile,
+    selectedOptimizationProfile,
+    selectedTexturePlan,
+    toolStatus?.tools.toktx?.ready
+  ]);
 
   const updateManifest = (updater: (manifest: SceneManifest) => SceneManifest) => {
     setManifest((current) => (current ? updater(current) : current));
@@ -8036,6 +8113,47 @@ function App() {
                     {optimizeState === "optimizing" ? "Optimizing" : applyOptimizedImmediately ? "Run & Apply" : "Generate Preview"}
                   </button>
                 </div>
+              </div>
+
+              <div className="optimization-setup-board" aria-label="Optimization setup health">
+                {optimizationSetupSteps.map((step) => (
+                  <button
+                    key={step.id}
+                    type="button"
+                    className={`optimization-setup-card ${step.status}`}
+                    disabled={step.status === "ready" && step.id !== "preview"}
+                    onClick={() => {
+                      if (step.id === "profile") {
+                        document.querySelector(".optimization-grid")?.scrollIntoView({ block: "center" });
+                        return;
+                      }
+                      if (step.id === "textures" || step.id === "compression") {
+                        document.querySelector(".asset-health-section")?.scrollIntoView({ block: "center" });
+                        return;
+                      }
+                      if (step.id === "preview" && !optimizationJob?.optimizedSceneUrl) {
+                        void optimizeProject();
+                        return;
+                      }
+                      if (step.id === "applied" && optimizationJob?.optimizedSceneUrl) {
+                        void switchModelSource("scene.optimized.glb");
+                      }
+                    }}
+                  >
+                    <span>
+                      {step.status === "ready" ? (
+                        <Check size={15} aria-hidden="true" />
+                      ) : step.status === "active" ? (
+                        <Activity size={15} aria-hidden="true" />
+                      ) : (
+                        <AlertTriangle size={15} aria-hidden="true" />
+                      )}
+                    </span>
+                    <strong>{step.label}</strong>
+                    <small>{step.detail}</small>
+                    <em>{step.action}</em>
+                  </button>
+                ))}
               </div>
 
               {optimizeError && <p className="error-note">{optimizeError}</p>}

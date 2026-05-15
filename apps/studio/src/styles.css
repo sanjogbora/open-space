@@ -1911,6 +1911,85 @@ button.list-row {
   width: 118px;
 }
 
+.optimization-setup-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.optimization-setup-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid #f0d099;
+  border-radius: 8px;
+  color: #7a4e08;
+  background: #fff8ed;
+  text-align: left;
+}
+
+.optimization-setup-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.optimization-setup-card.active {
+  color: #07538f;
+  border-color: #bddcf7;
+  background: #eff7ff;
+}
+
+.optimization-setup-card:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.optimization-setup-card:not(:disabled):hover,
+.optimization-setup-card:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.optimization-setup-card span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.optimization-setup-card strong,
+.optimization-setup-card small,
+.optimization-setup-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optimization-setup-card strong {
+  font-size: 12px;
+}
+
+.optimization-setup-card small,
+.optimization-setup-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.optimization-setup-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .model-source-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5319,6 +5398,7 @@ code {
 
   .publish-action-card,
   .publish-version-actions,
+  .optimization-setup-board,
   .optimization-action-controls,
   .surface-candidate-list,
   .collision-candidate-list {

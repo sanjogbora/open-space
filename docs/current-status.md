@@ -55,6 +55,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Environment now shows a context setup board for sky, outside ground, landscape enclosure, ground height, and review mode before raw environment fields.
 - Repair Center now includes a visual issue map that groups Source, Visuals, Movement, Presentation, Lighting, Performance, and Delivery fixes before the detailed cards.
 - Studio Publish now shows a visual client-share checklist for clearing blockers, creating a version, setting the live link, and testing the exact viewer a client will open.
+- Studio Optimization now shows a visual setup board for profile budget, texture RAM, GPU compression, preview artifact, and applied viewer model before detailed profile tables.
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
