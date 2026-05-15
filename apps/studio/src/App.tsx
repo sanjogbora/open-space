@@ -3964,6 +3964,78 @@ function App() {
     rooms.length,
     walkViewCount
   ]);
+  const selectedRoomWalkabilitySteps = useMemo(() => {
+    if (!manifest || !selectedRoom) {
+      return [];
+    }
+    const linkedView = selectedRoom.viewId
+      ? manifest.views.find((view) => view.id === selectedRoom.viewId)
+      : undefined;
+    const routeZones = [
+      ...enabledNavigationZones(manifest.navigation, "walk"),
+      ...enabledNavigationZones(manifest.navigation, "pass")
+    ];
+    const blockZones = enabledNavigationZones(manifest.navigation, "block");
+    const routeComponents = navigationComponents(routeZones);
+    const selectedCenter = roomCenter(selectedRoom, manifest.views);
+    const componentForPoint = (point: Vec3 | undefined) =>
+      point ? routeComponents.find((component) => component.some((zone) => pointInNavigationZone(zone, point, 0.35))) : undefined;
+    const centerComponent = componentForPoint(selectedCenter);
+    const viewComponent = componentForPoint(linkedView?.position);
+    const centerBlocked = blockZones.some((zone) => pointInNavigationZone(zone, selectedCenter, 0.15));
+    const viewBlocked = linkedView
+      ? blockZones.some((zone) => pointInNavigationZone(zone, linkedView.position, 0.15))
+      : false;
+    const centerInsideBounds = pointInNavigationBounds(selectedCenter, manifest.navigation.bounds, 0.05);
+    const viewInsideBounds = linkedView
+      ? pointInNavigationBounds(linkedView.position, manifest.navigation.bounds, 0.05)
+      : false;
+    const sameRouteIsland = Boolean(centerComponent && viewComponent && centerComponent === viewComponent);
+    return [
+      {
+        id: "button",
+        label: "Room button",
+        detail: linkedView ? `Linked to ${linkedView.label}.` : "No walk view linked.",
+        status: linkedView ? "ready" : "warning",
+        action: linkedView ? "Button OK" : "Link View"
+      },
+      {
+        id: "floor",
+        label: "Clickable floor",
+        detail: centerBlocked
+          ? "Room center is inside a blocker."
+          : centerComponent
+            ? "Room center sits on walk/pass area."
+            : "Room center is outside walk areas.",
+        status: centerComponent && !centerBlocked ? "ready" : "warning",
+        action: centerComponent && !centerBlocked ? "Floor OK" : "Open Controls"
+      },
+      {
+        id: "route",
+        label: "Door route",
+        detail: !linkedView
+          ? "Link a walk view before testing routes."
+          : viewBlocked
+            ? "Linked view starts inside a blocker."
+            : sameRouteIsland
+              ? "Room and view share a route island."
+              : "Room and view are on separate route islands.",
+        status: linkedView && sameRouteIsland && !viewBlocked ? "ready" : "warning",
+        action: linkedView && sameRouteIsland && !viewBlocked ? "Route OK" : "Repair Route"
+      },
+      {
+        id: "map",
+        label: "Floorplan area",
+        detail: selectedRoom.bounds
+          ? "Room has a top-view region."
+          : !centerInsideBounds || (linkedView && !viewInsideBounds)
+            ? "Room/view sits outside navigation bounds."
+            : "No top-view region drawn.",
+        status: selectedRoom.bounds && centerInsideBounds && (!linkedView || viewInsideBounds) ? "ready" : "warning",
+        action: selectedRoom.bounds ? "Area OK" : roomWalkZoneCount > 0 ? "From Walks" : "Set Bounds"
+      }
+    ];
+  }, [manifest, roomWalkZoneCount, selectedRoom]);
 
   const hotspotInteractions = useMemo(
     () => manifest?.interactions.filter(isHotspot) ?? [],
@@ -10129,6 +10201,45 @@ function App() {
                   secondaryActionLabel="Repair Center"
                   onSecondaryAction={() => setSelectedTab("repair")}
                 />
+                <div className="room-walkability-board" aria-label="Selected room walkability">
+                  {selectedRoomWalkabilitySteps.map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      className={`room-walkability-card ${step.status}`}
+                      onClick={() => {
+                        if (step.id === "button") {
+                          if (walkViewCount > 0) {
+                            syncRoomsFromViews();
+                            return;
+                          }
+                          setSelectedTab("views");
+                          return;
+                        }
+                        if (step.id === "map") {
+                          if (roomWalkZoneCount > 0) {
+                            syncRoomsFromWalkZones();
+                            return;
+                          }
+                          setSelectedTab("controls");
+                          return;
+                        }
+                        setSelectedTab("controls");
+                      }}
+                    >
+                      <span>
+                        {step.status === "ready" ? (
+                          <Check size={15} aria-hidden="true" />
+                        ) : (
+                          <Wrench size={15} aria-hidden="true" />
+                        )}
+                      </span>
+                      <strong>{step.label}</strong>
+                      <small>{step.detail}</small>
+                      <em>{step.action}</em>
+                    </button>
+                  ))}
+                </div>
                 {manifest.navigation.bounds ? (
                   ((roomMapBounds) => (
                   <div className="room-map">

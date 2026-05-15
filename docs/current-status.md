@@ -83,6 +83,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio surfaces room/floorplan mapping status with room counts, linked walk views, and one-click room sync.
 - Studio Rooms can now sync authored walk areas into room map regions, so floorplan areas can be generated from the navigation zones users draw.
 - Automatic room/floorplan generation now avoids using object labels like plants, fans, screens, and furniture as room names.
+- Studio Rooms now shows a selected-room walkability board for room-button link, clickable floor, door-route island, and floorplan area before manual room fields.
 - Viewer room lists now appear as a top-view room index tied to the active top/floor-plan view instead of cluttering walk mode.
 - Analyzer now reports missing or partial room maps and routes the import next step directly to Rooms when room labels, floorplan areas, or view links need setup.
 - Import repair now builds room entries from the final generated walk zones as well as semantic room candidates, giving repaired uploads better room bounds and floorplan areas automatically.
