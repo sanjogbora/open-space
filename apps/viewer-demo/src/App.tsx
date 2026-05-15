@@ -114,6 +114,9 @@ function studioRepairUrl(manifestUrl: string, failure: NavigationFailure): strin
   if (failure.blockerName) {
     url.searchParams.set("blocker", failure.blockerName);
   }
+  if (failure.objectName) {
+    url.searchParams.set("object", failure.objectName);
+  }
   if (failure.blockerKind) {
     url.searchParams.set("blockerKind", failure.blockerKind);
   }

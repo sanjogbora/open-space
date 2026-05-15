@@ -69,6 +69,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.
 - Click-route movement now keeps the same floor-height hold over small ridges while following waypoint routes, reducing camera bobbing during recovered/doorway navigation.
 - Object/wall clicks now project the click ray down onto nearby reachable floor before failing, so users can often move into visible rooms even when they click furniture, wall panels, or interior objects instead of an exposed floor patch.
+- Viewer-to-Studio navigation repair links now carry the clicked object name when an object/surface click still fails, helping Studio explain whether the user clicked furniture, glass, a wall panel, or a real floor target.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.
 - Grid fallback routes now cache sampled floor height per cell, reject over-height step transitions, and slightly prefer level routes to reduce camera bouncing over ridges or multi-level gaps.

@@ -3507,7 +3507,11 @@ export class WalkthroughViewer {
     return fallbackFloorHit;
   }
 
-  private tryMoveToFloorHit(floorHit: THREE.Intersection, event: PointerEvent): boolean {
+  private tryMoveToFloorHit(
+    floorHit: THREE.Intersection,
+    event: PointerEvent,
+    sourceObjectName?: string
+  ): boolean {
     const nextTarget = floorHit.point.clone();
     nextTarget.y = floorHit.point.y + this.cameraHeight;
     if (this.minBounds && this.maxBounds) {
@@ -3536,7 +3540,7 @@ export class WalkthroughViewer {
         failureDetail.reason,
         event,
         failureDetail.point ?? floorHit.point,
-        undefined,
+        sourceObjectName,
         failureDetail.blockerName,
         failureDetail.blockerKind,
         nextTarget
@@ -3569,7 +3573,7 @@ export class WalkthroughViewer {
         reason,
         event,
         bestFailureDetail.point ?? floorHit.point,
-        undefined,
+        sourceObjectName,
         bestFailureDetail.blockerName,
         bestFailureDetail.blockerKind,
         nextTarget
@@ -4039,15 +4043,15 @@ export class WalkthroughViewer {
     if (objectHit && objectHit.object instanceof THREE.Mesh) {
       const objectName = objectHit.object.name || objectHit.object.parent?.name || "Object";
       const portalFloorHit = this.findWalkableHitBeyondPortalObject(objectHit, objectName);
-      if (portalFloorHit && this.tryMoveToFloorHit(portalFloorHit, event)) {
+      if (portalFloorHit && this.tryMoveToFloorHit(portalFloorHit, event, objectName)) {
         return;
       }
       const projectedFloorHit = this.findProjectedWalkableHitFromObjectClick(objectHit);
-      if (projectedFloorHit && this.tryMoveToFloorHit(projectedFloorHit, event)) {
+      if (projectedFloorHit && this.tryMoveToFloorHit(projectedFloorHit, event, objectName)) {
         return;
       }
       const nearbyFloorHit = this.findWalkableHitNearObject(objectHit);
-      if (nearbyFloorHit && this.tryMoveToFloorHit(nearbyFloorHit, event)) {
+      if (nearbyFloorHit && this.tryMoveToFloorHit(nearbyFloorHit, event, objectName)) {
         return;
       }
       this.emitNavigationFailure("no-walkable-hit", event, objectHit.point, objectName);

@@ -292,6 +292,7 @@ function textureSuggestionConfidenceDetail(score: number): string {
 interface NavigationRepairDraft {
   reason: string;
   blockerName: string;
+  objectName?: string;
   blockerKind?: "authored" | "named" | "inferred";
   action?: string;
   hint?: string;
@@ -983,6 +984,7 @@ function parsePointParam(value: string | null): Vec3 | undefined {
 function initialNavigationRepairDraft(): NavigationRepairDraft | null {
   const params = new URLSearchParams(window.location.search);
   const blockerName = params.get("blocker") ?? "";
+  const objectName = params.get("object") ?? "";
   const blockerKindParam = params.get("blockerKind");
   const blockerKind =
     blockerKindParam === "authored" || blockerKindParam === "named" || blockerKindParam === "inferred"
@@ -997,12 +999,23 @@ function initialNavigationRepairDraft(): NavigationRepairDraft | null {
   const bodyRadiusRaw = params.get("bodyRadius");
   const bodyRadiusParam = bodyRadiusRaw ? Number(bodyRadiusRaw) : Number.NaN;
   const bodyRadius = Number.isFinite(bodyRadiusParam) ? bodyRadiusParam : undefined;
-  if (!blockerName && !reason && !action && !hint && !point && !target && !from && bodyRadius === undefined) {
+  if (
+    !blockerName &&
+    !objectName &&
+    !reason &&
+    !action &&
+    !hint &&
+    !point &&
+    !target &&
+    !from &&
+    bodyRadius === undefined
+  ) {
     return null;
   }
   return {
     reason,
     blockerName,
+    ...(objectName ? { objectName } : {}),
     ...(blockerKind ? { blockerKind } : {}),
     ...(action ? { action } : {}),
     ...(hint ? { hint } : {}),
@@ -1187,7 +1200,9 @@ function navigationRepairRecommendation(draft: NavigationRepairDraft): Navigatio
     return {
       title: "Recommended fix: add clickable floor",
       detail:
-        "The clicked spot is not inside any walk area. Add a blue walk patch there if a person should be allowed to stand on that part of the model.",
+        draft.objectName
+          ? `${draft.objectName} was clicked, but the viewer could not confirm a trusted floor target there. Add a blue walk patch only if a person should stand at that location.`
+          : "The clicked spot is not inside any walk area. Add a blue walk patch there if a person should be allowed to stand on that part of the model.",
       primaryLabel: "Add Walk Patch",
       action: "walk",
       requiresPoint: true
@@ -1286,8 +1301,10 @@ function navigationRepairDiagnosis(
       detail:
         "The click did not land on a floor area that the viewer trusts for walking.",
       checks: [
+        draft.objectName
+          ? `Clicked object: ${draft.objectName}. If this is furniture, a cupboard, glass, or decor, leave it unwalkable.`
+          : "The viewer did not receive a specific clicked object name for this failure.",
         "Add a walk patch only if a person should be allowed to stand there.",
-        "If the click landed on furniture, a cupboard, glass, or a helper mesh, leave it unwalkable.",
         coverage && coverage.walkZones > 0
           ? `${coverage.walkZones} walk area(s) are already active; this click is outside them.`
           : "No authored walk areas are active yet."
@@ -1350,8 +1367,10 @@ function navigationRepairPlanSteps(
     failureTitle = "The room is not connected";
     failureDetail = "The target floor exists, but there is no trusted path through the doorway or opening yet.";
   } else if (draft.reason === "outside-walk-zone" || draft.reason === "no-walkable-hit") {
-    failureTitle = "The click is outside trusted floor";
-    failureDetail = "The viewer does not currently treat that spot as a place where someone can stand.";
+    failureTitle = draft.objectName ? `${draft.objectName} is not trusted floor` : "The click is outside trusted floor";
+    failureDetail = draft.objectName
+      ? "The user clicked an object or surface, but the viewer could not project it to a reachable floor area."
+      : "The viewer does not currently treat that spot as a place where someone can stand.";
   } else if (draft.reason === "blocked-step") {
     failureTitle = "A height change stopped movement";
     failureDetail = "The route crosses a threshold, step, or ridge that is larger than the current movement limits.";
@@ -13398,6 +13417,12 @@ function App() {
                               <div>
                                 <dt>Blocker</dt>
                                 <dd>{navigationRepairDraft.blockerName}</dd>
+                              </div>
+                            )}
+                            {navigationRepairDraft.objectName && (
+                              <div>
+                                <dt>Clicked Object</dt>
+                                <dd>{navigationRepairDraft.objectName}</dd>
                               </div>
                             )}
                             {navigationRepairDraft.blockerKind && (
