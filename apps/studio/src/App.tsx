@@ -6719,6 +6719,10 @@ function App() {
       openStudioVisualTarget("controls", ".zone-map");
       return;
     }
+    if (action === "objects") {
+      openStudioVisualTarget("objects", ".list-panel, .object-detail");
+      return;
+    }
     if (action === "rooms") {
       openStudioVisualTarget("rooms", ".room-map");
       return;
@@ -11965,6 +11969,7 @@ function DiagnosticList({
                   {action === "materials" && <Palette size={15} aria-hidden="true" />}
                   {action === "views" && <MapPin size={15} aria-hidden="true" />}
                   {action === "navigation" && <MapPin size={15} aria-hidden="true" />}
+                  {action === "objects" && <Eye size={15} aria-hidden="true" />}
                   {action === "rooms" && <Layers3 size={15} aria-hidden="true" />}
                   {action === "interactions" && <Video size={15} aria-hidden="true" />}
                   {action === "optimize" && <Activity size={15} aria-hidden="true" />}
@@ -11988,6 +11993,7 @@ type ImportNextStepAction =
   | "materials"
   | "views"
   | "navigation"
+  | "objects"
   | "rooms"
   | "interactions"
   | "optimize"
@@ -12032,6 +12038,10 @@ function isTextureConnectionDiagnostic(code: string): boolean {
 
 function isLightmapArtifactDiagnostic(code: string): boolean {
   return ["missing-lightmap-assets", "tiny-lightmap-assets"].includes(code);
+}
+
+function isObjectVisibilityDiagnostic(code: string): boolean {
+  return ["no-named-ceiling-meshes", "stale-object-overrides", "invalid-object-navigation-behavior"].includes(code);
 }
 
 function isSourceStructureDiagnostic(code: string): boolean {
@@ -12122,6 +12132,9 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   ) {
     return "navigation";
   }
+  if (isObjectVisibilityDiagnostic(code)) {
+    return "objects";
+  }
   if (
     [
       "missing-room-map",
@@ -12176,12 +12189,9 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "suspicious-node-scales",
       "invalid-material-references",
       "invalid-texture-references",
-      "stale-object-overrides",
-      "invalid-object-navigation-behavior",
       "unsafe-gltf-resource-paths",
       "unsupported-required-extensions",
-      "repeated-large-mesh-instances",
-      "no-named-ceiling-meshes"
+      "repeated-large-mesh-instances"
     ].includes(code)
   ) {
     return "review";
@@ -12293,6 +12303,14 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
       button: "Open Controls"
     };
   }
+  if (action === "objects") {
+    return {
+      action,
+      title: "Review object visibility",
+      detail: "Open Objects to check ceilings, roof shells, helper meshes, and object roles that affect top view or movement.",
+      button: "Open Objects"
+    };
+  }
   if (action === "rooms") {
     return {
       action,
@@ -12357,6 +12375,9 @@ function repairCenterStageForAction(action: ImportNextStepAction): string {
   }
   if (action === "navigation") {
     return "Movement";
+  }
+  if (action === "objects") {
+    return "Presentation";
   }
   if (action === "rooms" || action === "views") {
     return "Presentation";
@@ -12439,6 +12460,9 @@ function repairCenterIcon(action: ImportNextStepAction) {
   if (action === "navigation" || action === "views") {
     return <MapPin size={17} aria-hidden="true" />;
   }
+  if (action === "objects") {
+    return <Eye size={17} aria-hidden="true" />;
+  }
   if (action === "rooms") {
     return <Layers3 size={17} aria-hidden="true" />;
   }
@@ -12466,6 +12490,9 @@ function repairCenterVisualFixForAction(action: ImportNextStepAction): string {
   }
   if (action === "navigation") {
     return "Use the zone map to paint walk areas, door passes, and blockers over the floorplan.";
+  }
+  if (action === "objects") {
+    return "Open Objects, review ceiling/roof/top-view meshes, and set visibility or navigation roles from the visual object list.";
   }
   if (action === "rooms") {
     return "Sync walk areas into room regions, then adjust the room map visually.";
@@ -12602,6 +12629,9 @@ function repairCenterDestinationForItem(item: RepairCenterItem): string {
   if (item.action === "navigation") {
     return "Opens Controls zone map.";
   }
+  if (item.action === "objects") {
+    return "Opens Objects visibility and roles.";
+  }
   if (item.action === "rooms") {
     return "Opens Rooms map.";
   }
@@ -12645,6 +12675,9 @@ function repairCenterVerifyForItem(item: RepairCenterItem): string {
   if (item.id === "source-structure") {
     return "After re-export, reimport and confirm the card is gone before spending time on materials, rooms, or navigation.";
   }
+  if (item.id === "object-visibility") {
+    return "After review, top view should show the floor plan clearly and walk clicks should no longer be affected by stale or wrong object roles.";
+  }
   if (item.action === "repair") {
     return "After repair, return here and confirm blocker counts or source warnings decreased.";
   }
@@ -12653,6 +12686,9 @@ function repairCenterVerifyForItem(item: RepairCenterItem): string {
   }
   if (item.action === "navigation") {
     return "After saving, open the viewer and click through the doorway or floor area that previously failed.";
+  }
+  if (item.action === "objects") {
+    return "After saving, open top view and walk mode to confirm ceiling/roof visibility and object roles behave correctly.";
   }
   if (item.action === "rooms") {
     return "After mapping rooms, top view should show readable room regions and room buttons should jump to the right view.";
@@ -12763,6 +12799,9 @@ function buildRepairCenterItems({
   const lightmapArtifactDiagnostics = (stats.diagnostics ?? []).filter(
     (diagnostic) => diagnostic.severity !== "info" && isLightmapArtifactDiagnostic(diagnostic.code)
   );
+  const objectVisibilityDiagnostics = (stats.diagnostics ?? []).filter(
+    (diagnostic) => diagnostic.severity !== "info" && isObjectVisibilityDiagnostic(diagnostic.code)
+  );
   const sourceStructureDiagnostics = (stats.diagnostics ?? []).filter(
     (diagnostic) => diagnostic.severity !== "info" && isSourceStructureDiagnostic(diagnostic.code)
   );
@@ -12834,6 +12873,20 @@ function buildRepairCenterItems({
       button: "Review Bake"
     });
   }
+  if (objectVisibilityDiagnostics.length > 0) {
+    const first = objectVisibilityDiagnostics[0]!;
+    const hasCeilingIssue = objectVisibilityDiagnostics.some((diagnostic) => diagnostic.code === "no-named-ceiling-meshes");
+    items.push({
+      id: "object-visibility",
+      stage: "Presentation",
+      title: hasCeilingIssue ? "Review ceiling and top-view objects" : "Review object roles",
+      detail: `${objectVisibilityDiagnostics.length} object visibility issue${objectVisibilityDiagnostics.length === 1 ? "" : "s"} found: ${first.title}. ${first.message}`,
+      visualFix: "Open Objects and use the visual list to hide ceiling/roof shell meshes from top view only, confirm key interior objects stay visible, and fix any stale navigation roles after reimport.",
+      severity: objectVisibilityDiagnostics.some((diagnostic) => diagnostic.severity === "error") ? "error" : "warning",
+      action: "objects",
+      button: "Review Objects"
+    });
+  }
   for (const diagnostic of stats.diagnostics ?? []) {
     if (diagnostic.severity === "info") {
       continue;
@@ -12851,6 +12904,9 @@ function buildRepairCenterItems({
       continue;
     }
     if (isLightmapArtifactDiagnostic(diagnostic.code)) {
+      continue;
+    }
+    if (isObjectVisibilityDiagnostic(diagnostic.code)) {
       continue;
     }
     if (isSourceStructureDiagnostic(diagnostic.code)) {
