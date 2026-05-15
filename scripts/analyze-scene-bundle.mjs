@@ -502,6 +502,47 @@ function defaultSceneStats(document) {
   const nodes = document.nodes ?? [];
   const meshes = document.meshes ?? [];
   const scenes = document.scenes ?? [];
+  const nodeTransformStats = nodes.reduce(
+    (stats, node) => {
+      const matrixValues = Array.isArray(node.matrix) ? node.matrix : [];
+      const translationValues = Array.isArray(node.translation) ? node.translation : [];
+      const rotationValues = Array.isArray(node.rotation) ? node.rotation : [];
+      const scaleValues = Array.isArray(node.scale) ? node.scale : [];
+      if (
+        (matrixValues.length > 0 && matrixValues.length !== 16) ||
+        (translationValues.length > 0 && translationValues.length !== 3) ||
+        (rotationValues.length > 0 && rotationValues.length !== 4) ||
+        (scaleValues.length > 0 && scaleValues.length !== 3) ||
+        [...matrixValues, ...translationValues, ...rotationValues, ...scaleValues].some((value) => !Number.isFinite(value))
+      ) {
+        stats.invalidLocalTransformCount += 1;
+      }
+      const scale = scaleValues.length === 3 ? scaleValues : [1, 1, 1];
+      if (scale.some((value) => value === 0)) {
+        stats.zeroScaleNodeCount += 1;
+      }
+      if (scale.some((value) => value < 0)) {
+        stats.negativeScaleNodeCount += 1;
+      }
+      const absScale = scale.map((value) => Math.abs(value)).filter((value) => value > 0);
+      const maxScale = absScale.length ? Math.max(...absScale) : 1;
+      const minScale = absScale.length ? Math.min(...absScale) : 1;
+      if (maxScale >= 100 || minScale <= 0.01) {
+        stats.extremeScaleNodeCount += 1;
+      }
+      if (maxScale / Math.max(minScale, Number.EPSILON) >= 25) {
+        stats.nonUniformScaleNodeCount += 1;
+      }
+      return stats;
+    },
+    {
+      invalidLocalTransformCount: 0,
+      zeroScaleNodeCount: 0,
+      negativeScaleNodeCount: 0,
+      extremeScaleNodeCount: 0,
+      nonUniformScaleNodeCount: 0
+    }
+  );
   const explicitDefaultScene = typeof document.scene === "number";
   const defaultSceneIndex = explicitDefaultScene ? document.scene : scenes.length > 0 ? 0 : undefined;
   const defaultScene =
@@ -564,6 +605,7 @@ function defaultSceneStats(document) {
     invalidRootNodeReferenceCount,
     invalidNodeChildReferenceCount,
     invalidNodeMeshReferenceCount,
+    ...nodeTransformStats,
     defaultSceneRootNodeCount: rootNodeIndices.length,
     defaultSceneReachableNodeCount: reachableNodes.size,
     renderableNodeCount,
@@ -2721,6 +2763,17 @@ function createDiagnostics(manifest, report, graphs, controls) {
     (sum, model) => sum + (model.invalidNodeMeshReferenceCount ?? 0),
     0
   );
+  const invalidLocalTransformCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidLocalTransformCount ?? 0),
+    0
+  );
+  const zeroScaleNodeCount = report.models.reduce((sum, model) => sum + (model.zeroScaleNodeCount ?? 0), 0);
+  const negativeScaleNodeCount = report.models.reduce((sum, model) => sum + (model.negativeScaleNodeCount ?? 0), 0);
+  const extremeScaleNodeCount = report.models.reduce((sum, model) => sum + (model.extremeScaleNodeCount ?? 0), 0);
+  const nonUniformScaleNodeCount = report.models.reduce(
+    (sum, model) => sum + (model.nonUniformScaleNodeCount ?? 0),
+    0
+  );
   const unreferencedDefaultSceneMeshCount = report.models.reduce(
     (sum, model) => sum + (model.unreferencedDefaultSceneMeshCount ?? 0),
     0
@@ -2830,6 +2883,46 @@ function createDiagnostics(manifest, report, graphs, controls) {
       title: "Nodes reference missing meshes",
       message: `${invalidNodeMeshReferenceCount} node mesh reference(s) point outside the mesh list.`,
       action: "Repair or re-export the model; invalid mesh references can produce blank, partial, or incorrectly framed imports."
+    });
+  }
+
+  if (invalidLocalTransformCount > 0) {
+    diagnostics.push({
+      severity: "error",
+      code: "invalid-node-transforms",
+      title: "Node transforms are invalid",
+      message: `${invalidLocalTransformCount} node transform(s) have invalid vector/matrix lengths or non-finite values.`,
+      action: "Repair or re-export the model; invalid transforms can make geometry disappear, explode, or generate unusable navigation bounds."
+    });
+  }
+
+  if (zeroScaleNodeCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "zero-scale-nodes",
+      title: "Some nodes have zero scale",
+      message: `${zeroScaleNodeCount} node(s) include a zero scale axis, which can flatten or hide geometry in the viewer.`,
+      action: "Apply transforms in the source model and re-export, or remove intentionally hidden zero-scale helper objects before import."
+    });
+  }
+
+  if (negativeScaleNodeCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "negative-scale-nodes",
+      title: "Mirrored node scales detected",
+      message: `${negativeScaleNodeCount} node(s) use negative scale, which can flip normals, lighting, culling, or navigation surface orientation.`,
+      action: "Apply transforms and recalculate normals in the source model before exporting the client walkthrough."
+    });
+  }
+
+  if (extremeScaleNodeCount > 0 || nonUniformScaleNodeCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "suspicious-node-scales",
+      title: "Suspicious node scales detected",
+      message: `${extremeScaleNodeCount} node(s) have very large/tiny scale and ${nonUniformScaleNodeCount} node(s) have strongly non-uniform scale.`,
+      action: "Apply object transforms in Blender/CAD before export so camera framing, click targets, lighting, and bounds use stable geometry."
     });
   }
 
@@ -4504,6 +4597,9 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "duplicate-node-names",
     "duplicate-material-names",
     "repeated-large-mesh-instances",
+    "zero-scale-nodes",
+    "negative-scale-nodes",
+    "suspicious-node-scales",
     "high-draw-primitive-count",
     "stale-object-overrides",
     "invalid-object-navigation-behavior"
