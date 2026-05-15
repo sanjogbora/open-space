@@ -54,6 +54,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Views now shows a visual setup board for saved views, walk starts, top view, room links, and walk-zone coverage before raw camera coordinates.
 - Studio Interactions now shows a setup board for detected TV/screen surfaces, mapped video targets, linked video media, and hotspots/links before detailed interaction editing.
 - Studio Variants now shows a visual setup board for finish sets, targets, options, color swatches, and texture finishes before raw variant fields.
+- Studio Objects now shows a setup board for scene object indexing, ceiling/top-view cleanup, movement roles, and hidden objects before detailed object fields.
 - Studio Environment now shows a context setup board for sky, outside ground, landscape enclosure, ground height, and review mode before raw environment fields.
 - Repair Center now includes a visual issue map that groups Source, Visuals, Movement, Presentation, Lighting, Performance, and Delivery fixes before the detailed cards.
 - Studio Publish now shows a visual client-share checklist for clearing blockers, creating a version, setting the live link, and testing the exact viewer a client will open.

@@ -4832,6 +4832,68 @@ function App() {
     }),
     [objectReviewRows]
   );
+  const objectSetupSteps = useMemo(
+    () => [
+      {
+        id: "objects",
+        label: "Scene objects",
+        detail:
+          objectFilterCounts.all > 0
+            ? `${objectFilterCounts.all} object${objectFilterCounts.all === 1 ? "" : "s"} indexed`
+            : "No scene graph yet",
+        status: objectFilterCounts.all > 0 ? "ready" : "warning",
+        action: objectFilterCounts.all > 0 ? "Objects OK" : "Run Import"
+      },
+      {
+        id: "ceiling",
+        label: "Ceiling review",
+        detail:
+          objectFilterCounts.ceiling > 0
+            ? `${objectFilterCounts.ceiling} ceiling/roof candidate${objectFilterCounts.ceiling === 1 ? "" : "s"}`
+            : "No ceiling names detected",
+        status: objectFilterCounts.ceilingNeedsTopHidden > 0 ? "warning" : "ready",
+        action: objectFilterCounts.ceilingNeedsTopHidden > 0 ? "Hide Top" : "Ceiling OK"
+      },
+      {
+        id: "top",
+        label: "Top view cleanup",
+        detail:
+          objectFilterCounts.topHidden > 0
+            ? `${objectFilterCounts.topHidden} object${objectFilterCounts.topHidden === 1 ? "" : "s"} hidden in top`
+            : "No top-view hiding yet",
+        status: objectFilterCounts.ceilingNeedsTopHidden > 0 ? "warning" : objectFilterCounts.topHidden > 0 ? "ready" : "active",
+        action: objectFilterCounts.ceilingNeedsTopHidden > 0 ? "Fix Ceiling" : objectFilterCounts.topHidden > 0 ? "Top OK" : "Review Top"
+      },
+      {
+        id: "roles",
+        label: "Movement roles",
+        detail:
+          objectFilterCounts.roles > 0
+            ? `${objectFilterCounts.roles} explicit role${objectFilterCounts.roles === 1 ? "" : "s"}`
+            : "Using automatic detection",
+        status: objectFilterCounts.roles > 0 ? "active" : "ready",
+        action: objectFilterCounts.roles > 0 ? "Review Roles" : "Roles OK"
+      },
+      {
+        id: "hidden",
+        label: "Hidden objects",
+        detail:
+          objectFilterCounts.hidden > 0
+            ? `${objectFilterCounts.hidden} globally hidden object${objectFilterCounts.hidden === 1 ? "" : "s"}`
+            : "No hidden objects",
+        status: objectFilterCounts.hidden > 0 ? "active" : "ready",
+        action: objectFilterCounts.hidden > 0 ? "Review Hidden" : "Visible OK"
+      }
+    ],
+    [
+      objectFilterCounts.all,
+      objectFilterCounts.ceiling,
+      objectFilterCounts.ceilingNeedsTopHidden,
+      objectFilterCounts.hidden,
+      objectFilterCounts.roles,
+      objectFilterCounts.topHidden
+    ]
+  );
   const filteredObjectRows = useMemo(() => {
     const query = normalizedObjectMatchName(objectSearchQuery);
     return objectReviewRows.filter((row) => {
@@ -11339,6 +11401,55 @@ function App() {
                 secondaryActionLabel="Repair Center"
                 onSecondaryAction={() => setSelectedTab("repair")}
               />
+              <div className="object-setup-board" aria-label="Object setup health">
+                {objectSetupSteps.map((step) => (
+                  <button
+                    key={step.id}
+                    type="button"
+                    className={`object-setup-card ${step.status}`}
+                    disabled={step.status === "ready" && step.id !== "objects"}
+                    onClick={() => {
+                      setObjectSearchQuery("");
+                      if (step.id === "objects") {
+                        setObjectListFilter("all");
+                        return;
+                      }
+                      if (step.id === "ceiling") {
+                        if (objectFilterCounts.ceilingNeedsTopHidden > 0) {
+                          hideCeilingCandidatesInTopView();
+                        } else {
+                          setObjectListFilter("ceiling");
+                        }
+                        return;
+                      }
+                      if (step.id === "top") {
+                        setObjectListFilter(objectFilterCounts.ceilingNeedsTopHidden > 0 ? "ceiling" : "top-hidden");
+                        return;
+                      }
+                      if (step.id === "roles") {
+                        setObjectListFilter("roles");
+                        return;
+                      }
+                      if (step.id === "hidden") {
+                        setObjectListFilter("hidden");
+                      }
+                    }}
+                  >
+                    <span>
+                      {step.status === "ready" ? (
+                        <Check size={15} aria-hidden="true" />
+                      ) : step.status === "active" ? (
+                        <Layers3 size={15} aria-hidden="true" />
+                      ) : (
+                        <AlertTriangle size={15} aria-hidden="true" />
+                      )}
+                    </span>
+                    <strong>{step.label}</strong>
+                    <small>{step.detail}</small>
+                    <em>{step.action}</em>
+                  </button>
+                ))}
+              </div>
               <div className="object-review-tools">
                 <label className="object-search-field">
                   <span>Find object</span>
