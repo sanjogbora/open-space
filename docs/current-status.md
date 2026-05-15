@@ -45,6 +45,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Materials now shows a plain-language diagnosis for the selected material, explaining the next safe visual action before editing raw map fields.
 - Studio Bake now prioritizes suspicious lightmap previews first and labels why each generated lightmap needs review.
 - Studio Bake lightmap previews now link directly to the matching material review, with the Materials list filtered to lightmapped materials.
+- Studio Bake now shows a visual setup board for Blender readiness, bake quality, raw lightmap size, preflight issues, and last output before detailed settings.
 - Studio Import now summarizes Source QA into visual export-structure, missing-resource, framing, material-reference, and saved-override cards before raw diagnostics.
 - Studio diagnostics now show grouped visual fix areas and likely user-visible symptoms before the raw diagnostic details.
 - Asset Health now shows a visual texture repair roadmap for path repair, material map assignment, texture memory, and lightmap asset issues before detailed file lists.

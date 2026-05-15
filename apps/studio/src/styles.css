@@ -4929,6 +4929,85 @@ button.list-row {
   line-height: 1.4;
 }
 
+.bake-setup-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bake-setup-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid #f0d099;
+  border-radius: 8px;
+  color: #7a4e08;
+  background: #fff8ed;
+  text-align: left;
+}
+
+.bake-setup-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.bake-setup-card.active {
+  color: #07538f;
+  border-color: #bddcf7;
+  background: #eff7ff;
+}
+
+.bake-setup-card:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.bake-setup-card:not(:disabled):hover,
+.bake-setup-card:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.bake-setup-card span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.bake-setup-card strong,
+.bake-setup-card small,
+.bake-setup-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bake-setup-card strong {
+  font-size: 12px;
+}
+
+.bake-setup-card small,
+.bake-setup-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.bake-setup-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .bake-preflight-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -5203,6 +5282,7 @@ code {
   .client-share-step,
   .source-qa-heading,
   .toggle-grid,
+  .bake-setup-board,
   .material-setup-board,
   .movement-preset-grid,
   .movement-comfort-card,

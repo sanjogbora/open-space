@@ -4397,6 +4397,81 @@ function App() {
             ? "Resolve the bake preflight errors before starting Blender."
             : "";
   const canRunLightmapBake = !lightmapBakeBlockedReason;
+  const bakeReviewPreviewCount = (lightmapBakeJob?.lightmaps ?? []).filter(
+    (lightmap) => lightmapPreviewQuality(lightmap) === "warning"
+  ).length;
+  const bakeSetupSteps = useMemo(
+    () => [
+      {
+        id: "tool",
+        label: "Bake tool",
+        detail: apiConnected
+          ? blenderTool?.ready
+            ? "Blender/Cycles is ready"
+            : (blenderTool?.action ?? "Checking Blender")
+          : "API is offline",
+        status: apiConnected && blenderTool?.ready ? "ready" : "warning",
+        action: apiConnected && blenderTool?.ready ? "Tool OK" : "Check Setup"
+      },
+      {
+        id: "quality",
+        label: "Quality preset",
+        detail: `${bakeSettings.preset} / ${bakeSettings.samples} samples`,
+        status:
+          bakeSettings.preset === "draft"
+            ? "warning"
+            : bakeSettings.preset === "super"
+              ? "active"
+              : "ready",
+        action: bakeSettings.preset === "draft" ? "Use Medium" : bakeSettings.preset === "super" ? "Use High" : "Preset OK"
+      },
+      {
+        id: "memory",
+        label: "Lightmap size",
+        detail: formatBytes(estimatedBakeTextureBytes),
+        status:
+          estimatedBakeTextureBytes > 1024 * 1024 * 1024
+            ? "warning"
+            : estimatedBakeTextureBytes > 512 * 1024 * 1024
+              ? "active"
+              : "ready",
+        action: estimatedBakeTextureBytes > 1024 * 1024 * 1024 ? "Lower px" : "Size OK"
+      },
+      {
+        id: "preflight",
+        label: "Preflight",
+        detail: bakePreflightIssues.length > 0
+          ? `${bakePreflightIssues.length} issue${bakePreflightIssues.length === 1 ? "" : "s"} before bake`
+          : "Settings look reasonable",
+        status: bakePreflightBlocked ? "warning" : bakePreflightIssues.length > 0 ? "active" : "ready",
+        action: bakePreflightIssues.length > 0 ? "Tune" : "Ready"
+      },
+      {
+        id: "output",
+        label: "Last output",
+        detail: lightmapBakeJob?.status
+          ? bakeReviewPreviewCount > 0
+            ? `${bakeReviewPreviewCount} preview${bakeReviewPreviewCount === 1 ? "" : "s"} need review`
+            : `${lightmapBakeJob.status}${lightmapBakeJob.lightmapCount ? ` / ${lightmapBakeJob.lightmapCount} lightmaps` : ""}`
+          : "No bake output yet",
+        status: bakeReviewPreviewCount > 0 ? "warning" : lightmapBakeJob?.status === "completed" ? "ready" : "active",
+        action: bakeReviewPreviewCount > 0 ? "Review" : lightmapBakeJob?.status === "completed" ? "Output OK" : "Bake"
+      }
+    ],
+    [
+      apiConnected,
+      bakePreflightBlocked,
+      bakePreflightIssues.length,
+      bakeReviewPreviewCount,
+      bakeSettings.preset,
+      bakeSettings.samples,
+      blenderTool?.action,
+      blenderTool?.ready,
+      estimatedBakeTextureBytes,
+      lightmapBakeJob?.lightmapCount,
+      lightmapBakeJob?.status
+    ]
+  );
   const resetBakeSettingsToPreset = () => {
     setBakeSettings((current) => ({
       ...current,
@@ -9960,6 +10035,63 @@ function App() {
                     {lightmapBakeBlockedReason}
                   </p>
                 )}
+                <div className="bake-setup-board" aria-label="Bake setup health">
+                  {bakeSetupSteps.map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      className={`bake-setup-card ${step.status}`}
+                      disabled={step.status === "ready" && step.id !== "output"}
+                      onClick={() => {
+                        if (step.id === "quality") {
+                          const preset = bakeSettings.preset === "super" ? "high" : "medium";
+                          setBakeSettings((current) => ({
+                            ...current,
+                            preset,
+                            ...bakePresetDefaults[preset]
+                          }));
+                          return;
+                        }
+                        if (step.id === "memory") {
+                          setBakeSettings((current) => ({
+                            ...current,
+                            resolution: Math.min(current.resolution, 1024)
+                          }));
+                          return;
+                        }
+                        if (step.id === "preflight") {
+                          setBakeSettings((current) => ({
+                            ...current,
+                            maxMaterials: Math.min(512, Math.max(current.maxMaterials, materialCountForBake)),
+                            resolution: estimatedBakeTextureBytes > 1024 * 1024 * 1024 ? 1024 : current.resolution,
+                            denoise: current.samples < 192 ? true : current.denoise
+                          }));
+                          return;
+                        }
+                        if (step.id === "output" && lightmapBakeJob?.lightmaps?.length) {
+                          document.querySelector(".lightmap-review-summary")?.scrollIntoView({ block: "center" });
+                          return;
+                        }
+                        if (step.id === "output" && canRunLightmapBake && lightmapBakeJob?.status !== "completed") {
+                          void bakeLightmaps();
+                        }
+                      }}
+                    >
+                      <span>
+                        {step.status === "ready" ? (
+                          <Check size={15} aria-hidden="true" />
+                        ) : step.status === "active" ? (
+                          <Activity size={15} aria-hidden="true" />
+                        ) : (
+                          <AlertTriangle size={15} aria-hidden="true" />
+                        )}
+                      </span>
+                      <strong>{step.label}</strong>
+                      <small>{step.detail}</small>
+                      <em>{step.action}</em>
+                    </button>
+                  ))}
+                </div>
                 <div className="field-grid">
                   <label className="field">
                     <span>Quality preset</span>
