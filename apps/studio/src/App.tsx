@@ -3893,6 +3893,65 @@ function App() {
     const linkedViewIds = new Set(rooms.map((room) => room.viewId).filter(Boolean));
     return manifest?.views.filter((view) => view.kind === "walk" && linkedViewIds.has(view.id)).length ?? 0;
   }, [manifest, rooms]);
+  const roomBoundsCount = useMemo(() => rooms.filter((room) => Boolean(room.bounds)).length, [rooms]);
+  const roomWalkZoneCount = useMemo(
+    () => (manifest ? enabledNavigationZones(manifest.navigation, "walk").length : 0),
+    [manifest]
+  );
+  const roomSetupSteps = useMemo(() => {
+    const roomCount = rooms.length;
+    const hasNavigationBounds = Boolean(manifest?.navigation.bounds);
+    return [
+      {
+        id: "labels",
+        label: "Room labels",
+        detail: roomCount > 0 ? `${roomCount} room${roomCount === 1 ? "" : "s"} named` : "No rooms yet",
+        status: roomCount > 0 ? "ready" : "warning",
+        action: roomCount > 0 ? "Labels OK" : "Sync or Add"
+      },
+      {
+        id: "regions",
+        label: "Floorplan regions",
+        detail: roomBoundsCount > 0
+          ? `${roomBoundsCount}/${roomCount} mapped`
+          : "No room areas on top view",
+        status: roomCount > 0 && roomBoundsCount >= roomCount ? "ready" : "warning",
+        action: roomWalkZoneCount > 0 ? "From Walks" : "Draw Walk Areas"
+      },
+      {
+        id: "views",
+        label: "Room buttons",
+        detail: walkViewCount > 0
+          ? `${linkedRoomViewCount}/${walkViewCount} walk view${walkViewCount === 1 ? "" : "s"} linked`
+          : "No walk views to link",
+        status: walkViewCount > 0 && linkedRoomViewCount >= walkViewCount ? "ready" : "warning",
+        action: walkViewCount > 0 ? "Sync Views" : "Open Views"
+      },
+      {
+        id: "bounds",
+        label: "Top-view bounds",
+        detail: hasNavigationBounds ? "Room map is enabled" : "Set bounds to use map",
+        status: hasNavigationBounds ? "ready" : "warning",
+        action: hasNavigationBounds ? "Bounds OK" : "Open Controls"
+      },
+      {
+        id: "walks",
+        label: "Walk areas",
+        detail: roomWalkZoneCount > 0
+          ? `${roomWalkZoneCount} walk area${roomWalkZoneCount === 1 ? "" : "s"} available`
+          : "No walk areas to sync",
+        status: roomWalkZoneCount > 0 ? "ready" : "warning",
+        action: roomWalkZoneCount > 0 ? "Sync Regions" : "Open Controls"
+      }
+    ];
+  }, [
+    linkedRoomViewCount,
+    manifest?.navigation.bounds,
+    roomBoundsCount,
+    roomWalkZoneCount,
+    rooms.length,
+    walkViewCount
+  ]);
 
   const hotspotInteractions = useMemo(
     () => manifest?.interactions.filter(isHotspot) ?? [],
@@ -8667,6 +8726,50 @@ function App() {
                     Add
                   </button>
                 </div>
+              </div>
+              <div className="room-setup-board" aria-label="Room setup health">
+                {roomSetupSteps.map((step) => (
+                  <button
+                    key={step.id}
+                    type="button"
+                    className={`room-setup-card ${step.status}`}
+                    disabled={step.status === "ready"}
+                    onClick={() => {
+                      if (step.id === "labels") {
+                        if (rooms.length === 0 && roomWalkZoneCount > 0) {
+                          syncRoomsFromWalkZones();
+                          return;
+                        }
+                        addRoom();
+                        return;
+                      }
+                      if (step.id === "regions" || step.id === "walks") {
+                        if (roomWalkZoneCount > 0) {
+                          syncRoomsFromWalkZones();
+                          return;
+                        }
+                        setSelectedTab("controls");
+                        return;
+                      }
+                      if (step.id === "views") {
+                        if (walkViewCount > 0) {
+                          syncRoomsFromViews();
+                          return;
+                        }
+                        setSelectedTab("views");
+                        return;
+                      }
+                      if (step.id === "bounds") {
+                        setSelectedTab("controls");
+                      }
+                    }}
+                  >
+                    <span>{step.status === "ready" ? <Check size={15} aria-hidden="true" /> : <Layers3 size={15} aria-hidden="true" />}</span>
+                    <strong>{step.label}</strong>
+                    <small>{step.detail}</small>
+                    <em>{step.action}</em>
+                  </button>
+                ))}
               </div>
               {rooms.map((room) => (
                 <button

@@ -2835,6 +2835,81 @@ button.list-row {
   color: #0e6242;
 }
 
+.room-setup-board {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.room-setup-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px 8px;
+  padding: 9px;
+  border: 1px solid #f0d099;
+  border-radius: 8px;
+  color: #7a4e08;
+  background: #fff8ed;
+  text-align: left;
+}
+
+.room-setup-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.room-setup-card:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.room-setup-card:not(:disabled):hover,
+.room-setup-card:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.room-setup-card span {
+  width: 28px;
+  height: 28px;
+  grid-row: span 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.room-setup-card strong,
+.room-setup-card small,
+.room-setup-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-setup-card strong {
+  font-size: 12px;
+}
+
+.room-setup-card small,
+.room-setup-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.room-setup-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .environment-preset-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
