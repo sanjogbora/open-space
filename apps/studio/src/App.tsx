@@ -12005,17 +12005,17 @@ function isSceneFramingDiagnostic(code: string): boolean {
   return sceneFramingDiagnosticCodes.has(code);
 }
 
+function isGreenPlaceholderDiagnostic(code: string): boolean {
+  return code === "dominant-green-placeholder-material";
+}
+
 function importActionForDiagnostic(code: string): ImportNextStepAction | undefined {
   if (isSceneFramingDiagnostic(code)) {
     return "repair";
   }
 
-  if (
-    [
-      "dominant-green-placeholder-material",
-    ].includes(code)
-  ) {
-    return "environment";
+  if (isGreenPlaceholderDiagnostic(code)) {
+    return "materials";
   }
   if (
     [
@@ -12501,11 +12501,15 @@ function diagnosticVisualSymptom(code: string): string | null {
       "many-unused-texture-images",
       "many-transparent-materials",
       "dominant-transparent-surface",
-      "dominant-untextured-material"
+      "dominant-untextured-material",
+      "dominant-green-placeholder-material"
     ].includes(code)
   ) {
     if (code === "many-transparent-materials" || code === "dominant-transparent-surface") {
       return "walls, ceilings, floors, or windows may look see-through, hollow, or sorted in the wrong order.";
+    }
+    if (code === "dominant-green-placeholder-material") {
+      return "the viewer may be showing a large grass/placeholder-colored surface instead of the detailed building materials.";
     }
     return "the model can look much poorer than the reference because material images are not actually assigned.";
   }
@@ -12537,6 +12541,9 @@ function repairCenterDestinationForItem(item: RepairCenterItem): string {
   }
   if (item.id === "scene-framing") {
     return "Opens Import scene framing health.";
+  }
+  if (item.id === "green-placeholder-material") {
+    return "Opens Materials review.";
   }
   if (item.action === "repair") {
     return "Opens Import repair.";
@@ -12577,6 +12584,9 @@ function repairCenterVerifyForItem(item: RepairCenterItem): string {
   }
   if (item.id === "scene-framing") {
     return "After repair, first load, top view, room buttons, and click-to-move should frame the actual building.";
+  }
+  if (item.id === "green-placeholder-material") {
+    return "After review, compare against the reference viewer and confirm the building no longer reads as one large green/plain surface.";
   }
   if (item.action === "repair") {
     return "After repair, return here and confirm blocker counts or source warnings decreased.";
@@ -12687,6 +12697,9 @@ function buildRepairCenterItems({
       isSceneFramingDiagnostic(diagnostic.code) &&
       !(hasModelOffset && diagnostic.code === "scene-far-from-origin")
   );
+  const greenPlaceholderDiagnostic = (stats.diagnostics ?? []).find(
+    (diagnostic) => diagnostic.severity !== "info" && isGreenPlaceholderDiagnostic(diagnostic.code)
+  );
   if (sceneFramingDiagnostics.length > 0) {
     const first = sceneFramingDiagnostics[0]!;
     items.push({
@@ -12700,6 +12713,18 @@ function buildRepairCenterItems({
       button: "Repair Framing"
     });
   }
+  if (greenPlaceholderDiagnostic) {
+    items.push({
+      id: "green-placeholder-material",
+      stage: "Visuals",
+      title: "Green/plain surface dominates",
+      detail: `${greenPlaceholderDiagnostic.title}: ${greenPlaceholderDiagnostic.message}`,
+      visualFix: "Open Materials and compare the dominant green/plain material against loose texture previews. If it is only generated grass or exterior context, switch to Environment after confirming the building materials are correct.",
+      severity: greenPlaceholderDiagnostic.severity === "error" ? "error" : "warning",
+      action: "materials",
+      button: "Review Surface"
+    });
+  }
   for (const diagnostic of stats.diagnostics ?? []) {
     if (diagnostic.severity === "info") {
       continue;
@@ -12708,6 +12733,9 @@ function buildRepairCenterItems({
       continue;
     }
     if (isSceneFramingDiagnostic(diagnostic.code)) {
+      continue;
+    }
+    if (isGreenPlaceholderDiagnostic(diagnostic.code)) {
       continue;
     }
     const action = importActionForDiagnostic(diagnostic.code) ?? "review";
@@ -13738,6 +13766,7 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
     (suggestion) => textureSuggestionConfidence(suggestion.score) === "review"
   );
   const textureAssignmentDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
+    diagnostic.code === "dominant-green-placeholder-material" ||
     diagnostic.code === "image-textures-unused-by-materials" ||
     diagnostic.code === "few-materials-use-textures" ||
     diagnostic.code === "many-unused-texture-images" ||
@@ -13915,6 +13944,7 @@ function AssetHealth({
   );
   const textureSuggestions = stats.materialTextureSuggestions ?? [];
   const textureAssignmentDiagnostic = (stats.diagnostics ?? []).find((diagnostic) =>
+    diagnostic.code === "dominant-green-placeholder-material" ||
     diagnostic.code === "image-textures-unused-by-materials" ||
     diagnostic.code === "few-materials-use-textures" ||
     diagnostic.code === "many-unused-texture-images" ||
