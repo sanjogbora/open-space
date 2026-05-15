@@ -13411,6 +13411,31 @@ function App() {
                             </div>
                           </div>
                         )}
+                        {navigationRepairDraft.objectName && !navigationRepairObjectMatch && (
+                          <div className="repair-object-card">
+                            <div>
+                              <strong>Clicked object needs review</strong>
+                              <p>
+                                Studio could not automatically match {navigationRepairDraft.objectName} to a saved object
+                                override. Open Objects with this name prefilled, then choose whether it should be ignored,
+                                walkable, or a wall.
+                              </p>
+                            </div>
+                            <div className="inline-actions">
+                              <button
+                                type="button"
+                                className="button secondary"
+                                onClick={() => {
+                                  setObjectSearchQuery(navigationRepairDraft.objectName ?? "");
+                                  setObjectListFilter("all");
+                                  setSelectedTab("objects");
+                                }}
+                              >
+                                Review Object
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         <details className="repair-debug-details">
                           <summary>Technical details</summary>
                           <dl className="repair-details">
