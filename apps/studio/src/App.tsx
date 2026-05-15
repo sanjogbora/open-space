@@ -3048,6 +3048,47 @@ function lightmapBakePlanText({
   return lines.filter(Boolean).join("\n");
 }
 
+function sceneFramingReportLines(stats: BundleStats | null): string[] {
+  if (!stats) {
+    return ["- Scene framing data is not available yet."];
+  }
+  const sceneArea = footprintAreaFromSize(stats.sceneBoundsSize);
+  const focusedArea = footprintAreaFromSize(stats.focusedBoundsSize);
+  const focusedShare =
+    typeof sceneArea === "number" && sceneArea > 0 && typeof focusedArea === "number"
+      ? Math.min(1, Math.max(0, focusedArea / sceneArea))
+      : undefined;
+  const sceneDiagnostics = (stats.diagnostics ?? []).filter((diagnostic) =>
+    isSceneFramingDiagnostic(diagnostic.code)
+  );
+  return [
+    typeof stats.sceneLargestDimension === "number"
+      ? `- Full scene span: ${stats.sceneLargestDimension.toFixed(1)} units`
+      : "- Full scene span: unknown",
+    typeof stats.focusedLargestDimension === "number"
+      ? `- Focused building span: ${stats.focusedLargestDimension.toFixed(1)} units`
+      : "- Focused building span: unknown",
+    typeof focusedShare === "number"
+      ? `- Focused building share: ${Math.max(1, Math.round(focusedShare * 100))}% of the full scene footprint`
+      : "- Focused building share: unknown",
+    stats.sceneFootprintCenter && typeof stats.sceneFootprintCenterDistance === "number"
+      ? `- Full scene center: ${stats.sceneFootprintCenter.map((value) => value.toFixed(1)).join(", ")} (${stats.sceneFootprintCenterDistance.toFixed(1)} units from origin)`
+      : "",
+    stats.focusedFootprintCenter && typeof stats.focusedFootprintCenterDistance === "number"
+      ? `- Focused building center: ${stats.focusedFootprintCenter.map((value) => value.toFixed(1)).join(", ")} (${stats.focusedFootprintCenterDistance.toFixed(1)} units from origin)`
+      : "",
+    stats.modelOffset
+      ? `- Viewer runtime offset: ${formatRuntimeVec3(stats.modelOffset)} (${formatRuntimeNumber(stats.modelOffsetDistance ?? 0, 1)} units applied)`
+      : "- Viewer runtime offset: none",
+    sceneDiagnostics.length > 0
+      ? `- Framing diagnostics: ${sceneDiagnostics.map((diagnostic) => diagnostic.title).join("; ")}`
+      : "- Framing diagnostics: none",
+    sceneDiagnostics.length > 0
+      ? "- Action: run Import Repair, then confirm first load, top view, room buttons, and click-to-move frame the actual building."
+      : "- Action: open the viewer and confirm the first view, top view, and movement targets still frame the building."
+  ].filter(Boolean);
+}
+
 function sourceQaPlanText(stats: BundleStats, projectId: string): string {
   const sourceReviewCodes = new Set([
     "malformed-model",
@@ -3072,6 +3113,11 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     "case-mismatched-model-resources",
     "large-coordinate-units",
     "scene-far-from-origin",
+    "dominant-flat-plane",
+    "focused-model-small-in-scene",
+    "initial-view-on-dominant-plane",
+    "initial-view-misses-focused-model",
+    "missing-scene-bounds",
     "relocatable-texture-resources",
     "stale-object-overrides",
     "invalid-object-navigation-behavior",
@@ -3110,6 +3156,9 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     `- Embedded images: ${stats.embeddedImageCount ?? 0}`,
     `- External resources: ${externalResources.length}`,
     `- Missing external resources: ${missingResources.length}`,
+    "",
+    "Scene framing:",
+    ...sceneFramingReportLines(stats),
     "",
     "Source QA diagnostics:",
     `- Blocking source issues: ${errorCount}`,
@@ -13399,6 +13448,9 @@ function viewerQaReportText(
     `- Source/export issues: ${sourceExportDiagnostics.length}`,
     `- Publish gate: ${publishReadiness?.status ?? "not analyzed"}`,
     "",
+    "Scene framing:",
+    ...sceneFramingReportLines(stats),
+    "",
     "Environment:",
     `- Sky backdrop: ${manifest.environment?.skyBackdropEnabled === false ? "off" : "on"}`,
     `- Ground: ${manifest.environment?.groundEnabled === false ? "off" : "on"}`,
@@ -13582,7 +13634,10 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
   );
 
   const lines = [
-    `Open Space texture repair plan - ${projectId}`,
+    `Open Space asset health repair plan - ${projectId}`,
+    "",
+    "Scene framing:",
+    ...sceneFramingReportLines(stats),
     "",
     "Current texture health:",
     `- Materials using textures: ${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0}`,
