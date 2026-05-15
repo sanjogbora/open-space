@@ -711,6 +711,14 @@ interface PublishCheck {
   action?: ImportNextStepAction;
 }
 
+interface ClientDeliveryStep {
+  id: string;
+  label: string;
+  detail: string;
+  status: "ready" | "blocked" | "active" | "todo";
+  actionLabel: string;
+}
+
 interface VideoSurfaceCandidate {
   id: string;
   meshName: string;
@@ -4068,6 +4076,65 @@ function App() {
   const firstPublishCheckIssue = publishChecks.find((check) => check.blocking && !check.ready) ?? publishChecks.find((check) => !check.ready);
   const firstPublishGateIssue =
     bundleStats?.publishReadiness?.blockers[0] ?? bundleStats?.publishReadiness?.warnings[0];
+  const latestPublishedEntry = publishHistory?.versions[0];
+  const activePublishedEntry = publishHistory?.activeVersion
+    ? publishHistory.versions.find((entry) => entry.version === publishHistory.activeVersion)
+    : undefined;
+  const clientDeliverySteps = useMemo<ClientDeliveryStep[]>(() => {
+    const hasPublishedVersion = Boolean(latestPublishedEntry);
+    const hasLiveVersion = Boolean(activePublishedEntry);
+    return [
+      {
+        id: "readiness",
+        label: "1. Clear blockers",
+        detail: hasBlockingPublishErrors
+          ? firstPublishCheckIssue
+            ? `${firstPublishCheckIssue.label}: ${firstPublishCheckIssue.detail}`
+            : "Fix the blocking readiness rows before sharing."
+          : firstPublishCheckIssue
+            ? `${firstPublishCheckIssue.label}: ${firstPublishCheckIssue.detail}`
+            : "No blocking publish rows are open.",
+        status: hasBlockingPublishErrors ? "blocked" : "ready",
+        actionLabel: hasBlockingPublishErrors ? "Open Repair Center" : "Copy Readiness"
+      },
+      {
+        id: "version",
+        label: "2. Create version",
+        detail: hasPublishedVersion
+          ? `Latest bundle: ${latestPublishedEntry?.version ?? "published"}`
+          : "Create a static bundle that can be opened, embedded, or deployed.",
+        status: publishState === "publishing" ? "active" : hasPublishedVersion ? "ready" : "todo",
+        actionLabel: publishState === "publishing" ? "Publishing" : "Publish"
+      },
+      {
+        id: "live",
+        label: "3. Set live link",
+        detail: hasLiveVersion
+          ? `Live version: ${activePublishedEntry?.version ?? publishHistory?.activeVersion}`
+          : hasPublishedVersion
+            ? "Choose the version clients should see by default."
+            : "Publish one version before setting the live link.",
+        status: hasLiveVersion ? "ready" : hasPublishedVersion ? "todo" : "blocked",
+        actionLabel: hasLiveVersion ? "Copy Live Link" : hasPublishedVersion ? "Set Latest Live" : "Waiting"
+      },
+      {
+        id: "client-test",
+        label: "4. Test as client",
+        detail: hasLiveVersion
+          ? "Open the live viewer and test movement, rooms, top view, screens, lighting, and mobile."
+          : "Use the published or draft viewer only after the live link is selected.",
+        status: hasLiveVersion && !hasBlockingPublishErrors ? "ready" : hasLiveVersion ? "active" : "todo",
+        actionLabel: hasLiveVersion ? "Open Live Viewer" : "Open Draft Viewer"
+      }
+    ];
+  }, [
+    activePublishedEntry,
+    firstPublishCheckIssue,
+    hasBlockingPublishErrors,
+    latestPublishedEntry,
+    publishHistory?.activeVersion,
+    publishState
+  ]);
   const blenderTool = toolStatus?.tools.blender;
   const materialCountForBake = bundleStats?.materialCount ?? materialsDoc?.materials.length ?? 0;
   const estimatedBakeMaterialCount = Math.min(materialCountForBake, bakeSettings.maxMaterials);
@@ -7839,6 +7906,108 @@ function App() {
                 secondaryActionLabel="Repair Center"
                 onSecondaryAction={() => setSelectedTab("repair")}
               />
+
+              <div className="client-share-board" aria-label="Client share checklist">
+                {clientDeliverySteps.map((step) => (
+                  <div key={step.id} className={`client-share-step ${step.status}`}>
+                    <div className="client-share-step-status">
+                      {step.status === "ready" ? (
+                        <Check size={16} aria-hidden="true" />
+                      ) : step.status === "blocked" ? (
+                        <AlertTriangle size={16} aria-hidden="true" />
+                      ) : step.status === "active" ? (
+                        <Activity size={16} aria-hidden="true" />
+                      ) : (
+                        <Globe2 size={16} aria-hidden="true" />
+                      )}
+                    </div>
+                    <div className="client-share-step-main">
+                      <strong>{step.label}</strong>
+                      <p>{step.detail}</p>
+                    </div>
+                    {step.id === "readiness" && (
+                      <button
+                        type="button"
+                        className="button secondary compact-button client-share-action"
+                        onClick={() =>
+                          hasBlockingPublishErrors
+                            ? setSelectedTab("repair")
+                            : void copyText(
+                                publishReadinessReportText({
+                                  projectId: activeProjectId,
+                                  title: manifest.branding.clientName ?? manifest.branding.title,
+                                  manifest,
+                                  stats: bundleStats,
+                                  publishChecks,
+                                  draftViewerUrl: viewerUrl(activeProjectId),
+                                  ...(publishHistory?.activeVersion
+                                    ? { liveViewerUrl: livePublishedViewerUrl(activeProjectId, publishHistory) }
+                                    : {})
+                                })
+                              )
+                        }
+                      >
+                        {hasBlockingPublishErrors ? <Wrench size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
+                        {step.actionLabel}
+                      </button>
+                    )}
+                    {step.id === "version" && (
+                      <button
+                        type="button"
+                        className="button secondary compact-button client-share-action"
+                        disabled={publishState === "publishing" || hasBlockingPublishErrors}
+                        onClick={() => void publishProject()}
+                      >
+                        <Globe2 size={15} aria-hidden="true" />
+                        {step.actionLabel}
+                      </button>
+                    )}
+                    {step.id === "live" &&
+                      (activePublishedEntry ? (
+                        <button
+                          type="button"
+                          className="button secondary compact-button client-share-action"
+                          onClick={() => void copyText(livePublishedViewerUrl(activeProjectId, publishHistory!))}
+                        >
+                          <Copy size={15} aria-hidden="true" />
+                          {step.actionLabel}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="button secondary compact-button client-share-action"
+                          disabled={!latestPublishedEntry || !apiConnected || activePublishVersion === latestPublishedEntry.version}
+                          onClick={() => latestPublishedEntry && void activatePublishedVersion(latestPublishedEntry)}
+                        >
+                          <Globe2 size={15} aria-hidden="true" />
+                          {activePublishVersion && latestPublishedEntry?.version === activePublishVersion ? "Setting" : step.actionLabel}
+                        </button>
+                      ))}
+                    {step.id === "client-test" &&
+                      (activePublishedEntry ? (
+                        <a
+                          className="button secondary compact-button client-share-action"
+                          href={livePublishedViewerUrl(activeProjectId, publishHistory!)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink size={15} aria-hidden="true" />
+                          {step.actionLabel}
+                        </a>
+                      ) : (
+                        <a
+                          className="button secondary compact-button client-share-action"
+                          href={viewerUrl(activeProjectId)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink size={15} aria-hidden="true" />
+                          {step.actionLabel}
+                        </a>
+                      ))}
+                  </div>
+                ))}
+              </div>
 
               <div className="publish-action-card">
                 <div>

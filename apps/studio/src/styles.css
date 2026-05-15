@@ -1413,6 +1413,87 @@ button.list-row {
   margin-bottom: 4px;
 }
 
+.client-share-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.client-share-step {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #dbe6ed;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.client-share-step.ready {
+  border-color: rgba(42, 151, 99, 0.28);
+  background: #f5fbf7;
+}
+
+.client-share-step.blocked {
+  border-color: rgba(190, 62, 62, 0.3);
+  background: #fff5f5;
+}
+
+.client-share-step.active,
+.client-share-step.todo {
+  border-color: rgba(33, 132, 220, 0.24);
+  background: #f6fbff;
+}
+
+.client-share-step-status {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d4e2ea;
+  border-radius: 50%;
+  color: #1f7fc8;
+  background: #ffffff;
+}
+
+.client-share-step.ready .client-share-step-status {
+  color: #177548;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.client-share-step.blocked .client-share-step-status {
+  color: #9a2d2d;
+  border-color: #efc3c3;
+  background: #fffafa;
+}
+
+.client-share-step-main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.client-share-step-main strong {
+  margin: 0;
+  color: #24313a;
+  font-size: 13px;
+}
+
+.client-share-step-main p {
+  margin: 0;
+  color: #52636f;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.client-share-action {
+  white-space: nowrap;
+}
+
 .publish-next-issue {
   display: grid;
   gap: 3px;
@@ -4283,6 +4364,7 @@ code {
   .bundle-grid,
   .repair-center-hero,
   .repair-center-card,
+  .client-share-board,
   .repair-diagnosis,
   .repair-playbook,
   .repair-action-grid,
@@ -4332,6 +4414,7 @@ code {
   .repair-recommendation,
   .repair-object-card,
   .repair-followup,
+  .client-share-step,
   .toggle-grid,
   .movement-preset-grid,
   .movement-comfort-card,
