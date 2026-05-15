@@ -3986,6 +3986,64 @@ function App() {
     [controlsDoc?.movement.collisionRadius, manifest]
   );
   const navigationCoverageSummary = useMemo(() => (manifest ? navigationCoverage(manifest) : null), [manifest]);
+  const movementSetupSteps = useMemo(() => {
+    const movement = controlsDoc?.movement;
+    const hasWalkAreas = (navigationCoverageSummary?.walkZones ?? 0) > 0;
+    const hasBounds = Boolean(manifest?.navigation.bounds);
+    const comfort = manifest
+      ? movementComfortStatus(controlsDoc, manifest)
+      : { tone: "blocked" as const };
+    const wheelSpeed = movement?.wheelMoveSpeed ?? 0;
+    return [
+      {
+        id: "movement",
+        label: "Movement",
+        detail: movement?.enabled ? "Viewer movement is enabled" : "Viewer movement is off",
+        status: movement?.enabled ? "ready" : "warning",
+        action: movement?.enabled ? "Movement OK" : "Enable"
+      },
+      {
+        id: "keyboard",
+        label: "WASD",
+        detail: movement?.keyboard ? "Keyboard walking is enabled" : "Keyboard walking is off",
+        status: movement?.keyboard ? "ready" : "warning",
+        action: movement?.keyboard ? "WASD OK" : "Enable WASD"
+      },
+      {
+        id: "click",
+        label: "Click-to-move",
+        detail:
+          movement?.clickToMove && hasWalkAreas
+            ? `${navigationCoverageSummary?.walkZones ?? 0} walk area${(navigationCoverageSummary?.walkZones ?? 0) === 1 ? "" : "s"}`
+            : movement?.clickToMove
+              ? "Needs walk areas"
+              : "Click movement is off",
+        status: movement?.clickToMove && hasWalkAreas ? "ready" : "warning",
+        action: movement?.clickToMove ? "View Walks" : "Enable Click"
+      },
+      {
+        id: "look-wheel",
+        label: "Look & wheel",
+        detail:
+          movement?.dragLook && wheelSpeed > 0
+            ? `Drag look and wheel glide ${wheelSpeed}`
+            : "Mouse drag or wheel glide needs setup",
+        status: movement?.dragLook && wheelSpeed > 0 ? "ready" : "warning",
+        action: movement?.dragLook && wheelSpeed > 0 ? "Input OK" : "Enable"
+      },
+      {
+        id: "collision",
+        label: "Walls & bounds",
+        detail: hasBounds
+          ? comfort.tone === "warning"
+            ? "Movement comfort needs tuning"
+            : "Bounds and collision are configured"
+          : "No movement bounds yet",
+        status: hasBounds && comfort.tone !== "warning" ? "ready" : "warning",
+        action: hasBounds ? (comfort.tone === "warning" ? "Ridge Safe" : "Collision OK") : "Auto Fix"
+      }
+    ];
+  }, [controlsDoc, manifest, navigationCoverageSummary?.walkZones]);
   const viewSetupSteps = useMemo(() => {
     const viewCount = manifest?.views.length ?? 0;
     const coveredWalkViews = navigationCoverageSummary?.coveredWalkViews ?? 0;
@@ -11668,6 +11726,73 @@ function App() {
 
               {controlsDoc ? (
                 <>
+                  <div className="movement-setup-board" aria-label="Movement setup health">
+                    {movementSetupSteps.map((step) => (
+                      <button
+                        key={step.id}
+                        type="button"
+                        className={`movement-setup-card ${step.status}`}
+                        disabled={step.status === "ready"}
+                        onClick={() => {
+                          if (step.id === "movement") {
+                            updateControls((current) => ({
+                              ...current,
+                              movement: { ...current.movement, enabled: true }
+                            }));
+                            return;
+                          }
+                          if (step.id === "keyboard") {
+                            updateControls((current) => ({
+                              ...current,
+                              movement: { ...current.movement, keyboard: true }
+                            }));
+                            return;
+                          }
+                          if (step.id === "click") {
+                            if (!controlsDoc.movement.clickToMove) {
+                              updateControls((current) => ({
+                                ...current,
+                                movement: { ...current.movement, clickToMove: true }
+                              }));
+                              return;
+                            }
+                            createWalkZonesFromViews();
+                            return;
+                          }
+                          if (step.id === "look-wheel") {
+                            updateControls((current) => ({
+                              ...current,
+                              movement: {
+                                ...current.movement,
+                                dragLook: true,
+                                wheelMoveSpeed: Math.max(current.movement.wheelMoveSpeed ?? 0, 0.82)
+                              }
+                            }));
+                            return;
+                          }
+                          if (step.id === "collision") {
+                            if (!manifest.navigation.bounds) {
+                              runNavigationQuickFix();
+                              return;
+                            }
+                            applyMovementPreset("ridge-safe");
+                          }
+                        }}
+                      >
+                        <span>
+                          {step.status === "ready" ? (
+                            <Check size={15} aria-hidden="true" />
+                          ) : (
+                            <Settings2 size={15} aria-hidden="true" />
+                          )}
+                        </span>
+                        <strong>{step.label}</strong>
+                        <small>{step.detail}</small>
+                        <em>{step.action}</em>
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="toggle-grid">
                     {movementToggles.map(({ field, label }) => (
                       <label key={field} className="toggle-row">

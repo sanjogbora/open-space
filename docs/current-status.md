@@ -50,6 +50,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio diagnostics now show grouped visual fix areas and likely user-visible symptoms before the raw diagnostic details.
 - Asset Health now shows a visual texture repair roadmap for path repair, material map assignment, texture memory, and lightmap asset issues before detailed file lists.
 - Studio Navigation Repair now shows a doorway health board for route islands, door passes, body clearance, blocker overlap, and bounds before the detailed QA list.
+- Studio Controls now shows a movement setup board for movement enablement, WASD, click-to-move, drag/wheel input, and collision/bounds before numeric tuning.
 - Studio Rooms now shows a room setup board for labels, floorplan regions, linked walk views, top-view bounds, and walk-area syncing before manual room editing.
 - Studio Views now shows a visual setup board for saved views, walk starts, top view, room links, and walk-zone coverage before raw camera coordinates.
 - Studio Interactions now shows a setup board for detected TV/screen surfaces, mapped video targets, linked video media, and hotspots/links before detailed interaction editing.

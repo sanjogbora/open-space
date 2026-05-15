@@ -888,6 +888,79 @@ textarea:focus {
   line-height: 1.35;
 }
 
+.movement-setup-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.movement-setup-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid #f0d099;
+  border-radius: 8px;
+  color: #7a4e08;
+  background: #fff8ed;
+  text-align: left;
+}
+
+.movement-setup-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.movement-setup-card:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.movement-setup-card:not(:disabled):hover,
+.movement-setup-card:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.movement-setup-card span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.movement-setup-card strong,
+.movement-setup-card small,
+.movement-setup-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movement-setup-card strong {
+  font-size: 12px;
+}
+
+.movement-setup-card small,
+.movement-setup-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.movement-setup-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .movement-comfort-card {
   border: 1px solid #d8e3e9;
   border-radius: 8px;
@@ -5595,6 +5668,7 @@ code {
   .toggle-grid,
   .bake-setup-board,
   .material-setup-board,
+  .movement-setup-board,
   .movement-preset-grid,
   .movement-comfort-card,
   .navigation-doorway-board,
