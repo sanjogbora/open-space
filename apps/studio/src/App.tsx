@@ -36,6 +36,7 @@ import {
   type ObjectToggleInteraction,
   type SceneControlsDocument,
   type SceneGraphDocument,
+  type SceneGraphNode,
   type SceneInteraction,
   type SceneManifest,
   type SceneView,
@@ -66,6 +67,7 @@ type PublishState = "idle" | "publishing" | "done" | "error";
 type OptimizeState = "idle" | "optimizing" | "done" | "error";
 type RepairState = "idle" | "repairing" | "done" | "error";
 type BakeState = "idle" | "baking" | "done" | "error";
+type ObjectListFilter = "all" | "ceiling" | "top-hidden" | "roles" | "hidden";
 type BakePreset = "draft" | "medium" | "high" | "super";
 type LightmapBakeSettings = {
   preset: BakePreset;
@@ -1092,6 +1094,21 @@ function objectMatchesBlockerName(object: ObjectOverride, blockerName: string): 
     (objectName.length >= 4 && blocker.includes(objectName)) ||
     (blocker.length >= 4 && objectName.includes(blocker))
   );
+}
+
+function objectSearchText(node: SceneGraphNode, override?: ObjectOverride): string {
+  return normalizedObjectMatchName(
+    [node.name, node.meshName, node.materialIds.join(" "), override?.name, override?.navigationBehavior].filter(Boolean).join(" ")
+  );
+}
+
+function isLikelyCeilingOrRoofObject(node: SceneGraphNode): boolean {
+  const text = objectSearchText(node);
+  return /\b(ceiling|false ceiling|dropped ceiling|roof|roofing|soffit|lid|cover)\b/.test(text);
+}
+
+function hasObjectNavigationRole(override: ObjectOverride | undefined): boolean {
+  return Boolean(override?.navigationBehavior && override.navigationBehavior !== "default");
 }
 
 function navigationRepairRecommendation(draft: NavigationRepairDraft): NavigationRepairRecommendation {
@@ -3356,6 +3373,8 @@ function App() {
   const [toolStatus, setToolStatus] = useState<ToolStatusDocument | null>(null);
   const [selectedMaterialId, setSelectedMaterialId] = useState("");
   const [selectedObjectId, setSelectedObjectId] = useState("");
+  const [objectSearchQuery, setObjectSearchQuery] = useState("");
+  const [objectListFilter, setObjectListFilter] = useState<ObjectListFilter>("all");
   const [apiConnected, setApiConnected] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [saveError, setSaveError] = useState("");
@@ -4231,14 +4250,55 @@ function App() {
     [materialVariantInteractions, selectedVariantInteractionId]
   );
 
+  const objectOverrideById = useMemo(() => {
+    const entries = objectsDoc?.objects.map((object) => [object.id, object] as const) ?? [];
+    return new Map(entries);
+  }, [objectsDoc]);
+  const objectReviewRows = useMemo(() => {
+    return (sceneGraph?.nodes ?? []).map((node) => {
+      const override = objectOverrideById.get(node.id);
+      return {
+        node,
+        override,
+        searchText: objectSearchText(node, override),
+        isCeilingOrRoof: isLikelyCeilingOrRoofObject(node),
+        isHiddenInTopView: override?.hideInTopView === true,
+        isHidden: override?.visible === false,
+        hasNavigationRole: hasObjectNavigationRole(override)
+      };
+    });
+  }, [objectOverrideById, sceneGraph]);
+  const objectFilterCounts = useMemo(
+    () => ({
+      all: objectReviewRows.length,
+      ceiling: objectReviewRows.filter((row) => row.isCeilingOrRoof).length,
+      topHidden: objectReviewRows.filter((row) => row.isHiddenInTopView).length,
+      roles: objectReviewRows.filter((row) => row.hasNavigationRole).length,
+      hidden: objectReviewRows.filter((row) => row.isHidden).length
+    }),
+    [objectReviewRows]
+  );
+  const filteredObjectRows = useMemo(() => {
+    const query = normalizedObjectMatchName(objectSearchQuery);
+    return objectReviewRows.filter((row) => {
+      const matchesFilter =
+        objectListFilter === "all" ||
+        (objectListFilter === "ceiling" && row.isCeilingOrRoof) ||
+        (objectListFilter === "top-hidden" && row.isHiddenInTopView) ||
+        (objectListFilter === "roles" && row.hasNavigationRole) ||
+        (objectListFilter === "hidden" && row.isHidden);
+      return matchesFilter && (!query || row.searchText.includes(query));
+    });
+  }, [objectListFilter, objectReviewRows, objectSearchQuery]);
+
   const selectedObject = useMemo(
     () => sceneGraph?.nodes.find((node) => node.id === selectedObjectId),
     [sceneGraph, selectedObjectId]
   );
 
   const selectedObjectOverride = useMemo(
-    () => objectsDoc?.objects.find((object) => object.id === selectedObjectId),
-    [objectsDoc, selectedObjectId]
+    () => objectOverrideById.get(selectedObjectId),
+    [objectOverrideById, selectedObjectId]
   );
 
   const selectedMaterial = useMemo(
@@ -9810,7 +9870,7 @@ function App() {
             <div className="list-panel">
               <div className="list-heading">
                 <h2>Objects</h2>
-                <small>{sceneGraph?.nodes.length ?? 0}</small>
+                <small>{filteredObjectRows.length} / {sceneGraph?.nodes.length ?? 0}</small>
               </div>
               <VisualGuideCard
                 className="compact"
@@ -9826,8 +9886,37 @@ function App() {
                 secondaryActionLabel="Repair Center"
                 onSecondaryAction={() => setSelectedTab("repair")}
               />
-              {sceneGraph?.nodes.map((node) => {
-                const override = objectsDoc?.objects.find((object) => object.id === node.id);
+              <div className="object-review-tools">
+                <label className="object-search-field">
+                  <span>Find object</span>
+                  <input
+                    type="search"
+                    value={objectSearchQuery}
+                    placeholder="Search ceiling, roof, wall, mesh name..."
+                    onChange={(event) => setObjectSearchQuery(event.target.value)}
+                  />
+                </label>
+                <div className="object-filter-row" aria-label="Object filters">
+                  {[
+                    ["all", "All", objectFilterCounts.all],
+                    ["ceiling", "Ceiling/Roof", objectFilterCounts.ceiling],
+                    ["top-hidden", "Hidden in Top", objectFilterCounts.topHidden],
+                    ["roles", "Movement Roles", objectFilterCounts.roles],
+                    ["hidden", "Hidden", objectFilterCounts.hidden]
+                  ].map(([id, label, count]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={objectListFilter === id ? "object-filter-chip active" : "object-filter-chip"}
+                      onClick={() => setObjectListFilter(id as ObjectListFilter)}
+                    >
+                      <span>{label}</span>
+                      <strong>{count}</strong>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {filteredObjectRows.map(({ node, override, isCeilingOrRoof, isHiddenInTopView }) => {
                 return (
                   <div
                     key={node.id}
@@ -9839,6 +9928,11 @@ function App() {
                         {node.triangleCount} triangles
                         {override?.hideInTopView ? " · hidden in top" : ""}
                       </small>
+                      {(isCeilingOrRoof || isHiddenInTopView) && (
+                        <span className={isHiddenInTopView ? "object-role-chip top-hidden" : "object-role-chip review"}>
+                          {isHiddenInTopView ? "Top Hidden" : "Review Top"}
+                        </span>
+                      )}
                       {override?.navigationBehavior && override.navigationBehavior !== "default" && (
                         <span className={`object-role-chip ${override.navigationBehavior}`}>
                           {objectNavigationBehaviorLabel(override.navigationBehavior)}
@@ -9865,6 +9959,9 @@ function App() {
                   </div>
                 );
               })}
+              {sceneGraph && filteredObjectRows.length === 0 && (
+                <p className="empty-list">No objects match this filter. Clear the search or switch back to All.</p>
+              )}
               {!sceneGraph && <p className="empty-list">No scene graph generated.</p>}
             </div>
 
