@@ -5004,6 +5004,56 @@ function App() {
       ).length,
     [videoTextureInteractions]
   );
+  const objectToggleKnownTargetKeys = useMemo(() => {
+    const ids = new Set<string>();
+    const names = new Set<string>();
+    objectsDoc?.objects.forEach((object) => {
+      ids.add(object.id);
+      names.add(normalizedObjectMatchName(object.name));
+    });
+    sceneGraph?.nodes.forEach((node) => {
+      ids.add(node.id);
+      names.add(normalizedObjectMatchName(node.name));
+    });
+    names.delete("");
+    return { ids, names };
+  }, [objectsDoc, sceneGraph]);
+  const objectToggleMissingTargetCount = useMemo(
+    () =>
+      objectToggleInteractions.filter(
+        (interaction) => !interaction.targetObjectId?.trim() && !interaction.targetObjectName?.trim()
+      ).length,
+    [objectToggleInteractions]
+  );
+  const objectToggleStaleTargetCount = useMemo(
+    () =>
+      objectToggleInteractions.filter((interaction) => {
+        const targetId = interaction.targetObjectId?.trim();
+        const targetName = normalizedObjectMatchName(interaction.targetObjectName ?? "");
+        if (!targetId && !targetName) {
+          return false;
+        }
+        return !(
+          (targetId && objectToggleKnownTargetKeys.ids.has(targetId)) ||
+          (targetName && objectToggleKnownTargetKeys.names.has(targetName))
+        );
+      }).length,
+    [objectToggleInteractions, objectToggleKnownTargetKeys]
+  );
+  const selectedObjectToggleTargetState = useMemo(() => {
+    if (!selectedObjectToggle) {
+      return "ready";
+    }
+    const targetId = selectedObjectToggle.targetObjectId?.trim();
+    const targetName = normalizedObjectMatchName(selectedObjectToggle.targetObjectName ?? "");
+    if (!targetId && !targetName) {
+      return "missing";
+    }
+    return (targetId && objectToggleKnownTargetKeys.ids.has(targetId)) ||
+      (targetName && objectToggleKnownTargetKeys.names.has(targetName))
+      ? "ready"
+      : "stale";
+  }, [objectToggleKnownTargetKeys, selectedObjectToggle]);
   const interactionSetupSteps = useMemo(() => {
     const likelyCount = likelyVideoSurfaceCandidates.length;
     const interactionCount =
@@ -5042,6 +5092,19 @@ function App() {
         action: videoTextureInteractions.length > 0 ? "Upload Video" : "Add Screen"
       },
       {
+        id: "object-toggles",
+        label: "Object toggles",
+        detail: objectToggleInteractions.length > 0
+          ? objectToggleMissingTargetCount > 0
+            ? `${objectToggleMissingTargetCount} toggle${objectToggleMissingTargetCount === 1 ? "" : "s"} need target`
+            : objectToggleStaleTargetCount > 0
+              ? `${objectToggleStaleTargetCount} toggle${objectToggleStaleTargetCount === 1 ? "" : "s"} may be stale`
+              : `${objectToggleInteractions.length} toggle${objectToggleInteractions.length === 1 ? "" : "s"} targeted`
+          : "Optional show/hide actions",
+        status: objectToggleMissingTargetCount > 0 || objectToggleStaleTargetCount > 0 ? "warning" : "ready",
+        action: objectToggleInteractions.length > 0 ? "Review Toggle" : "Optional"
+      },
+      {
         id: "hotspots",
         label: "Hotspots & links",
         detail: interactionCount > 0
@@ -5056,7 +5119,9 @@ function App() {
     likelyVideoSurfaceCandidates.length,
     linkInteractions.length,
     mappedVideoSurfaceCount,
+    objectToggleMissingTargetCount,
     objectToggleInteractions.length,
+    objectToggleStaleTargetCount,
     videoSurfaceCandidates.length,
     videoTextureInteractions.length,
     videoTextureMissingMediaCount,
@@ -10788,6 +10853,26 @@ function App() {
                         addVideoTexture();
                         return;
                       }
+                      if (step.id === "object-toggles") {
+                        const reviewTarget =
+                          objectToggleInteractions.find((interaction) => {
+                            const targetId = interaction.targetObjectId?.trim();
+                            const targetName = normalizedObjectMatchName(interaction.targetObjectName ?? "");
+                            if (!targetId && !targetName) {
+                              return true;
+                            }
+                            return !(
+                              (targetId && objectToggleKnownTargetKeys.ids.has(targetId)) ||
+                              (targetName && objectToggleKnownTargetKeys.names.has(targetName))
+                            );
+                          }) ?? objectToggleInteractions[0];
+                        if (reviewTarget) {
+                          setSelectedInteractionId(reviewTarget.id);
+                          return;
+                        }
+                        addObjectToggle();
+                        return;
+                      }
                       if (step.id === "hotspots") {
                         addHotspot();
                       }
@@ -11036,6 +11121,13 @@ function App() {
                       ))}
                     </select>
                   </label>
+                  {selectedObjectToggleTargetState !== "ready" && (
+                    <p className="error-note compact-note">
+                      {selectedObjectToggleTargetState === "missing"
+                        ? "Choose the object this toggle should show or hide before testing."
+                        : "This target was not found in the current scene graph. Pick the object again after reimport."}
+                    </p>
+                  )}
                   <label className="toggle-row compact-toggle">
                     <input
                       type="checkbox"

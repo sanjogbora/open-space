@@ -119,6 +119,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Objects can now mark all detected ceiling/roof candidates as hidden in top view with one click, then send users straight to Save & Test.
 - Studio object edits now create a missing object override or object document automatically, so visibility, top-view hiding, and movement-role fixes do not silently fail on partial or regenerated object data.
 - Studio object-toggle interactions can now target any detected scene object, not only objects with saved overrides, so presentation toggles are easier to add after a fresh import.
+- Studio Interactions now flags object toggles with missing or stale targets and routes the setup board directly to the broken toggle.
 - Viewer fallback navigation now keeps ignored/collision objects out of walkable click targets and honors forced collision objects even when their names look floor-like.
 - Viewer navigation and picking now ignore globally hidden objects, so hidden geometry no longer acts as an invisible floor or collision blocker.
 - Movement is constrained by configured scene bounds.
