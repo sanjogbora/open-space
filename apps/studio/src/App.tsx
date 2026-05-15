@@ -7420,23 +7420,15 @@ function App() {
               {repairError && <p className="error-note">{repairError}</p>}
               {repairSummary && <p className="success-note">{repairSummary}</p>}
               {bundleStats && (
-                <div className="publish-action-card">
-                  <div>
-                    <strong>Source QA handoff</strong>
-                    <p className="quiet-note">
-                      Copy malformed-model, missing-resource, invalid-reference, and stale-override notes for source
-                      cleanup or re-export.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => void copyText(sourceQaPlanText(bundleStats, activeProjectId))}
-                  >
-                    <Copy size={16} aria-hidden="true" />
-                    Copy QA
-                  </button>
-                </div>
+                <SourceQaSummary
+                  stats={bundleStats}
+                  projectId={activeProjectId}
+                  apiConnected={apiConnected}
+                  repairState={repairState}
+                  onCopy={() => void copyText(sourceQaPlanText(bundleStats, activeProjectId))}
+                  onRepair={() => void repairImport()}
+                  onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })}
+                />
               )}
               {conversionJob && conversionJob.status !== "idle" && (
                 <div className="job-step-list">
@@ -12677,6 +12669,160 @@ function isSourceStructureDiagnostic(code: string): boolean {
     "invalid-position-bounds",
     "collapsed-position-bounds"
   ].includes(code);
+}
+
+interface SourceQaGroup {
+  id: string;
+  label: string;
+  detail: string;
+  count: number;
+  severity: "error" | "warning" | "ready";
+}
+
+function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
+  const diagnostics = stats.diagnostics ?? [];
+  const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
+  const missingResources = externalResources.filter((resource) => !resource.exists);
+  const groupFromDiagnostics = (
+    id: string,
+    label: string,
+    detail: string,
+    matches: (code: string) => boolean,
+    extraCount = 0
+  ): SourceQaGroup => {
+    const groupDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "info" && matches(diagnostic.code));
+    const hasError = groupDiagnostics.some((diagnostic) => diagnostic.severity === "error");
+    const hasWarning = groupDiagnostics.some((diagnostic) => diagnostic.severity === "warning");
+    const count = groupDiagnostics.length + extraCount;
+    return {
+      id,
+      label,
+      detail,
+      count,
+      severity: hasError ? "error" : hasWarning || extraCount > 0 ? "warning" : "ready"
+    };
+  };
+
+  return [
+    groupFromDiagnostics(
+      "structure",
+      "Export structure",
+      "Bad GLB/GLTF structure can make the model open blank, partial, mirrored, or impossible to analyze reliably.",
+      isSourceStructureDiagnostic
+    ),
+    groupFromDiagnostics(
+      "resources",
+      "Missing resources",
+      "Broken texture or buffer paths usually mean the original ZIP/folder needs to be uploaded or the model re-exported with embedded resources.",
+      (code) =>
+        [
+          "missing-model-resources",
+          "case-mismatched-model-resources",
+          "unsafe-gltf-resource-paths",
+          "unsupported-required-extensions",
+          "embedded-texture-decode-failed",
+          "sidecar-texture-decode-failed",
+          "relocatable-texture-resources"
+        ].includes(code),
+      missingResources.length
+    ),
+    groupFromDiagnostics(
+      "framing",
+      "Model framing",
+      "Far-away terrain, wrong bounds, or missing scene bounds can make first view, top view, rooms, and click targets frame the wrong area.",
+      isSceneFramingDiagnostic
+    ),
+    groupFromDiagnostics(
+      "references",
+      "Material references",
+      "Invalid material, texture, UV, or primitive references can make surfaces appear flat, green, black, or much poorer than the reference viewer.",
+      (code) =>
+        [
+          "invalid-material-references",
+          "invalid-texture-references",
+          "textures-without-images",
+          "invalid-uv-accessor-shapes",
+          "missing-uv-attributes",
+          "textured-primitives-missing-uvs",
+          "unassigned-primitive-materials"
+        ].includes(code)
+    ),
+    groupFromDiagnostics(
+      "overrides",
+      "Saved overrides",
+      "Stale object or navigation overrides after reimport can make hidden objects, blockers, top view, or movement roles behave unexpectedly.",
+      (code) => ["stale-object-overrides", "invalid-object-navigation-behavior"].includes(code)
+    )
+  ];
+}
+
+function SourceQaSummary({
+  stats,
+  projectId,
+  apiConnected,
+  repairState,
+  onCopy,
+  onRepair,
+  onReviewDiagnostics
+}: {
+  stats: BundleStats;
+  projectId: string;
+  apiConnected: boolean;
+  repairState: RepairState;
+  onCopy: () => void;
+  onRepair: () => void;
+  onReviewDiagnostics: () => void;
+}) {
+  const groups = sourceQaGroups(stats);
+  const issueGroups = groups.filter((group) => group.count > 0);
+  const hasErrors = groups.some((group) => group.severity === "error");
+  const hasWarnings = groups.some((group) => group.severity === "warning");
+  const status = hasErrors ? "error" : hasWarnings ? "warning" : "ready";
+  return (
+    <div className={`source-qa-card ${status}`}>
+      <div className="source-qa-heading">
+        <div>
+          <strong>Source QA</strong>
+          <p>
+            {issueGroups.length > 0
+              ? `${issueGroups.length} source/export area${issueGroups.length === 1 ? "" : "s"} need review before trusting viewer setup.`
+              : "No source/export structure problem is currently flagged."}
+          </p>
+          <small>{projectId}</small>
+        </div>
+        <div className="source-qa-actions">
+          <button type="button" className="button secondary compact-button" onClick={onCopy}>
+            <Copy size={15} aria-hidden="true" />
+            Copy QA
+          </button>
+          <button
+            type="button"
+            className="button secondary compact-button"
+            disabled={!apiConnected || repairState === "repairing"}
+            onClick={onRepair}
+          >
+            <Wrench size={15} aria-hidden="true" />
+            {repairState === "repairing" ? "Repairing" : "Repair"}
+          </button>
+        </div>
+      </div>
+      <div className="source-qa-grid">
+        {groups.map((group) => (
+          <button
+            key={group.id}
+            type="button"
+            className={`source-qa-item ${group.severity}`}
+            onClick={onReviewDiagnostics}
+            disabled={group.count === 0}
+          >
+            <span>{group.count > 0 ? group.count : <Check size={15} aria-hidden="true" />}</span>
+            <strong>{group.label}</strong>
+            <small>{group.count > 0 ? group.detail : "Looks clear."}</small>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function importActionForDiagnostic(code: string): ImportNextStepAction | undefined {
