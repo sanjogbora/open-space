@@ -2825,6 +2825,87 @@ button.list-row {
   line-height: 1.35;
 }
 
+.interaction-setup-board {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.interaction-setup-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px 8px;
+  padding: 9px;
+  border: 1px solid #f0d099;
+  border-radius: 8px;
+  color: #7a4e08;
+  background: #fff8ed;
+  text-align: left;
+}
+
+.interaction-setup-card.active {
+  color: #095b88;
+  border-color: #b8dcf0;
+  background: #eef8ff;
+}
+
+.interaction-setup-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.interaction-setup-card:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.interaction-setup-card:not(:disabled):hover,
+.interaction-setup-card:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.interaction-setup-card span {
+  width: 28px;
+  height: 28px;
+  grid-row: span 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.interaction-setup-card strong,
+.interaction-setup-card small,
+.interaction-setup-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interaction-setup-card strong {
+  font-size: 12px;
+}
+
+.interaction-setup-card small,
+.interaction-setup-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.interaction-setup-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .room-planner-card {
   border-color: #c7eadb;
   background: #f3fbf7;

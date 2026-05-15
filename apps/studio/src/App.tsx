@@ -4425,6 +4425,75 @@ function App() {
       )
     ).length;
   }, [videoSurfaceCandidates, videoTextureInteractions]);
+  const videoTextureMissingMediaCount = useMemo(
+    () => videoTextureInteractions.filter((interaction) => !interaction.source.trim()).length,
+    [videoTextureInteractions]
+  );
+  const videoTextureMissingTargetCount = useMemo(
+    () =>
+      videoTextureInteractions.filter(
+        (interaction) => !interaction.targetMeshName && !interaction.targetMaterialName
+      ).length,
+    [videoTextureInteractions]
+  );
+  const interactionSetupSteps = useMemo(() => {
+    const likelyCount = likelyVideoSurfaceCandidates.length;
+    const interactionCount =
+      videoTextureInteractions.length +
+      hotspotInteractions.length +
+      linkInteractions.length +
+      objectToggleInteractions.length;
+    return [
+      {
+        id: "detect-screens",
+        label: "Detected screens",
+        detail: likelyCount > 0 ? `${likelyCount} likely TV/screen surface${likelyCount === 1 ? "" : "s"}` : "No strong screen candidates",
+        status: likelyCount > 0 ? "active" : videoSurfaceCandidates.length > 0 ? "warning" : "warning",
+        action: likelyCount > 0 ? "Map Likely" : "Add Screen"
+      },
+      {
+        id: "screen-targets",
+        label: "Mapped targets",
+        detail: videoTextureInteractions.length > 0
+          ? videoTextureMissingTargetCount > 0
+            ? `${videoTextureMissingTargetCount} screen${videoTextureMissingTargetCount === 1 ? "" : "s"} need target`
+            : `${mappedVideoSurfaceCount} candidate${mappedVideoSurfaceCount === 1 ? "" : "s"} mapped`
+          : "No video screens configured",
+        status: videoTextureInteractions.length > 0 && videoTextureMissingTargetCount === 0 ? "ready" : "warning",
+        action: videoTextureInteractions.length > 0 ? "Review Target" : "Add Screen"
+      },
+      {
+        id: "screen-media",
+        label: "Video media",
+        detail: videoTextureInteractions.length > 0
+          ? videoTextureMissingMediaCount > 0
+            ? `${videoTextureMissingMediaCount} screen${videoTextureMissingMediaCount === 1 ? "" : "s"} missing video`
+            : "Screen media is linked"
+          : "Add a screen before uploading media",
+        status: videoTextureInteractions.length > 0 && videoTextureMissingMediaCount === 0 ? "ready" : "warning",
+        action: videoTextureInteractions.length > 0 ? "Upload Video" : "Add Screen"
+      },
+      {
+        id: "hotspots",
+        label: "Hotspots & links",
+        detail: interactionCount > 0
+          ? `${interactionCount} interaction${interactionCount === 1 ? "" : "s"} configured`
+          : "No clickable points yet",
+        status: interactionCount > 0 ? "ready" : "warning",
+        action: interactionCount > 0 ? "Interactions OK" : "Add Hotspot"
+      }
+    ];
+  }, [
+    hotspotInteractions.length,
+    likelyVideoSurfaceCandidates.length,
+    linkInteractions.length,
+    mappedVideoSurfaceCount,
+    objectToggleInteractions.length,
+    videoSurfaceCandidates.length,
+    videoTextureInteractions.length,
+    videoTextureMissingMediaCount,
+    videoTextureMissingTargetCount
+  ]);
 
   const collisionNameCandidates = useMemo(() => {
     if (!sceneGraph || !manifest) {
@@ -9077,6 +9146,58 @@ function App() {
                   </div>
                 </div>
               )}
+              <div className="interaction-setup-board" aria-label="Interaction setup health">
+                {interactionSetupSteps.map((step) => (
+                  <button
+                    key={step.id}
+                    type="button"
+                    className={`interaction-setup-card ${step.status}`}
+                    disabled={step.status === "ready"}
+                    onClick={() => {
+                      if (step.id === "detect-screens") {
+                        if (likelyVideoSurfaceCandidates.length > 0) {
+                          addLikelyVideoTextures();
+                          return;
+                        }
+                        addVideoTexture();
+                        return;
+                      }
+                      if (step.id === "screen-targets" || step.id === "screen-media") {
+                        const reviewTarget =
+                          videoTextureInteractions.find(
+                            (interaction) =>
+                              (step.id === "screen-media" && !interaction.source.trim()) ||
+                              (step.id === "screen-targets" &&
+                                !interaction.targetMeshName &&
+                                !interaction.targetMaterialName)
+                          ) ?? videoTextureInteractions[0];
+                        if (reviewTarget) {
+                          setSelectedInteractionId(reviewTarget.id);
+                          return;
+                        }
+                        addVideoTexture();
+                        return;
+                      }
+                      if (step.id === "hotspots") {
+                        addHotspot();
+                      }
+                    }}
+                  >
+                    <span>
+                      {step.status === "ready" ? (
+                        <Check size={15} aria-hidden="true" />
+                      ) : step.id.includes("screen") ? (
+                        <Video size={15} aria-hidden="true" />
+                      ) : (
+                        <MapPin size={15} aria-hidden="true" />
+                      )}
+                    </span>
+                    <strong>{step.label}</strong>
+                    <small>{step.detail}</small>
+                    <em>{step.action}</em>
+                  </button>
+                ))}
+              </div>
               {hotspotInteractions.map((interaction) => (
                 <button
                   key={interaction.id}

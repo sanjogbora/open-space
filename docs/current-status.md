@@ -49,6 +49,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Asset Health now shows a visual texture repair roadmap for path repair, material map assignment, texture memory, and lightmap asset issues before detailed file lists.
 - Studio Navigation Repair now shows a doorway health board for route islands, door passes, body clearance, blocker overlap, and bounds before the detailed QA list.
 - Studio Rooms now shows a room setup board for labels, floorplan regions, linked walk views, top-view bounds, and walk-area syncing before manual room editing.
+- Studio Interactions now shows a setup board for detected TV/screen surfaces, mapped video targets, linked video media, and hotspots/links before detailed interaction editing.
 - Repair Center now includes a visual issue map that groups Source, Visuals, Movement, Presentation, Lighting, Performance, and Delivery fixes before the detailed cards.
 - Studio Publish now shows a visual client-share checklist for clearing blockers, creating a version, setting the live link, and testing the exact viewer a client will open.
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.
