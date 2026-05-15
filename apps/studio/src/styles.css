@@ -780,6 +780,61 @@ textarea:focus {
   line-height: 1.35;
 }
 
+.movement-comfort-card {
+  border: 1px solid #d8e3e9;
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.9fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.movement-comfort-card.ready {
+  border-color: rgba(35, 150, 98, 0.35);
+  background: rgba(35, 150, 98, 0.08);
+}
+
+.movement-comfort-card.warning {
+  border-color: rgba(206, 129, 28, 0.4);
+  background: rgba(206, 129, 28, 0.09);
+}
+
+.movement-comfort-card.blocked {
+  border-color: rgba(198, 62, 62, 0.4);
+  background: rgba(198, 62, 62, 0.08);
+}
+
+.movement-comfort-card span {
+  display: block;
+  color: #60717c;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.movement-comfort-card strong {
+  display: block;
+  margin-top: 3px;
+  color: #1e2c34;
+}
+
+.movement-comfort-card p {
+  margin: 6px 0 0;
+  color: #51636f;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.movement-comfort-card ul {
+  margin: 0;
+  padding-left: 16px;
+  color: #26343d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .compact-toggle {
   min-height: 38px;
   align-self: end;
@@ -4003,6 +4058,7 @@ code {
   .repair-followup,
   .toggle-grid,
   .movement-preset-grid,
+  .movement-comfort-card,
   .vector-field {
     grid-template-columns: 1fr;
   }

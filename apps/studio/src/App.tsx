@@ -807,6 +807,96 @@ const movementPresets: readonly {
   }
 ];
 
+const movementComfortFields: readonly (keyof SceneControlsDocument["movement"])[] = [
+  "clickMoveSpeed",
+  "wheelMoveSpeed",
+  "collisionRadius",
+  "maxStepUp",
+  "maxStepDown",
+  "floorHeightSmoothing",
+  "floorBumpTolerance"
+];
+
+function movementNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function closestMovementPreset(movement: SceneControlsDocument["movement"]): (typeof movementPresets)[number] {
+  return movementPresets.reduce((best, preset) => {
+    const score = movementComfortFields.reduce((total, field) => {
+      const presetValue = preset.movement[field];
+      if (typeof presetValue !== "number") {
+        return total;
+      }
+      const currentValue = movementNumber(movement[field], presetValue);
+      return total + Math.abs(currentValue - presetValue) / Math.max(0.1, Math.abs(presetValue));
+    }, 0);
+    return score < best.score ? { preset, score } : best;
+  }, { preset: movementPresets[0]!, score: Number.POSITIVE_INFINITY }).preset;
+}
+
+function movementComfortStatus(
+  controls: SceneControlsDocument | null,
+  manifest: SceneManifest
+): { label: string; tone: "ready" | "warning" | "blocked"; detail: string; lines: string[] } {
+  if (!controls?.movement.enabled) {
+    return {
+      label: "Movement off",
+      tone: "blocked",
+      detail: "Movement is disabled, so WASD, wheel glide, and click-to-move cannot be tested.",
+      lines: ["- Movement: off"]
+    };
+  }
+
+  const movement = controls.movement;
+  const preset = closestMovementPreset(movement);
+  const clickGlide = movementNumber(movement.clickMoveSpeed, 1.05);
+  const wheelGlide = movementNumber(movement.wheelMoveSpeed, 1);
+  const bodyRadius = movementNumber(movement.collisionRadius, 0.28);
+  const stepUp = movementNumber(movement.maxStepUp, 0.38);
+  const stepDown = movementNumber(movement.maxStepDown, 0.72);
+  const heightGlide = movementNumber(movement.floorHeightSmoothing, 0.9);
+  const bumpIgnore = movementNumber(movement.floorBumpTolerance, 0.48);
+  const cameraHeight = manifest.navigation.cameraHeight;
+  const warnings = [
+    bumpIgnore < 0.18
+      ? "Floor Bump Ignore is strict, so tiny slabs, rug lips, or imported floor ridges may make the camera bob."
+      : "",
+    heightGlide > 1.8
+      ? "Height Glide is high, so the camera follows floor height changes more tightly instead of smoothing them out."
+      : "",
+    stepUp > 0.55 && bumpIgnore < 0.3
+      ? "Step Up is forgiving but bump ignore is low, so thresholds may still feel like small climbs."
+      : "",
+    bodyRadius > 0.34
+      ? "Body Radius is wide, so narrow doors may block even when the floor looks clickable."
+      : "",
+    bodyRadius < 0.2
+      ? "Body Radius is narrow, so users may clip closer to walls and furniture."
+      : ""
+  ].filter(Boolean);
+  const tone = warnings.length > 0 ? "warning" : "ready";
+  const detail =
+    warnings.length > 0
+      ? warnings[0]!
+      : preset.id === "ridge-safe"
+        ? "Ridge Safe-style settings are active for smoother imported floors."
+        : "Movement comfort settings are in a reasonable range for viewer testing.";
+  const lines = [
+    `- Closest preset: ${preset.label}`,
+    `- Camera height: ${cameraHeight.toFixed(2)}`,
+    `- Click glide: ${clickGlide.toFixed(2)}`,
+    `- Wheel glide: ${wheelGlide.toFixed(2)}`,
+    `- Body radius: ${bodyRadius.toFixed(2)}`,
+    `- Step up/down: ${stepUp.toFixed(2)} / ${stepDown.toFixed(2)}`,
+    `- Height glide: ${heightGlide.toFixed(2)}`,
+    `- Floor bump ignore: ${bumpIgnore.toFixed(2)}`,
+    warnings.length > 0 ? `- Watch: ${warnings.join(" ")}` : "- Watch: no obvious comfort risk from movement settings."
+  ];
+
+  return { label: preset.label, tone, detail, lines };
+}
+
 function initialProjectId(): string {
   return new URLSearchParams(window.location.search).get("project") ?? "demo";
 }
@@ -6569,6 +6659,7 @@ function App() {
   }
 
   const videoCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
+  const movementComfort = movementComfortStatus(controlsDoc, manifest);
   const variantCount = materialVariantInteractions.reduce(
     (sum, interaction) => sum + interaction.variants.length,
     0
@@ -7016,6 +7107,7 @@ function App() {
               />
               <ViewerQaChecklist
                 manifest={manifest}
+                controls={controlsDoc}
                 stats={bundleStats}
                 objects={objectsDoc}
                 viewerUrl={viewerUrl(activeProjectId)}
@@ -7037,6 +7129,7 @@ function App() {
                   void copyText(
                     viewerQaReportText(
                       manifest,
+                      controlsDoc,
                       bundleStats,
                       objectsDoc,
                       viewerUrl(activeProjectId),
@@ -9913,6 +10006,19 @@ function App() {
                         <small>{preset.detail}</small>
                       </button>
                     ))}
+                  </div>
+
+                  <div className={`movement-comfort-card ${movementComfort.tone}`}>
+                    <div>
+                      <span>Current comfort</span>
+                      <strong>{movementComfort.label}</strong>
+                      <p>{movementComfort.detail}</p>
+                    </div>
+                    <ul>
+                      {movementComfort.lines.slice(1, 8).map((line) => (
+                        <li key={line}>{line.replace(/^- /, "")}</li>
+                      ))}
+                    </ul>
                   </div>
 
                   <div className="field-grid">
@@ -12995,6 +13101,7 @@ function ImportNextSteps({
 
 function ViewerQaChecklist({
   manifest,
+  controls,
   stats,
   objects,
   viewerUrl,
@@ -13015,6 +13122,7 @@ function ViewerQaChecklist({
   onCopyReport
 }: {
   manifest: SceneManifest;
+  controls: SceneControlsDocument | null;
   stats: BundleStats | null;
   objects: ObjectsDocument | null;
   viewerUrl: string;
@@ -13035,6 +13143,7 @@ function ViewerQaChecklist({
   onCopyReport: () => void;
 }) {
   const diagnostics = stats?.diagnostics ?? [];
+  const movementComfort = movementComfortStatus(controls, manifest);
   const diagnosticCodes = new Set(diagnostics.map((diagnostic) => diagnostic.code));
   const errorCodes = new Set(
     diagnostics.filter((diagnostic) => diagnostic.severity === "error").map((diagnostic) => diagnostic.code)
@@ -13259,9 +13368,9 @@ function ViewerQaChecklist({
       id: "movement",
       label: "Movement basics",
       detail: hasNavigationSetup
-        ? "Test WASD, mouse drag, mouse wheel glide, and click-to-move on real floors."
+        ? `${movementComfort.label}: ${movementComfort.detail}`
         : "Set bounds, walk views, and at least one walk zone before testing movement.",
-      status: hasNavigationSetup ? "ready" : "blocked",
+      status: hasNavigationSetup ? movementComfort.tone : "blocked",
       button: hasNavigationSetup ? "Debug Viewer" : "Open Controls",
       onClick: hasNavigationSetup ? onSaveAndTestNavigation : onNavigation
     },
@@ -13370,6 +13479,7 @@ function ViewerQaChecklist({
 
 function viewerQaReportText(
   manifest: SceneManifest,
+  controls: SceneControlsDocument | null,
   stats: BundleStats | null,
   objects: ObjectsDocument | null,
   viewerUrl: string,
@@ -13415,6 +13525,7 @@ function viewerQaReportText(
   const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;
   const linkCount = manifest.interactions.filter((interaction) => interaction.kind === "link").length;
   const objectToggleCount = manifest.interactions.filter((interaction) => interaction.kind === "object-toggle").length;
+  const movementComfort = movementComfortStatus(controls, manifest);
   const publishReadiness = stats?.publishReadiness;
   const publishIssues = [
     ...(publishReadiness?.blockers ?? []).map((issue) => `BLOCKER: ${issue.title} - ${issue.message}`),
@@ -13475,6 +13586,9 @@ function viewerQaReportText(
     `- Door/pass zones: ${coverage.passZones}`,
     `- Route islands: ${coverage.routeComponents}`,
     `- Walk views covered: ${coverage.coveredWalkViews}/${coverage.walkViews}`,
+    "",
+    "Movement comfort:",
+    ...movementComfort.lines,
     "",
     "Interactions:",
     `- Video screens: ${videoTextureCount}`,

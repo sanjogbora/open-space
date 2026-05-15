@@ -196,6 +196,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import asset health now includes a visual Scene Framing card for terrain-dominated, far-origin, or recentered imports, with full-scene span, focused span, building share, and offset/origin distance.
 - Repair Center now groups terrain, far-origin, scale, and first-camera framing diagnostics into one visual Repair scene framing card instead of scattering them across generic environment/source fixes.
 - Source QA, Viewer QA, and Asset Health copyable reports now include the same plain-language scene framing evidence and repair action as the visual Studio card.
+- Studio Controls and Viewer QA now show a Movement Comfort summary with the closest preset, glide/body/step values, and bobbing risk guidance for messy imported floors.
 - API texture repair scores duplicate loose texture candidates by relative path and texture-folder context before copying.
 - Analyzer now flags embedded GLB textures and sidecar texture files that cannot be decoded, so broken image payloads are reported instead of only showing flat or strange-colored surfaces in the viewer.
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.
