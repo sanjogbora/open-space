@@ -3509,6 +3509,8 @@ function App() {
     }, 0);
     if (navigationRepairDraft.blockerName) {
       setBlockerNameDraft(navigationRepairDraft.blockerName);
+    } else if (navigationRepairDraft.objectName) {
+      setBlockerNameDraft(navigationRepairDraft.objectName);
     }
   }, [navigationRepairDraft]);
 
@@ -4234,11 +4236,11 @@ function App() {
     return Number(clampNumber(radius - 0.06, 0.18, 0.24).toFixed(2));
   }, [controlsDoc?.movement.collisionRadius, navigationRepairDraft?.bodyRadius, navigationRepairDraft?.reason]);
   const navigationRepairObjectMatch = useMemo(() => {
-    if (!navigationRepairDraft?.blockerName || !objectsDoc) {
+    const matchName = navigationRepairDraft?.blockerName || navigationRepairDraft?.objectName;
+    if (!matchName || !objectsDoc) {
       return null;
     }
-    const blockerName = navigationRepairDraft.blockerName;
-    const blocker = normalizedObjectMatchName(blockerName);
+    const blocker = normalizedObjectMatchName(matchName);
     const sceneNode = sceneGraph?.nodes.find((node) => {
       const names = [node.id, node.name, node.meshName ?? ""].map(normalizedObjectMatchName);
       return names.some(
@@ -4251,10 +4253,10 @@ function App() {
     const objectBySceneNode = sceneNode
       ? objectsDoc.objects.find((object) => object.id === sceneNode.id || object.name === sceneNode.name)
       : undefined;
-    const objectByName = objectsDoc.objects.find((object) => objectMatchesBlockerName(object, blockerName));
+    const objectByName = objectsDoc.objects.find((object) => objectMatchesBlockerName(object, matchName));
     const object = objectBySceneNode ?? objectByName;
     return object ? { object, sceneNode } : null;
-  }, [navigationRepairDraft?.blockerName, objectsDoc, sceneGraph]);
+  }, [navigationRepairDraft?.blockerName, navigationRepairDraft?.objectName, objectsDoc, sceneGraph]);
   const repairDiagnosis = useMemo(
     () =>
       navigationRepairDraft
@@ -6748,6 +6750,7 @@ function App() {
       return;
     }
     const blockerName = navigationRepairDraft?.blockerName?.trim();
+    const clickedObjectName = navigationRepairDraft?.objectName?.trim();
     updateObject(match.object.id, (object) => ({
       ...object,
       navigationBehavior: behavior
@@ -6756,11 +6759,13 @@ function App() {
       updateNavigation((navigation) => {
         const existing = navigation.ignoredCollisionMeshNames ?? [];
         const next = [...existing];
-        [blockerName, match.object.name].filter((name): name is string => Boolean(name)).forEach((name) => {
-          if (!next.some((item) => item.toLowerCase() === name.toLowerCase())) {
-            next.push(name);
-          }
-        });
+        [blockerName, clickedObjectName, match.object.name]
+          .filter((name): name is string => Boolean(name))
+          .forEach((name) => {
+            if (!next.some((item) => item.toLowerCase() === name.toLowerCase())) {
+              next.push(name);
+            }
+          });
         return {
           ...navigation,
           ignoredCollisionMeshNames: next
@@ -13361,8 +13366,8 @@ function App() {
                             <div>
                               <strong>Matched model object</strong>
                               <p>
-                                {navigationRepairObjectMatch.object.name} is the likely object stopping movement.
-                                Choose a role here instead of editing coordinates.
+                                {navigationRepairObjectMatch.object.name} is the likely object involved in this failed click.
+                                Choose whether it should be walkable, blocking, or ignored instead of editing coordinates.
                               </p>
                               <small>
                                 Current role:{" "}
