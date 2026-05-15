@@ -4518,6 +4518,10 @@ function App() {
   }, [manifest?.environment]);
   const blenderTool = toolStatus?.tools.blender;
   const materialCountForBake = bundleStats?.materialCount ?? materialsDoc?.materials.length ?? 0;
+  const lightmappedMaterialCountForBake =
+    materialsDoc?.materials.filter((material) => Boolean(material.lightMapUrl)).length ??
+    bundleStats?.lightmapMaterialCount ??
+    0;
   const estimatedBakeMaterialCount = Math.min(materialCountForBake, bakeSettings.maxMaterials);
   const estimatedBakeTextureBytes =
     estimatedBakeMaterialCount * bakeSettings.resolution * bakeSettings.resolution * 4;
@@ -4663,6 +4667,63 @@ function App() {
       estimatedBakeTextureBytes,
       lightmapBakeJob?.lightmapCount,
       lightmapBakeJob?.status
+    ]
+  );
+  const bakeTriageSteps = useMemo(
+    () => [
+      {
+        id: "shadows",
+        label: "No soft shadows",
+        detail:
+          lightmappedMaterialCountForBake > 0
+            ? `${lightmappedMaterialCountForBake} material${lightmappedMaterialCountForBake === 1 ? "" : "s"} already use lightmaps.`
+            : "Bake lighting when the scene looks flat compared with Shapespark.",
+        status: lightmappedMaterialCountForBake > 0 ? "ready" : "warning",
+        action: lightmappedMaterialCountForBake > 0 ? "Review" : "Bake Medium"
+      },
+      {
+        id: "blank-output",
+        label: "Blank/tiny output",
+        detail:
+          bakeReviewPreviewCount > 0
+            ? `${bakeReviewPreviewCount} lightmap preview${bakeReviewPreviewCount === 1 ? "" : "s"} need review.`
+            : lightmapBakeJob?.status === "completed"
+              ? "No suspicious lightmap previews are flagged."
+              : "Use after a bake finishes with tiny or empty images.",
+        status: bakeReviewPreviewCount > 0 ? "warning" : lightmapBakeJob?.status === "completed" ? "ready" : "active",
+        action: bakeReviewPreviewCount > 0 ? "Review Output" : "Check Output"
+      },
+      {
+        id: "heavy",
+        label: "Bake too heavy",
+        detail:
+          bakePreflightIssues.length > 0
+            ? `${bakePreflightIssues.length} preflight issue${bakePreflightIssues.length === 1 ? "" : "s"} before bake.`
+            : `${formatBytes(estimatedBakeTextureBytes)} raw lightmap target.`,
+        status: bakePreflightIssues.length > 0 || estimatedBakeTextureBytes > 512 * 1024 * 1024 ? "warning" : "ready",
+        action: "Make Safer"
+      },
+      {
+        id: "tool",
+        label: "Blender setup",
+        detail: apiConnected
+          ? blenderTool?.ready
+            ? "Blender/Cycles is ready."
+            : (blenderTool?.action ?? "Checking Blender.")
+          : "API is offline.",
+        status: apiConnected && blenderTool?.ready ? "ready" : "warning",
+        action: apiConnected && blenderTool?.ready ? "Tool OK" : "Copy Plan"
+      }
+    ],
+    [
+      apiConnected,
+      bakePreflightIssues.length,
+      bakeReviewPreviewCount,
+      blenderTool?.action,
+      blenderTool?.ready,
+      estimatedBakeTextureBytes,
+      lightmapBakeJob?.status,
+      lightmappedMaterialCountForBake
     ]
   );
   const resetBakeSettingsToPreset = () => {
@@ -10935,6 +10996,74 @@ function App() {
                           <Activity size={15} aria-hidden="true" />
                         ) : (
                           <AlertTriangle size={15} aria-hidden="true" />
+                        )}
+                      </span>
+                      <strong>{step.label}</strong>
+                      <small>{step.detail}</small>
+                      <em>{step.action}</em>
+                    </button>
+                  ))}
+                </div>
+                <div className="bake-triage-board" aria-label="Bake symptom fixes">
+                  {bakeTriageSteps.map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      className={`bake-triage-card ${step.status}`}
+                      onClick={() => {
+                        if (step.id === "shadows") {
+                          if (lightmappedMaterialCountForBake > 0) {
+                            setMaterialListFilter("lightmaps");
+                            return;
+                          }
+                          setBakeSettings((current) => ({
+                            ...current,
+                            preset: "medium",
+                            ...bakePresetDefaults.medium
+                          }));
+                          if (canRunLightmapBake) {
+                            void bakeLightmaps();
+                          }
+                          return;
+                        }
+                        if (step.id === "blank-output") {
+                          document.querySelector(".lightmap-review-summary")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                          return;
+                        }
+                        if (step.id === "heavy") {
+                          setBakeSettings((current) => ({
+                            ...current,
+                            preset: current.preset === "super" ? "high" : current.preset,
+                            resolution: Math.min(current.resolution, 1024),
+                            samples: Math.min(current.samples, 192),
+                            denoise: true,
+                            maxMaterials: Math.min(512, Math.max(current.maxMaterials, materialCountForBake))
+                          }));
+                          return;
+                        }
+                        if (step.id === "tool") {
+                          void copyText(
+                            lightmapBakePlanText({
+                              projectId: activeProjectId,
+                              settings: bakeSettings,
+                              materialCount: materialCountForBake,
+                              estimatedMaterialCount: estimatedBakeMaterialCount,
+                              estimatedBytes: estimatedBakeTextureBytes,
+                              preflightIssues: bakePreflightIssues,
+                              blenderTool,
+                              job: lightmapBakeJob
+                            })
+                          );
+                        }
+                      }}
+                    >
+                      <span>
+                        {step.status === "ready" ? (
+                          <Check size={15} aria-hidden="true" />
+                        ) : step.status === "active" ? (
+                          <Activity size={15} aria-hidden="true" />
+                        ) : (
+                          <Wrench size={15} aria-hidden="true" />
                         )}
                       </span>
                       <strong>{step.label}</strong>

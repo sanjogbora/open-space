@@ -47,6 +47,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Bake now prioritizes suspicious lightmap previews first and labels why each generated lightmap needs review.
 - Studio Bake lightmap previews now link directly to the matching material review, with the Materials list filtered to lightmapped materials.
 - Studio Bake now shows a visual setup board for Blender readiness, bake quality, raw lightmap size, preflight issues, and last output before detailed settings.
+- Studio Bake now adds symptom-first cards for missing soft shadows, blank/tiny bake output, heavy bake settings, and Blender/tool setup.
 - Studio Import now summarizes Source QA into visual export-structure, missing-resource, framing, material-reference, and saved-override cards before raw diagnostics.
 - Studio Import now adds symptom-first cards for blank/partial imports, wrong first view/framing, poor or green visuals, and room-entry movement failures.
 - Studio diagnostics now show grouped visual fix areas and likely user-visible symptoms before the raw diagnostic details.
