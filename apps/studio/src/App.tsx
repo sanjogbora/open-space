@@ -4276,6 +4276,53 @@ function App() {
     publishHistory?.activeVersion,
     publishState
   ]);
+  const environmentSetupSteps = useMemo(() => {
+    const environment = manifest?.environment;
+    const skyEnabled = environment?.skyBackdropEnabled ?? true;
+    const groundEnabled = environment?.groundEnabled ?? true;
+    const enclosureEnabled = environment?.enclosureEnabled ?? true;
+    const groundY = environment?.groundY ?? -0.04;
+    const groundSize = environment?.groundSize ?? 90;
+    const enclosureRadius = environment?.enclosureRadius ?? 44;
+    const isReviewMode = skyEnabled === false && groundEnabled === false && enclosureEnabled === false;
+    return [
+      {
+        id: "sky",
+        label: "Sky backdrop",
+        detail: skyEnabled ? "Window background is visible" : "Neutral review background",
+        status: skyEnabled || isReviewMode ? "ready" : "warning",
+        action: skyEnabled ? "Sky OK" : "Interior"
+      },
+      {
+        id: "outside",
+        label: "Outside ground",
+        detail: groundEnabled ? `Ground ${groundSize}m wide` : "No grass/ground plane",
+        status: groundEnabled || isReviewMode ? "ready" : "warning",
+        action: groundEnabled ? "Ground OK" : "Exterior"
+      },
+      {
+        id: "enclosure",
+        label: "Landscape wall",
+        detail: enclosureEnabled ? `Radius ${enclosureRadius}m` : "No outside enclosure",
+        status: enclosureEnabled || isReviewMode ? "ready" : "warning",
+        action: enclosureEnabled ? "Enclosure OK" : "Exterior"
+      },
+      {
+        id: "height",
+        label: "Ground height",
+        detail: `${groundY.toFixed(2)}m relative to model`,
+        status: groundY <= 0.1 ? "ready" : "warning",
+        action: groundY <= 0.1 ? "Height OK" : "Lower Ground"
+      },
+      {
+        id: "review",
+        label: "Review mode",
+        detail: isReviewMode ? "Debug background enabled" : "Client backdrop enabled",
+        status: isReviewMode ? "active" : "ready",
+        action: isReviewMode ? "Reviewing" : "Review"
+      }
+    ];
+  }, [manifest?.environment]);
   const blenderTool = toolStatus?.tools.blender;
   const materialCountForBake = bundleStats?.materialCount ?? materialsDoc?.materials.length ?? 0;
   const estimatedBakeMaterialCount = Math.min(materialCountForBake, bakeSettings.maxMaterials);
@@ -12487,6 +12534,49 @@ function App() {
                     Review
                   </button>
                 </div>
+              </div>
+              <div className="environment-setup-board" aria-label="Environment setup health">
+                {environmentSetupSteps.map((step) => (
+                  <button
+                    key={step.id}
+                    type="button"
+                    className={`environment-setup-card ${step.status}`}
+                    disabled={step.status === "ready" && step.id !== "review"}
+                    onClick={() => {
+                      if (step.id === "outside" || step.id === "enclosure") {
+                        applyEnvironmentPreset("exterior");
+                        return;
+                      }
+                      if (step.id === "sky") {
+                        applyEnvironmentPreset("interior");
+                        return;
+                      }
+                      if (step.id === "height") {
+                        updateEnvironment((environment) => ({
+                          ...environment,
+                          groundY: -0.04
+                        }));
+                        return;
+                      }
+                      if (step.id === "review") {
+                        applyEnvironmentPreset(step.status === "active" ? "exterior" : "review");
+                      }
+                    }}
+                  >
+                    <span>
+                      {step.status === "ready" ? (
+                        <Check size={15} aria-hidden="true" />
+                      ) : step.status === "active" ? (
+                        <Eye size={15} aria-hidden="true" />
+                      ) : (
+                        <Globe2 size={15} aria-hidden="true" />
+                      )}
+                    </span>
+                    <strong>{step.label}</strong>
+                    <small>{step.detail}</small>
+                    <em>{step.action}</em>
+                  </button>
+                ))}
               </div>
               <div className="toggle-grid">
                 <label>
