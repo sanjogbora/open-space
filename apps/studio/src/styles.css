@@ -4006,6 +4006,36 @@ button.list-row {
   background: #fff7e8;
 }
 
+.lightmap-review-summary {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid #d6dde2;
+  border-radius: 7px;
+  background: #fbfcfd;
+}
+
+.lightmap-review-summary.pass {
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.lightmap-review-summary.warning {
+  border-color: #f0d38f;
+  background: #fff8e8;
+}
+
+.lightmap-review-summary strong {
+  color: #182026;
+  font-size: 13px;
+}
+
+.lightmap-review-summary small {
+  color: #52636f;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .bake-qa-card {
   display: grid;
   gap: 6px;

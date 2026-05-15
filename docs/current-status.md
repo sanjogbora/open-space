@@ -42,6 +42,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Materials now includes search and visual issue filters for suggested texture matches, untextured materials, plain/green placeholders, transparent materials, and lightmapped materials.
 - Studio Materials can now apply only the high-confidence texture suggestions visible in the current material filter instead of forcing an all-material apply.
 - Studio Materials now shows a plain-language diagnosis for the selected material, explaining the next safe visual action before editing raw map fields.
+- Studio Bake now prioritizes suspicious lightmap previews first and labels why each generated lightmap needs review.
 - New projects and imports now default to the smooth-interior movement profile for slower click glide and less camera bounce on minor floor ridges.
 - Click-to-move now rejects most flat furniture/cupboard surfaces unless they are part of the generated floor/navigation surfaces.
 - Straight click routes can fall back to route waypoints and grid pathfinding around blocked spans.

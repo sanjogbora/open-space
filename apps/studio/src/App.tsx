@@ -9481,11 +9481,24 @@ function App() {
                       </>
                     )}
                     {lightmapBakeJob.lightmaps && lightmapBakeJob.lightmaps.length > 0 && (
-                      <div className="job-history-list">
-                        {lightmapBakeJob.lightmaps
-                          .slice(0, 8)
-                          .map((lightmap) => {
+                      (() => {
+                        const prioritizedLightmaps = prioritizeLightmapPreviews(lightmapBakeJob.lightmaps).slice(0, 12);
+                        const reviewCount = (lightmapBakeJob.lightmaps ?? []).filter(
+                          (lightmap) => lightmapPreviewQuality(lightmap) === "warning"
+                        ).length;
+                        return (
+                          <div className="job-history-list">
+                            <div className={reviewCount > 0 ? "lightmap-review-summary warning" : "lightmap-review-summary pass"}>
+                              <strong>{reviewCount > 0 ? `${reviewCount} lightmap preview${reviewCount === 1 ? "" : "s"} need review` : "Lightmap previews look ready"}</strong>
+                              <small>
+                                {reviewCount > 0
+                                  ? "Review items are shown first. Look for blank, tiny, blurry, or unexpectedly flat outputs before publishing."
+                                  : "Still compare the viewer against the reference render before client delivery."}
+                              </small>
+                            </div>
+                            {prioritizedLightmaps.map((lightmap) => {
                             const quality = lightmapPreviewQuality(lightmap);
+                            const issue = lightmapPreviewIssue(lightmap);
                             return (
                               <div
                                 key={`${lightmap.materialName}-${lightmap.url}`}
@@ -9498,7 +9511,7 @@ function App() {
                                 )}
                                 <div>
                                   <strong>{lightmap.materialName}</strong>
-                                  <span>{lightmap.url}</span>
+                                  <span>{issue ?? lightmap.url}</span>
                                 </div>
                                 <small>
                                   <span className={`lightmap-quality-pill ${quality}`}>
@@ -9509,8 +9522,10 @@ function App() {
                                 </small>
                               </div>
                             );
-                          })}
-                      </div>
+                            })}
+                          </div>
+                        );
+                      })()
                     )}
                     {lightmapBakeJob.steps.map((step) => (
                       <div key={step.id} className={`job-step-row ${step.status}`}>
@@ -14308,6 +14323,35 @@ function lightmapPreviewQuality(lightmap: NonNullable<LightmapBakeJobDocument["l
     return "warning";
   }
   return "pass";
+}
+
+function lightmapPreviewIssue(lightmap: NonNullable<LightmapBakeJobDocument["lightmaps"]>[number]): string | null {
+  if (!lightmap.bytes) {
+    return "No file size recorded; confirm this lightmap exists and loads.";
+  }
+  if (lightmap.bytes < 4096) {
+    return "Extremely small output; this may be blank or failed.";
+  }
+  if (lightmapLooksFlatOrBlank(lightmap)) {
+    return "Very low detail for its resolution; inspect for blank or flat lighting.";
+  }
+  if (typeof lightmap.resolution === "number" && lightmap.resolution < 1024) {
+    return "Below 1024px; shadows may look soft or blurry.";
+  }
+  return null;
+}
+
+function prioritizeLightmapPreviews(
+  lightmaps: NonNullable<LightmapBakeJobDocument["lightmaps"]>
+): NonNullable<LightmapBakeJobDocument["lightmaps"]> {
+  return [...lightmaps].sort((a, b) => {
+    const qualityDelta =
+      (lightmapPreviewQuality(a) === "warning" ? 0 : 1) - (lightmapPreviewQuality(b) === "warning" ? 0 : 1);
+    if (qualityDelta !== 0) {
+      return qualityDelta;
+    }
+    return (a.materialName ?? a.url).localeCompare(b.materialName ?? b.url);
+  });
 }
 
 function lightmapLooksFlatOrBlank(lightmap: NonNullable<LightmapBakeJobDocument["lightmaps"]>[number]): boolean {
