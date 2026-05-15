@@ -366,6 +366,8 @@ interface BundleStats {
   focusedLargestDimension?: number;
   focusedFootprintCenter?: readonly [number, number];
   focusedFootprintCenterDistance?: number;
+  modelOffset?: readonly [number, number, number];
+  modelOffsetDistance?: number;
   texturedMaterialCount?: number;
   textureCount?: number;
   imageCount?: number;
@@ -2838,6 +2840,9 @@ function publishReadinessReportText({
     `- Triangles: ${stats?.triangleCount ?? 0}`,
     `- Draw primitives: ${stats?.primitiveCount ?? stats?.meshCount ?? 0}`,
     `- Texture RAM: ${formatBytes(stats?.estimatedTextureMemoryBytes ?? 0)}`,
+    stats?.modelOffset
+      ? `- Viewer model offset: ${stats.modelOffset.map((value) => value.toFixed(1)).join(", ")}`
+      : "",
     `- Lightmaps: ${stats?.lightmapAssetCount ?? 0}/${stats?.lightmapMaterialCount ?? 0}`,
     "",
     "Readiness rows:",
@@ -2998,6 +3003,9 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
       : "",
     stats.focusedFootprintCenter && typeof stats.focusedFootprintCenterDistance === "number"
       ? `- Focused footprint center: ${stats.focusedFootprintCenter.map((value) => value.toFixed(1)).join(", ")} (${stats.focusedFootprintCenterDistance.toFixed(1)} units from origin)`
+      : "",
+    stats.modelOffset
+      ? `- Viewer model offset: ${stats.modelOffset.map((value) => value.toFixed(1)).join(", ")} (${(stats.modelOffsetDistance ?? 0).toFixed(1)} units applied)`
       : "",
     `- Embedded images: ${stats.embeddedImageCount ?? 0}`,
     `- External resources: ${externalResources.length}`,
@@ -13112,6 +13120,9 @@ function viewerQaReportText(
     `- Scene span: ${typeof stats?.sceneLargestDimension === "number" ? `${stats.sceneLargestDimension.toFixed(1)} units` : "unknown"}`,
     `- Scene center from origin: ${typeof stats?.sceneFootprintCenterDistance === "number" ? `${stats.sceneFootprintCenterDistance.toFixed(1)} units` : "unknown"}`,
     `- Focused center from origin: ${typeof stats?.focusedFootprintCenterDistance === "number" ? `${stats.focusedFootprintCenterDistance.toFixed(1)} units` : "unknown"}`,
+    stats?.modelOffset
+      ? `- Viewer model offset: ${stats.modelOffset.map((value) => value.toFixed(1)).join(", ")} (${(stats.modelOffsetDistance ?? 0).toFixed(1)} units applied)`
+      : "",
     `- Textured materials: ${stats?.texturedMaterialCount ?? 0}/${stats?.materialCount ?? 0}`,
     `- Estimated texture RAM: ${formatBytes(stats?.estimatedTextureMemoryBytes ?? 0)}`,
     `- Lightmaps: ${stats?.lightmapAssetCount ?? 0}/${stats?.lightmapMaterialCount ?? 0}`,

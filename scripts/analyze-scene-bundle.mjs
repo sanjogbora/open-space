@@ -2600,6 +2600,8 @@ function createDiagnostics(manifest, report, graphs, controls) {
   const largestDimension = size ? Math.max(...size.map(Math.abs)) : 0;
   const footprintCenter = boundsFootprintCenter(bounds);
   const footprintCenterDistance = footprintCenter ? Math.hypot(footprintCenter[0], footprintCenter[1]) : 0;
+  const modelOffset = Array.isArray(manifest.rendering?.modelOffset) ? manifest.rendering.modelOffset : undefined;
+  const hasModelOffset = Boolean(modelOffset?.some((value) => Math.abs(value) > 0.01));
   const flatPlane = dominantFlatPlane(graph, bounds);
   const flatSurfaceRisk = flatSurfaceNavigationRisk(graph, bounds);
   const focusedBounds = graphFocusBounds(graph);
@@ -3602,7 +3604,8 @@ function createDiagnostics(manifest, report, graphs, controls) {
   } else if (
     largestDimension > 1 &&
     footprintCenterDistance > Math.max(250, largestDimension * 8) &&
-    modelScale === 1
+    modelScale === 1 &&
+    !hasModelOffset
   ) {
     diagnostics.push({
       severity: "warning",
@@ -3610,6 +3613,14 @@ function createDiagnostics(manifest, report, graphs, controls) {
       title: "Model is far from the origin",
       message: `The model center is about ${footprintCenterDistance.toFixed(1)} units from world origin while the model spans about ${largestDimension.toFixed(1)} units.`,
       action: "Move the source model near 0,0,0 or run import repair to regenerate focused bounds, camera views, rooms, and navigation from the building footprint."
+    });
+  } else if (hasModelOffset) {
+    diagnostics.push({
+      severity: "info",
+      code: "model-origin-offset-applied",
+      title: "Model origin offset applied",
+      message: `The source model is shifted by ${modelOffset.map((value) => value.toFixed(2)).join(", ")} in the viewer so camera views, room maps, and navigation use the focused building area.`,
+      action: "Open the viewer and confirm the first view, top view, room buttons, and click-to-move land on the intended building."
     });
   } else if (modelScale !== 1) {
     diagnostics.push({
@@ -4186,6 +4197,8 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
   const focusedFootprintCenter = boundsFootprintCenter(focusedModelBounds);
   const sceneFootprintCenterDistance = sceneFootprintCenter ? Math.hypot(sceneFootprintCenter[0], sceneFootprintCenter[1]) : undefined;
   const focusedFootprintCenterDistance = focusedFootprintCenter ? Math.hypot(focusedFootprintCenter[0], focusedFootprintCenter[1]) : undefined;
+  const modelOffset = Array.isArray(manifest.rendering?.modelOffset) ? manifest.rendering.modelOffset : undefined;
+  const modelOffsetDistance = modelOffset ? Math.hypot(modelOffset[0], modelOffset[2]) : undefined;
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -4223,6 +4236,12 @@ function summarize(manifest, assets, models, graphs, looseImages, materialOverri
     estimatedTexturePixels,
     estimatedTextureMemoryBytes,
     textureMemoryImages: textureMemoryImages.slice(0, 40),
+    ...(modelOffset
+      ? {
+          modelOffset,
+          modelOffsetDistance
+        }
+      : {}),
     embeddedImageCount: models.reduce((sum, model) => sum + (model.embeddedImageCount ?? 0), 0),
     looseImageCount: looseImages.length,
     looseImages: looseImages.slice(0, 40),

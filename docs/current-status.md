@@ -186,6 +186,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Analyzer now warns when a normal-sized model sits far from world origin, which can explain bad camera framing, floorplan bounds, click targets, and navigation repair maps.
 - Analyzer stats and copyable QA handoffs now include scene/focused footprint span and distance from origin, making scale/origin repair evidence visible without reading raw coordinates.
 - Import Repair now writes a viewer-side model offset for far-from-origin models, and Repair Center treats that diagnostic as handled with a visual test card instead of repeatedly sending users back to the same repair.
+- Analyzer reports now include the applied viewer model offset and downgrade repaired origin issues to an informational note, keeping publish/QA reports focused on unresolved problems.
 - API texture repair scores duplicate loose texture candidates by relative path and texture-folder context before copying.
 - Analyzer now flags embedded GLB textures and sidecar texture files that cannot be decoded, so broken image payloads are reported instead of only showing flat or strange-colored surfaces in the viewer.
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.
