@@ -5302,6 +5302,17 @@ function App() {
     () => objectOverrideById.get(selectedObjectId),
     [objectOverrideById, selectedObjectId]
   );
+  const selectedObjectEditableOverride = useMemo<ObjectOverride | undefined>(
+    () =>
+      selectedObject
+        ? selectedObjectOverride ?? {
+            id: selectedObject.id,
+            name: selectedObject.name,
+            visible: true
+          }
+        : undefined,
+    [selectedObject, selectedObjectOverride]
+  );
 
   const selectedMaterial = useMemo(
     () => materialsDoc?.materials.find((material) => material.id === selectedMaterialId),
@@ -5966,18 +5977,42 @@ function App() {
 
   const updateObject = (
     objectId: string,
-    updater: (object: ObjectOverride) => ObjectOverride
+    updater: (object: ObjectOverride) => ObjectOverride,
+    fallbackName?: string
   ) => {
-    setObjectsDoc((current) =>
-      current
-        ? {
-            ...current,
-            objects: current.objects.map((object) =>
-              object.id === objectId ? updater(object) : object
-            )
-          }
-        : current
-    );
+    setObjectsDoc((current) => {
+      if (!current) {
+        return current;
+      }
+      let found = false;
+      const objects = current.objects.map((object) => {
+        if (object.id !== objectId) {
+          return object;
+        }
+        found = true;
+        return updater(object);
+      });
+      if (found) {
+        return {
+          ...current,
+          objects
+        };
+      }
+      if (!fallbackName) {
+        return current;
+      }
+      return {
+        ...current,
+        objects: [
+          ...objects,
+          updater({
+            id: objectId,
+            name: fallbackName,
+            visible: true
+          })
+        ]
+      };
+    });
   };
 
   const setObjectNavigationBehavior = (
@@ -5988,7 +6023,7 @@ function App() {
     updateObject(objectId, (object) => ({
       ...object,
       navigationBehavior: behavior
-    }));
+    }), objectName);
     const detail = objectNavigationBehaviorDetail(behavior);
     setObjectReviewMessage(`${objectName} set to ${detail.title}. Save & Test to verify movement in the viewer.`);
   };
@@ -6800,7 +6835,7 @@ function App() {
     updateObject(match.object.id, (object) => ({
       ...object,
       navigationBehavior: behavior
-    }));
+    }), match.object.name);
     if (behavior === "ignore") {
       updateNavigation((navigation) => {
         const existing = navigation.ignoredCollisionMeshNames ?? [];
@@ -12689,7 +12724,7 @@ function App() {
                         updateObject(node.id, (object) => ({
                           ...object,
                           visible: !object.visible
-                        }))
+                        }), node.name)
                       }
                     >
                       {override?.visible === false ? (
@@ -12720,31 +12755,31 @@ function App() {
                   <Stat label="Vertices" value={String(selectedObject.vertexCount)} />
                   <Stat
                     label="Visible"
-                    value={selectedObjectOverride?.visible === false ? "Hidden" : "Visible"}
+                    value={selectedObjectEditableOverride?.visible === false ? "Hidden" : "Visible"}
                   />
                   <Stat
                     label="Top View"
-                    value={selectedObjectOverride?.hideInTopView ? "Hidden" : "Visible"}
+                    value={selectedObjectEditableOverride?.hideInTopView ? "Hidden" : "Visible"}
                   />
                   <Stat
                     label="Navigation"
-                    value={objectNavigationBehaviorLabel(selectedObjectOverride?.navigationBehavior)}
+                    value={objectNavigationBehaviorLabel(selectedObjectEditableOverride?.navigationBehavior)}
                   />
                 </div>
 
-                {selectedObjectOverride && (
+                {selectedObjectEditableOverride && (
                   <div className="object-detail">
                     <h3>View Visibility</h3>
                     <div className="toggle-grid">
                       <label className="toggle-row">
                         <input
                           type="checkbox"
-                          checked={selectedObjectOverride.hideInTopView === true}
+                          checked={selectedObjectEditableOverride.hideInTopView === true}
                           onChange={(event) =>
-                            updateObject(selectedObjectOverride.id, (object) => ({
+                            updateObject(selectedObjectEditableOverride.id, (object) => ({
                               ...object,
                               hideInTopView: event.target.checked
-                            }))
+                            }), selectedObject.name)
                           }
                         />
                         <span>Hide in top view</span>
@@ -12753,20 +12788,20 @@ function App() {
                   </div>
                 )}
 
-                {selectedObjectOverride && (
+                {selectedObjectEditableOverride && (
                   <div className="object-detail">
                     <h3>Navigation Behavior</h3>
                     <div className="object-role-decision-board" aria-label="Object movement role">
                       {(["default", "walk", "collision", "ignore"] as const).map((behavior) => {
                         const detail = objectNavigationBehaviorDetail(behavior);
-                        const isActive = (selectedObjectOverride.navigationBehavior ?? "default") === behavior;
+                        const isActive = (selectedObjectEditableOverride.navigationBehavior ?? "default") === behavior;
                         return (
                           <button
                             key={behavior}
                             type="button"
                             className={isActive ? `object-role-decision active ${behavior}` : `object-role-decision ${behavior}`}
                             onClick={() =>
-                              setObjectNavigationBehavior(selectedObjectOverride.id, selectedObject.name, behavior)
+                              setObjectNavigationBehavior(selectedObjectEditableOverride.id, selectedObject.name, behavior)
                             }
                           >
                             <span>
@@ -12790,10 +12825,10 @@ function App() {
                     <label>
                       <span>Object role</span>
                       <select
-                        value={selectedObjectOverride.navigationBehavior ?? "default"}
+                        value={selectedObjectEditableOverride.navigationBehavior ?? "default"}
                         onChange={(event) =>
                           setObjectNavigationBehavior(
-                            selectedObjectOverride.id,
+                            selectedObjectEditableOverride.id,
                             selectedObject.name,
                             event.target.value as NonNullable<ObjectOverride["navigationBehavior"]>
                           )
