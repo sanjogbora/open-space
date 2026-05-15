@@ -41,6 +41,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Asset Health now repeats that generic-loose-texture warning in the repair plan so users know when to manually review materials or request a cleaner export instead of expecting one-click texture repair.
 - Studio Materials now includes search and visual issue filters for suggested texture matches, untextured materials, plain/green placeholders, transparent materials, and lightmapped materials.
 - Studio Materials can now apply only the high-confidence texture suggestions visible in the current material filter instead of forcing an all-material apply.
+- Studio Materials now shows a visual setup board for texture matches, missing maps, plain/green placeholders, transparency, and baked lighting before detailed material editing.
 - Studio Materials now shows a plain-language diagnosis for the selected material, explaining the next safe visual action before editing raw map fields.
 - Studio Bake now prioritizes suspicious lightmap previews first and labels why each generated lightmap needs review.
 - Studio Bake lightmap previews now link directly to the matching material review, with the Materials list filtered to lightmapped materials.

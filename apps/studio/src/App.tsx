@@ -4848,6 +4848,82 @@ function App() {
     }),
     [materialReviewRows]
   );
+  const materialSetupSteps = useMemo(
+    () => [
+      {
+        id: "suggestions",
+        label: "Texture matches",
+        detail:
+          pendingMaterialTextureSuggestionCount > 0
+            ? `${pendingMaterialTextureSuggestionCount} safe match${pendingMaterialTextureSuggestionCount === 1 ? "" : "es"} ready`
+            : reviewMaterialTextureSuggestionCount > 0
+              ? `${reviewMaterialTextureSuggestionCount} match${reviewMaterialTextureSuggestionCount === 1 ? "" : "es"} need review`
+              : "No pending texture matches",
+        status:
+          pendingMaterialTextureSuggestionCount > 0
+            ? "active"
+            : reviewMaterialTextureSuggestionCount > 0
+              ? "warning"
+              : "ready",
+        action: materialFilterCounts.suggested > 0 ? "Show Matches" : "Matches OK",
+        filter: "suggested" as MaterialListFilter
+      },
+      {
+        id: "missing-maps",
+        label: "Missing maps",
+        detail:
+          materialFilterCounts.untextured > 0
+            ? `${materialFilterCounts.untextured} material${materialFilterCounts.untextured === 1 ? "" : "s"} with no textures`
+            : "All reviewed materials have maps",
+        status: materialFilterCounts.untextured > 0 ? "warning" : "ready",
+        action: materialFilterCounts.untextured > 0 ? "Show No Textures" : "Maps OK",
+        filter: "untextured" as MaterialListFilter
+      },
+      {
+        id: "plain-green",
+        label: "Plain/green",
+        detail:
+          materialFilterCounts.plainGreen > 0
+            ? `${materialFilterCounts.plainGreen} placeholder-like surface${materialFilterCounts.plainGreen === 1 ? "" : "s"}`
+            : "No green placeholders flagged",
+        status: materialFilterCounts.plainGreen > 0 ? "warning" : "ready",
+        action: materialFilterCounts.plainGreen > 0 ? "Show Plain" : "Colors OK",
+        filter: "plain-green" as MaterialListFilter
+      },
+      {
+        id: "transparent",
+        label: "Transparency",
+        detail:
+          materialFilterCounts.transparent > 0
+            ? `${materialFilterCounts.transparent} transparent material${materialFilterCounts.transparent === 1 ? "" : "s"}`
+            : "No transparent materials flagged",
+        status: materialFilterCounts.transparent > 0 ? "active" : "ready",
+        action: materialFilterCounts.transparent > 0 ? "Review Glass" : "Opacity OK",
+        filter: "transparent" as MaterialListFilter
+      },
+      {
+        id: "lightmaps",
+        label: "Baked lighting",
+        detail:
+          materialFilterCounts.lightmaps > 0
+            ? `${materialFilterCounts.lightmaps} lightmapped material${materialFilterCounts.lightmaps === 1 ? "" : "s"}`
+            : "No lightmaps assigned yet",
+        status: materialFilterCounts.lightmaps > 0 ? "ready" : materialFilterCounts.all > 0 ? "warning" : "ready",
+        action: materialFilterCounts.lightmaps > 0 ? "Show Lightmaps" : "Bake Review",
+        filter: "lightmaps" as MaterialListFilter
+      }
+    ],
+    [
+      materialFilterCounts.all,
+      materialFilterCounts.lightmaps,
+      materialFilterCounts.plainGreen,
+      materialFilterCounts.suggested,
+      materialFilterCounts.transparent,
+      materialFilterCounts.untextured,
+      pendingMaterialTextureSuggestionCount,
+      reviewMaterialTextureSuggestionCount
+    ]
+  );
   const filteredMaterialRows = useMemo(() => {
     const query = normalizeTextureMatchName(materialSearchQuery);
     return materialReviewRows.filter((row) => {
@@ -9792,6 +9868,34 @@ function App() {
                   secondaryActionLabel="Repair Center"
                   onSecondaryAction={() => setSelectedTab("repair")}
                 />
+
+                <div className="material-setup-board" aria-label="Material setup health">
+                  {materialSetupSteps.map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      className={`material-setup-card ${step.status}`}
+                      disabled={step.status === "ready" && step.id !== "lightmaps"}
+                      onClick={() => {
+                        setMaterialSearchQuery("");
+                        setMaterialListFilter(step.filter);
+                      }}
+                    >
+                      <span>
+                        {step.status === "ready" ? (
+                          <Check size={15} aria-hidden="true" />
+                        ) : step.status === "active" ? (
+                          <Palette size={15} aria-hidden="true" />
+                        ) : (
+                          <AlertTriangle size={15} aria-hidden="true" />
+                        )}
+                      </span>
+                      <strong>{step.label}</strong>
+                      <small>{step.detail}</small>
+                      <em>{step.action}</em>
+                    </button>
+                  ))}
+                </div>
 
                 {selectedMaterialDiagnosis && (
                   <div className={`material-diagnosis-card ${selectedMaterialDiagnosis.tone}`}>
