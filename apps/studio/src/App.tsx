@@ -629,6 +629,8 @@ interface PublishEntry {
     blockerCount?: number;
     warningCount?: number;
     diagnosticCount?: number;
+    blockers?: readonly PublishReadinessIssue[];
+    warnings?: readonly PublishReadinessIssue[];
   };
 }
 
@@ -2757,6 +2759,12 @@ function publishedDeploymentChecklist(entry: PublishEntry, title: string): strin
     `- Status: ${gate?.status ?? "unknown"}`,
     `- Blockers: ${gate?.blockerCount ?? 0}`,
     `- Warnings: ${gate?.warningCount ?? 0}`,
+    ...(gate?.blockers?.length
+      ? ["", "Published blockers:", ...gate.blockers.map((issue) => `- ${issue.title}: ${issue.message}`)]
+      : []),
+    ...(gate?.warnings?.length
+      ? ["", "Published warnings:", ...gate.warnings.map((issue) => `- ${issue.title}: ${issue.message}`)]
+      : []),
     "",
     "Preflight:",
     entry.deploymentPath
@@ -7448,6 +7456,11 @@ function App() {
                                 {entry.qualityGate.warningCount ?? 0} warning
                                 {(entry.qualityGate.warningCount ?? 0) === 1 ? "" : "s"}
                               </small>
+                              {(entry.qualityGate.blockers?.[0] ?? entry.qualityGate.warnings?.[0]) && (
+                                <small>
+                                  {(entry.qualityGate.blockers?.[0] ?? entry.qualityGate.warnings?.[0])?.title}
+                                </small>
+                              )}
                             </div>
                           )}
                         </div>

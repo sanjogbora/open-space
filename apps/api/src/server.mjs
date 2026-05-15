@@ -2849,7 +2849,9 @@ async function publishProject(projectId) {
       analyzedAt: deployment.qualityGate.analyzedAt,
       blockerCount: deployment.qualityGate.blockerCount,
       warningCount: deployment.qualityGate.warningCount,
-      diagnosticCount: deployment.qualityGate.diagnosticCount
+      diagnosticCount: deployment.qualityGate.diagnosticCount,
+      blockers: (deployment.qualityGate.blockers ?? []).slice(0, 8),
+      warnings: (deployment.qualityGate.warnings ?? []).slice(0, 8)
     }
   };
   const history = await publishHistory(projectId);
