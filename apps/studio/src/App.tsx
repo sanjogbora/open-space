@@ -4747,6 +4747,61 @@ function App() {
     () => materialVariantInteractions.find((interaction) => interaction.id === selectedVariantInteractionId),
     [materialVariantInteractions, selectedVariantInteractionId]
   );
+  const variantSetupSteps = useMemo(() => {
+    const setCount = materialVariantInteractions.length;
+    const targetedCount = materialVariantInteractions.filter(
+      (interaction) => Boolean(interaction.targetMaterialName || interaction.targetMeshName)
+    ).length;
+    const optionCount = materialVariantInteractions.reduce(
+      (sum, interaction) => sum + interaction.variants.length,
+      0
+    );
+    const texturedOptionCount = materialVariantInteractions.reduce(
+      (sum, interaction) => sum + interaction.variants.filter((variant) => Boolean(variant.texture)).length,
+      0
+    );
+    const colorOptionCount = materialVariantInteractions.reduce(
+      (sum, interaction) => sum + interaction.variants.filter((variant) => Boolean(variant.color)).length,
+      0
+    );
+    return [
+      {
+        id: "sets",
+        label: "Finish sets",
+        detail: setCount > 0 ? `${setCount} set${setCount === 1 ? "" : "s"} configured` : "No finish sets yet",
+        status: setCount > 0 ? "ready" : "warning",
+        action: setCount > 0 ? "Sets OK" : "Add Set"
+      },
+      {
+        id: "targets",
+        label: "Targets",
+        detail: setCount > 0 ? `${targetedCount}/${setCount} set${setCount === 1 ? "" : "s"} targeted` : "Choose material or mesh",
+        status: setCount > 0 && targetedCount >= setCount ? "ready" : "warning",
+        action: targetedCount >= setCount && setCount > 0 ? "Targets OK" : "Pick Target"
+      },
+      {
+        id: "options",
+        label: "Options",
+        detail: optionCount > 0 ? `${optionCount} visible option${optionCount === 1 ? "" : "s"}` : "No options yet",
+        status: optionCount > 0 ? "ready" : "warning",
+        action: optionCount > 0 ? "Options OK" : "Add Option"
+      },
+      {
+        id: "colors",
+        label: "Color swatches",
+        detail: colorOptionCount > 0 ? `${colorOptionCount} color swatch${colorOptionCount === 1 ? "" : "es"}` : "No swatches yet",
+        status: colorOptionCount > 0 ? "ready" : "warning",
+        action: colorOptionCount > 0 ? "Colors OK" : "Add Color"
+      },
+      {
+        id: "textures",
+        label: "Texture finishes",
+        detail: texturedOptionCount > 0 ? `${texturedOptionCount} texture option${texturedOptionCount === 1 ? "" : "s"}` : "Optional texture URLs",
+        status: texturedOptionCount > 0 ? "active" : optionCount > 0 ? "ready" : "warning",
+        action: texturedOptionCount > 0 ? "Review" : optionCount > 0 ? "Optional" : "Add Option"
+      }
+    ];
+  }, [materialVariantInteractions]);
 
   const objectOverrideById = useMemo(() => {
     const entries = objectsDoc?.objects.map((object) => [object.id, object] as const) ?? [];
@@ -11009,6 +11064,52 @@ function App() {
               )}
             </div>
 
+            {!selectedVariantInteraction && (
+              <div className="panel editor-panel">
+                <div className="panel-heading">
+                  <Palette size={18} aria-hidden="true" />
+                  <h2>Finish Options</h2>
+                </div>
+                <VisualGuideCard
+                  title="Material finish setup"
+                  detail="Create client-facing finish choices only after the base material looks correct."
+                  steps={[
+                    "Add a finish set for each editable sofa, wall, cabinet, fabric, or product surface.",
+                    "Target a material or mesh, then add clear options with color swatches or texture previews.",
+                    "Test the viewer so the client can switch finishes without breaking lighting or texture scale."
+                  ]}
+                  actionLabel="Add Set"
+                  onAction={addMaterialVariantInteraction}
+                  secondaryActionLabel="Materials"
+                  onSecondaryAction={() => setSelectedTab("materials")}
+                />
+                <div className="variant-setup-board" aria-label="Variant setup health">
+                  {variantSetupSteps.map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      className={`variant-setup-card ${step.status}`}
+                      disabled={step.status === "ready" || step.status === "active"}
+                      onClick={addMaterialVariantInteraction}
+                    >
+                      <span>
+                        {step.status === "ready" ? (
+                          <Check size={15} aria-hidden="true" />
+                        ) : step.status === "active" ? (
+                          <Palette size={15} aria-hidden="true" />
+                        ) : (
+                          <AlertTriangle size={15} aria-hidden="true" />
+                        )}
+                      </span>
+                      <strong>{step.label}</strong>
+                      <small>{step.detail}</small>
+                      <em>{step.action}</em>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {selectedVariantInteraction && (
               <div className="panel editor-panel">
                 <div className="panel-heading">
@@ -11022,6 +11123,57 @@ function App() {
                   >
                     <Trash2 size={17} aria-hidden="true" />
                   </button>
+                </div>
+
+                <VisualGuideCard
+                  title="Material finish setup"
+                  detail="Make finish choices visual and easy to test before publishing."
+                  steps={[
+                    "Target the real material or mesh users should be able to change.",
+                    "Keep option labels client-friendly and use color swatches or texture URLs for each finish.",
+                    "Open the viewer and confirm every option switches only the intended surface."
+                  ]}
+                  actionLabel="Add Option"
+                  onAction={() => addMaterialVariantOption(selectedVariantInteraction.id)}
+                  secondaryActionLabel="Materials"
+                  onSecondaryAction={() => setSelectedTab("materials")}
+                />
+
+                <div className="variant-setup-board" aria-label="Variant setup health">
+                  {variantSetupSteps.map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      className={`variant-setup-card ${step.status}`}
+                      disabled={step.status === "ready" || step.status === "active"}
+                      onClick={() => {
+                        if (step.id === "sets") {
+                          addMaterialVariantInteraction();
+                          return;
+                        }
+                        if (step.id === "targets") {
+                          document.querySelector(".field-grid")?.scrollIntoView({ block: "center" });
+                          return;
+                        }
+                        if (step.id === "options" || step.id === "colors" || step.id === "textures") {
+                          addMaterialVariantOption(selectedVariantInteraction.id);
+                        }
+                      }}
+                    >
+                      <span>
+                        {step.status === "ready" ? (
+                          <Check size={15} aria-hidden="true" />
+                        ) : step.status === "active" ? (
+                          <Palette size={15} aria-hidden="true" />
+                        ) : (
+                          <AlertTriangle size={15} aria-hidden="true" />
+                        )}
+                      </span>
+                      <strong>{step.label}</strong>
+                      <small>{step.detail}</small>
+                      <em>{step.action}</em>
+                    </button>
+                  ))}
                 </div>
 
                 <div className="field-grid">

@@ -2355,6 +2355,85 @@ button.list-row {
   gap: 10px;
 }
 
+.variant-setup-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.variant-setup-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid #f0d099;
+  border-radius: 8px;
+  color: #7a4e08;
+  background: #fff8ed;
+  text-align: left;
+}
+
+.variant-setup-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.variant-setup-card.active {
+  color: #07538f;
+  border-color: #bddcf7;
+  background: #eff7ff;
+}
+
+.variant-setup-card:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.variant-setup-card:not(:disabled):hover,
+.variant-setup-card:not(:disabled):focus-visible {
+  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline-offset: 1px;
+}
+
+.variant-setup-card span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.variant-setup-card strong,
+.variant-setup-card small,
+.variant-setup-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.variant-setup-card strong {
+  font-size: 12px;
+}
+
+.variant-setup-card small,
+.variant-setup-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.variant-setup-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .variant-editor-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(180px, 260px) 38px;
@@ -5424,6 +5503,7 @@ code {
 
   .field-grid,
   .variant-editor-row,
+  .variant-setup-board,
   .zone-editor-heading,
   .zone-simple-heading,
   .repair-card-heading,
