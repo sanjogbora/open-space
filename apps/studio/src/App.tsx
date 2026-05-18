@@ -9474,7 +9474,7 @@ function App() {
                 onViews={() => setSelectedTab("views")}
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
-                onInteractions={() => setSelectedTab("interactions")}
+                onInteractions={openInteractionsWorkflow}
                 pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
                 reviewTextureSuggestionCount={reviewMaterialTextureSuggestionCount}
                 onApplyTextureSuggestions={applyMaterialTextureSuggestions}
@@ -9493,7 +9493,7 @@ function App() {
                 onRooms={() => setSelectedTab("rooms")}
                 onViews={() => setSelectedTab("views")}
                 onBake={openBakeWorkflow}
-                onInteractions={() => setSelectedTab("interactions")}
+                onInteractions={openInteractionsWorkflow}
                 onOptimize={() => setSelectedTab("optimization")}
                 onObjects={() => setSelectedTab("objects")}
                 onPublish={() => setSelectedTab("publish")}
