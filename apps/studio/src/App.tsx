@@ -4058,7 +4058,7 @@ function App() {
         label: "Top-view bounds",
         detail: hasNavigationBounds ? "Room map is enabled" : "Set bounds to use map",
         status: hasNavigationBounds ? "ready" : "warning",
-        action: hasNavigationBounds ? "Bounds OK" : "Open Controls"
+        action: hasNavigationBounds ? "Bounds OK" : "Fix Bounds"
       },
       {
         id: "walks",
@@ -4067,7 +4067,7 @@ function App() {
           ? `${roomWalkZoneCount} walk area${roomWalkZoneCount === 1 ? "" : "s"} available`
           : "No walk areas to sync",
         status: roomWalkZoneCount > 0 ? "ready" : "warning",
-        action: roomWalkZoneCount > 0 ? "Sync Regions" : "Open Controls"
+        action: roomWalkZoneCount > 0 ? "Sync Regions" : "Fix Walk Areas"
       }
     ];
   }, [
@@ -4122,7 +4122,7 @@ function App() {
             ? "Room center sits on walk/pass area."
             : "Room center is outside walk areas.",
         status: centerComponent && !centerBlocked ? "ready" : "warning",
-        action: centerComponent && !centerBlocked ? "Floor OK" : "Open Controls"
+        action: centerComponent && !centerBlocked ? "Floor OK" : "Fix Floor"
       },
       {
         id: "route",
@@ -8959,7 +8959,7 @@ function App() {
             ? `${movementIssueCount} navigation issue${movementIssueCount === 1 ? "" : "s"} need setup.`
             : "Use when clicks stop at doors, walls, or room entries.",
         status: movementIssueCount > 0 ? "warning" : "ready",
-        action: "Open Controls"
+        action: "Fix Navigation"
       }
     ];
   }, [bundleStats?.diagnostics, navigationIssues, pendingMaterialTextureSuggestionCount]);
@@ -11306,7 +11306,7 @@ function App() {
                     </div>
                     <button type="button" className="button secondary" onClick={openNavigationWorkflow}>
                       <Wrench size={16} aria-hidden="true" />
-                      Controls
+                      Fix Bounds
                     </button>
                   </div>
                 )}
@@ -16591,7 +16591,7 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
       action,
       title: "Fix navigation",
       detail: "Open the guided Controls tools to inspect walk areas, door passes, blockers, and generated zones.",
-      button: "Open Controls"
+      button: "Fix Navigation"
     };
   }
   if (action === "objects") {
@@ -18065,7 +18065,7 @@ function ViewerQaChecklist({
         ? `${movementComfort.label}: ${movementComfort.detail}`
         : "Set bounds, walk views, and at least one walk zone before testing movement.",
       status: hasNavigationSetup ? movementComfort.tone : "blocked",
-      button: hasNavigationSetup ? "Debug Viewer" : "Open Controls",
+      button: hasNavigationSetup ? "Debug Viewer" : "Fix Navigation",
       onClick: hasNavigationSetup ? onSaveAndTestNavigation : onNavigation
     },
     {
@@ -18077,7 +18077,7 @@ function ViewerQaChecklist({
           ? "Click through doorways and confirm walls, windows, cupboards, and exterior bounds reject movement."
           : "If rooms are separate, draw green door passes before testing entry between rooms.",
       status: navigationIssue && errorCodes.has(navigationIssue) ? "blocked" : navigationIssue || passZones.length === 0 ? "warn" : "ready",
-      button: navigationIssue || passZones.length === 0 ? "Open Controls" : "Debug Viewer",
+      button: navigationIssue || passZones.length === 0 ? "Fix Navigation" : "Debug Viewer",
       onClick: navigationIssue || passZones.length === 0 ? onNavigation : onSaveAndTestNavigation
     },
     {
@@ -18154,7 +18154,7 @@ function ViewerQaChecklist({
               {check.button === "Open Materials" && <Palette size={15} aria-hidden="true" />}
               {check.button === "Open Environment" && <Globe2 size={15} aria-hidden="true" />}
               {check.button === "Open Bake" && <Palette size={15} aria-hidden="true" />}
-              {check.button === "Open Controls" && <MapPin size={15} aria-hidden="true" />}
+              {(check.button === "Open Controls" || check.button === "Fix Navigation") && <MapPin size={15} aria-hidden="true" />}
               {check.button === "Open Rooms" && <Layers3 size={15} aria-hidden="true" />}
               {check.button === "Open Views" && <MapPin size={15} aria-hidden="true" />}
               {check.button === "Open Objects" && <Eye size={15} aria-hidden="true" />}
