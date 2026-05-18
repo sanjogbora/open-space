@@ -5221,6 +5221,18 @@ function App() {
     });
     return { meshNames, materialNames };
   }, [materialsDoc, sceneGraph]);
+  const variantMeshTargetOptions = useMemo(() => {
+    const names = new Set<string>();
+    sceneGraph?.nodes.forEach((node) => {
+      if (node.name) {
+        names.add(node.name);
+      }
+      if (node.meshName) {
+        names.add(node.meshName);
+      }
+    });
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [sceneGraph]);
   const variantMissingTargetCount = useMemo(
     () => materialVariantInteractions.filter((interaction) => !interaction.targetMaterialName && !interaction.targetMeshName).length,
     [materialVariantInteractions]
@@ -12655,6 +12667,7 @@ function App() {
                   <label>
                     <span>Target Mesh</span>
                     <input
+                      list="variant-mesh-targets"
                       value={selectedVariantInteraction.targetMeshName ?? ""}
                       onChange={(event) =>
                         updateMaterialVariantInteraction(selectedVariantInteraction.id, (interaction) => {
@@ -12665,6 +12678,11 @@ function App() {
                         })
                       }
                     />
+                    <datalist id="variant-mesh-targets">
+                      {variantMeshTargetOptions.map((name) => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
                   </label>
                 </div>
                 {selectedVariantTargetState !== "ready" && (

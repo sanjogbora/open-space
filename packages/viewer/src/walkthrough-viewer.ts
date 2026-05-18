@@ -1616,7 +1616,7 @@ export class WalkthroughViewer {
       if (!(node instanceof THREE.Mesh)) {
         return;
       }
-      const meshMatches = Boolean(interaction.targetMeshName && node.name === interaction.targetMeshName);
+      const meshMatches = this.meshMatchesVariantTarget(node, interaction.targetMeshName);
       const materials = Array.isArray(node.material) ? node.material : [node.material];
       materials.forEach((material, materialIndex) => {
         const materialMatches = Boolean(
@@ -1629,6 +1629,33 @@ export class WalkthroughViewer {
     });
 
     return targets;
+  }
+
+  private meshMatchesVariantTarget(mesh: THREE.Mesh, targetMeshName: string | undefined): boolean {
+    if (!targetMeshName?.trim()) {
+      return false;
+    }
+    const exactNames = [
+      mesh.name,
+      mesh.parent?.name ?? "",
+      typeof mesh.userData["name"] === "string" ? mesh.userData["name"] : ""
+    ].filter((name) => name.trim().length > 0);
+    if (exactNames.includes(targetMeshName)) {
+      return true;
+    }
+    const normalizedTarget = normalizedObjectOverrideName(targetMeshName);
+    if (normalizedTarget.length < 4) {
+      return false;
+    }
+    return exactNames
+      .map(normalizedObjectOverrideName)
+      .filter((name) => name.length >= 4)
+      .some(
+        (name) =>
+          name === normalizedTarget ||
+          name.includes(normalizedTarget) ||
+          normalizedTarget.includes(name)
+      );
   }
 
   private resolveLegacyCoordinateScale(): number {
