@@ -3276,13 +3276,73 @@ button.list-row {
 
 .variant-editor-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px) 38px;
+  grid-template-columns: minmax(140px, 0.9fr) minmax(180px, 230px) minmax(130px, 170px) minmax(190px, 1fr) 38px;
   align-items: end;
   gap: 10px;
   padding: 10px;
   border: 1px solid #e3e8eb;
   border-radius: 8px;
   background: #fbfcfd;
+}
+
+.variant-option-visual {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 3px 8px;
+  padding: 7px;
+  border: 1px solid #bfe5d3;
+  border-radius: 7px;
+  background: #f1fbf6;
+}
+
+.variant-option-visual.warning {
+  border-color: #f0d099;
+  background: #fff8ed;
+}
+
+.variant-option-visual.error {
+  border-color: rgba(190, 62, 62, 0.3);
+  background: #fff4f4;
+}
+
+.variant-option-visual img,
+.variant-option-visual > span {
+  grid-row: 1 / span 2;
+  width: 54px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 1px solid rgba(36, 49, 58, 0.14);
+  border-radius: 6px;
+  background: #e9eef2;
+}
+
+.variant-option-visual > span {
+  display: grid;
+  place-items: center;
+  color: #24313a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.variant-option-visual strong,
+.variant-option-visual small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.variant-option-visual strong {
+  color: #24313a;
+  font-size: 12px;
+}
+
+.variant-option-visual small {
+  color: #667681;
+  font-size: 11px;
 }
 
 .side-stack {

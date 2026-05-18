@@ -2962,6 +2962,14 @@ function canPreviewTextureAsset(source: string): boolean {
   return /\.(avif|jpe?g|png|webp)$/i.test(source);
 }
 
+function normalizeAssetReference(source: string): string {
+  return source.replace(/\\/g, "/").replace(/^\/+/, "");
+}
+
+function isExternalAssetReference(source: string): boolean {
+  return /^(https?:|data:|blob:|generated:\/\/)/i.test(source);
+}
+
 function draftKey(projectId: string, document: string): string {
   return `walkthrough-studio.${projectId}-${document}`;
 }
@@ -5247,6 +5255,13 @@ function App() {
     });
     return [...names].sort((a, b) => a.localeCompare(b));
   }, [materialsDoc, sceneGraph]);
+  const missingVariantTextureSources = useMemo(() => {
+    const sources = new Set<string>();
+    bundleStats?.assets
+      ?.filter((asset) => asset.kind === "variant-texture" && !asset.exists)
+      .forEach((asset) => sources.add(normalizeAssetReference(asset.source)));
+    return sources;
+  }, [bundleStats]);
   const variantMissingTargetCount = useMemo(
     () => materialVariantInteractions.filter((interaction) => !interaction.targetMaterialName && !interaction.targetMeshName).length,
     [materialVariantInteractions]
@@ -12720,78 +12735,123 @@ function App() {
                     </button>
                   </div>
 
-                  {selectedVariantInteraction.variants.map((variant) => (
-                    <div key={variant.id} className="variant-editor-row">
-                      <label>
-                        <span>Label</span>
-                        <input
-                          value={variant.label}
-                          onChange={(event) =>
-                            updateMaterialVariantOption(
-                              selectedVariantInteraction.id,
-                              variant.id,
-                              (current) => ({ ...current, label: event.target.value })
-                            )
-                          }
-                        />
-                      </label>
-                      <label>
-                        <span>Color</span>
-                        <div className="color-control">
+                  {selectedVariantInteraction.variants.map((variant) => {
+                    const textureSource = variant.texture?.trim() ?? "";
+                    const normalizedTextureSource = normalizeAssetReference(textureSource);
+                    const isGeneratedTexture = textureSource.startsWith("generated://");
+                    const isExternalTexture = isExternalAssetReference(textureSource);
+                    const isMissingTexture =
+                      Boolean(textureSource) &&
+                      !isExternalTexture &&
+                      missingVariantTextureSources.has(normalizedTextureSource);
+                    const canPreviewTexture =
+                      Boolean(textureSource) &&
+                      !isGeneratedTexture &&
+                      canPreviewTextureAsset(textureSource);
+                    const previewStatus = !variant.color && !textureSource
+                      ? "Needs color or texture"
+                      : isGeneratedTexture
+                        ? "Placeholder only"
+                        : isMissingTexture
+                          ? "Missing file"
+                          : textureSource
+                            ? canPreviewTexture
+                              ? "Texture preview"
+                              : isExternalTexture
+                                ? "External texture"
+                                : "Texture path"
+                            : "Color swatch";
+                    const previewTone = !variant.color && !textureSource
+                      ? "warning"
+                      : isGeneratedTexture || isMissingTexture
+                        ? "error"
+                        : "ready";
+                    return (
+                      <div key={variant.id} className="variant-editor-row">
+                        <label>
+                          <span>Label</span>
                           <input
-                            type="color"
-                            value={variant.color ?? "#ffffff"}
+                            value={variant.label}
                             onChange={(event) =>
                               updateMaterialVariantOption(
                                 selectedVariantInteraction.id,
                                 variant.id,
-                                (current) => ({ ...current, color: event.target.value })
+                                (current) => ({ ...current, label: event.target.value })
                               )
                             }
                           />
-                          <input
-                            value={variant.color ?? ""}
-                            onChange={(event) =>
-                              updateMaterialVariantOption(
-                                selectedVariantInteraction.id,
-                                variant.id,
-                                (current) => ({ ...current, color: event.target.value })
-                              )
-                            }
-                          />
-                        </div>
-                      </label>
-                      <label>
-                        <span>Texture URL</span>
-                        <input
-                          value={variant.texture ?? ""}
-                          placeholder="textures/finish-option.webp"
-                          onChange={(event) =>
-                            updateMaterialVariantOption(
-                              selectedVariantInteraction.id,
-                              variant.id,
-                              (current) => {
-                                const texture = event.target.value.trim();
-                                if (!texture) {
-                                  const { texture: _texture, ...rest } = current;
-                                  return rest;
-                                }
-                                return { ...current, texture };
+                        </label>
+                        <label>
+                          <span>Color</span>
+                          <div className="color-control">
+                            <input
+                              type="color"
+                              value={variant.color ?? "#ffffff"}
+                              onChange={(event) =>
+                                updateMaterialVariantOption(
+                                  selectedVariantInteraction.id,
+                                  variant.id,
+                                  (current) => ({ ...current, color: event.target.value })
+                                )
                               }
-                            )
-                          }
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        className="icon-action danger"
-                        title="Delete option"
-                        onClick={() => removeMaterialVariantOption(selectedVariantInteraction.id, variant.id)}
-                      >
-                        <Trash2 size={17} aria-hidden="true" />
-                      </button>
-                    </div>
-                  ))}
+                            />
+                            <input
+                              value={variant.color ?? ""}
+                              onChange={(event) =>
+                                updateMaterialVariantOption(
+                                  selectedVariantInteraction.id,
+                                  variant.id,
+                                  (current) => ({ ...current, color: event.target.value })
+                                )
+                              }
+                            />
+                          </div>
+                        </label>
+                        <div className={`variant-option-visual ${previewTone}`}>
+                          {canPreviewTexture && !isExternalTexture ? (
+                            <img src={projectAssetPath(activeProjectId, normalizedTextureSource)} alt="" loading="lazy" />
+                          ) : canPreviewTexture && isExternalTexture ? (
+                            <img src={textureSource} alt="" loading="lazy" />
+                          ) : (
+                            <span style={{ background: variant.color || undefined }}>
+                              {textureSource ? "TX" : variant.color ? "CL" : "?"}
+                            </span>
+                          )}
+                          <strong>{previewStatus}</strong>
+                          <small>{textureSource || variant.color || "Add a visible swatch or texture."}</small>
+                        </div>
+                        <label>
+                          <span>Texture URL</span>
+                          <input
+                            value={variant.texture ?? ""}
+                            placeholder="textures/finish-option.webp"
+                            onChange={(event) =>
+                              updateMaterialVariantOption(
+                                selectedVariantInteraction.id,
+                                variant.id,
+                                (current) => {
+                                  const texture = event.target.value.trim();
+                                  if (!texture) {
+                                    const { texture: _texture, ...rest } = current;
+                                    return rest;
+                                  }
+                                  return { ...current, texture };
+                                }
+                              )
+                            }
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className="icon-action danger"
+                          title="Delete option"
+                          onClick={() => removeMaterialVariantOption(selectedVariantInteraction.id, variant.id)}
+                        >
+                          <Trash2 size={17} aria-hidden="true" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

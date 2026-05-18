@@ -126,6 +126,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer finish variants now match target meshes by mesh, parent, and loose scene names, and Studio offers detected mesh names when choosing a variant target.
 - Studio Variants now fills target material choices from both material overrides and the scene graph, so finish setup still works when materials.json is missing or stale.
 - Bundle analysis and Repair Center now warn when hotspots, links, object toggles, or finish options have missing content, invalid positions, unsupported URLs, placeholder textures, or missing finish texture files before publish.
+- Studio Variants now shows each finish option as a visual swatch/texture preview with missing-file, placeholder, external, and needs-visual cues beside the raw texture field.
 - Viewer fallback navigation now keeps ignored/collision objects out of walkable click targets and honors forced collision objects even when their names look floor-like.
 - Viewer navigation and picking now ignore globally hidden objects, so hidden geometry no longer acts as an invisible floor or collision blocker.
 - Movement is constrained by configured scene bounds.
