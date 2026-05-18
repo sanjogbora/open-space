@@ -10852,7 +10852,24 @@ function App() {
                   onClick={() => setSelectedViewId(view.id)}
                 >
                   <span>{view.label}</span>
-                  <small>{view.kind}</small>
+                  <small>
+                    {view.kind === "top"
+                      ? "top view"
+                      : enabledNavigationZones(manifest.navigation, "block").some((zone) =>
+                            pointInNavigationZone(zone, view.position, 0.15)
+                          )
+                        ? "inside blocker"
+                        : !pointInNavigationBounds(view.position, manifest.navigation.bounds, 0.05)
+                          ? "outside bounds"
+                          : enabledNavigationZones(manifest.navigation, "walk").length > 0 &&
+                              !enabledNavigationZones(manifest.navigation, "walk").some((zone) =>
+                                pointInNavigationZone(zone, view.position, 0.35)
+                              )
+                            ? "outside walk area"
+                            : rooms.some((room) => room.viewId === view.id)
+                              ? "room linked"
+                              : "needs room link"}
+                  </small>
                 </button>
               ))}
             </div>
@@ -11091,7 +11108,17 @@ function App() {
                   onClick={() => setSelectedRoomId(room.id)}
                 >
                   <span>{room.label}</span>
-                  <small>{room.dimensions ?? room.viewId ?? "room"}</small>
+                  <small>
+                    {!room.viewId
+                      ? "needs view"
+                      : !room.bounds
+                        ? "needs map area"
+                        : enabledNavigationZones(manifest.navigation, "block").some((zone) =>
+                            pointInNavigationZone(zone, roomCenter(room, manifest.views), 0.15)
+                          )
+                          ? "inside blocker"
+                          : "room ready"}
+                  </small>
                 </button>
               ))}
               {rooms.length === 0 && <p className="empty-list">No rooms mapped.</p>}
