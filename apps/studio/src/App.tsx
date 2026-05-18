@@ -5233,6 +5233,20 @@ function App() {
     });
     return [...names].sort((a, b) => a.localeCompare(b));
   }, [sceneGraph]);
+  const variantMaterialTargetOptions = useMemo(() => {
+    const names = new Set<string>();
+    materialsDoc?.materials.forEach((material) => {
+      if (material.name) {
+        names.add(material.name);
+      }
+    });
+    sceneGraph?.materials.forEach((material) => {
+      if (material.name) {
+        names.add(material.name);
+      }
+    });
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [materialsDoc, sceneGraph]);
   const variantMissingTargetCount = useMemo(
     () => materialVariantInteractions.filter((interaction) => !interaction.targetMaterialName && !interaction.targetMeshName).length,
     [materialVariantInteractions]
@@ -12657,9 +12671,9 @@ function App() {
                       }
                     >
                       <option value="">Select material</option>
-                      {materialsDoc?.materials.map((material) => (
-                        <option key={material.id} value={material.name}>
-                          {material.name}
+                      {variantMaterialTargetOptions.map((materialName) => (
+                        <option key={materialName} value={materialName}>
+                          {materialName}
                         </option>
                       ))}
                     </select>
