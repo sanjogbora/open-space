@@ -182,6 +182,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio live Navigation QA now also flags walk zones overlapping blockers and routes them to blocker review without waiting for a fresh bundle analysis.
 - Studio's blocker-review quick fix now opens zone details, reveals generated zones, and expands the affected walk/pass zone so the repair target is easier to find.
 - Studio navigation repair actions now select the current failing QA issue, prepare the relevant map mode or blocker details, and scroll to the visual repair area instead of opening a generic Controls page.
+- Studio environment, optimization, and publish repair actions now route to their visual setup/checklist boards instead of opening a broad tab or starting an optimization job immediately.
 - Analyzer and Studio now warn when walk or door-pass zones extend outside movement bounds, which catches another cause of valid-looking floors that still refuse navigation.
 - Studio Navigation Repair can now expand movement bounds to fit active walk and door-pass zones when authored route areas sit outside the allowed movement boundary.
 - Viewer prunes routed click-to-move paths after visibility/grid routing so movement glides through fewer unnecessary intermediate waypoints.

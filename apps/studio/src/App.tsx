@@ -9105,6 +9105,15 @@ function App() {
           : ".navigation-quick-fix, .navigation-repair-path, .movement-setup-board";
     openStudioVisualTarget("controls", targetSelector);
   };
+  const openEnvironmentWorkflow = () => {
+    openStudioVisualTarget("environment", ".environment-setup-board, .environment-preview, .environment-panel, .field-grid");
+  };
+  const openOptimizationWorkflow = () => {
+    openStudioVisualTarget("optimization", ".optimization-setup-board, .optimization-action-controls, .texture-delivery-plan");
+  };
+  const openPublishWorkflow = () => {
+    openStudioVisualTarget("publish", ".client-share-board, .publish-handoff-board, .publish-readiness-list");
+  };
   const openVariantsWorkflow = () => {
     const targetVariant =
       materialVariantInteractions.find((interaction) => !interaction.targetMaterialName && !interaction.targetMeshName) ??
@@ -9197,7 +9206,7 @@ function App() {
       return;
     }
     if (action === "environment") {
-      openStudioVisualTarget("environment", ".environment-preview, .environment-panel, .field-grid");
+      openEnvironmentWorkflow();
       return;
     }
     if (action === "materials") {
@@ -9229,7 +9238,7 @@ function App() {
       return;
     }
     if (action === "optimize") {
-      void optimizeProject();
+      openOptimizationWorkflow();
       return;
     }
     if (action === "bake") {
@@ -9252,7 +9261,7 @@ function App() {
       return;
     }
     if (action === "optimize") {
-      openStudioVisualTarget("optimization", ".optimization-action-controls, .publish-action-card");
+      openOptimizationWorkflow();
       return;
     }
     runImportDiagnosticAction(action);
@@ -9639,9 +9648,9 @@ function App() {
                 optimizeState={optimizeState}
                 bakeState={bakeState}
                 onRepair={() => void repairImport()}
-                onOptimize={() => void optimizeProject()}
+                onOptimize={openOptimizationWorkflow}
                 onBake={openBakeWorkflow}
-                onEnvironment={() => setSelectedTab("environment")}
+                onEnvironment={openEnvironmentWorkflow}
                 onMaterials={openMaterialsWorkflow}
                 onVariants={openVariantsWorkflow}
                 onViews={openViewsWorkflow}
@@ -9661,15 +9670,15 @@ function App() {
                 viewerUrl={viewerUrl(activeProjectId)}
                 navigationViewerUrl={navigationDebugViewerUrl(activeProjectId)}
                 onMaterials={openMaterialsWorkflow}
-                onEnvironment={() => setSelectedTab("environment")}
+                onEnvironment={openEnvironmentWorkflow}
                 onNavigation={openNavigationWorkflow}
                 onRooms={openRoomsWorkflow}
                 onViews={openViewsWorkflow}
                 onBake={openBakeWorkflow}
                 onInteractions={openInteractionsWorkflow}
-                onOptimize={() => setSelectedTab("optimization")}
+                onOptimize={openOptimizationWorkflow}
                 onObjects={openObjectsWorkflow}
-                onPublish={() => setSelectedTab("publish")}
+                onPublish={openPublishWorkflow}
                 onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })}
                 onSaveAndTest={() => void saveAndOpenViewer(viewerUrl(activeProjectId))}
                 onSaveAndTestNavigation={() => void saveAndOpenViewer(navigationDebugViewerUrl(activeProjectId))}
@@ -9730,7 +9739,7 @@ function App() {
                     onApplyTextureSuggestions={applyMaterialTextureSuggestions}
                     onRepair={() => void repairImport()}
                     onMaterials={openMaterialsWorkflow}
-                    onOptimize={() => setSelectedTab("optimization")}
+                    onOptimize={openOptimizationWorkflow}
                     onBake={openBakeWorkflow}
                     onReviewTextureSuggestion={reviewMaterialTextureSuggestion}
                     onCopyPlan={() => void copyText(assetHealthRepairPlanText(bundleStats, activeProjectId))}
