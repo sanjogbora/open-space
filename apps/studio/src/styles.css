@@ -4265,6 +4265,49 @@ button.list-row {
   opacity: 0.78;
 }
 
+.interaction-placement-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 11px;
+  border: 1px solid #d6dde4;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.interaction-placement-card > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.interaction-placement-card strong,
+.interaction-placement-card small {
+  min-width: 0;
+  overflow: hidden;
+  color: #21313d;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interaction-placement-card strong {
+  font-size: 13px;
+}
+
+.interaction-placement-card small {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+@media (max-width: 780px) {
+  .interaction-placement-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 .room-planner-card {
   border-color: #c7eadb;
   background: #f3fbf7;

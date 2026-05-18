@@ -58,6 +58,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Views now shows a visual setup board for saved views, walk starts, top view, room links, and walk-zone coverage before raw camera coordinates.
 - Studio Interactions now shows a setup board for detected TV/screen surfaces, mapped video targets, linked video media, and hotspots/links before detailed interaction editing.
 - Studio Interactions now gives the selected hotspot, link, or object toggle a visual readiness card for marker placement, missing content, link URL validity, stale object targets, and viewer testing.
+- Studio Interactions can place a selected hotspot, link, or object-toggle marker from the selected saved view's look point or camera spot, reducing manual coordinate editing.
 - Studio Variants now shows a visual setup board for finish sets, targets, options, color swatches, and texture finishes before raw variant fields.
 - Studio Objects now shows a setup board for scene object indexing, ceiling/top-view cleanup, movement roles, and hidden objects before detailed object fields.
 - Studio Environment now shows a context setup board for sky, outside ground, landscape enclosure, ground height, and review mode before raw environment fields.

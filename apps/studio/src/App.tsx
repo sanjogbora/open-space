@@ -6274,6 +6274,28 @@ function App() {
     }));
   };
 
+  const applySelectedInteractionPosition = (position: Vec3) => {
+    const nextPosition: Vec3 = [
+      Number(position[0].toFixed(3)),
+      Number(position[1].toFixed(3)),
+      Number(position[2].toFixed(3))
+    ];
+    if (selectedHotspot) {
+      updateHotspot(selectedHotspot.id, (interaction) => ({ ...interaction, position: nextPosition }));
+      return;
+    }
+    if (selectedLink) {
+      updateLink(selectedLink.id, (interaction) => ({ ...interaction, position: nextPosition }));
+      return;
+    }
+    if (selectedObjectToggle) {
+      updateObjectToggle(selectedObjectToggle.id, (interaction) => ({
+        ...interaction,
+        position: nextPosition
+      }));
+    }
+  };
+
   const updateMaterialVariantInteraction = (
     interactionId: string,
     updater: (interaction: MaterialVariantInteraction) => MaterialVariantInteraction
@@ -11269,6 +11291,10 @@ function App() {
                 </div>
 
                 <InteractionHealthBoard title="Hotspot readiness" steps={selectedInteractionHealthSteps} />
+                <InteractionPlacementCard
+                  selectedView={selectedView}
+                  onUsePosition={applySelectedInteractionPosition}
+                />
 
                 <div className="field-grid">
                   <label>
@@ -11341,6 +11367,10 @@ function App() {
                 </div>
 
                 <InteractionHealthBoard title="Link readiness" steps={selectedInteractionHealthSteps} />
+                <InteractionPlacementCard
+                  selectedView={selectedView}
+                  onUsePosition={applySelectedInteractionPosition}
+                />
 
                 <div className="field-grid">
                   <label>
@@ -11406,6 +11436,10 @@ function App() {
                 </div>
 
                 <InteractionHealthBoard title="Object toggle readiness" steps={selectedInteractionHealthSteps} />
+                <InteractionPlacementCard
+                  selectedView={selectedView}
+                  onUsePosition={applySelectedInteractionPosition}
+                />
 
                 <div className="field-grid">
                   <label>
@@ -18668,6 +18702,47 @@ function InteractionHealthBoard({
             <em>{step.action}</em>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function InteractionPlacementCard({
+  selectedView,
+  onUsePosition
+}: {
+  selectedView: SceneView | undefined;
+  onUsePosition: (position: Vec3) => void;
+}) {
+  return (
+    <div className="interaction-placement-card">
+      <div>
+        <strong>Place marker visually</strong>
+        <small>
+          {selectedView
+            ? `Use ${selectedView.label} instead of typing coordinates.`
+            : "Create or select a saved view before using visual placement."}
+        </small>
+      </div>
+      <div className="inline-actions">
+        <button
+          type="button"
+          className="button secondary compact-button"
+          disabled={!selectedView}
+          onClick={() => selectedView && onUsePosition(selectedView.target)}
+        >
+          <MapPin size={15} aria-hidden="true" />
+          Look Point
+        </button>
+        <button
+          type="button"
+          className="button secondary compact-button"
+          disabled={!selectedView}
+          onClick={() => selectedView && onUsePosition(selectedView.position)}
+        >
+          <Globe2 size={15} aria-hidden="true" />
+          Camera Spot
+        </button>
       </div>
     </div>
   );
