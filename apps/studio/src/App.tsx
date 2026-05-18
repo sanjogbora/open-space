@@ -15600,7 +15600,9 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
     [
       "video-textures-missing-source",
       "video-textures-missing-target",
-      "video-textures-target-missing"
+      "video-textures-target-missing",
+      "object-toggles-missing-target",
+      "object-toggles-target-missing"
     ].includes(code)
   ) {
     return "interactions";
@@ -16999,7 +17001,9 @@ function ViewerQaChecklist({
   const interactionCodes = [
     "video-textures-missing-source",
     "video-textures-missing-target",
-    "video-textures-target-missing"
+    "video-textures-target-missing",
+    "object-toggles-missing-target",
+    "object-toggles-target-missing"
   ];
   const performanceDiagnosticCodes = [
     "missing-geometry-compression",

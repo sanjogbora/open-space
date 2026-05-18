@@ -1582,6 +1582,15 @@ function normalizeTextureMatchName(value) {
     .trim();
 }
 
+function normalizeObjectTargetName(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[_\-.]+/g, " ")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function looseTextureHasGenericName(source) {
   const name = normalizeTextureMatchName(path.posix.basename(String(source ?? "").replace(/\\/g, "/")));
   if (!name) {
@@ -2747,7 +2756,15 @@ function createDiagnostics(manifest, report, graphs, controls) {
   const linkedRoomViewIds = new Set(rooms.map((room) => room?.viewId).filter(Boolean));
   const linkedWalkRoomCount = topology.walkViews.filter((view) => linkedRoomViewIds.has(view.id)).length;
   const videoTextures = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "video-texture");
+  const objectToggles = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "object-toggle");
   const graphNodeNames = new Set((graph?.nodes ?? []).map((node) => node.name).filter(Boolean));
+  const graphNodeIds = new Set((graph?.nodes ?? []).map((node) => node.id).filter(Boolean));
+  const graphNodeTargetNames = new Set(
+    (graph?.nodes ?? [])
+      .flatMap((node) => [node.name, node.meshName])
+      .map(normalizeObjectTargetName)
+      .filter(Boolean)
+  );
   const graphMaterialNames = new Set((graph?.materials ?? []).map((material) => material.name).filter(Boolean));
   const duplicateNodeNames = duplicateNames((graph?.nodes ?? []).map((node) => node.name)).slice(0, 8);
   const duplicateMaterialNames = duplicateNames((graph?.materials ?? []).map((material) => material.name)).slice(0, 8);
@@ -2762,6 +2779,20 @@ function createDiagnostics(manifest, report, graphs, controls) {
       (interaction.targetMeshName && graph && !graphNodeNames.has(interaction.targetMeshName)) ||
       (interaction.targetMaterialName && graph && !graphMaterialNames.has(interaction.targetMaterialName))
   );
+  const objectTogglesMissingTarget = objectToggles.filter(
+    (interaction) => !String(interaction.targetObjectId ?? "").trim() && !String(interaction.targetObjectName ?? "").trim()
+  );
+  const objectTogglesWithMissingTargets = objectToggles.filter((interaction) => {
+    const targetObjectId = String(interaction.targetObjectId ?? "").trim();
+    const targetObjectName = normalizeObjectTargetName(interaction.targetObjectName);
+    if (!graph || (!targetObjectId && !targetObjectName)) {
+      return false;
+    }
+    return !(
+      (targetObjectId && graphNodeIds.has(targetObjectId)) ||
+      (targetObjectName && graphNodeTargetNames.has(targetObjectName))
+    );
+  });
   const textureImages = [
     ...report.looseImages,
     ...report.models.flatMap((model) => model.externalResources ?? []).filter((resource) => resource.kind === "texture")
@@ -4001,6 +4032,26 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if (objectTogglesMissingTarget.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "object-toggles-missing-target",
+      title: "Object toggles are not mapped to objects",
+      message: `${objectTogglesMissingTarget.length} object toggle interaction(s) do not target a scene object.`,
+      action: "Open Interactions and choose the object each toggle should show or hide before publishing."
+    });
+  }
+
+  if (objectTogglesWithMissingTargets.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "object-toggles-target-missing",
+      title: "Object toggle target was not found",
+      message: `${objectTogglesWithMissingTargets.length} object toggle interaction(s) reference objects that were not found in the current model graph.`,
+      action: "Open Interactions and pick the target object again after reimporting or repairing the model."
+    });
+  }
+
   if ((manifest.views?.length ?? 0) === 0) {
     diagnostics.push({
       severity: "error",
@@ -4702,6 +4753,8 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "video-textures-missing-source",
     "video-textures-missing-target",
     "video-textures-target-missing",
+    "object-toggles-missing-target",
+    "object-toggles-target-missing",
     "duplicate-node-names",
     "duplicate-material-names",
     "repeated-large-mesh-instances",
