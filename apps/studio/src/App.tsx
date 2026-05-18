@@ -8985,6 +8985,35 @@ function App() {
     }
     openStudioVisualTarget("materials", ".lightmap-bake-card");
   };
+  const openInteractionsWorkflow = () => {
+    const targetInteraction =
+      videoTextureInteractions.find((interaction) => !interaction.targetMeshName && !interaction.targetMaterialName) ??
+      videoTextureInteractions.find((interaction) => !interaction.source.trim() || !isValidMediaSource(interaction.source)) ??
+      objectToggleInteractions.find((interaction) => {
+        const targetId = interaction.targetObjectId?.trim();
+        const targetName = normalizedObjectMatchName(interaction.targetObjectName ?? "");
+        if (!targetId && !targetName) {
+          return true;
+        }
+        return !(
+          (targetId && objectToggleKnownTargetKeys.ids.has(targetId)) ||
+          (targetName && objectToggleKnownTargetKeys.names.has(targetName))
+        );
+      }) ??
+      hotspotInteractions.find((interaction) => !isFiniteVec3(interaction.position) || !interaction.title.trim()) ??
+      linkInteractions.find(
+        (interaction) =>
+          !isFiniteVec3(interaction.position) || !interaction.label.trim() || !isValidInteractionUrl(interaction.url)
+      ) ??
+      videoTextureInteractions[0] ??
+      hotspotInteractions[0] ??
+      linkInteractions[0] ??
+      objectToggleInteractions[0];
+    if (targetInteraction) {
+      setSelectedInteractionId(targetInteraction.id);
+    }
+    openStudioVisualTarget("interactions", ".selected-interaction-health, .surface-mapper, .screen-planner-card");
+  };
   const runImportDiagnosticAction = (action: ImportNextStepAction) => {
     if (action === "repair") {
       void repairImport();
@@ -9023,7 +9052,7 @@ function App() {
       return;
     }
     if (action === "interactions") {
-      openStudioVisualTarget("interactions", ".screen-planner-card, .surface-mapper");
+      openInteractionsWorkflow();
       return;
     }
     if (action === "optimize") {
