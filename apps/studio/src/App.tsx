@@ -9016,6 +9016,58 @@ function App() {
       ".material-diagnosis-card, .texture-candidate-panel, .material-preview-strip, .material-setup-board"
     );
   };
+  const openViewsWorkflow = () => {
+    const walkZones = manifest ? enabledNavigationZones(manifest.navigation, "walk") : [];
+    const blockZones = manifest ? enabledNavigationZones(manifest.navigation, "block") : [];
+    const linkedViewIds = new Set(rooms.map((room) => room.viewId).filter(Boolean));
+    const targetView =
+      manifest?.views.find((view) => view.kind === "walk" && blockZones.some((zone) => pointInNavigationZone(zone, view.position, 0.15))) ??
+      manifest?.views.find((view) => view.kind === "walk" && !pointInNavigationBounds(view.position, manifest.navigation.bounds, 0.05)) ??
+      manifest?.views.find(
+        (view) =>
+          view.kind === "walk" &&
+          walkZones.length > 0 &&
+          !walkZones.some((zone) => pointInNavigationZone(zone, view.position, 0.35))
+      ) ??
+      manifest?.views.find((view) => view.kind === "walk" && !linkedViewIds.has(view.id)) ??
+      manifest?.views.find((view) => view.kind === "top") ??
+      manifest?.views[0];
+    if (targetView) {
+      setSelectedViewId(targetView.id);
+    }
+    openStudioVisualTarget("views", ".view-setup-board, .editor-panel");
+  };
+  const openRoomsWorkflow = () => {
+    if (!manifest) {
+      openStudioVisualTarget("rooms", ".room-setup-board, .room-planner-card");
+      return;
+    }
+    const routeZones = [
+      ...enabledNavigationZones(manifest.navigation, "walk"),
+      ...enabledNavigationZones(manifest.navigation, "pass")
+    ];
+    const blockZones = enabledNavigationZones(manifest.navigation, "block");
+    const routeComponents = navigationComponents(routeZones);
+    const targetRoom =
+      rooms.find((room) => !room.viewId) ??
+      rooms.find((room) => !room.bounds) ??
+      rooms.find((room) => {
+        const center = roomCenter(room, manifest.views);
+        return blockZones.some((zone) => pointInNavigationZone(zone, center, 0.15));
+      }) ??
+      rooms.find((room) => {
+        const center = roomCenter(room, manifest.views);
+        return !routeComponents.some((component) =>
+          component.some((zone) => pointInNavigationZone(zone, center, 0.35))
+        );
+      }) ??
+      rooms.find((room) => !pointInNavigationBounds(roomCenter(room, manifest.views), manifest.navigation.bounds, 0.05)) ??
+      rooms[0];
+    if (targetRoom) {
+      setSelectedRoomId(targetRoom.id);
+    }
+    openStudioVisualTarget("rooms", ".room-walkability-board, .room-map, .room-setup-board");
+  };
   const openVariantsWorkflow = () => {
     const targetVariant =
       materialVariantInteractions.find((interaction) => !interaction.targetMaterialName && !interaction.targetMeshName) ??
@@ -9120,7 +9172,7 @@ function App() {
       return;
     }
     if (action === "views") {
-      openStudioVisualTarget("views", ".editor-layout, .view-list");
+      openViewsWorkflow();
       return;
     }
     if (action === "navigation") {
@@ -9132,7 +9184,7 @@ function App() {
       return;
     }
     if (action === "rooms") {
-      openStudioVisualTarget("rooms", ".room-map");
+      openRoomsWorkflow();
       return;
     }
     if (action === "interactions") {
@@ -9555,9 +9607,9 @@ function App() {
                 onEnvironment={() => setSelectedTab("environment")}
                 onMaterials={openMaterialsWorkflow}
                 onVariants={openVariantsWorkflow}
-                onViews={() => setSelectedTab("views")}
+                onViews={openViewsWorkflow}
                 onNavigation={() => setSelectedTab("controls")}
-                onRooms={() => setSelectedTab("rooms")}
+                onRooms={openRoomsWorkflow}
                 onInteractions={openInteractionsWorkflow}
                 pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
                 reviewTextureSuggestionCount={reviewMaterialTextureSuggestionCount}
@@ -9574,8 +9626,8 @@ function App() {
                 onMaterials={openMaterialsWorkflow}
                 onEnvironment={() => setSelectedTab("environment")}
                 onNavigation={() => setSelectedTab("controls")}
-                onRooms={() => setSelectedTab("rooms")}
-                onViews={() => setSelectedTab("views")}
+                onRooms={openRoomsWorkflow}
+                onViews={openViewsWorkflow}
                 onBake={openBakeWorkflow}
                 onInteractions={openInteractionsWorkflow}
                 onOptimize={() => setSelectedTab("optimization")}
