@@ -12960,7 +12960,29 @@ function App() {
                   onClick={() => setSelectedVariantInteractionId(interaction.id)}
                 >
                   <span>{interaction.label}</span>
-                  <small>{interaction.targetMaterialName ?? interaction.targetMeshName ?? "untargeted"}</small>
+                  <small>
+                    {!interaction.targetMaterialName && !interaction.targetMeshName
+                      ? "needs target"
+                      : sceneGraph &&
+                          ((interaction.targetMaterialName &&
+                            !variantTargetKeys.materialNames.has(interaction.targetMaterialName)) ||
+                            (interaction.targetMeshName && !variantTargetKeys.meshNames.has(interaction.targetMeshName)))
+                        ? "target missing"
+                        : interaction.variants.length === 0
+                          ? "needs options"
+                          : interaction.variants.some((variant) => !variant.color && !variant.texture?.trim())
+                            ? "needs finish"
+                            : interaction.variants.some((variant) => {
+                                const texture = variant.texture?.trim() ?? "";
+                                return (
+                                  Boolean(texture) &&
+                                  (texture.startsWith("generated://") ||
+                                    missingVariantTextureSources.has(normalizeAssetReference(texture)))
+                                );
+                              })
+                              ? "missing texture"
+                              : "finish ready"}
+                  </small>
                 </button>
               ))}
               {materialVariantInteractions.length === 0 && (

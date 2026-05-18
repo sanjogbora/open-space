@@ -64,6 +64,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Repair and publish actions that open Interactions now select the first broken video screen, hotspot, link, or object toggle and scroll to its visual readiness card.
 - Overview recommended-step and viewer-QA buttons now use the same targeted Interactions flow instead of opening a generic raw interaction list.
 - Variant repair actions now select the first finish set with a missing/stale target, empty option, placeholder texture, or missing texture file and scroll to the visual setup board.
+- Studio Variants now labels each finish set in the list as needs target, target missing, needs options, needs finish, missing texture, or finish ready.
 - Studio Variants now shows a visual setup board for finish sets, targets, options, color swatches, and texture finishes before raw variant fields.
 - Studio Objects now shows a setup board for scene object indexing, ceiling/top-view cleanup, movement roles, and hidden objects before detailed object fields.
 - Studio Environment now shows a context setup board for sky, outside ground, landscape enclosure, ground height, and review mode before raw environment fields.
