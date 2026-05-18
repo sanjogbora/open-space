@@ -9044,6 +9044,31 @@ function App() {
     }
     openStudioVisualTarget("variants", ".variant-setup-board, .variant-editor-list");
   };
+  const openObjectsWorkflow = () => {
+    const targetRow =
+      objectReviewRows.find((row) => row.isCeilingOrRoof && !row.isHiddenInTopView) ??
+      objectReviewRows.find((row) => row.isCeilingOrRoof) ??
+      objectReviewRows.find((row) => row.hasNavigationRole) ??
+      objectReviewRows.find((row) => row.isHiddenInTopView) ??
+      objectReviewRows.find((row) => row.isHidden) ??
+      objectReviewRows[0];
+    if (targetRow) {
+      setSelectedObjectId(targetRow.node.id);
+      setObjectSearchQuery("");
+      setObjectListFilter(
+        targetRow.isCeilingOrRoof
+          ? "ceiling"
+          : targetRow.hasNavigationRole
+            ? "roles"
+            : targetRow.isHiddenInTopView
+              ? "top-hidden"
+              : targetRow.isHidden
+                ? "hidden"
+                : "all"
+      );
+    }
+    openStudioVisualTarget("objects", ".object-setup-board, .object-review-tools, .object-detail");
+  };
   const openInteractionsWorkflow = () => {
     const targetInteraction =
       videoTextureInteractions.find((interaction) => !interaction.targetMeshName && !interaction.targetMaterialName) ??
@@ -9103,7 +9128,7 @@ function App() {
       return;
     }
     if (action === "objects") {
-      openStudioVisualTarget("objects", ".list-panel, .object-detail");
+      openObjectsWorkflow();
       return;
     }
     if (action === "rooms") {
@@ -9554,7 +9579,7 @@ function App() {
                 onBake={openBakeWorkflow}
                 onInteractions={openInteractionsWorkflow}
                 onOptimize={() => setSelectedTab("optimization")}
-                onObjects={() => setSelectedTab("objects")}
+                onObjects={openObjectsWorkflow}
                 onPublish={() => setSelectedTab("publish")}
                 onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })}
                 onSaveAndTest={() => void saveAndOpenViewer(viewerUrl(activeProjectId))}
