@@ -11376,7 +11376,15 @@ function App() {
                   onClick={() => setSelectedInteractionId(interaction.id)}
                 >
                   <span>{interaction.label}</span>
-                  <small>video surface</small>
+                  <small>
+                    {!interaction.targetMeshName && !interaction.targetMaterialName
+                      ? "needs target"
+                      : !interaction.source.trim()
+                        ? "needs video"
+                        : isValidMediaSource(interaction.source)
+                          ? "screen ready"
+                          : "check video"}
+                  </small>
                 </button>
               ))}
             </div>
