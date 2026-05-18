@@ -8985,6 +8985,34 @@ function App() {
     }
     openStudioVisualTarget("materials", ".lightmap-bake-card");
   };
+  const openVariantsWorkflow = () => {
+    const targetVariant =
+      materialVariantInteractions.find((interaction) => !interaction.targetMaterialName && !interaction.targetMeshName) ??
+      materialVariantInteractions.find((interaction) => {
+        if (!sceneGraph) {
+          return false;
+        }
+        return Boolean(
+          (interaction.targetMaterialName && !variantTargetKeys.materialNames.has(interaction.targetMaterialName)) ||
+            (interaction.targetMeshName && !variantTargetKeys.meshNames.has(interaction.targetMeshName))
+        );
+      }) ??
+      materialVariantInteractions.find((interaction) => interaction.variants.length === 0) ??
+      materialVariantInteractions.find((interaction) =>
+        interaction.variants.some((variant) => !variant.color && !variant.texture?.trim())
+      ) ??
+      materialVariantInteractions.find((interaction) =>
+        interaction.variants.some((variant) => {
+          const texture = variant.texture?.trim() ?? "";
+          return texture.startsWith("generated://") || missingVariantTextureSources.has(normalizeAssetReference(texture));
+        })
+      ) ??
+      materialVariantInteractions[0];
+    if (targetVariant) {
+      setSelectedVariantInteractionId(targetVariant.id);
+    }
+    openStudioVisualTarget("variants", ".variant-setup-board, .variant-editor-list");
+  };
   const openInteractionsWorkflow = () => {
     const targetInteraction =
       videoTextureInteractions.find((interaction) => !interaction.targetMeshName && !interaction.targetMaterialName) ??
@@ -9032,7 +9060,7 @@ function App() {
       return;
     }
     if (action === "variants") {
-      openStudioVisualTarget("variants", ".variant-setup-board, .variant-editor-list");
+      openVariantsWorkflow();
       return;
     }
     if (action === "views") {
@@ -9470,7 +9498,7 @@ function App() {
                 onBake={openBakeWorkflow}
                 onEnvironment={() => setSelectedTab("environment")}
                 onMaterials={() => setSelectedTab("materials")}
-                onVariants={() => setSelectedTab("variants")}
+                onVariants={openVariantsWorkflow}
                 onViews={() => setSelectedTab("views")}
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
