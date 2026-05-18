@@ -1068,6 +1068,20 @@ function isValidInteractionUrl(value: string): boolean {
   return trimmed.startsWith("/") || trimmed.startsWith("./") || trimmed.startsWith("../") || trimmed.startsWith("#");
 }
 
+function isValidMediaSource(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    return true;
+  }
+  if (/^(\/|\.\/|\.\.\/)/.test(trimmed)) {
+    return /\.(mp4|mov|webm)([?#].*)?$/i.test(trimmed);
+  }
+  return /^media\/.+\.(mp4|mov|webm)([?#].*)?$/i.test(trimmed);
+}
+
 function parseKeywordList(value: string): string[] {
   return value
     .split(",")
@@ -5091,6 +5105,26 @@ function App() {
       ? "ready"
       : "stale";
   }, [objectToggleKnownTargetKeys, selectedObjectToggle]);
+  const selectedVideoTextureTargetState = useMemo(() => {
+    if (!selectedVideoTexture) {
+      return "ready";
+    }
+    const targetMeshName = selectedVideoTexture.targetMeshName?.trim();
+    const targetMaterialName = selectedVideoTexture.targetMaterialName?.trim();
+    if (!targetMeshName && !targetMaterialName) {
+      return "missing";
+    }
+    const meshFound =
+      !targetMeshName ||
+      !sceneGraph ||
+      sceneGraph.nodes.some((node) => node.name === targetMeshName || node.meshName === targetMeshName);
+    const materialFound =
+      !targetMaterialName ||
+      (!materialsDoc && !sceneGraph) ||
+      Boolean(materialsDoc?.materials.some((material) => material.name === targetMaterialName)) ||
+      Boolean(sceneGraph?.materials.some((material) => material.name === targetMaterialName));
+    return meshFound && materialFound ? "ready" : "stale";
+  }, [materialsDoc, sceneGraph, selectedVideoTexture]);
   const selectedInteractionHealthSteps = useMemo((): InteractionHealthStep[] => {
     if (selectedHotspot) {
       const hasPosition = isFiniteVec3(selectedHotspot.position);
@@ -5210,6 +5244,78 @@ function App() {
     }
     return [];
   }, [selectedHotspot, selectedLink, selectedObjectToggle, selectedObjectToggleTargetState]);
+  const selectedVideoTextureHealthSteps = useMemo((): InteractionHealthStep[] => {
+    if (!selectedVideoTexture) {
+      return [];
+    }
+    const source = selectedVideoTexture.source.trim();
+    const hasValidMedia = isValidMediaSource(source);
+    const triggerDistance = selectedVideoTexture.triggerDistance ?? 8;
+    const targetLabel =
+      selectedVideoTexture.targetMaterialName ??
+      selectedVideoTexture.targetMeshName ??
+      "No mesh or material selected.";
+    return [
+      {
+        id: "target",
+        label: "Screen target",
+        detail:
+          selectedVideoTextureTargetState === "ready"
+            ? `Mapped to ${targetLabel}.`
+            : selectedVideoTextureTargetState === "missing"
+              ? "Choose the TV mesh or material."
+              : "Selected target was not found after reimport.",
+        status: selectedVideoTextureTargetState === "ready" ? "ready" : "warning",
+        action: selectedVideoTextureTargetState === "ready" ? "Target OK" : "Map Screen"
+      },
+      {
+        id: "media",
+        label: "Video media",
+        detail: source
+          ? hasValidMedia
+            ? `Using ${source}.`
+            : "Use an uploaded media file or an HTTPS video URL."
+          : "Upload or paste an MP4, MOV, or WebM video.",
+        status: hasValidMedia ? "ready" : "warning",
+        action: hasValidMedia ? "Media OK" : "Add Video"
+      },
+      {
+        id: "autoplay",
+        label: "Mobile playback",
+        detail:
+          selectedVideoTexture.autoplay !== false
+            ? selectedVideoTexture.muted !== false
+              ? "Autoplay is muted, which is safest for browsers."
+              : "Unmuted autoplay is often blocked on mobile."
+            : "Video waits for user/viewer logic instead of autoplay.",
+        status:
+          selectedVideoTexture.autoplay !== false && selectedVideoTexture.muted === false ? "warning" : "ready",
+        action:
+          selectedVideoTexture.autoplay !== false
+            ? selectedVideoTexture.muted !== false
+              ? "Playback OK"
+              : "Mute Video"
+            : "Manual"
+      },
+      {
+        id: "performance",
+        label: "Performance guard",
+        detail:
+          triggerDistance > 0
+            ? `Pauses when farther than ${triggerDistance.toFixed(1)}m.`
+            : "Set a trigger distance so offscreen video does not keep decoding.",
+        status: triggerDistance > 0 ? "ready" : "warning",
+        action: triggerDistance > 0 ? "Guard OK" : "Set Distance"
+      },
+      {
+        id: "viewer",
+        label: "Viewer test",
+        detail: "Open the viewer and confirm the video appears on the intended screen.",
+        status: "active",
+        action: "Test Screen"
+      }
+    ];
+  }, [selectedVideoTexture, selectedVideoTextureTargetState]);
   const interactionSetupSteps = useMemo(() => {
     const likelyCount = likelyVideoSurfaceCandidates.length;
     const interactionCount =
@@ -11524,6 +11630,8 @@ function App() {
                     <Trash2 size={17} aria-hidden="true" />
                   </button>
                 </div>
+
+                <InteractionHealthBoard title="Video screen readiness" steps={selectedVideoTextureHealthSteps} />
 
                 {videoSurfaceCandidates.length > 0 && (
                   <div className="surface-mapper">
