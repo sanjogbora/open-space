@@ -3579,6 +3579,7 @@ function App() {
   const [navigationPolygonDraft, setNavigationPolygonDraft] = useState<NavigationPolygonDraft | null>(null);
   const [showGeneratedNavigationZones, setShowGeneratedNavigationZones] = useState(false);
   const [showNavigationZoneList, setShowNavigationZoneList] = useState(false);
+  const [highlightedNavigationIssueId, setHighlightedNavigationIssueId] = useState("");
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
   const [applyOptimizedImmediately, setApplyOptimizedImmediately] = useState(true);
@@ -8371,7 +8372,7 @@ function App() {
     updateManifest((current) => {
       const bounds = current.navigation.bounds;
       if (!bounds) {
-        window.setTimeout(() => setSelectedTab("controls"), 0);
+        window.setTimeout(() => openNavigationWorkflow(), 0);
         return current;
       }
       const topView = createTopViewFromBounds(
@@ -9068,6 +9069,42 @@ function App() {
     }
     openStudioVisualTarget("rooms", ".room-walkability-board, .room-map, .room-setup-board");
   };
+  const openNavigationWorkflow = () => {
+    const targetIssue = navigationIssues.find((issue) => issue.severity !== "info") ?? navigationIssues[0];
+    const targetQuickFix = navigationQuickFixForIssue(targetIssue);
+    setHighlightedNavigationIssueId(targetIssue?.severity === "info" ? "" : targetIssue?.id ?? "");
+
+    if (targetQuickFix.action === "paint-walk") {
+      setNavigationPaintKind("walk");
+      setNavigationPaintShape("rectangle");
+      setNavigationPolygonDraft(null);
+    } else if (targetQuickFix.action === "paint-pass") {
+      setNavigationPaintKind("pass");
+      setNavigationPaintShape("rectangle");
+      setNavigationPolygonDraft(null);
+    } else {
+      setNavigationPaintKind(null);
+      setNavigationPolygonDraft(null);
+    }
+
+    if (targetQuickFix.action === "review-zones") {
+      setShowNavigationZoneList(true);
+      setShowGeneratedNavigationZones(true);
+      if (targetQuickFix.targetZoneId) {
+        setExpandedNavigationZoneIds((current) => new Set(current).add(targetQuickFix.targetZoneId!));
+      }
+    }
+
+    const targetSelector =
+      navigationRepairDraft
+        ? ".repair-card"
+        : targetQuickFix.action === "paint-walk" ||
+            targetQuickFix.action === "paint-pass" ||
+            targetQuickFix.action === "review-zones"
+          ? ".zone-map"
+          : ".navigation-quick-fix, .navigation-repair-path, .movement-setup-board";
+    openStudioVisualTarget("controls", targetSelector);
+  };
   const openVariantsWorkflow = () => {
     const targetVariant =
       materialVariantInteractions.find((interaction) => !interaction.targetMaterialName && !interaction.targetMeshName) ??
@@ -9176,7 +9213,7 @@ function App() {
       return;
     }
     if (action === "navigation") {
-      openStudioVisualTarget("controls", ".zone-map");
+      openNavigationWorkflow();
       return;
     }
     if (action === "objects") {
@@ -9554,7 +9591,7 @@ function App() {
                         return;
                       }
                       if (step.id === "movement") {
-                        setSelectedTab("controls");
+                        openNavigationWorkflow();
                       }
                     }}
                   >
@@ -9608,7 +9645,7 @@ function App() {
                 onMaterials={openMaterialsWorkflow}
                 onVariants={openVariantsWorkflow}
                 onViews={openViewsWorkflow}
-                onNavigation={() => setSelectedTab("controls")}
+                onNavigation={openNavigationWorkflow}
                 onRooms={openRoomsWorkflow}
                 onInteractions={openInteractionsWorkflow}
                 pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
@@ -9625,7 +9662,7 @@ function App() {
                 navigationViewerUrl={navigationDebugViewerUrl(activeProjectId)}
                 onMaterials={openMaterialsWorkflow}
                 onEnvironment={() => setSelectedTab("environment")}
-                onNavigation={() => setSelectedTab("controls")}
+                onNavigation={openNavigationWorkflow}
                 onRooms={openRoomsWorkflow}
                 onViews={openViewsWorkflow}
                 onBake={openBakeWorkflow}
@@ -10931,7 +10968,7 @@ function App() {
                           if (walkViewCount > 0) {
                             createWalkZonesFromViews();
                           } else {
-                            setSelectedTab("controls");
+                            openNavigationWorkflow();
                           }
                         }
                       }}
@@ -11077,7 +11114,7 @@ function App() {
                           syncRoomsFromWalkZones();
                           return;
                         }
-                        setSelectedTab("controls");
+                        openNavigationWorkflow();
                         return;
                       }
                       if (step.id === "views") {
@@ -11089,7 +11126,7 @@ function App() {
                         return;
                       }
                       if (step.id === "bounds") {
-                        setSelectedTab("controls");
+                        openNavigationWorkflow();
                       }
                     }}
                   >
@@ -11175,10 +11212,10 @@ function App() {
                             syncRoomsFromWalkZones();
                             return;
                           }
-                          setSelectedTab("controls");
+                          openNavigationWorkflow();
                           return;
                         }
-                        setSelectedTab("controls");
+                        openNavigationWorkflow();
                       }}
                     >
                       <span>
@@ -11267,7 +11304,7 @@ function App() {
                         Set navigation bounds in Controls to enable the draggable room map.
                       </p>
                     </div>
-                    <button type="button" className="button secondary" onClick={() => setSelectedTab("controls")}>
+                    <button type="button" className="button secondary" onClick={openNavigationWorkflow}>
                       <Wrench size={16} aria-hidden="true" />
                       Controls
                     </button>
@@ -14514,8 +14551,12 @@ function App() {
                     <div className="navigation-qa-list" aria-label="Navigation QA">
                       {navigationIssues.map((issue) => {
                         const issueFix = navigationQuickFixForIssue(issue);
+                        const focusedIssue = highlightedNavigationIssueId === issue.id;
                         return (
-                          <div key={issue.id} className={`navigation-qa-card ${issue.severity}`}>
+                          <div
+                            key={issue.id}
+                            className={`navigation-qa-card ${issue.severity}${focusedIssue ? " focused" : ""}`}
+                          >
                             <div>
                               <strong>{issue.title}</strong>
                               <p>{issue.detail}</p>

@@ -5201,6 +5201,12 @@ button.list-row {
   background: #f1fbf6;
 }
 
+.navigation-qa-card.focused {
+  outline: 2px solid #0b8cff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(11, 140, 255, 0.12);
+}
+
 .navigation-qa-card strong,
 .navigation-qa-card p,
 .navigation-qa-card small {
