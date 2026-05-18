@@ -5198,6 +5198,59 @@ function App() {
     () => materialVariantInteractions.find((interaction) => interaction.id === selectedVariantInteractionId),
     [materialVariantInteractions, selectedVariantInteractionId]
   );
+  const variantTargetKeys = useMemo(() => {
+    const meshNames = new Set<string>();
+    const materialNames = new Set<string>();
+    sceneGraph?.nodes.forEach((node) => {
+      if (node.name) {
+        meshNames.add(node.name);
+      }
+      if (node.meshName) {
+        meshNames.add(node.meshName);
+      }
+    });
+    sceneGraph?.materials.forEach((material) => {
+      if (material.name) {
+        materialNames.add(material.name);
+      }
+    });
+    materialsDoc?.materials.forEach((material) => {
+      if (material.name) {
+        materialNames.add(material.name);
+      }
+    });
+    return { meshNames, materialNames };
+  }, [materialsDoc, sceneGraph]);
+  const variantMissingTargetCount = useMemo(
+    () => materialVariantInteractions.filter((interaction) => !interaction.targetMaterialName && !interaction.targetMeshName).length,
+    [materialVariantInteractions]
+  );
+  const variantStaleTargetCount = useMemo(
+    () =>
+      materialVariantInteractions.filter((interaction) => {
+        if (!sceneGraph) {
+          return false;
+        }
+        return Boolean(
+          (interaction.targetMaterialName && !variantTargetKeys.materialNames.has(interaction.targetMaterialName)) ||
+            (interaction.targetMeshName && !variantTargetKeys.meshNames.has(interaction.targetMeshName))
+        );
+      }).length,
+    [materialVariantInteractions, sceneGraph, variantTargetKeys]
+  );
+  const selectedVariantTargetState = useMemo(() => {
+    if (!selectedVariantInteraction || !sceneGraph) {
+      return "ready";
+    }
+    if (!selectedVariantInteraction.targetMaterialName && !selectedVariantInteraction.targetMeshName) {
+      return "missing";
+    }
+    return (selectedVariantInteraction.targetMaterialName &&
+      !variantTargetKeys.materialNames.has(selectedVariantInteraction.targetMaterialName)) ||
+      (selectedVariantInteraction.targetMeshName && !variantTargetKeys.meshNames.has(selectedVariantInteraction.targetMeshName))
+      ? "stale"
+      : "ready";
+  }, [sceneGraph, selectedVariantInteraction, variantTargetKeys]);
   const variantSetupSteps = useMemo(() => {
     const setCount = materialVariantInteractions.length;
     const targetedCount = materialVariantInteractions.filter(
@@ -5226,9 +5279,15 @@ function App() {
       {
         id: "targets",
         label: "Targets",
-        detail: setCount > 0 ? `${targetedCount}/${setCount} set${setCount === 1 ? "" : "s"} targeted` : "Choose material or mesh",
-        status: setCount > 0 && targetedCount >= setCount ? "ready" : "warning",
-        action: targetedCount >= setCount && setCount > 0 ? "Targets OK" : "Pick Target"
+        detail: setCount > 0
+          ? variantMissingTargetCount > 0
+            ? `${variantMissingTargetCount} set${variantMissingTargetCount === 1 ? "" : "s"} need target`
+            : variantStaleTargetCount > 0
+              ? `${variantStaleTargetCount} set${variantStaleTargetCount === 1 ? "" : "s"} may be stale`
+              : `${targetedCount}/${setCount} set${setCount === 1 ? "" : "s"} targeted`
+          : "Choose material or mesh",
+        status: setCount > 0 && targetedCount >= setCount && variantStaleTargetCount === 0 ? "ready" : "warning",
+        action: targetedCount >= setCount && setCount > 0 && variantStaleTargetCount === 0 ? "Targets OK" : "Pick Target"
       },
       {
         id: "options",
@@ -5252,7 +5311,7 @@ function App() {
         action: texturedOptionCount > 0 ? "Review" : optionCount > 0 ? "Optional" : "Add Option"
       }
     ];
-  }, [materialVariantInteractions]);
+  }, [materialVariantInteractions, variantMissingTargetCount, variantStaleTargetCount]);
 
   const objectOverrideById = useMemo(() => {
     const entries = objectsDoc?.objects.map((object) => [object.id, object] as const) ?? [];
@@ -12608,6 +12667,13 @@ function App() {
                     />
                   </label>
                 </div>
+                {selectedVariantTargetState !== "ready" && (
+                  <p className="error-note compact-note">
+                    {selectedVariantTargetState === "missing"
+                      ? "Choose the material or mesh this finish set should control before testing."
+                      : "This finish target was not found in the current scene graph. Pick the material or mesh again after reimport."}
+                  </p>
+                )}
 
                 <div className="variant-editor-list">
                   <div className="publish-row">

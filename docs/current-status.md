@@ -122,6 +122,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Interactions now flags object toggles with missing or stale targets and routes the setup board directly to the broken toggle.
 - Bundle analysis and publish readiness now warn when object-toggle interactions have no target or reference objects missing after reimport.
 - Bundle analysis and Repair Center now flag finish variants that have no target, stale targets after reimport, or no visible color/texture options.
+- Studio Variants now surfaces missing or stale finish targets directly in the setup board and selected variant editor.
 - Viewer fallback navigation now keeps ignored/collision objects out of walkable click targets and honors forced collision objects even when their names look floor-like.
 - Viewer navigation and picking now ignore globally hidden objects, so hidden geometry no longer acts as an invisible floor or collision blocker.
 - Movement is constrained by configured scene bounds.
