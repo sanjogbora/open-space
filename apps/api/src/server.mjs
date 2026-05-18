@@ -898,7 +898,7 @@ function validateModelSource(value) {
 
 function safeProjectAssetPath(filename, kind = "lightmap") {
   const extension = path.extname(filename).toLowerCase();
-  const folder = kind === "media" ? "media" : "lightmaps";
+  const folder = kind === "media" ? "media" : kind === "texture" ? "textures" : "lightmaps";
   const allowedExtensions =
     kind === "media"
       ? [".mp4", ".mov", ".webm"]
@@ -907,7 +907,7 @@ function safeProjectAssetPath(filename, kind = "lightmap") {
     throw badRequest(
       kind === "media"
         ? "Media assets must be MP4, MOV, or WebM videos."
-        : "Lightmap assets must be PNG, JPEG, WebP, AVIF, or KTX2 images."
+        : "Image assets must be PNG, JPEG, WebP, AVIF, or KTX2 images."
     );
   }
   const baseName = slug(path.basename(filename, extension));
@@ -916,8 +916,8 @@ function safeProjectAssetPath(filename, kind = "lightmap") {
 
 async function writeProjectAsset(projectId, assetPath, body) {
   const safePath = safeArchivePath(assetPath);
-  if (!safePath || (!safePath.startsWith("lightmaps/") && !safePath.startsWith("media/"))) {
-    throw badRequest("Asset path must be inside the lightmaps or media folder.");
+  if (!safePath || (!safePath.startsWith("lightmaps/") && !safePath.startsWith("media/") && !safePath.startsWith("textures/"))) {
+    throw badRequest("Asset path must be inside the lightmaps, textures, or media folder.");
   }
   await Promise.all(
     targetDirs(projectId).map(async (target) => {
@@ -3174,7 +3174,8 @@ async function handleRequest(request, response) {
         throw badRequest("Uploaded asset is empty.");
       }
       const fileName = String(request.headers["x-file-name"] ?? "lightmap.webp");
-      const kind = url.searchParams.get("kind") === "media" ? "media" : "lightmap";
+      const requestedKind = url.searchParams.get("kind");
+      const kind = requestedKind === "media" ? "media" : requestedKind === "texture" ? "texture" : "lightmap";
       const requestedPath = url.searchParams.get("path");
       const assetPath = await writeProjectAsset(
         assetProjectId,

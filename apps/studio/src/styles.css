@@ -3345,6 +3345,22 @@ button.list-row {
   font-size: 11px;
 }
 
+.variant-texture-control {
+  display: grid;
+  gap: 5px;
+}
+
+.variant-texture-control input[type="file"] {
+  height: auto;
+  padding: 7px;
+  font-size: 12px;
+}
+
+.variant-texture-control strong {
+  color: #087fe7;
+  font-size: 11px;
+}
+
 .side-stack {
   display: grid;
   align-content: start;

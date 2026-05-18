@@ -3505,6 +3505,8 @@ function App() {
   const [uploadError, setUploadError] = useState("");
   const [lightmapUploadState, setLightmapUploadState] = useState<UploadState>("idle");
   const [lightmapUploadError, setLightmapUploadError] = useState("");
+  const [variantUploadState, setVariantUploadState] = useState<UploadState>("idle");
+  const [variantUploadError, setVariantUploadError] = useState("");
   const [mediaUploadState, setMediaUploadState] = useState<UploadState>("idle");
   const [mediaUploadError, setMediaUploadError] = useState("");
   const [publishState, setPublishState] = useState<PublishState>("idle");
@@ -8457,6 +8459,67 @@ function App() {
     }));
   };
 
+  const uploadMaterialVariantTexture = async (
+    interactionId: string,
+    variantId: string,
+    file: File | undefined
+  ) => {
+    if (!file) {
+      return;
+    }
+    if (!apiConnected) {
+      setVariantUploadState("error");
+      setVariantUploadError("API is not connected.");
+      return;
+    }
+    if (!/\.(avif|jpe?g|ktx2|png|webp)$/i.test(file.name)) {
+      setVariantUploadState("error");
+      setVariantUploadError("Upload a PNG, JPEG, WebP, AVIF, or KTX2 finish texture.");
+      return;
+    }
+
+    setVariantUploadState("uploading");
+    setVariantUploadError("");
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/asset?kind=texture`, {
+        method: "POST",
+        headers: {
+          "content-type": file.type || "application/octet-stream",
+          "x-file-name": file.name
+        },
+        body: file
+      });
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error ?? `Upload failed with ${response.status}.`);
+      }
+      const result = (await response.json()) as {
+        assetPath?: string;
+        stats?: BundleStats;
+        optimization?: OptimizationDocument;
+      };
+      if (!result.assetPath) {
+        throw new Error("Upload did not return an asset path.");
+      }
+      const assetPath = result.assetPath;
+      updateMaterialVariantOption(interactionId, variantId, (variant) => ({
+        ...variant,
+        texture: assetPath
+      }));
+      if (result.stats) {
+        setBundleStats(result.stats);
+      }
+      if (result.optimization) {
+        setOptimizationDoc(result.optimization);
+      }
+      setVariantUploadState("done");
+      setNotice("saved");
+    } catch (error) {
+      setVariantUploadState("error");
+      setVariantUploadError(error instanceof Error ? error.message : "Finish texture upload failed.");
+    }
+  };
+
   const addMaterialVariantOption = (interactionId: string) => {
     updateMaterialVariantInteraction(interactionId, (interaction) => ({
       ...interaction,
@@ -12820,7 +12883,7 @@ function App() {
                           <strong>{previewStatus}</strong>
                           <small>{textureSource || variant.color || "Add a visible swatch or texture."}</small>
                         </div>
-                        <label>
+                        <label className="variant-texture-control">
                           <span>Texture URL</span>
                           <input
                             value={variant.texture ?? ""}
@@ -12840,6 +12903,24 @@ function App() {
                               )
                             }
                           />
+                          <input
+                            type="file"
+                            accept={materialTextureAccept}
+                            disabled={!apiConnected || variantUploadState === "uploading"}
+                            onChange={(event) =>
+                              void uploadMaterialVariantTexture(
+                                selectedVariantInteraction.id,
+                                variant.id,
+                                event.target.files?.[0]
+                              )
+                            }
+                          />
+                          <strong>
+                            {variantUploadState === "uploading" && "Uploading texture"}
+                            {variantUploadState === "done" && "Texture uploaded"}
+                            {variantUploadState === "error" && "Upload failed"}
+                            {variantUploadState === "idle" && "Upload texture"}
+                          </strong>
                         </label>
                         <button
                           type="button"
@@ -12852,6 +12933,7 @@ function App() {
                       </div>
                     );
                   })}
+                  {variantUploadError && <p className="error-note compact-note">{variantUploadError}</p>}
                 </div>
               </div>
             )}
