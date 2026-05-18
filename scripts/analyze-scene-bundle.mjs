@@ -98,6 +98,17 @@ function collectAssetReferences(manifest) {
     if (interaction.kind === "video-texture" && interaction.source && !isExternalAsset(interaction.source)) {
       assets.push({ kind: "video", source: interaction.source, label: interaction.label });
     }
+    if (interaction.kind === "material-variant") {
+      for (const variant of interaction.variants ?? []) {
+        if (variant.texture && !isExternalAsset(variant.texture)) {
+          assets.push({
+            kind: "image",
+            source: variant.texture,
+            label: `${interaction.label ?? "Finish variant"}: ${variant.label ?? variant.id ?? "texture"}`
+          });
+        }
+      }
+    }
   }
 
   if (manifest.branding?.logoUrl && !isExternalAsset(manifest.branding.logoUrl)) {
@@ -1604,6 +1615,33 @@ function looseTextureHasGenericName(source) {
   );
 }
 
+function hasFiniteVec3(value) {
+  return (
+    Array.isArray(value) &&
+    value.length === 3 &&
+    value.every((coordinate) => Number.isFinite(Number(coordinate)))
+  );
+}
+
+function isProbablyValidLinkUrl(value) {
+  const source = String(value ?? "").trim();
+  if (!source) {
+    return false;
+  }
+  if (/^(https?:|mailto:|tel:)/i.test(source)) {
+    try {
+      new URL(source);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  if (/^(#|\/|\.\/|\.\.\/)/.test(source)) {
+    return true;
+  }
+  return false;
+}
+
 function inferMaterialTextureField(source) {
   const normalized = normalizeTextureMatchName(source);
   if (/\b(lightmap|light map|bake|baked|shadow)\b/.test(normalized)) {
@@ -2755,6 +2793,8 @@ function createDiagnostics(manifest, report, graphs, controls) {
   const roomsWithBounds = rooms.filter((room) => room?.bounds);
   const linkedRoomViewIds = new Set(rooms.map((room) => room?.viewId).filter(Boolean));
   const linkedWalkRoomCount = topology.walkViews.filter((view) => linkedRoomViewIds.has(view.id)).length;
+  const hotspots = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "hotspot");
+  const links = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "link");
   const videoTextures = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "video-texture");
   const materialVariants = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "material-variant");
   const objectToggles = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "object-toggle");
@@ -2767,8 +2807,31 @@ function createDiagnostics(manifest, report, graphs, controls) {
       .filter(Boolean)
   );
   const graphMaterialNames = new Set((graph?.materials ?? []).map((material) => material.name).filter(Boolean));
+  const hasGraphMeshTarget = (targetName) => {
+    const target = String(targetName ?? "").trim();
+    if (!target || !graph) {
+      return true;
+    }
+    return graphNodeNames.has(target) || graphNodeTargetNames.has(normalizeObjectTargetName(target));
+  };
+  const hasGraphMaterialTarget = (targetName) => {
+    const target = String(targetName ?? "").trim();
+    if (!target || !graph) {
+      return true;
+    }
+    return graphMaterialNames.has(target);
+  };
   const duplicateNodeNames = duplicateNames((graph?.nodes ?? []).map((node) => node.name)).slice(0, 8);
   const duplicateMaterialNames = duplicateNames((graph?.materials ?? []).map((material) => material.name)).slice(0, 8);
+  const hotspotsMissingContent = hotspots.filter(
+    (interaction) => !String(interaction.title ?? interaction.label ?? "").trim()
+  );
+  const hotspotsWithBadPositions = hotspots.filter((interaction) => !hasFiniteVec3(interaction.position));
+  const linksMissingUrl = links.filter((interaction) => !String(interaction.url ?? "").trim());
+  const linksWithInvalidUrl = links.filter(
+    (interaction) => String(interaction.url ?? "").trim() && !isProbablyValidLinkUrl(interaction.url)
+  );
+  const linksWithBadPositions = links.filter((interaction) => !hasFiniteVec3(interaction.position));
   const videoTexturesMissingSource = videoTextures.filter(
     (interaction) => !String(interaction.source ?? "").trim()
   );
@@ -2777,23 +2840,30 @@ function createDiagnostics(manifest, report, graphs, controls) {
   );
   const videoTexturesWithMissingTargets = videoTextures.filter(
     (interaction) =>
-      (interaction.targetMeshName && graph && !graphNodeNames.has(interaction.targetMeshName)) ||
-      (interaction.targetMaterialName && graph && !graphMaterialNames.has(interaction.targetMaterialName))
+      (interaction.targetMeshName && !hasGraphMeshTarget(interaction.targetMeshName)) ||
+      (interaction.targetMaterialName && !hasGraphMaterialTarget(interaction.targetMaterialName))
   );
   const materialVariantsMissingTarget = materialVariants.filter(
     (interaction) => !interaction.targetMeshName && !interaction.targetMaterialName
   );
   const materialVariantsWithMissingTargets = materialVariants.filter(
     (interaction) =>
-      (interaction.targetMeshName && graph && !graphNodeNames.has(interaction.targetMeshName)) ||
-      (interaction.targetMaterialName && graph && !graphMaterialNames.has(interaction.targetMaterialName))
+      (interaction.targetMeshName && !hasGraphMeshTarget(interaction.targetMeshName)) ||
+      (interaction.targetMaterialName && !hasGraphMaterialTarget(interaction.targetMaterialName))
   );
   const materialVariantsWithoutOptions = materialVariants.filter(
     (interaction) => !Array.isArray(interaction.variants) || interaction.variants.length === 0
   );
+  const materialVariantsWithInvisibleOptions = materialVariants.filter((interaction) =>
+    (interaction.variants ?? []).some((variant) => !String(variant.color ?? "").trim() && !String(variant.texture ?? "").trim())
+  );
+  const materialVariantsWithInvalidTextureUrls = materialVariants.filter((interaction) =>
+    (interaction.variants ?? []).some((variant) => String(variant.texture ?? "").trim().startsWith("generated://"))
+  );
   const objectTogglesMissingTarget = objectToggles.filter(
     (interaction) => !String(interaction.targetObjectId ?? "").trim() && !String(interaction.targetObjectName ?? "").trim()
   );
+  const objectTogglesWithBadPositions = objectToggles.filter((interaction) => !hasFiniteVec3(interaction.position));
   const objectTogglesWithMissingTargets = objectToggles.filter((interaction) => {
     const targetObjectId = String(interaction.targetObjectId ?? "").trim();
     const targetObjectName = normalizeObjectTargetName(interaction.targetObjectName);
@@ -4014,6 +4084,56 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if (hotspotsMissingContent.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "hotspots-missing-content",
+      title: "Hotspots need visible content",
+      message: `${hotspotsMissingContent.length} hotspot interaction(s) have no title or label to show users.`,
+      action: "Open Interactions and add a short hotspot title, or remove unused placeholder hotspots."
+    });
+  }
+
+  if (hotspotsWithBadPositions.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "hotspots-invalid-position",
+      title: "Hotspots have invalid positions",
+      message: `${hotspotsWithBadPositions.length} hotspot interaction(s) do not have a valid 3D position.`,
+      action: "Open Interactions and place each hotspot visually on the model before publishing."
+    });
+  }
+
+  if (linksMissingUrl.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "links-missing-url",
+      title: "Links have no destination",
+      message: `${linksMissingUrl.length} link interaction(s) are placed in the scene but have no URL.`,
+      action: "Open Interactions and add the destination URL, or remove unused link markers."
+    });
+  }
+
+  if (linksWithInvalidUrl.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "links-invalid-url",
+      title: "Links use unsupported URLs",
+      message: `${linksWithInvalidUrl.length} link interaction(s) have URLs that may not open reliably in the viewer.`,
+      action: "Use https://, http://, mailto:, tel:, or a relative path for scene links."
+    });
+  }
+
+  if (linksWithBadPositions.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "links-invalid-position",
+      title: "Links have invalid positions",
+      message: `${linksWithBadPositions.length} link interaction(s) do not have a valid 3D position.`,
+      action: "Open Interactions and place each link marker visually on the model before publishing."
+    });
+  }
+
   if (videoTexturesMissingSource.length > 0) {
     diagnostics.push({
       severity: "warning",
@@ -4074,6 +4194,26 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if (materialVariantsWithInvisibleOptions.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "material-variants-invisible-options",
+      title: "Finish options do not change visuals",
+      message: `${materialVariantsWithInvisibleOptions.length} finish variant set(s) include option(s) with no color or texture.`,
+      action: "Open Variants and give every finish option a color swatch or texture thumbnail before publishing."
+    });
+  }
+
+  if (materialVariantsWithInvalidTextureUrls.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "material-variants-generated-textures",
+      title: "Finish textures are placeholders",
+      message: `${materialVariantsWithInvalidTextureUrls.length} finish variant set(s) reference generated texture placeholders that the published viewer cannot load as files.`,
+      action: "Open Variants and replace generated placeholders with saved image files or color swatches."
+    });
+  }
+
   if (objectTogglesMissingTarget.length > 0) {
     diagnostics.push({
       severity: "warning",
@@ -4091,6 +4231,16 @@ function createDiagnostics(manifest, report, graphs, controls) {
       title: "Object toggle target was not found",
       message: `${objectTogglesWithMissingTargets.length} object toggle interaction(s) reference objects that were not found in the current model graph.`,
       action: "Open Interactions and pick the target object again after reimporting or repairing the model."
+    });
+  }
+
+  if (objectTogglesWithBadPositions.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "object-toggles-invalid-position",
+      title: "Object toggles have invalid positions",
+      message: `${objectTogglesWithBadPositions.length} object toggle interaction(s) do not have a valid 3D marker position.`,
+      action: "Open Interactions and place each toggle marker visually near the object it controls."
     });
   }
 
@@ -4792,14 +4942,22 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "missing-texture-compression",
     "some-lightmap-secondary-uvs-missing",
     "tiny-lightmap-assets",
+    "hotspots-missing-content",
+    "hotspots-invalid-position",
+    "links-missing-url",
+    "links-invalid-url",
+    "links-invalid-position",
     "video-textures-missing-source",
     "video-textures-missing-target",
     "video-textures-target-missing",
     "material-variants-missing-target",
     "material-variants-target-missing",
     "material-variants-no-options",
+    "material-variants-invisible-options",
+    "material-variants-generated-textures",
     "object-toggles-missing-target",
     "object-toggles-target-missing",
+    "object-toggles-invalid-position",
     "duplicate-node-names",
     "duplicate-material-names",
     "repeated-large-mesh-instances",

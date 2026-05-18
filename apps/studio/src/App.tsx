@@ -15694,7 +15694,9 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
     [
       "material-variants-missing-target",
       "material-variants-target-missing",
-      "material-variants-no-options"
+      "material-variants-no-options",
+      "material-variants-invisible-options",
+      "material-variants-generated-textures"
     ].includes(code)
   ) {
     return "variants";
@@ -15714,8 +15716,14 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "video-textures-missing-source",
       "video-textures-missing-target",
       "video-textures-target-missing",
+      "hotspots-missing-content",
+      "hotspots-invalid-position",
+      "links-missing-url",
+      "links-invalid-url",
+      "links-invalid-position",
       "object-toggles-missing-target",
-      "object-toggles-target-missing"
+      "object-toggles-target-missing",
+      "object-toggles-invalid-position"
     ].includes(code)
   ) {
     return "interactions";
@@ -16164,6 +16172,18 @@ function diagnosticVisualSymptom(code: string): string | null {
   }
   if (["no-named-ceiling-meshes"].includes(code)) {
     return "ceiling or roof handling may need manual object review, especially for top view.";
+  }
+  if (
+    [
+      "hotspots-missing-content",
+      "hotspots-invalid-position",
+      "links-missing-url",
+      "links-invalid-url",
+      "links-invalid-position",
+      "object-toggles-invalid-position"
+    ].includes(code)
+  ) {
+    return "the viewer may show dead markers, confusing icons, or links that do nothing during client review.";
   }
   if (["repeated-large-mesh-instances"].includes(code)) {
     return "the scene may load slowly or feel heavy because duplicated geometry dominates the model.";
@@ -17116,7 +17136,9 @@ function ViewerQaChecklist({
     "extreme-texture-aspect-ratios",
     "material-variants-missing-target",
     "material-variants-target-missing",
-    "material-variants-no-options"
+    "material-variants-no-options",
+    "material-variants-invisible-options",
+    "material-variants-generated-textures"
   ];
   const navigationCodes = [
     "missing-walk-zones",
@@ -17142,11 +17164,17 @@ function ViewerQaChecklist({
     "invalid-normal-accessor-shapes"
   ];
   const interactionCodes = [
+    "hotspots-missing-content",
+    "hotspots-invalid-position",
+    "links-missing-url",
+    "links-invalid-url",
+    "links-invalid-position",
     "video-textures-missing-source",
     "video-textures-missing-target",
     "video-textures-target-missing",
     "object-toggles-missing-target",
-    "object-toggles-target-missing"
+    "object-toggles-target-missing",
+    "object-toggles-invalid-position"
   ];
   const performanceDiagnosticCodes = [
     "missing-geometry-compression",
