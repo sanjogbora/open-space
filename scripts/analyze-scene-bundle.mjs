@@ -2756,6 +2756,7 @@ function createDiagnostics(manifest, report, graphs, controls) {
   const linkedRoomViewIds = new Set(rooms.map((room) => room?.viewId).filter(Boolean));
   const linkedWalkRoomCount = topology.walkViews.filter((view) => linkedRoomViewIds.has(view.id)).length;
   const videoTextures = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "video-texture");
+  const materialVariants = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "material-variant");
   const objectToggles = (manifest.interactions ?? []).filter((interaction) => interaction.kind === "object-toggle");
   const graphNodeNames = new Set((graph?.nodes ?? []).map((node) => node.name).filter(Boolean));
   const graphNodeIds = new Set((graph?.nodes ?? []).map((node) => node.id).filter(Boolean));
@@ -2778,6 +2779,17 @@ function createDiagnostics(manifest, report, graphs, controls) {
     (interaction) =>
       (interaction.targetMeshName && graph && !graphNodeNames.has(interaction.targetMeshName)) ||
       (interaction.targetMaterialName && graph && !graphMaterialNames.has(interaction.targetMaterialName))
+  );
+  const materialVariantsMissingTarget = materialVariants.filter(
+    (interaction) => !interaction.targetMeshName && !interaction.targetMaterialName
+  );
+  const materialVariantsWithMissingTargets = materialVariants.filter(
+    (interaction) =>
+      (interaction.targetMeshName && graph && !graphNodeNames.has(interaction.targetMeshName)) ||
+      (interaction.targetMaterialName && graph && !graphMaterialNames.has(interaction.targetMaterialName))
+  );
+  const materialVariantsWithoutOptions = materialVariants.filter(
+    (interaction) => !Array.isArray(interaction.variants) || interaction.variants.length === 0
   );
   const objectTogglesMissingTarget = objectToggles.filter(
     (interaction) => !String(interaction.targetObjectId ?? "").trim() && !String(interaction.targetObjectName ?? "").trim()
@@ -4032,6 +4044,36 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if (materialVariantsMissingTarget.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "material-variants-missing-target",
+      title: "Finish variants are not mapped to surfaces",
+      message: `${materialVariantsMissingTarget.length} finish variant set(s) do not target a mesh or material.`,
+      action: "Open Variants and choose the material or mesh each finish set should control."
+    });
+  }
+
+  if (materialVariantsWithMissingTargets.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "material-variants-target-missing",
+      title: "Finish variant target was not found",
+      message: `${materialVariantsWithMissingTargets.length} finish variant set(s) reference mesh/material names that were not found in the current model graph.`,
+      action: "Open Variants and pick the finish target again after reimporting or repairing the model."
+    });
+  }
+
+  if (materialVariantsWithoutOptions.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "material-variants-no-options",
+      title: "Finish variants have no visible options",
+      message: `${materialVariantsWithoutOptions.length} finish variant set(s) have no color or texture options to show in the viewer.`,
+      action: "Open Variants and add at least one finish option or remove unused variant sets."
+    });
+  }
+
   if (objectTogglesMissingTarget.length > 0) {
     diagnostics.push({
       severity: "warning",
@@ -4753,6 +4795,9 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "video-textures-missing-source",
     "video-textures-missing-target",
     "video-textures-target-missing",
+    "material-variants-missing-target",
+    "material-variants-target-missing",
+    "material-variants-no-options",
     "object-toggles-missing-target",
     "object-toggles-target-missing",
     "duplicate-node-names",

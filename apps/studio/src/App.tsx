@@ -8565,6 +8565,10 @@ function App() {
       openStudioVisualTarget("materials", ".texture-candidate-panel, .material-preview-strip");
       return;
     }
+    if (action === "variants") {
+      openStudioVisualTarget("variants", ".variant-setup-board, .variant-editor-list");
+      return;
+    }
     if (action === "views") {
       openStudioVisualTarget("views", ".editor-layout, .view-list");
       return;
@@ -9000,6 +9004,7 @@ function App() {
                 onBake={openBakeWorkflow}
                 onEnvironment={() => setSelectedTab("environment")}
                 onMaterials={() => setSelectedTab("materials")}
+                onVariants={() => setSelectedTab("variants")}
                 onViews={() => setSelectedTab("views")}
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
@@ -15288,6 +15293,7 @@ type ImportNextStepAction =
   | "apply-textures"
   | "environment"
   | "materials"
+  | "variants"
   | "views"
   | "navigation"
   | "objects"
@@ -15588,6 +15594,15 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
   }
   if (
     [
+      "material-variants-missing-target",
+      "material-variants-target-missing",
+      "material-variants-no-options"
+    ].includes(code)
+  ) {
+    return "variants";
+  }
+  if (
+    [
       "missing-room-map",
       "room-map-missing-bounds",
       "partial-room-map",
@@ -15740,6 +15755,14 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
       button: "Open Materials"
     };
   }
+  if (action === "variants") {
+    return {
+      action,
+      title: "Fix finish variants",
+      detail: "Open Variants to target the right mesh/material and add visible color or texture options.",
+      button: "Open Variants"
+    };
+  }
   if (action === "views") {
     return {
       action,
@@ -15826,6 +15849,9 @@ function repairCenterStageForAction(action: ImportNextStepAction): string {
   if (action === "materials" || action === "apply-textures") {
     return "Visuals";
   }
+  if (action === "variants") {
+    return "Visuals";
+  }
   if (action === "navigation") {
     return "Movement";
   }
@@ -15907,7 +15933,7 @@ function repairCenterIcon(action: ImportNextStepAction) {
   if (action === "repair") {
     return <Wrench size={17} aria-hidden="true" />;
   }
-  if (action === "materials" || action === "apply-textures" || action === "bake") {
+  if (action === "materials" || action === "variants" || action === "apply-textures" || action === "bake") {
     return <Palette size={17} aria-hidden="true" />;
   }
   if (action === "navigation" || action === "views") {
@@ -15940,6 +15966,9 @@ function repairCenterVisualFixForAction(action: ImportNextStepAction): string {
   }
   if (action === "materials") {
     return "Compare texture previews and click Base, Normal, Emissive, or Lightmap on the right image.";
+  }
+  if (action === "variants") {
+    return "Pick the target mesh/material and confirm each finish has a visible swatch or texture.";
   }
   if (action === "navigation") {
     return "Use the zone map to paint walk areas, door passes, and blockers over the floorplan.";
@@ -16079,6 +16108,9 @@ function repairCenterDestinationForItem(item: RepairCenterItem): string {
   if (item.action === "apply-textures" || item.action === "materials") {
     return "Opens Materials review.";
   }
+  if (item.action === "variants") {
+    return "Opens Variants setup.";
+  }
   if (item.action === "navigation") {
     return "Opens Controls zone map.";
   }
@@ -16137,6 +16169,9 @@ function repairCenterVerifyForItem(item: RepairCenterItem): string {
   if (item.action === "apply-textures" || item.action === "materials") {
     return "After assigning textures, compare the viewer against the reference model and check that flat/plain surfaces improved.";
   }
+  if (item.action === "variants") {
+    return "After saving, open the viewer and confirm each finish option changes the intended surface.";
+  }
   if (item.action === "navigation") {
     return "After saving, open the viewer and click through the doorway or floor area that previously failed.";
   }
@@ -16179,6 +16214,9 @@ function repairCenterChangeForItem(item: RepairCenterItem): string {
   }
   if (item.action === "materials") {
     return "Changes only the material or texture slot the user reviews and applies.";
+  }
+  if (item.action === "variants") {
+    return "Updates finish variant targets and visible swatch or texture options.";
   }
   if (item.action === "navigation") {
     return "Updates walk areas, door passes, blockers, or movement bounds.";
@@ -16228,7 +16266,7 @@ function repairCenterRiskForItem(item: RepairCenterItem): { label: string; detai
       tone: "ready"
     };
   }
-  if (item.action === "materials" || item.action === "objects" || item.action === "interactions" || item.action === "environment") {
+  if (item.action === "materials" || item.action === "variants" || item.action === "objects" || item.action === "interactions" || item.action === "environment") {
     return {
       label: "Manual",
       detail: "User picks the visible target before saving, so the change is controlled.",
@@ -16781,6 +16819,7 @@ function ImportNextSteps({
   onBake,
   onEnvironment,
   onMaterials,
+  onVariants,
   onViews,
   onNavigation,
   onRooms,
@@ -16800,6 +16839,7 @@ function ImportNextSteps({
   onBake: () => void;
   onEnvironment: () => void;
   onMaterials: () => void;
+  onVariants: () => void;
   onViews: () => void;
   onNavigation: () => void;
   onRooms: () => void;
@@ -16867,6 +16907,8 @@ function ImportNextSteps({
               ? onEnvironment
             : step.action === "materials"
               ? onMaterials
+            : step.action === "variants"
+              ? onVariants
             : step.action === "views"
               ? onViews
             : step.action === "navigation"
@@ -16973,7 +17015,10 @@ function ViewerQaChecklist({
     "many-transparent-materials",
     "dominant-transparent-surface",
     "tiny-texture-dimensions",
-    "extreme-texture-aspect-ratios"
+    "extreme-texture-aspect-ratios",
+    "material-variants-missing-target",
+    "material-variants-target-missing",
+    "material-variants-no-options"
   ];
   const navigationCodes = [
     "missing-walk-zones",
