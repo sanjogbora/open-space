@@ -15696,7 +15696,8 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "material-variants-target-missing",
       "material-variants-no-options",
       "material-variants-invisible-options",
-      "material-variants-generated-textures"
+      "material-variants-generated-textures",
+      "material-variants-missing-texture-assets"
     ].includes(code)
   ) {
     return "variants";
@@ -17138,7 +17139,8 @@ function ViewerQaChecklist({
     "material-variants-target-missing",
     "material-variants-no-options",
     "material-variants-invisible-options",
-    "material-variants-generated-textures"
+    "material-variants-generated-textures",
+    "material-variants-missing-texture-assets"
   ];
   const navigationCodes = [
     "missing-walk-zones",

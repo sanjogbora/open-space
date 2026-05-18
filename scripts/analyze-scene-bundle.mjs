@@ -102,7 +102,7 @@ function collectAssetReferences(manifest) {
       for (const variant of interaction.variants ?? []) {
         if (variant.texture && !isExternalAsset(variant.texture)) {
           assets.push({
-            kind: "image",
+            kind: "variant-texture",
             source: variant.texture,
             label: `${interaction.label ?? "Finish variant"}: ${variant.label ?? variant.id ?? "texture"}`
           });
@@ -2860,6 +2860,9 @@ function createDiagnostics(manifest, report, graphs, controls) {
   const materialVariantsWithInvalidTextureUrls = materialVariants.filter((interaction) =>
     (interaction.variants ?? []).some((variant) => String(variant.texture ?? "").trim().startsWith("generated://"))
   );
+  const missingMaterialVariantTextureAssets = (report.assets ?? []).filter(
+    (asset) => asset.kind === "variant-texture" && !asset.exists
+  );
   const objectTogglesMissingTarget = objectToggles.filter(
     (interaction) => !String(interaction.targetObjectId ?? "").trim() && !String(interaction.targetObjectName ?? "").trim()
   );
@@ -4214,6 +4217,16 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if (missingMaterialVariantTextureAssets.length > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "material-variants-missing-texture-assets",
+      title: "Finish texture files are missing",
+      message: `${missingMaterialVariantTextureAssets.length} finish texture file(s) are referenced but missing from the scene bundle.`,
+      action: "Open Variants and replace the missing texture path with an uploaded texture file or a color swatch."
+    });
+  }
+
   if (objectTogglesMissingTarget.length > 0) {
     diagnostics.push({
       severity: "warning",
@@ -4955,6 +4968,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "material-variants-no-options",
     "material-variants-invisible-options",
     "material-variants-generated-textures",
+    "material-variants-missing-texture-assets",
     "object-toggles-missing-target",
     "object-toggles-target-missing",
     "object-toggles-invalid-position",
