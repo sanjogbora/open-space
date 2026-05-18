@@ -8985,6 +8985,37 @@ function App() {
     }
     openStudioVisualTarget("materials", ".lightmap-bake-card");
   };
+  const openMaterialsWorkflow = () => {
+    const targetRow =
+      materialReviewRows.find((row) => row.suggestionStatus?.pending) ??
+      materialReviewRows.find((row) => row.suggestionStatus?.review) ??
+      materialReviewRows.find((row) => row.isPlainGreen) ??
+      materialReviewRows.find((row) => row.isUntextured) ??
+      materialReviewRows.find((row) => row.isTransparent) ??
+      materialReviewRows.find((row) => row.hasLightmap) ??
+      materialReviewRows[0];
+    if (targetRow) {
+      setSelectedMaterialId(targetRow.material.id);
+      setMaterialSearchQuery("");
+      setMaterialListFilter(
+        targetRow.suggestionStatus?.pending || targetRow.suggestionStatus?.review
+          ? "suggested"
+          : targetRow.isPlainGreen
+            ? "plain-green"
+            : targetRow.isUntextured
+              ? "untextured"
+              : targetRow.isTransparent
+                ? "transparent"
+                : targetRow.hasLightmap
+                  ? "lightmaps"
+                  : "all"
+      );
+    }
+    openStudioVisualTarget(
+      "materials",
+      ".material-diagnosis-card, .texture-candidate-panel, .material-preview-strip, .material-setup-board"
+    );
+  };
   const openVariantsWorkflow = () => {
     const targetVariant =
       materialVariantInteractions.find((interaction) => !interaction.targetMaterialName && !interaction.targetMeshName) ??
@@ -9056,7 +9087,7 @@ function App() {
       return;
     }
     if (action === "materials") {
-      openStudioVisualTarget("materials", ".texture-candidate-panel, .material-preview-strip");
+      openMaterialsWorkflow();
       return;
     }
     if (action === "variants") {
@@ -9497,7 +9528,7 @@ function App() {
                 onOptimize={() => void optimizeProject()}
                 onBake={openBakeWorkflow}
                 onEnvironment={() => setSelectedTab("environment")}
-                onMaterials={() => setSelectedTab("materials")}
+                onMaterials={openMaterialsWorkflow}
                 onVariants={openVariantsWorkflow}
                 onViews={() => setSelectedTab("views")}
                 onNavigation={() => setSelectedTab("controls")}
@@ -9515,7 +9546,7 @@ function App() {
                 objects={objectsDoc}
                 viewerUrl={viewerUrl(activeProjectId)}
                 navigationViewerUrl={navigationDebugViewerUrl(activeProjectId)}
-                onMaterials={() => setSelectedTab("materials")}
+                onMaterials={openMaterialsWorkflow}
                 onEnvironment={() => setSelectedTab("environment")}
                 onNavigation={() => setSelectedTab("controls")}
                 onRooms={() => setSelectedTab("rooms")}
@@ -9584,7 +9615,7 @@ function App() {
                     appliedTextureSuggestionCount={appliedMaterialTextureSuggestionCount}
                     onApplyTextureSuggestions={applyMaterialTextureSuggestions}
                     onRepair={() => void repairImport()}
-                    onMaterials={() => setSelectedTab("materials")}
+                    onMaterials={openMaterialsWorkflow}
                     onOptimize={() => setSelectedTab("optimization")}
                     onBake={openBakeWorkflow}
                     onReviewTextureSuggestion={reviewMaterialTextureSuggestion}
