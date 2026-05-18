@@ -13506,7 +13506,16 @@ function App() {
                       <span>{node.name}</span>
                       <small>
                         {node.triangleCount} triangles
-                        {override?.hideInTopView ? " · hidden in top" : ""}
+                        {" - "}
+                        {isCeilingOrRoof && !isHiddenInTopView
+                          ? "needs top hide"
+                          : override?.navigationBehavior && override.navigationBehavior !== "default"
+                            ? "movement role"
+                            : override?.visible === false
+                              ? "hidden"
+                              : isHiddenInTopView
+                                ? "top hidden"
+                                : "object ready"}
                       </small>
                       {(isCeilingOrRoof || isHiddenInTopView) && (
                         <span className={isHiddenInTopView ? "object-role-chip top-hidden" : "object-role-chip review"}>
