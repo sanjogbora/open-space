@@ -4133,6 +4133,138 @@ button.list-row {
   opacity: 0.78;
 }
 
+.selected-interaction-health {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid #cfe1ed;
+  border-radius: 8px;
+  background: #f7fbfe;
+}
+
+.selected-interaction-health-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.selected-interaction-health-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.selected-interaction-health-heading strong,
+.selected-interaction-health-heading small {
+  min-width: 0;
+  overflow: hidden;
+  color: #1e3546;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-interaction-health-heading strong {
+  font-size: 13px;
+}
+
+.selected-interaction-health-heading small {
+  font-size: 12px;
+  opacity: 0.78;
+}
+
+.health-pill {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.health-pill.ready {
+  color: #146c43;
+  background: #dff7ea;
+}
+
+.health-pill.warning {
+  color: #7a4e08;
+  background: #ffe9c0;
+}
+
+.selected-interaction-health-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.selected-interaction-health-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid #f0d099;
+  border-radius: 8px;
+  color: #7a4e08;
+  background: #fff8ed;
+}
+
+.selected-interaction-health-card.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.selected-interaction-health-card.active {
+  color: #095b88;
+  border-color: #b8dcf0;
+  background: #eef8ff;
+}
+
+.selected-interaction-health-card > span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.selected-interaction-health-card > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.selected-interaction-health-card strong,
+.selected-interaction-health-card small,
+.selected-interaction-health-card em {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-interaction-health-card strong {
+  font-size: 12px;
+}
+
+.selected-interaction-health-card small,
+.selected-interaction-health-card em {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.selected-interaction-health-card em {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
 .room-planner-card {
   border-color: #c7eadb;
   background: #f3fbf7;

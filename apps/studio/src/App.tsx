@@ -746,6 +746,14 @@ interface VideoSurfaceCandidate {
   dimensions?: string;
 }
 
+interface InteractionHealthStep {
+  id: string;
+  label: string;
+  detail: string;
+  status: "ready" | "warning" | "active";
+  action: string;
+}
+
 interface DoorPassCandidate {
   id: string;
   name: string;
@@ -1039,6 +1047,25 @@ function updateVec3(value: Vec3, index: number, next: string): Vec3 {
   const draft = [...value] as [number, number, number];
   draft[index] = toNumber(next, value[index] ?? 0);
   return draft;
+}
+
+function isFiniteVec3(value: Vec3): boolean {
+  return value.length === 3 && value.every((item) => Number.isFinite(item));
+}
+
+function vec3Summary(value: Vec3): string {
+  return value.map((item) => item.toFixed(2)).join(", ");
+}
+
+function isValidInteractionUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+  if (/^(https?:|mailto:|tel:)/i.test(trimmed)) {
+    return true;
+  }
+  return trimmed.startsWith("/") || trimmed.startsWith("./") || trimmed.startsWith("../") || trimmed.startsWith("#");
 }
 
 function parseKeywordList(value: string): string[] {
@@ -5064,6 +5091,125 @@ function App() {
       ? "ready"
       : "stale";
   }, [objectToggleKnownTargetKeys, selectedObjectToggle]);
+  const selectedInteractionHealthSteps = useMemo((): InteractionHealthStep[] => {
+    if (selectedHotspot) {
+      const hasPosition = isFiniteVec3(selectedHotspot.position);
+      const hasTitle = Boolean(selectedHotspot.title.trim() || selectedHotspot.label.trim());
+      const hasBody = Boolean(selectedHotspot.body?.trim());
+      return [
+        {
+          id: "marker",
+          label: "Marker position",
+          detail: hasPosition
+            ? `Placed at ${vec3Summary(selectedHotspot.position)}`
+            : "Marker coordinates are invalid.",
+          status: hasPosition ? "ready" : "warning",
+          action: hasPosition ? "Marker OK" : "Set Position"
+        },
+        {
+          id: "content",
+          label: "Content",
+          detail: hasTitle
+            ? hasBody
+              ? "Title and body are ready."
+              : "Title is ready; body is optional."
+            : "Add a visible title before publishing.",
+          status: hasTitle ? "ready" : "warning",
+          action: hasTitle ? "Content OK" : "Add Title"
+        },
+        {
+          id: "viewer",
+          label: "Viewer test",
+          detail: "Open the viewer and click this marker from a nearby camera view.",
+          status: "active",
+          action: "Test Click"
+        }
+      ];
+    }
+    if (selectedLink) {
+      const hasPosition = isFiniteVec3(selectedLink.position);
+      const hasLabel = Boolean(selectedLink.label.trim());
+      const validUrl = isValidInteractionUrl(selectedLink.url);
+      return [
+        {
+          id: "marker",
+          label: "Marker position",
+          detail: hasPosition
+            ? `Placed at ${vec3Summary(selectedLink.position)}`
+            : "Marker coordinates are invalid.",
+          status: hasPosition ? "ready" : "warning",
+          action: hasPosition ? "Marker OK" : "Set Position"
+        },
+        {
+          id: "destination",
+          label: "Destination",
+          detail: validUrl ? "URL format is publish-safe." : "Use https, mailto, tel, #, or a relative path.",
+          status: validUrl ? "ready" : "warning",
+          action: validUrl ? "URL OK" : "Fix URL"
+        },
+        {
+          id: "label",
+          label: "Button label",
+          detail: hasLabel ? `Shown as ${selectedLink.label}.` : "Add a short label for the link.",
+          status: hasLabel ? "ready" : "warning",
+          action: hasLabel ? "Label OK" : "Add Label"
+        },
+        {
+          id: "behavior",
+          label: "Open behavior",
+          detail: selectedLink.openInNewTab !== false
+            ? "Opens in a new browser tab."
+            : "Opens in the current viewer tab.",
+          status: "ready",
+          action: selectedLink.openInNewTab !== false ? "New Tab" : "Same Tab"
+        }
+      ];
+    }
+    if (selectedObjectToggle) {
+      const hasPosition = isFiniteVec3(selectedObjectToggle.position);
+      const hasLabel = Boolean(selectedObjectToggle.label.trim());
+      return [
+        {
+          id: "marker",
+          label: "Marker position",
+          detail: hasPosition
+            ? `Placed at ${vec3Summary(selectedObjectToggle.position)}`
+            : "Marker coordinates are invalid.",
+          status: hasPosition ? "ready" : "warning",
+          action: hasPosition ? "Marker OK" : "Set Position"
+        },
+        {
+          id: "target",
+          label: "Target object",
+          detail:
+            selectedObjectToggleTargetState === "ready"
+              ? selectedObjectToggle.targetObjectName || selectedObjectToggle.targetObjectId || "Target found."
+              : selectedObjectToggleTargetState === "missing"
+                ? "Choose the object this marker should show or hide."
+                : "Target was not found after reimport; select it again.",
+          status: selectedObjectToggleTargetState === "ready" ? "ready" : "warning",
+          action: selectedObjectToggleTargetState === "ready" ? "Target OK" : "Choose Object"
+        },
+        {
+          id: "label",
+          label: "Marker label",
+          detail: hasLabel ? `Shown as ${selectedObjectToggle.label}.` : "Add a short marker label.",
+          status: hasLabel ? "ready" : "warning",
+          action: hasLabel ? "Label OK" : "Add Label"
+        },
+        {
+          id: "state",
+          label: "Starting state",
+          detail: selectedObjectToggle.initiallyVisible !== false
+            ? "Object starts visible, then marker can hide it."
+            : "Object starts hidden, then marker can reveal it.",
+          status: "ready",
+          action: selectedObjectToggle.initiallyVisible !== false ? "Visible" : "Hidden"
+        }
+      ];
+    }
+    return [];
+  }, [selectedHotspot, selectedLink, selectedObjectToggle, selectedObjectToggleTargetState]);
   const interactionSetupSteps = useMemo(() => {
     const likelyCount = likelyVideoSurfaceCandidates.length;
     const interactionCount =
@@ -11122,6 +11268,8 @@ function App() {
                   </button>
                 </div>
 
+                <InteractionHealthBoard title="Hotspot readiness" steps={selectedInteractionHealthSteps} />
+
                 <div className="field-grid">
                   <label>
                     <span>Title</span>
@@ -11192,6 +11340,8 @@ function App() {
                   </button>
                 </div>
 
+                <InteractionHealthBoard title="Link readiness" steps={selectedInteractionHealthSteps} />
+
                 <div className="field-grid">
                   <label>
                     <span>Label</span>
@@ -11254,6 +11404,8 @@ function App() {
                     <Trash2 size={17} aria-hidden="true" />
                   </button>
                 </div>
+
+                <InteractionHealthBoard title="Object toggle readiness" steps={selectedInteractionHealthSteps} />
 
                 <div className="field-grid">
                   <label>
@@ -18467,6 +18619,56 @@ function AssetHealth({
       {externalResources.length > 0 && missingResources.length === 0 && (
         <p>All GLTF external resources referenced by the active model are present.</p>
       )}
+    </div>
+  );
+}
+
+function InteractionHealthBoard({
+  title,
+  steps
+}: {
+  title: string;
+  steps: readonly InteractionHealthStep[];
+}) {
+  if (steps.length === 0) {
+    return null;
+  }
+  const needsFixCount = steps.filter((step) => step.status === "warning").length;
+  return (
+    <div className="selected-interaction-health" aria-label={title}>
+      <div className="selected-interaction-health-heading">
+        <div>
+          <strong>{title}</strong>
+          <small>
+            {needsFixCount > 0
+              ? `${needsFixCount} item${needsFixCount === 1 ? "" : "s"} need attention`
+              : "Ready for viewer testing"}
+          </small>
+        </div>
+        <span className={needsFixCount > 0 ? "health-pill warning" : "health-pill ready"}>
+          {needsFixCount > 0 ? "Fix" : "Ready"}
+        </span>
+      </div>
+      <div className="selected-interaction-health-grid">
+        {steps.map((step) => (
+          <div key={step.id} className={`selected-interaction-health-card ${step.status}`}>
+            <span>
+              {step.status === "ready" ? (
+                <Check size={15} aria-hidden="true" />
+              ) : step.status === "active" ? (
+                <MapPin size={15} aria-hidden="true" />
+              ) : (
+                <AlertTriangle size={15} aria-hidden="true" />
+              )}
+            </span>
+            <div>
+              <strong>{step.label}</strong>
+              <small>{step.detail}</small>
+            </div>
+            <em>{step.action}</em>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
