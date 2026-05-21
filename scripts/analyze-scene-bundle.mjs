@@ -2464,6 +2464,18 @@ function navigationZonesOverlap(a, b, padding = 0.2) {
   return polygonDistance2D(navigationZoneFootprint(a), navigationZoneFootprint(b)) <= padding;
 }
 
+function navigationZoneConnectionPadding(a, b, bodyRadius = 0.28) {
+  const basePadding = Math.max(0.22, bodyRadius * 1.35);
+  if (a.kind !== "pass" && b.kind !== "pass") {
+    return basePadding;
+  }
+  return Math.max(basePadding, Math.min(1.15, bodyRadius * 2.8));
+}
+
+function navigationZonesConnect(a, b, bodyRadius = 0.28) {
+  return navigationZonesOverlap(a, b, navigationZoneConnectionPadding(a, b, bodyRadius));
+}
+
 function navigationZoneOutsideBounds(zone, bounds, padding = 0.05) {
   if (!bounds) {
     return false;
@@ -2479,7 +2491,7 @@ function navigationZoneOutsideBounds(zone, bounds, padding = 0.05) {
   );
 }
 
-function navigationComponents(zones) {
+function navigationComponents(zones, bodyRadius = 0.28) {
   if (zones.length === 0) {
     return [];
   }
@@ -2496,7 +2508,7 @@ function navigationComponents(zones) {
       const current = queue.shift();
       component.push(current);
       for (const candidate of zones) {
-        if (!seen.has(candidate.id) && navigationZonesOverlap(current, candidate)) {
+        if (!seen.has(candidate.id) && navigationZonesConnect(current, candidate, bodyRadius)) {
           seen.add(candidate.id);
           queue.push(candidate);
         }
@@ -2534,12 +2546,12 @@ function navigationTopology(manifest, bodyRadius = 0.28) {
   const passZones = enabledNavigationZones(navigation, "pass");
   const blockZones = enabledNavigationZones(navigation, "block");
   const routeZones = [...walkZones, ...passZones];
-  const routeComponents = navigationComponents(routeZones);
+  const routeComponents = navigationComponents(routeZones, bodyRadius);
   const orphanPassZones = passZones.filter(
-    (zone) => !walkZones.some((walkZone) => navigationZonesOverlap(zone, walkZone))
+    (zone) => !walkZones.some((walkZone) => navigationZonesConnect(zone, walkZone, bodyRadius))
   );
   const oneSidedPassZones = passZones.filter((zone) => {
-    const touchingWalkZones = walkZones.filter((walkZone) => navigationZonesOverlap(zone, walkZone));
+    const touchingWalkZones = walkZones.filter((walkZone) => navigationZonesConnect(zone, walkZone, bodyRadius));
     return touchingWalkZones.length === 1 && walkZones.length > 1;
   });
   const blockedPassZones = passZones.filter((zone) =>

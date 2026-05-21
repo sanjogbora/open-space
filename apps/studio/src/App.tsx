@@ -1763,6 +1763,18 @@ function navigationZonesOverlap(a: NavigationZone, b: NavigationZone, padding = 
   return polygonDistance2D(navigationZoneFootprint(a), navigationZoneFootprint(b)) <= padding;
 }
 
+function navigationZoneConnectionPadding(a: NavigationZone, b: NavigationZone, bodyRadius = 0.28): number {
+  const basePadding = Math.max(0.22, bodyRadius * 1.35);
+  if (a.kind !== "pass" && b.kind !== "pass") {
+    return basePadding;
+  }
+  return Math.max(basePadding, Math.min(1.15, bodyRadius * 2.8));
+}
+
+function navigationZonesConnect(a: NavigationZone, b: NavigationZone, bodyRadius = 0.28): boolean {
+  return navigationZonesOverlap(a, b, navigationZoneConnectionPadding(a, b, bodyRadius));
+}
+
 function navigationZoneOutsideBounds(
   zone: NavigationZone,
   bounds: SceneManifest["navigation"]["bounds"] | undefined,
@@ -1782,7 +1794,7 @@ function navigationZoneOutsideBounds(
   );
 }
 
-function navigationComponents(zones: readonly NavigationZone[]): NavigationZone[][] {
+function navigationComponents(zones: readonly NavigationZone[], bodyRadius = 0.28): NavigationZone[][] {
   if (zones.length === 0) {
     return [];
   }
@@ -1799,7 +1811,7 @@ function navigationComponents(zones: readonly NavigationZone[]): NavigationZone[
       const current = queue.shift()!;
       component.push(current);
       for (const candidate of zones) {
-        if (!seen.has(candidate.id) && navigationZonesOverlap(current, candidate)) {
+        if (!seen.has(candidate.id) && navigationZonesConnect(current, candidate, bodyRadius)) {
           seen.add(candidate.id);
           queue.push(candidate);
         }
@@ -2093,7 +2105,7 @@ function navigationQaIssues(manifest: SceneManifest, bodyRadius = 0.28): Navigat
     });
   }
 
-  const routeComponents = navigationComponents(routeZones);
+  const routeComponents = navigationComponents(routeZones, bodyRadius);
   if (routeComponents.length > 1) {
     const islandSummary = navigationComponentSummary(routeComponents);
     issues.push({
@@ -2108,7 +2120,7 @@ function navigationQaIssues(manifest: SceneManifest, bodyRadius = 0.28): Navigat
   }
 
   passZones.forEach((zone) => {
-    const touchingWalkZones = walkZones.filter((walkZone) => navigationZonesOverlap(zone, walkZone));
+    const touchingWalkZones = walkZones.filter((walkZone) => navigationZonesConnect(zone, walkZone, bodyRadius));
     const touchingBlockZones = blockZones.filter((blockZone) => navigationZonesOverlap(zone, blockZone, 0.05));
     const narrowestSpan = navigationZoneNarrowestSpan(zone);
     const requiredSpan = Math.max(0.42, bodyRadius * 2);
