@@ -3049,6 +3049,13 @@ function publishEntryDeliveryMode(entry: PublishEntry): string {
   return "Unverified draft";
 }
 
+function setLiveActionLabel(entry: PublishEntry | undefined): string {
+  if (!entry) {
+    return "Waiting";
+  }
+  return entry.qualityGate?.status === "ready" ? "Set Live" : "Set Draft Live";
+}
+
 function livePublishedViewerUrl(projectId: string, history: PublishHistoryDocument | null): string {
   if (history?.liveViewerUrl) {
     return `${viewerBaseUrl}${history.liveViewerUrl}`;
@@ -5142,10 +5149,12 @@ function App() {
         detail: hasLiveVersion
           ? `Clients open ${activePublishedEntry?.version ?? publishHistory?.activeVersion}.`
           : hasPublishedVersion
-            ? "Set the latest version as the live client link."
+            ? latestPublishedEntry?.qualityGate?.status === "ready"
+              ? "Set the latest version as the live client link."
+              : "Latest version is still a draft; only set it live if the warnings are accepted."
             : "Publish a version before choosing a live link.",
         status: hasLiveVersion ? "ready" : hasPublishedVersion ? "todo" : "blocked",
-        actionLabel: hasLiveVersion ? "Copy Link" : hasPublishedVersion ? "Set Live" : "Waiting"
+        actionLabel: hasLiveVersion ? "Copy Link" : hasPublishedVersion ? setLiveActionLabel(latestPublishedEntry) : "Waiting"
       },
       {
         id: "package",
@@ -5166,6 +5175,7 @@ function App() {
     hasBlockingPublishErrors,
     hasPublishWarnings,
     latestPublishedEntry,
+    latestPublishedEntry?.qualityGate?.status,
     publishHandoffEntry?.deploymentPath,
     publishHistory?.activeVersion,
     publishWarningCount,
@@ -5265,10 +5275,12 @@ function App() {
         detail: hasLiveVersion
           ? `Live version: ${activePublishedEntry?.version ?? publishHistory?.activeVersion}`
           : hasPublishedVersion
-            ? "Choose the version clients should see by default."
+            ? latestPublishedEntry?.qualityGate?.status === "ready"
+              ? "Choose the version clients should see by default."
+              : "Latest bundle is still a draft; do not make it live until warnings are accepted."
             : "Publish one version before setting the live link.",
         status: hasLiveVersion ? "ready" : hasPublishedVersion ? "todo" : "blocked",
-        actionLabel: hasLiveVersion ? "Copy Live Link" : hasPublishedVersion ? "Set Latest Live" : "Waiting"
+        actionLabel: hasLiveVersion ? "Copy Live Link" : hasPublishedVersion ? setLiveActionLabel(latestPublishedEntry) : "Waiting"
       },
       {
         id: "client-test",
@@ -8386,6 +8398,14 @@ function App() {
       setPublishError("API is not connected.");
       return;
     }
+    if (
+      entry.qualityGate?.status !== "ready" &&
+      !window.confirm(
+        `${publishEntryDeliveryMode(entry)} version ${entry.version} still has saved quality-gate issues. Set it as the live client link anyway?`
+      )
+    ) {
+      return;
+    }
     setActivePublishVersion(entry.version);
     setPublishError("");
     try {
@@ -11390,7 +11410,7 @@ function App() {
                               ? "Live"
                               : activePublishVersion === entry.version
                                 ? "Setting"
-                                : "Set Live"}
+                                : setLiveActionLabel(entry)}
                           </button>
                         </div>
                         {entry.cdnBasePath && <code>{entry.cdnBasePath}</code>}
