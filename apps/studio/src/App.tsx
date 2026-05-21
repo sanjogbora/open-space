@@ -771,6 +771,9 @@ interface PublishHistoryDocument {
   activeVersion?: string;
   activePublishedAt?: string;
   activatedAt?: string;
+  activeDeliveryMode?: string;
+  activatedAsDraft?: boolean;
+  activeQualityGate?: PublishEntry["qualityGate"];
   liveScenePath?: string;
   liveViewerUrl?: string;
   versions: PublishEntry[];
@@ -5105,6 +5108,14 @@ function App() {
   const activePublishedEntry = publishHistory?.activeVersion
     ? publishHistory.versions.find((entry) => entry.version === publishHistory.activeVersion)
     : undefined;
+  const activeLiveDeliveryMode = activePublishedEntry
+    ? publishEntryDeliveryMode(activePublishedEntry)
+    : publishHistory?.activeDeliveryMode;
+  const activeLiveIsDraft = Boolean(publishHistory?.activeVersion) && (
+    activePublishedEntry
+      ? activePublishedEntry.qualityGate?.status !== "ready"
+      : publishHistory?.activatedAsDraft === true || publishHistory?.activeQualityGate?.status !== "ready"
+  );
   const publishHandoffEntry = activePublishedEntry ?? latestPublishedEntry;
   const publishHandoffSteps = useMemo<PublishHandoffStep[]>(() => {
     const hasPublishedVersion = Boolean(latestPublishedEntry);
@@ -11293,10 +11304,10 @@ function App() {
                     </button>
                   </div>
                   <code>{livePublishedViewerUrl(activeProjectId, publishHistory)}</code>
-                  {activePublishedEntry && activePublishedEntry.qualityGate?.status !== "ready" && (
+                  {activeLiveIsDraft && (
                     <div className="publish-next-issue">
                       <span>Live link is a draft</span>
-                      <strong>{publishEntryDeliveryMode(activePublishedEntry)}</strong>
+                      <strong>{activeLiveDeliveryMode ?? "Draft"}</strong>
                       <p>
                         This client link still has saved quality-gate issues. Keep it for internal review until the
                         warnings are fixed or intentionally accepted.

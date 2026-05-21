@@ -214,6 +214,19 @@ async function publishHistory(projectId) {
   });
 }
 
+function publishEntryDeliveryMode(entry) {
+  if (entry.qualityGate?.status === "ready") {
+    return "Client-ready";
+  }
+  if (entry.qualityGate?.status === "blocked") {
+    return "Blocked draft";
+  }
+  if (entry.qualityGate?.status === "warning") {
+    return "Draft";
+  }
+  return "Unverified draft";
+}
+
 async function activatePublishedVersion(projectId, version, options = {}) {
   const history = options.history ?? await publishHistory(projectId);
   const entry = history.versions.find((item) => item.version === version);
@@ -233,6 +246,8 @@ async function activatePublishedVersion(projectId, version, options = {}) {
   const liveScenePath = `/published/${projectId}/live/scene.manifest.json`;
   const liveViewerUrl = `/?scene=${encodeURIComponent(liveScenePath)}`;
   const activatedAt = options.activatedAt ?? new Date().toISOString();
+  const activeDeliveryMode = publishEntryDeliveryMode(entry);
+  const activatedAsDraft = entry.qualityGate?.status !== "ready";
   const target = path.join(publishedRoot, projectId, "live");
   await rm(target, { recursive: true, force: true });
   await mkdir(path.dirname(target), { recursive: true });
@@ -245,10 +260,13 @@ async function activatePublishedVersion(projectId, version, options = {}) {
         schemaVersion: "0.1",
         projectId,
         activeVersion: entry.version,
+        activeDeliveryMode,
+        activatedAsDraft,
         sourceScenePath: entry.scenePath,
         liveScenePath,
         liveViewerUrl,
-        activatedAt
+        activatedAt,
+        qualityGate: entry.qualityGate ?? null
       },
       null,
       2
@@ -261,6 +279,9 @@ async function activatePublishedVersion(projectId, version, options = {}) {
     activeVersion: entry.version,
     activePublishedAt: entry.publishedAt,
     activatedAt,
+    activeDeliveryMode,
+    activatedAsDraft,
+    activeQualityGate: entry.qualityGate,
     liveScenePath,
     liveViewerUrl
   };
@@ -272,7 +293,10 @@ async function activatePublishedVersion(projectId, version, options = {}) {
       publishedAt: entry.publishedAt,
       activatedAt,
       scenePath: liveScenePath,
-      viewerUrl: liveViewerUrl
+      viewerUrl: liveViewerUrl,
+      deliveryMode: activeDeliveryMode,
+      activatedAsDraft,
+      qualityGate: entry.qualityGate
     },
     publishHistory: nextHistory
   };
