@@ -15915,7 +15915,10 @@ function App() {
                 <FileJson size={18} aria-hidden="true" />
                 <h2>environment</h2>
               </div>
-              <pre className="json-preview">{JSON.stringify(manifest.environment ?? {}, null, 2)}</pre>
+              <details className="json-details">
+                <summary>Show technical environment JSON</summary>
+                <pre className="json-preview">{JSON.stringify(manifest.environment ?? {}, null, 2)}</pre>
+              </details>
             </div>
           </section>
         )}
@@ -15927,7 +15930,57 @@ function App() {
                 <FileJson size={18} aria-hidden="true" />
                 <h2>Manifest</h2>
               </div>
-              <pre className="json-preview">{JSON.stringify(manifest, null, 2)}</pre>
+              <div className="bundle-snapshot-board" aria-label="Bundle snapshot">
+                <div className="bundle-snapshot-card">
+                  <span>Scene</span>
+                  <strong>{manifest.sceneUrl}</strong>
+                  <small>{formatBytes(bundleStats?.modelBytes ?? 0)} model file</small>
+                </div>
+                <div className="bundle-snapshot-card">
+                  <span>Walkthrough</span>
+                  <strong>
+                    {manifest.views.length} view{manifest.views.length === 1 ? "" : "s"}
+                  </strong>
+                  <small>
+                    {(manifest.rooms ?? []).length} room{(manifest.rooms ?? []).length === 1 ? "" : "s"} /{" "}
+                    {manifest.interactions.length} interaction{manifest.interactions.length === 1 ? "" : "s"}
+                  </small>
+                </div>
+                <div className="bundle-snapshot-card">
+                  <span>Movement</span>
+                  <strong>{manifest.navigation.bounds ? "Bounds set" : "Needs bounds"}</strong>
+                  <small>
+                    {(manifest.navigation.zones ?? []).length} zone{(manifest.navigation.zones ?? []).length === 1 ? "" : "s"}
+                  </small>
+                </div>
+                <div className={`bundle-snapshot-card ${bundleStats?.publishReadiness?.status ?? "waiting"}`}>
+                  <span>Publish gate</span>
+                  <strong>{bundleStats?.publishReadiness?.status ?? "Not analyzed"}</strong>
+                  <small>
+                    {(bundleStats?.publishReadiness?.blockers.length ?? 0)} blocker
+                    {(bundleStats?.publishReadiness?.blockers.length ?? 0) === 1 ? "" : "s"} /{" "}
+                    {(bundleStats?.publishReadiness?.warnings.length ?? 0)} warning
+                    {(bundleStats?.publishReadiness?.warnings.length ?? 0) === 1 ? "" : "s"}
+                  </small>
+                </div>
+              </div>
+              <VisualGuideCard
+                title="Technical bundle reference"
+                detail="Use this only when debugging deploy scripts, schema issues, or viewer loading. Normal setup should happen from Repair Center, Publish, and the visual Studio tabs."
+                steps={[
+                  "Check the snapshot first for scene URL, views, rooms, interactions, navigation zones, and publish gate state.",
+                  "Open the manifest JSON only when a developer needs exact paths or schema values.",
+                  "Use Publish for client links and deployment commands instead of copying paths from this technical view."
+                ]}
+                actionLabel="Copy Manifest"
+                onAction={() => void copyText(JSON.stringify(manifest, null, 2))}
+                secondaryActionLabel="Publish"
+                onSecondaryAction={() => setSelectedTab("publish")}
+              />
+              <details className="json-details">
+                <summary>Show technical manifest JSON</summary>
+                <pre className="json-preview">{JSON.stringify(manifest, null, 2)}</pre>
+              </details>
             </div>
             <div className="side-stack">
               <div className="panel stats-panel">
