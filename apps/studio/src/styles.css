@@ -3795,6 +3795,93 @@ button.list-row {
   gap: 8px;
 }
 
+.source-qa-decision-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.source-qa-decision-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 10px;
+  align-content: start;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid rgba(23, 65, 93, 0.16);
+  border-radius: 8px;
+  color: #17415d;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.source-qa-decision-card > span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(23, 65, 93, 0.14);
+  border-radius: 50%;
+  color: inherit;
+  background: #ffffff;
+}
+
+.source-qa-decision-card > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.source-qa-decision-card strong,
+.source-qa-decision-card small {
+  margin: 0;
+  color: inherit;
+}
+
+.source-qa-decision-card strong {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-qa-decision-card small {
+  font-size: 11px;
+  line-height: 1.35;
+  opacity: 0.86;
+}
+
+.source-qa-decision-card .button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.source-qa-decision-card.ready {
+  color: #147c4f;
+  border-color: rgba(20, 124, 79, 0.18);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.source-qa-decision-card.warning {
+  color: #6f4b00;
+  border-color: rgba(111, 75, 0, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.source-qa-decision-card.error {
+  color: #8f1e2b;
+  border-color: rgba(143, 30, 43, 0.24);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.source-qa-decision-card.active {
+  color: #17415d;
+  border-color: rgba(8, 127, 231, 0.24);
+  background: rgba(255, 255, 255, 0.74);
+}
+
 .source-qa-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -7050,6 +7137,7 @@ code {
   .publish-handoff-board,
   .publish-hosting-board,
   .bundle-snapshot-board,
+  .source-qa-decision-board,
   .source-qa-grid,
   .import-symptom-board,
   .diagnostic-action-map,
@@ -7110,6 +7198,7 @@ code {
   .publish-handoff-step,
   .publish-hosting-step,
   .bundle-snapshot-board,
+  .source-qa-decision-board,
   .source-qa-heading,
   .source-qa-detail-heading,
   .toggle-grid,

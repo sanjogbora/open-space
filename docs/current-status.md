@@ -360,6 +360,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Source/export review actions now open the visual Source QA handoff before technical diagnostics, so malformed or missing-resource uploads get a clearer non-technical triage path.
 - Source QA cards now reveal a selected plain-language issue preview with likely visible symptoms and next actions before users open technical diagnostic evidence.
 - Source QA cards can now copy a focused re-export request for the selected source/export issue, making it easier to send actionable feedback to whoever created the model.
+- Source QA now opens with a visual decision board for source re-export, missing resource folders, Studio repair, and technical evidence before users inspect grouped diagnostics.
 - Import, room, material texture, and navigation object-review actions now route to the matching visual repair panels instead of opening broad raw tabs.
 - Repair Center action labels and destination hints now describe the visual outcome, such as Review Materials, Set Views, Fix Context, and Review Performance, instead of broad tab names.
 - Import Viewer QA checklist actions now use the same outcome-oriented language so users review materials, set views, map rooms, and review performance from the checklist.

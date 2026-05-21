@@ -16988,6 +16988,20 @@ function SourceQaSummary({
   const hasErrors = groups.some((group) => group.severity === "error");
   const hasWarnings = groups.some((group) => group.severity === "warning");
   const status = hasErrors ? "error" : hasWarnings ? "warning" : "ready";
+  const structureGroup = groups.find((group) => group.id === "structure");
+  const resourcesGroup = groups.find((group) => group.id === "resources");
+  const referencesGroup = groups.find((group) => group.id === "references");
+  const framingGroup = groups.find((group) => group.id === "framing");
+  const overridesGroup = groups.find((group) => group.id === "overrides");
+  const sourcePackageIssueGroup =
+    structureGroup && structureGroup.count > 0
+      ? structureGroup
+      : referencesGroup && referencesGroup.count > 0
+        ? referencesGroup
+        : undefined;
+  const hasResourceIssues = Boolean(resourcesGroup && resourcesGroup.count > 0);
+  const repairIssueCount = (framingGroup?.count ?? 0) + (overridesGroup?.count ?? 0);
+  const totalIssueCount = issueGroups.reduce((sum, group) => sum + group.count, 0);
   return (
     <div className={`source-qa-card ${status}`}>
       <div className="source-qa-heading">
@@ -17013,6 +17027,98 @@ function SourceQaSummary({
           >
             <Wrench size={15} aria-hidden="true" />
             {repairState === "repairing" ? "Repairing" : "Repair"}
+          </button>
+        </div>
+      </div>
+      <div className="source-qa-decision-board" aria-label="Source QA decision path">
+        <div className={`source-qa-decision-card ${sourcePackageIssueGroup ? sourcePackageIssueGroup.severity : "ready"}`}>
+          <span>{sourcePackageIssueGroup ? <AlertTriangle size={15} aria-hidden="true" /> : <Check size={15} aria-hidden="true" />}</span>
+          <div>
+            <strong>Source export</strong>
+            <small>
+              {sourcePackageIssueGroup
+                ? `${sourcePackageIssueGroup.count} source/model issue${sourcePackageIssueGroup.count === 1 ? "" : "s"} need the exporter.`
+                : "Model structure and material references look usable."}
+            </small>
+          </div>
+          <button
+            type="button"
+            className="button secondary compact-button"
+            disabled={!sourcePackageIssueGroup}
+            onClick={() => {
+              if (sourcePackageIssueGroup) {
+                setSelectedGroupId(sourcePackageIssueGroup.id);
+                onCopyText(sourceQaReexportRequestText(projectId, sourcePackageIssueGroup, sourcePackageIssueGroup.issues));
+              }
+            }}
+          >
+            <Copy size={14} aria-hidden="true" />
+            Copy Re-export
+          </button>
+        </div>
+        <div className={`source-qa-decision-card ${hasResourceIssues && resourcesGroup ? resourcesGroup.severity : "ready"}`}>
+          <span>{hasResourceIssues ? <AlertTriangle size={15} aria-hidden="true" /> : <Check size={15} aria-hidden="true" />}</span>
+          <div>
+            <strong>Texture/resource folder</strong>
+            <small>
+              {hasResourceIssues && resourcesGroup
+                ? `${resourcesGroup.count} missing or risky resource${resourcesGroup.count === 1 ? "" : "s"}.`
+                : "Referenced resources look present."}
+            </small>
+          </div>
+          <button
+            type="button"
+            className="button secondary compact-button"
+            disabled={!hasResourceIssues || !resourcesGroup}
+            onClick={() => {
+              if (resourcesGroup && hasResourceIssues) {
+                setSelectedGroupId(resourcesGroup.id);
+                onCopyText(sourceQaReexportRequestText(projectId, resourcesGroup, resourcesGroup.issues));
+              }
+            }}
+          >
+            <Copy size={14} aria-hidden="true" />
+            Copy Resource Ask
+          </button>
+        </div>
+        <div className={`source-qa-decision-card ${repairIssueCount > 0 ? "warning" : "ready"}`}>
+          <span>{repairIssueCount > 0 ? <Wrench size={15} aria-hidden="true" /> : <Check size={15} aria-hidden="true" />}</span>
+          <div>
+            <strong>Studio repair</strong>
+            <small>
+              {repairIssueCount > 0
+                ? `${repairIssueCount} framing or saved-override issue${repairIssueCount === 1 ? "" : "s"} can usually be repaired here.`
+                : "No source-side repair issue is blocking Studio setup."}
+            </small>
+          </div>
+          <button
+            type="button"
+            className="button secondary compact-button"
+            disabled={!apiConnected || repairState === "repairing"}
+            onClick={onRepair}
+          >
+            <Wrench size={14} aria-hidden="true" />
+            {repairState === "repairing" ? "Repairing" : "Run Repair"}
+          </button>
+        </div>
+        <div className={`source-qa-decision-card ${totalIssueCount > 0 ? "active" : "ready"}`}>
+          <span>{totalIssueCount > 0 ? <FileJson size={15} aria-hidden="true" /> : <Check size={15} aria-hidden="true" />}</span>
+          <div>
+            <strong>Technical evidence</strong>
+            <small>
+              {totalIssueCount > 0
+                ? `${totalIssueCount} diagnostic finding${totalIssueCount === 1 ? "" : "s"} are available if the model author needs proof.`
+                : "No technical diagnostic evidence is needed right now."}
+            </small>
+          </div>
+          <button
+            type="button"
+            className="button secondary compact-button"
+            disabled={totalIssueCount === 0}
+            onClick={onReviewDiagnostics}
+          >
+            <FileJson size={14} aria-hidden="true" />
+            Evidence
           </button>
         </div>
       </div>
