@@ -1675,6 +1675,18 @@ textarea:focus {
   line-height: 1.45;
 }
 
+.material-diagnosis-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.material-diagnosis-actions small {
+  flex: 1 1 240px;
+}
+
 .object-bulk-actions {
   display: grid;
   gap: 5px;
@@ -7191,6 +7203,7 @@ code {
   .zone-simple-heading,
   .repair-card-heading,
   .navigation-qa-card,
+  .material-diagnosis-actions,
   .repair-recommendation,
   .repair-object-card,
   .repair-followup,

@@ -45,6 +45,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Materials now shows a visual setup board for texture matches, missing maps, plain/green placeholders, transparency, and baked lighting before detailed material editing.
 - Studio Materials now adds symptom-first visual fix cards for flat-looking models, green/plain surfaces, loose texture folders, and missing baked shadows.
 - Studio Materials now shows a plain-language diagnosis for the selected material, explaining the next safe visual action before editing raw map fields.
+- Studio Materials can now copy a selected-material fix brief with assigned maps, candidate textures, current material values, and visual assignment guidance.
 - Studio Bake now prioritizes suspicious lightmap previews first and labels why each generated lightmap needs review.
 - Studio Bake lightmap previews now link directly to the matching material review, with the Materials list filtered to lightmapped materials.
 - Studio Bake now shows a visual setup board for Blender readiness, bake quality, raw lightmap size, preflight issues, and last output before detailed settings.

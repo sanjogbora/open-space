@@ -3392,6 +3392,64 @@ function navigationQaBriefText({
   return lines.filter(Boolean).join("\n");
 }
 
+function materialFixBriefText({
+  projectId,
+  material,
+  diagnosis,
+  previews,
+  candidates
+}: {
+  projectId: string;
+  material: MaterialOverride;
+  diagnosis: { title: string; detail: string; action: string } | null;
+  previews: readonly { field: MaterialTextureField; label: string; source: string }[];
+  candidates: readonly MaterialTextureCandidate[];
+}): string {
+  const assignedLines = materialTextureFields.map((field) => {
+    const source = material[field];
+    return `- ${materialTextureFieldLabels[field]}: ${source || "not assigned"}`;
+  });
+  const candidateLines = candidates.slice(0, 8).map(
+    (candidate) =>
+      `- ${candidate.source}: suggested ${materialTextureFieldLabels[candidate.field]}, ${formatBytes(candidate.bytes)}, ${textureSuggestionConfidenceLabel(candidate.score)}, score ${candidate.score}${
+        looseTextureNameLooksGeneric(candidate.source) ? ", generic filename needs visual confirmation" : ""
+      }`
+  );
+  const previewLines = previews.map((preview) => `- ${preview.label}: ${preview.source}`);
+  return [
+    `Open Space material fix brief - ${material.name}`,
+    `Project: ${projectId}`,
+    `Generated: ${new Date().toISOString()}`,
+    "",
+    "Current visual diagnosis:",
+    diagnosis ? `- ${diagnosis.title}: ${diagnosis.detail}` : "- No selected-material diagnosis is currently available.",
+    diagnosis ? `- Next action: ${diagnosis.action}` : "",
+    "",
+    "Current material values:",
+    `- Base color: ${material.baseColor ?? "not set"}`,
+    `- Roughness: ${material.roughness ?? "not set"}`,
+    `- Metalness: ${material.metalness ?? "not set"}`,
+    `- Opacity: ${material.opacity ?? "not set"}`,
+    "",
+    "Assigned texture maps:",
+    ...assignedLines,
+    previews.length > 0 ? "" : "",
+    previews.length > 0 ? "Preview these assigned maps:" : "",
+    ...previewLines,
+    candidates.length > 0 ? "" : "",
+    candidates.length > 0 ? "Loose texture candidates to compare visually:" : "",
+    ...candidateLines,
+    "",
+    "Fix guidance:",
+    "- Compare thumbnails against the source/reference render before assigning loose files.",
+    "- Assign base textures only when the image clearly matches the surface color/pattern.",
+    "- Assign normal maps only when the image is a bump/normal-style texture.",
+    "- Assign emissive maps only for screens/lights/glowing surfaces.",
+    "- Assign lightmaps only after bake/relink QA confirms the image is not blank, tiny, or unrelated.",
+    "- If candidates use generic names like gltf_embedded_0.png, request a cleaner export or manually verify each material."
+  ].join("\n");
+}
+
 function interactionSetupRequestText({
   projectId,
   title,
@@ -12713,7 +12771,27 @@ function App() {
                       <strong>{selectedMaterialDiagnosis.title}</strong>
                       <p>{selectedMaterialDiagnosis.detail}</p>
                     </div>
-                    <small>{selectedMaterialDiagnosis.action}</small>
+                    <div className="material-diagnosis-actions">
+                      <small>{selectedMaterialDiagnosis.action}</small>
+                      <button
+                        type="button"
+                        className="button secondary compact-button"
+                        onClick={() =>
+                          void copyText(
+                            materialFixBriefText({
+                              projectId: activeProjectId,
+                              material: selectedMaterial,
+                              diagnosis: selectedMaterialDiagnosis,
+                              previews: selectedMaterialTexturePreviews,
+                              candidates: selectedMaterialTextureCandidates
+                            })
+                          )
+                        }
+                      >
+                        <Copy size={15} aria-hidden="true" />
+                        Copy Fix Brief
+                      </button>
+                    </div>
                   </div>
                 )}
 
