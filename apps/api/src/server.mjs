@@ -2993,7 +2993,7 @@ function publishRuntimeSummary(manifest, stats) {
   };
 }
 
-async function publishProject(projectId) {
+async function publishProject(projectId, options = {}) {
   await runAnalyze(projectId);
   const publishedAt = new Date().toISOString();
   const version = publishedAt.replace(/[-:.]/g, "").replace("T", "-").replace("Z", "z");
@@ -3065,9 +3065,21 @@ async function publishProject(projectId) {
     projectId,
     versions: [entry, ...history.versions.filter((item) => item.version !== version)]
   };
+  const shouldActivateLive = deployment.qualityGate.status === "ready" || options.allowDraftLive === true;
+  if (!shouldActivateLive) {
+    await writeProjectAll(projectId, "publish-history.json", nextHistory);
+    return {
+      ok: true,
+      entry,
+      active: null,
+      publishHistory: nextHistory
+    };
+  }
+
   const activePublish = await activatePublishedVersion(projectId, version, {
     history: nextHistory,
-    activatedAt: publishedAt
+    activatedAt: publishedAt,
+    allowDraft: options.allowDraftLive === true
   });
   return {
     ok: true,
@@ -3349,7 +3361,8 @@ async function handleRequest(request, response) {
 
     const publishProjectId = projectIdFromPathname(url.pathname, "/publish");
     if (request.method === "POST" && publishProjectId) {
-      sendJson(response, 200, await publishProject(publishProjectId));
+      const body = await readBody(request);
+      sendJson(response, 200, await publishProject(publishProjectId, { allowDraftLive: body.allowDraftLive === true }));
       return;
     }
 
