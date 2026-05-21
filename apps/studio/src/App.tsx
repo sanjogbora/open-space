@@ -3701,6 +3701,76 @@ function lightmapBakeQaReportText({
   return lines.filter(Boolean).join("\n");
 }
 
+function lightmapBakeFailureReportText({
+  projectId,
+  settings,
+  preflightIssues,
+  blenderTool,
+  job
+}: {
+  projectId: string;
+  settings: LightmapBakeSettings;
+  preflightIssues: readonly BakePreflightIssue[];
+  blenderTool: ToolStatusDocument["tools"][string] | undefined;
+  job: LightmapBakeJobDocument;
+}): string {
+  const failedSteps = job.steps.filter((step) => step.status === "failed");
+  const skippedSteps = job.steps.filter((step) => step.status === "skipped");
+  const pendingSteps = job.steps.filter((step) => step.status === "pending");
+  const blockingPreflightIssues = preflightIssues.filter((issue) => issue.severity === "error");
+  const warningPreflightIssues = preflightIssues.filter((issue) => issue.severity === "warning");
+  const denoiseEnabled = job.denoise ?? settings.denoise;
+  const nextAction =
+    blockingPreflightIssues.length > 0
+      ? "Fix the blocking preflight issue first, then run the bake again."
+      : blenderTool && !blenderTool.ready
+        ? "Install or configure Blender, reload Studio, and run the bake again."
+        : failedSteps.length > 0
+          ? "Review the failed Blender stage and reduce bake scope or quality before retrying."
+          : "Review the job message and retry with Draft or Medium settings before production bake.";
+  return [
+    `Open Space lightmap bake failure - ${projectId}`,
+    `Generated: ${new Date().toISOString()}`,
+    "",
+    "Failure summary:",
+    `- Status: ${job.status}`,
+    job.message ? `- Message: ${job.message}` : "- Message: none",
+    `- Engine: ${job.engine}`,
+    `- Bake pass: ${job.bakeMode ?? settings.mode}`,
+    `- Preset: ${job.preset ?? settings.preset}`,
+    `- Resolution: ${job.resolution ?? settings.resolution}px`,
+    `- Samples: ${job.samples ?? settings.samples}`,
+    `- Margin: ${job.margin ?? settings.margin}px`,
+    `- Max materials: ${job.maxMaterials ?? settings.maxMaterials}`,
+    `- Denoise: ${denoiseEnabled ? "on" : "off"}`,
+    `- Blender: ${blenderTool ? (blenderTool.ready ? `ready (${blenderTool.command})` : `not ready (${blenderTool.action})`) : "unknown"}`,
+    "",
+    "Preflight:",
+    `- Blocking issues: ${blockingPreflightIssues.length}`,
+    `- Warnings: ${warningPreflightIssues.length}`,
+    ...preflightIssues.map((issue) => `- ${issue.severity.toUpperCase()}: ${issue.message}`),
+    "",
+    "Job stages:",
+    ...job.steps.map((step) => `- ${step.status.toUpperCase()}: ${step.label}${step.note ? ` - ${step.note}` : ""}`),
+    failedSteps.length > 0 ? "" : "",
+    failedSteps.length > 0 ? "Failed stages:" : "",
+    ...failedSteps.map((step) => `- ${step.label}${step.note ? `: ${step.note}` : ""}`),
+    skippedSteps.length > 0 ? "" : "",
+    skippedSteps.length > 0 ? "Skipped stages:" : "",
+    ...skippedSteps.map((step) => `- ${step.label}${step.note ? `: ${step.note}` : ""}`),
+    pendingSteps.length > 0 ? "" : "",
+    pendingSteps.length > 0 ? "Pending stages at failure:" : "",
+    ...pendingSteps.map((step) => `- ${step.label}${step.note ? `: ${step.note}` : ""}`),
+    "",
+    "Next action:",
+    `- ${nextAction}`,
+    "- Retry with Draft first if the model is large or Blender is unstable.",
+    "- Reduce max materials or resolution when raw lightmap memory is high.",
+    "- If Blender cannot open the source, reimport from a cleaner GLB/ZIP before rebaking.",
+    "- After a successful retry, inspect thumbnails and run the viewer lighting QA before publishing."
+  ].join("\n");
+}
+
 function sceneFramingReportLines(stats: BundleStats | null): string[] {
   if (!stats) {
     return ["- Scene framing data is not available yet."];
@@ -13108,7 +13178,15 @@ function App() {
                 {bakeError && <p className="error-note">{bakeError}</p>}
                 {lightmapBakeJob && lightmapBakeJob.status !== "idle" && (
                   <div className="job-step-list">
-                    <div className={`job-step-row ${lightmapBakeJob.status === "blocked" ? "failed" : "completed"}`}>
+                    <div
+                      className={`job-step-row ${
+                        lightmapBakeJob.status === "completed"
+                          ? "completed"
+                          : lightmapBakeJob.status === "running"
+                            ? "pending"
+                            : "failed"
+                      }`}
+                    >
                       <div className="job-step-main">
                         <span>{lightmapBakeJob.engine}</span>
                         {lightmapBakeJob.message && <small>{lightmapBakeJob.message}</small>}
@@ -13121,6 +13199,35 @@ function App() {
                       </div>
                       <strong>{lightmapBakeJob.status}</strong>
                     </div>
+                    {(lightmapBakeJob.status === "blocked" || lightmapBakeJob.status === "failed") && (
+                      <div className="bake-failure-card">
+                        <div>
+                          <strong>{lightmapBakeJob.status === "blocked" ? "Bake blocked before output" : "Bake failed before output"}</strong>
+                          <p>
+                            {lightmapBakeJob.message ??
+                              "The bake did not produce a usable lightmapped scene. Copy the report before changing settings."}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="button secondary compact-button"
+                          onClick={() =>
+                            void copyText(
+                              lightmapBakeFailureReportText({
+                                projectId: activeProjectId,
+                                settings: bakeSettings,
+                                preflightIssues: bakePreflightIssues,
+                                blenderTool,
+                                job: lightmapBakeJob
+                              })
+                            )
+                          }
+                        >
+                          <Copy size={15} aria-hidden="true" />
+                          Copy Failure Report
+                        </button>
+                      </div>
+                    )}
                     {lightmapBakeJob.status === "completed" && (
                       <>
                         <div className="stat-grid compact-stat-grid">

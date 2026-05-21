@@ -6985,6 +6985,35 @@ button.list-row {
   color: #7b4c00;
 }
 
+.bake-failure-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #f0bdc5;
+  border-radius: 8px;
+  color: #8f1e2b;
+  background: #fff1f3;
+}
+
+.bake-failure-card > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.bake-failure-card strong,
+.bake-failure-card p {
+  margin: 0;
+  color: inherit;
+}
+
+.bake-failure-card p {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .bake-preset-note {
   display: flex;
   flex-wrap: wrap;
@@ -7215,6 +7244,7 @@ code {
   .source-qa-heading,
   .source-qa-detail-heading,
   .toggle-grid,
+  .bake-failure-card,
   .bake-setup-board,
   .bake-triage-board,
   .material-setup-board,

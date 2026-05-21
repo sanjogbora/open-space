@@ -380,6 +380,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio/API/Blender bake jobs now expose a denoise toggle and record whether denoise was used in the bake job output.
 - Studio Bake can now copy a lightmap bake plan with current settings, Blender readiness, preflight issues, estimated memory, last bake output, and lightmap thumbnails that need review.
 - Studio Bake can now copy a completed bake QA report with output coverage, suspicious lightmaps, recommended action, and viewer lighting checks.
+- Studio Bake now shows failed or blocked bake jobs as failure cards and can copy a failure report with job stages, preflight state, settings, and retry guidance.
 - Failed Blender/Cycles bakes return the bake job in the API error response so Studio can show the failed stage and job steps.
 
 Current limitations:
