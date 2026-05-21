@@ -4309,6 +4309,64 @@ function App() {
         : navigationZones.filter((zone) => zone.source !== "generated"),
     [navigationZones, showGeneratedNavigationZones]
   );
+  const navigationZoneSetupSteps = useMemo(() => {
+    const activeZones = navigationZones.filter((zone) => zone.enabled !== false);
+    const walkCount = activeZones.filter((zone) => zone.kind === "walk").length;
+    const passCount = activeZones.filter((zone) => zone.kind === "pass").length;
+    const blockCount = activeZones.filter((zone) => zone.kind === "block").length;
+    const manualCount = activeZones.filter((zone) => zone.source !== "generated").length;
+    const disconnectedCount = Math.max(0, (navigationCoverageSummary?.routeComponents ?? 0) - 1);
+    return [
+      {
+        id: "walk",
+        label: "Clickable floor",
+        detail: walkCount > 0
+          ? `${walkCount} walk area${walkCount === 1 ? "" : "s"} active`
+          : "Draw where visitors can stand or click.",
+        status: walkCount > 0 ? "ready" : "warning",
+        action: walkCount > 0 ? "Review Walks" : "Draw Walk"
+      },
+      {
+        id: "pass",
+        label: "Door connectors",
+        detail: disconnectedCount > 0
+          ? `${disconnectedCount + 1} route islands need passes`
+          : passCount > 0
+            ? `${passCount} pass area${passCount === 1 ? "" : "s"} active`
+            : "Add passes through doors or tight openings.",
+        status: disconnectedCount > 0 ? "warning" : passCount > 0 ? "ready" : "warning",
+        action: disconnectedCount > 0 || passCount === 0 ? "Draw Pass" : "Passes OK"
+      },
+      {
+        id: "block",
+        label: "Hard boundaries",
+        detail: blockCount > 0
+          ? `${blockCount} blocker${blockCount === 1 ? "" : "s"} keep movement inside`
+          : manifest?.navigation.bounds
+            ? "Add boundary blockers to stop outside movement."
+            : "Set movement bounds before blockers.",
+        status: blockCount > 0 ? "ready" : "warning",
+        action: blockCount > 0 ? "Review Blocks" : manifest?.navigation.bounds ? "Create Boundary" : "Set Bounds"
+      },
+      {
+        id: "auto",
+        label: "Auto detection",
+        detail: generatedNavigationZoneCount > 0
+          ? `${generatedNavigationZoneCount} generated zone${generatedNavigationZoneCount === 1 ? "" : "s"} ${showGeneratedNavigationZones ? "visible" : "hidden"}`
+          : manualCount > 0
+            ? `${manualCount} manual zone${manualCount === 1 ? "" : "s"} active`
+            : "Run Auto Fix or draw zones manually.",
+        status: generatedNavigationZoneCount > 0 || manualCount > 0 ? "active" : "warning",
+        action: generatedNavigationZoneCount > 0 ? "Inspect Auto" : "Auto Fix"
+      }
+    ];
+  }, [
+    generatedNavigationZoneCount,
+    manifest?.navigation.bounds,
+    navigationCoverageSummary?.routeComponents,
+    navigationZones,
+    showGeneratedNavigationZones
+  ]);
   const repairRecommendation = useMemo(
     () => (navigationRepairDraft ? navigationRepairRecommendation(navigationRepairDraft) : null),
     [navigationRepairDraft]
@@ -15082,6 +15140,70 @@ function App() {
                         </div>
                       </div>
                     )}
+                    <div className="zone-setup-board" aria-label="Navigation zone setup health">
+                      {navigationZoneSetupSteps.map((step) => (
+                        <button
+                          key={step.id}
+                          type="button"
+                          className={`zone-setup-card ${step.status}`}
+                          onClick={() => {
+                            if (step.id === "walk") {
+                              if (step.status === "warning") {
+                                setNavigationPaintKind("walk");
+                                setNavigationPaintShape("polygon");
+                                setNavigationPolygonDraft(null);
+                              } else {
+                                setShowNavigationZoneList(true);
+                              }
+                              return;
+                            }
+                            if (step.id === "pass") {
+                              if (step.action === "Draw Pass") {
+                                setNavigationPaintKind("pass");
+                                setNavigationPaintShape("polygon");
+                                setNavigationPolygonDraft(null);
+                              } else {
+                                setShowNavigationZoneList(true);
+                              }
+                              return;
+                            }
+                            if (step.id === "block") {
+                              if (step.action === "Create Boundary") {
+                                createBoundaryBlockZones();
+                              } else if (step.action === "Set Bounds") {
+                                applyBoundsFromGraph();
+                              } else {
+                                setNavigationPaintKind("block");
+                                setNavigationPaintShape("rectangle");
+                                setNavigationPolygonDraft(null);
+                                setShowNavigationZoneList(true);
+                              }
+                              return;
+                            }
+                            if (step.id === "auto") {
+                              if (generatedNavigationZoneCount > 0) {
+                                setShowGeneratedNavigationZones(true);
+                              } else {
+                                autoRepairNavigation();
+                              }
+                            }
+                          }}
+                        >
+                          <span>
+                            {step.status === "ready" ? (
+                              <Check size={15} aria-hidden="true" />
+                            ) : step.id === "auto" ? (
+                              <Wrench size={15} aria-hidden="true" />
+                            ) : (
+                              <MapPin size={15} aria-hidden="true" />
+                            )}
+                          </span>
+                          <strong>{step.label}</strong>
+                          <small>{step.detail}</small>
+                          <em>{step.action}</em>
+                        </button>
+                      ))}
+                    </div>
                     {manifest.navigation.bounds && (
                       <div className="zone-map">
                         <div className="zone-map-heading">

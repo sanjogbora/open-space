@@ -5462,6 +5462,87 @@ button.list-row {
   flex: 1;
 }
 
+.zone-setup-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.zone-setup-card {
+  min-width: 0;
+  min-height: 116px;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  align-content: start;
+  justify-items: start;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #dce5eb;
+  border-radius: 8px;
+  text-align: left;
+  background: #fbfcfd;
+}
+
+.zone-setup-card.ready {
+  border-color: rgba(17, 140, 91, 0.24);
+  background: #f4fbf7;
+}
+
+.zone-setup-card.warning {
+  border-color: rgba(217, 139, 39, 0.32);
+  background: #fff8ed;
+}
+
+.zone-setup-card.active {
+  border-color: rgba(8, 127, 231, 0.24);
+  background: #f1f8ff;
+}
+
+.zone-setup-card span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #087fe7;
+}
+
+.zone-setup-card.ready span {
+  background: #118c5b;
+}
+
+.zone-setup-card.warning span {
+  background: #d98b27;
+}
+
+.zone-setup-card strong,
+.zone-setup-card small,
+.zone-setup-card em {
+  min-width: 0;
+  margin: 0;
+}
+
+.zone-setup-card strong {
+  color: #182026;
+  font-size: 13px;
+}
+
+.zone-setup-card small {
+  color: #52636f;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.zone-setup-card em {
+  color: #087fe7;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .zone-editor-list {
   display: grid;
   gap: 12px;
@@ -6874,6 +6955,7 @@ code {
   .import-symptom-board,
   .diagnostic-action-map,
   .asset-health-roadmap,
+  .zone-setup-board,
   .texture-review-board,
   .repair-diagnosis,
   .repair-playbook,
@@ -6941,6 +7023,7 @@ code {
   .movement-triage-board,
   .material-triage-board,
   .navigation-doorway-board,
+  .zone-setup-board,
   .object-setup-board,
   .object-role-decision-board,
   .object-role-test-card,
