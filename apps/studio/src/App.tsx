@@ -11266,6 +11266,16 @@ function App() {
                     </button>
                   </div>
                   <code>{livePublishedViewerUrl(activeProjectId, publishHistory)}</code>
+                  {activePublishedEntry && activePublishedEntry.qualityGate?.status !== "ready" && (
+                    <div className="publish-next-issue">
+                      <span>Live link is a draft</span>
+                      <strong>{publishEntryDeliveryMode(activePublishedEntry)}</strong>
+                      <p>
+                        This client link still has saved quality-gate issues. Keep it for internal review until the
+                        warnings are fixed or intentionally accepted.
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
             </div>
