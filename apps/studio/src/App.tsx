@@ -494,6 +494,11 @@ interface BundleStats {
       caseMismatch?: boolean;
       actualSource?: string;
     }[];
+    unsafeLocalResources?: readonly {
+      kind: string;
+      source: string;
+      label?: string;
+    }[];
   }[];
 }
 
@@ -17203,6 +17208,7 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
   const caseMismatchedResources = externalResources.filter((resource) => resource.exists && resource.caseMismatch);
+  const unsafeResources = (stats.models ?? []).flatMap((model) => model.unsafeLocalResources ?? []);
   const issueFromDiagnostic = (diagnostic: NonNullable<BundleStats["diagnostics"]>[number]): SourceQaIssue => ({
     title: diagnostic.title,
     detail: diagnostic.message,
@@ -17225,6 +17231,13 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
     severity: "warning",
     symptom: "the texture or buffer may load on Windows but fail after publishing to a case-sensitive CDN or Linux host.",
     action: "Rename the file or re-export the source model so referenced resource paths exactly match the uploaded filenames."
+  }));
+  const unsafeResourceIssues: SourceQaIssue[] = unsafeResources.slice(0, 5).map((resource) => ({
+    title: `Unsafe ${resource.kind}: ${resource.source}`,
+    detail: "The model points to an absolute path or a path outside the uploaded scene folder.",
+    severity: "warning",
+    symptom: "the resource cannot be packaged safely and will fail after upload, optimization, or publishing.",
+    action: "Re-export with resources beside the GLTF/GLB, use relative paths only, or embed textures and buffers in a self-contained GLB."
   }));
   const groupFromDiagnostics = (
     id: string,
@@ -17269,7 +17282,7 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
           "sidecar-texture-decode-failed",
           "relocatable-texture-resources"
         ].includes(code),
-      [...missingResourceIssues, ...caseMismatchIssues]
+      [...missingResourceIssues, ...caseMismatchIssues, ...unsafeResourceIssues]
     ),
     groupFromDiagnostics(
       "framing",
