@@ -62,6 +62,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Views now shows a visual setup board for saved views, walk starts, top view, room links, and walk-zone coverage before raw camera coordinates.
 - Studio Interactions now shows a setup board for detected TV/screen surfaces, mapped video targets, linked video media, and hotspots/links before detailed interaction editing.
 - Studio Interactions now gives the selected hotspot, link, or object toggle a visual readiness card for marker placement, missing content, link URL validity, stale object targets, and viewer testing.
+- Studio Interactions can copy a selected screen, hotspot, link, or object-toggle setup request with the current target/media/marker state, missing fixes, and viewer QA steps.
 - Studio Interactions can place a selected hotspot, link, or object-toggle marker from the selected saved view's look point or camera spot, reducing manual coordinate editing.
 - Studio Interactions now gives the selected video screen a readiness card for screen target, media source, mobile autoplay safety, distance-based performance, and viewer testing.
 - Studio Interactions now labels each video screen in the interaction list as needs target, needs video, check video, or screen ready.

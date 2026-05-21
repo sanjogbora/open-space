@@ -4331,6 +4331,14 @@ button.list-row {
   opacity: 0.78;
 }
 
+.selected-interaction-health-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .health-pill {
   flex: 0 0 auto;
   padding: 5px 8px;
@@ -4459,6 +4467,12 @@ button.list-row {
 }
 
 @media (max-width: 780px) {
+  .selected-interaction-health-heading,
+  .selected-interaction-health-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .interaction-placement-card {
     align-items: stretch;
     flex-direction: column;

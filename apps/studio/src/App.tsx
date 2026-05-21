@@ -84,6 +84,7 @@ type BakePreflightIssue = {
   message: string;
 };
 type HotspotIcon = NonNullable<HotspotInteraction["icon"]>;
+type SetupRequestInteraction = HotspotInteraction | LinkInteraction | ObjectToggleInteraction | VideoTextureInteraction;
 type MovementToggle = "enabled" | "keyboard" | "clickToMove" | "dragLook";
 type NavigationPaintShape = "rectangle" | "polygon";
 type MaterialTextureField = "mapUrl" | "normalMapUrl" | "emissiveMapUrl" | "lightMapUrl";
@@ -3233,6 +3234,97 @@ function publishReadinessReportText({
     "- Open the draft viewer and test WASD, mouse drag, mouse wheel movement, and click-to-move.",
     "- Try entering rooms through doors and verify walls/windows/cupboards reject movement.",
     "- Check top view, room buttons, TV/video screens, hotspots, baked lighting, and mobile performance."
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
+function interactionSetupRequestText({
+  projectId,
+  title,
+  interaction,
+  steps,
+  draftViewerUrl
+}: {
+  projectId: string;
+  title: string;
+  interaction: SetupRequestInteraction;
+  steps: readonly InteractionHealthStep[];
+  draftViewerUrl: string;
+}): string {
+  const warnings = steps.filter((step) => step.status === "warning");
+  const activeSteps = steps.filter((step) => step.status === "active");
+  const kindLabel =
+    interaction.kind === "video-texture"
+      ? "video screen"
+      : interaction.kind === "object-toggle"
+        ? "object toggle"
+        : interaction.kind;
+  const label = interaction.kind === "hotspot" ? interaction.title : interaction.label;
+  const currentSetup =
+    interaction.kind === "video-texture"
+      ? [
+          `- Label: ${interaction.label}`,
+          `- Target mesh: ${interaction.targetMeshName ?? "not selected"}`,
+          `- Target material: ${interaction.targetMaterialName ?? "not selected"}`,
+          `- Video source: ${interaction.source.trim() || "missing"}`,
+          `- Playback: autoplay ${interaction.autoplay !== false ? "on" : "off"}, muted ${
+            interaction.muted !== false ? "on" : "off"
+          }, loop ${interaction.loop !== false ? "on" : "off"}`,
+          `- Trigger distance: ${interaction.triggerDistance ?? 8}m`
+        ]
+      : interaction.kind === "hotspot"
+        ? [
+            `- Title: ${interaction.title || "missing"}`,
+            `- Icon: ${interaction.icon ?? "info"}`,
+            `- Body: ${interaction.body?.trim() ? "present" : "missing"}`,
+            `- Position: ${vec3Summary(interaction.position)}`
+          ]
+        : interaction.kind === "link"
+          ? [
+              `- Label: ${interaction.label || "missing"}`,
+              `- URL: ${interaction.url || "missing"}`,
+              `- Opens in new tab: ${interaction.openInNewTab !== false ? "yes" : "no"}`,
+              `- Position: ${vec3Summary(interaction.position)}`
+            ]
+          : [
+              `- Label: ${interaction.label || "missing"}`,
+              `- Target object id: ${interaction.targetObjectId ?? "not selected"}`,
+              `- Target object name: ${interaction.targetObjectName ?? "not selected"}`,
+              `- Initially visible: ${interaction.initiallyVisible !== false ? "yes" : "no"}`,
+              `- Position: ${vec3Summary(interaction.position)}`
+            ];
+  const fixLines =
+    warnings.length > 0
+      ? warnings.map((step) => `- ${step.label}: ${step.detail} Action: ${step.action}`)
+      : ["- No setup blockers in Studio. Run the viewer test and confirm the interaction behaves visually."];
+
+  const lines = [
+    `Open Space interaction setup request - ${title}`,
+    `Project: ${projectId}`,
+    `Generated: ${new Date().toISOString()}`,
+    `Draft viewer: ${draftViewerUrl}`,
+    "",
+    `Interaction: ${label || interaction.id}`,
+    `Kind: ${kindLabel}`,
+    `ID: ${interaction.id}`,
+    "",
+    "Current setup:",
+    ...currentSetup,
+    "",
+    "Fix needed:",
+    ...fixLines,
+    ...(activeSteps.length > 0 ? [""] : []),
+    ...activeSteps.map((step) => `- Viewer check: ${step.detail}`),
+    "",
+    "Visual QA steps:",
+    "- In Studio, open Interactions and select this item.",
+    "- Use the readiness card first; only edit numeric fields when the visual card still shows a warning.",
+    "- Save, open the viewer, and test from at least two camera views.",
+    interaction.kind === "video-texture"
+      ? "- Confirm the video appears on the intended TV/screen surface, is muted for mobile autoplay, loops if required, and pauses when far away."
+      : "- Confirm the marker appears in the intended spot, does not hide behind geometry, and opens or toggles the expected content.",
+    "- Test once on mobile width before publishing."
   ];
 
   return lines.filter(Boolean).join("\n");
@@ -11706,7 +11798,21 @@ function App() {
                   </button>
                 </div>
 
-                <InteractionHealthBoard title="Hotspot readiness" steps={selectedInteractionHealthSteps} />
+                <InteractionHealthBoard
+                  title="Hotspot readiness"
+                  steps={selectedInteractionHealthSteps}
+                  onCopyRequest={() =>
+                    void copyText(
+                      interactionSetupRequestText({
+                        projectId: activeProjectId,
+                        title: manifest.branding.title,
+                        interaction: selectedHotspot,
+                        steps: selectedInteractionHealthSteps,
+                        draftViewerUrl: viewerUrl(activeProjectId)
+                      })
+                    )
+                  }
+                />
                 <InteractionPlacementCard
                   selectedView={selectedView}
                   onUsePosition={applySelectedInteractionPosition}
@@ -11782,7 +11888,21 @@ function App() {
                   </button>
                 </div>
 
-                <InteractionHealthBoard title="Link readiness" steps={selectedInteractionHealthSteps} />
+                <InteractionHealthBoard
+                  title="Link readiness"
+                  steps={selectedInteractionHealthSteps}
+                  onCopyRequest={() =>
+                    void copyText(
+                      interactionSetupRequestText({
+                        projectId: activeProjectId,
+                        title: manifest.branding.title,
+                        interaction: selectedLink,
+                        steps: selectedInteractionHealthSteps,
+                        draftViewerUrl: viewerUrl(activeProjectId)
+                      })
+                    )
+                  }
+                />
                 <InteractionPlacementCard
                   selectedView={selectedView}
                   onUsePosition={applySelectedInteractionPosition}
@@ -11851,7 +11971,21 @@ function App() {
                   </button>
                 </div>
 
-                <InteractionHealthBoard title="Object toggle readiness" steps={selectedInteractionHealthSteps} />
+                <InteractionHealthBoard
+                  title="Object toggle readiness"
+                  steps={selectedInteractionHealthSteps}
+                  onCopyRequest={() =>
+                    void copyText(
+                      interactionSetupRequestText({
+                        projectId: activeProjectId,
+                        title: manifest.branding.title,
+                        interaction: selectedObjectToggle,
+                        steps: selectedInteractionHealthSteps,
+                        draftViewerUrl: viewerUrl(activeProjectId)
+                      })
+                    )
+                  }
+                />
                 <InteractionPlacementCard
                   selectedView={selectedView}
                   onUsePosition={applySelectedInteractionPosition}
@@ -11941,7 +12075,21 @@ function App() {
                   </button>
                 </div>
 
-                <InteractionHealthBoard title="Video screen readiness" steps={selectedVideoTextureHealthSteps} />
+                <InteractionHealthBoard
+                  title="Video screen readiness"
+                  steps={selectedVideoTextureHealthSteps}
+                  onCopyRequest={() =>
+                    void copyText(
+                      interactionSetupRequestText({
+                        projectId: activeProjectId,
+                        title: manifest.branding.title,
+                        interaction: selectedVideoTexture,
+                        steps: selectedVideoTextureHealthSteps,
+                        draftViewerUrl: viewerUrl(activeProjectId)
+                      })
+                    )
+                  }
+                />
 
                 {videoSurfaceCandidates.length > 0 && (
                   <div className="surface-mapper">
@@ -19391,10 +19539,14 @@ function AssetHealth({
 
 function InteractionHealthBoard({
   title,
-  steps
+  steps,
+  onCopyRequest,
+  requestLabel = "Copy Setup"
 }: {
   title: string;
   steps: readonly InteractionHealthStep[];
+  onCopyRequest?: () => void;
+  requestLabel?: string;
 }) {
   if (steps.length === 0) {
     return null;
@@ -19411,9 +19563,17 @@ function InteractionHealthBoard({
               : "Ready for viewer testing"}
           </small>
         </div>
-        <span className={needsFixCount > 0 ? "health-pill warning" : "health-pill ready"}>
-          {needsFixCount > 0 ? "Fix" : "Ready"}
-        </span>
+        <div className="selected-interaction-health-actions">
+          {onCopyRequest && (
+            <button type="button" className="button secondary compact-button" onClick={onCopyRequest}>
+              <Copy size={14} aria-hidden="true" />
+              {requestLabel}
+            </button>
+          )}
+          <span className={needsFixCount > 0 ? "health-pill warning" : "health-pill ready"}>
+            {needsFixCount > 0 ? "Fix" : "Ready"}
+          </span>
+        </div>
       </div>
       <div className="selected-interaction-health-grid">
         {steps.map((step) => (
