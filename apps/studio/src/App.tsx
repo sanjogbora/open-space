@@ -9114,6 +9114,9 @@ function App() {
   const openPublishWorkflow = () => {
     openStudioVisualTarget("publish", ".client-share-board, .publish-handoff-board, .publish-readiness-list");
   };
+  const openSourceReviewWorkflow = () => {
+    openStudioVisualTarget("import", ".source-qa-card, .diagnostic-action-map, .diagnostic-list");
+  };
   const openVariantsWorkflow = () => {
     const targetVariant =
       materialVariantInteractions.find((interaction) => !interaction.targetMaterialName && !interaction.targetMeshName) ??
@@ -9246,7 +9249,7 @@ function App() {
       return;
     }
     if (action === "review") {
-      openStudioVisualTarget("overview", ".diagnostic-list");
+      openSourceReviewWorkflow();
       return;
     }
     void saveAndOpenViewer(viewerUrl(activeProjectId));
@@ -9573,7 +9576,7 @@ function App() {
                   repairState={repairState}
                   onCopy={() => void copyText(sourceQaPlanText(bundleStats, activeProjectId))}
                   onRepair={() => void repairImport()}
-                  onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })}
+                  onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth", block: "center" })}
                 />
               )}
               <div className="import-symptom-board" aria-label="Import symptom fixes">
@@ -9584,7 +9587,7 @@ function App() {
                     className={`import-symptom-card ${step.status}`}
                     onClick={() => {
                       if (step.id === "source") {
-                        document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                        openSourceReviewWorkflow();
                         return;
                       }
                       if (step.id === "framing") {
@@ -9657,6 +9660,7 @@ function App() {
                 onNavigation={openNavigationWorkflow}
                 onRooms={openRoomsWorkflow}
                 onInteractions={openInteractionsWorkflow}
+                onReviewDiagnostics={openSourceReviewWorkflow}
                 pendingTextureSuggestionCount={pendingMaterialTextureSuggestionCount}
                 reviewTextureSuggestionCount={reviewMaterialTextureSuggestionCount}
                 onApplyTextureSuggestions={applyMaterialTextureSuggestions}
@@ -9679,7 +9683,7 @@ function App() {
                 onOptimize={openOptimizationWorkflow}
                 onObjects={openObjectsWorkflow}
                 onPublish={openPublishWorkflow}
-                onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })}
+                onReviewDiagnostics={openSourceReviewWorkflow}
                 onSaveAndTest={() => void saveAndOpenViewer(viewerUrl(activeProjectId))}
                 onSaveAndTestNavigation={() => void saveAndOpenViewer(navigationDebugViewerUrl(activeProjectId))}
                 onCopyReport={() =>
@@ -16559,8 +16563,8 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
     return {
       action,
       title: "Fix the source export",
-      detail: "The model report found an issue that needs the original export, texture ZIP, or source model to be corrected.",
-      button: "Review Diagnostics"
+      detail: "Open Source QA first, then use the raw diagnostics underneath only as evidence for re-export or source-file fixes.",
+      button: "Review Source QA"
     };
   }
   if (action === "environment") {
@@ -17660,6 +17664,7 @@ function ImportNextSteps({
   onNavigation,
   onRooms,
   onInteractions,
+  onReviewDiagnostics,
   pendingTextureSuggestionCount = 0,
   reviewTextureSuggestionCount = 0,
   onApplyTextureSuggestions,
@@ -17680,6 +17685,7 @@ function ImportNextSteps({
   onNavigation: () => void;
   onRooms: () => void;
   onInteractions: () => void;
+  onReviewDiagnostics: () => void;
   pendingTextureSuggestionCount?: number;
   reviewTextureSuggestionCount?: number;
   onApplyTextureSuggestions?: () => void;
@@ -17758,7 +17764,7 @@ function ImportNextSteps({
               : step.action === "bake"
                 ? onBake
               : step.action === "review"
-                ? () => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth" })
+                ? onReviewDiagnostics
                 : onTest;
         return (
           <div key={step.action} className={`import-next-step ${step.action}`}>
@@ -18000,7 +18006,7 @@ function ViewerQaChecklist({
         ? "The GLB/export structure, resources, or saved overrides need source review before repair work is trusted."
         : "No blocking source-export diagnostics are listed for this bundle.",
       status: sourceIssue && errorCodes.has(sourceIssue) ? "blocked" : sourceIssue ? "warn" : "ready",
-      button: sourceIssue ? "Review Diagnostics" : "Open Viewer",
+      button: sourceIssue ? "Review Source QA" : "Open Viewer",
       onClick: sourceIssue ? onReviewDiagnostics : onSaveAndTest
     },
     {
@@ -18170,7 +18176,7 @@ function ViewerQaChecklist({
               {check.button === "Open Interactions" && <Video size={15} aria-hidden="true" />}
               {check.button === "Open Optimization" && <Activity size={15} aria-hidden="true" />}
               {check.button === "Open Publish" && <ExternalLink size={15} aria-hidden="true" />}
-              {check.button === "Review Diagnostics" && <AlertTriangle size={15} aria-hidden="true" />}
+              {check.button === "Review Source QA" && <AlertTriangle size={15} aria-hidden="true" />}
               {check.button}
             </button>
           </div>
