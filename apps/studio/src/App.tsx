@@ -8412,7 +8412,7 @@ function App() {
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/publish/active`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ version: entry.version })
+        body: JSON.stringify({ version: entry.version, allowDraft: entry.qualityGate?.status !== "ready" })
       });
       if (!response.ok) {
         const error = (await response.json()) as { error?: string };

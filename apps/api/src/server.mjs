@@ -226,6 +226,10 @@ async function activatePublishedVersion(projectId, version, options = {}) {
     throw badRequest(`Published version ${version} is missing from disk.`);
   }
 
+  if (entry.qualityGate?.status && entry.qualityGate.status !== "ready" && options.allowDraft !== true) {
+    throw badRequest(`Published version ${version} is ${entry.qualityGate.status}; pass allowDraft to set it live anyway.`);
+  }
+
   const liveScenePath = `/published/${projectId}/live/scene.manifest.json`;
   const liveViewerUrl = `/?scene=${encodeURIComponent(liveScenePath)}`;
   const activatedAt = options.activatedAt ?? new Date().toISOString();
@@ -3332,7 +3336,11 @@ async function handleRequest(request, response) {
       if (!version) {
         throw badRequest("Missing published version to activate.");
       }
-      sendJson(response, 200, await activatePublishedVersion(activePublishProjectId, version));
+      sendJson(
+        response,
+        200,
+        await activatePublishedVersion(activePublishProjectId, version, { allowDraft: body.allowDraft === true })
+      );
       return;
     }
 
