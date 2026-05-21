@@ -2920,6 +2920,12 @@ button.list-row {
   text-transform: uppercase;
 }
 
+.publish-live-pill.not-live {
+  color: #667681;
+  border-color: #d8e0e5;
+  background: #f8fafb;
+}
+
 .publish-delivery-pill {
   display: inline-flex;
   align-items: center;

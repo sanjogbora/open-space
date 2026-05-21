@@ -11350,8 +11350,10 @@ function App() {
                         <div>
                           <div className="publish-version-title">
                             <strong>{entry.version}</strong>
-                            {publishHistory.activeVersion === entry.version && (
+                            {publishHistory.activeVersion === entry.version ? (
                               <span className="publish-live-pill">Live</span>
+                            ) : (
+                              <span className="publish-live-pill not-live">Not live</span>
                             )}
                             <span className={`publish-delivery-pill ${entry.qualityGate?.status ?? "unknown"}`}>
                               {publishEntryDeliveryMode(entry)}
