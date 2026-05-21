@@ -4972,6 +4972,7 @@ function App() {
   const publishChecks = useMemo<PublishCheck[]>(() => {
     const errorDiagnostics = bundleStats?.diagnostics?.filter((diagnostic) => diagnostic.severity === "error") ?? [];
     const publishBlockers = bundleStats?.publishReadiness?.blockers ?? [];
+    const publishWarnings = bundleStats?.publishReadiness?.warnings ?? [];
     const navigationErrorCount = navigationIssues.filter((issue) => issue.severity === "error").length;
     return [
       {
@@ -5026,6 +5027,17 @@ function App() {
           : bundleStats?.publishReadiness?.warnings[0]
             ? publishActionForIssue(bundleStats.publishReadiness.warnings[0].code) ?? "review"
             : "review"
+      },
+      {
+        id: "client-warnings",
+        label: "Client delivery warnings",
+        ready: Boolean(bundleStats) && publishWarnings.length === 0,
+        detail: !bundleStats
+          ? "Run analysis"
+          : publishWarnings.length > 0
+            ? `${publishWarnings.length} warning(s): ${publishWarnings[0]?.title ?? "Review publish warnings"}`
+            : "No warnings",
+        action: publishWarnings[0] ? publishActionForIssue(publishWarnings[0].code) ?? "review" : "review"
       },
       {
         id: "geometry",
@@ -17497,6 +17509,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
     [
       "missing-normal-attributes",
       "invalid-normal-accessor-shapes",
+      "unbaked-materials",
       "lightmaps-missing-secondary-uvs",
       "some-lightmap-secondary-uvs-missing"
     ].includes(code)
@@ -17919,6 +17932,9 @@ function diagnosticVisualSymptom(code: string): string | null {
       return "the viewer may be showing a large grass/placeholder-colored surface instead of the detailed building materials.";
     }
     return "the model can look much poorer than the reference because material images are not actually assigned.";
+  }
+  if (code === "unbaked-materials") {
+    return "the walkthrough may look flat or real-time-lit instead of having soft baked shadows and interior light depth.";
   }
   if (
     [
@@ -19013,6 +19029,7 @@ function ViewerQaChecklist({
   const lightingCodes = [
     "missing-lightmap-assets",
     "tiny-lightmap-assets",
+    "unbaked-materials",
     "lightmaps-missing-secondary-uvs",
     "some-lightmap-secondary-uvs-missing",
     "missing-normal-attributes",

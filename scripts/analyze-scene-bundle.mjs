@@ -3532,6 +3532,16 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if ((report.materialCount ?? 0) > 0 && (report.lightmapMaterialCount ?? 0) === 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "unbaked-materials",
+      title: "Baked lighting is not linked",
+      message: `${report.materialCount} material(s) are present, but none have linked lightmap textures.`,
+      action: "Use Bake to generate and review lightmaps before treating the scene as a Shapespark-style client walkthrough."
+    });
+  }
+
   if (nonTrianglePrimitiveCount > 0) {
     diagnostics.push({
       severity: "info",
@@ -5019,6 +5029,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "many-large-textures",
     "high-texture-memory-estimate",
     "missing-texture-compression",
+    "unbaked-materials",
     "some-lightmap-secondary-uvs-missing",
     "tiny-lightmap-assets",
     "hotspots-missing-content",

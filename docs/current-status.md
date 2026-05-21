@@ -56,6 +56,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Asset Health now shows a visual texture repair roadmap for path repair, material map assignment, texture memory, and lightmap asset issues before detailed file lists.
 - Asset Health now treats loose texture folders that are not referenced by the model as a source-export problem, with a Copy Request action instead of pushing users toward unsafe manual guessing.
 - Asset Health now marks unbaked material sets as "Not baked yet" and routes users to Bake instead of showing 0/0 lightmaps as a ready state.
+- Analyzer and Studio Publish now flag unbaked material sets as client-delivery warnings, so an unbaked scene no longer looks fully ready just because it has no broken lightmap files.
 - Asset Health and related material/bake guidance now use outcome labels like Review Materials, Review Performance, and Review Bake instead of broad tab names.
 - Room, view, object, and source repair handoffs now use outcome labels like Set Views, Fix Walk Areas, Review Objects, and Review Source QA.
 - Studio Navigation Repair now shows a doorway health board for route islands, door passes, body clearance, blocker overlap, and bounds before the detailed QA list.
