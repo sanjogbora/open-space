@@ -3306,6 +3306,92 @@ function clientViewerTestScriptText({
   return lines.filter(Boolean).join("\n");
 }
 
+function navigationQaBriefText({
+  projectId,
+  manifest,
+  controls,
+  coverage,
+  issues,
+  repairDraft,
+  quickFix,
+  navigationViewerUrl
+}: {
+  projectId: string;
+  manifest: SceneManifest;
+  controls: SceneControlsDocument | null;
+  coverage: NavigationCoverage | null;
+  issues: readonly NavigationQaIssue[];
+  repairDraft: NavigationRepairDraft | null;
+  quickFix: NavigationQuickFix;
+  navigationViewerUrl: string;
+}): string {
+  const movement = controls?.movement;
+  const comfort = movementComfortStatus(controls, manifest);
+  const passIssues = issues.filter((issue) => /pass|door|island|route/i.test(`${issue.id} ${issue.title}`));
+  const blockerIssues = issues.filter((issue) => /block|collision|wall/i.test(`${issue.id} ${issue.title}`));
+  const lines = [
+    `Open Space navigation QA brief - ${projectId}`,
+    `Generated: ${new Date().toISOString()}`,
+    `Navigation debug viewer: ${navigationViewerUrl}`,
+    "",
+    "Current movement feel:",
+    `- ${comfort.label}: ${comfort.detail}`,
+    ...comfort.lines,
+    "",
+    "Navigation coverage:",
+    coverage
+      ? `- Walk areas: ${coverage.walkZones}, door passes: ${coverage.passZones}, blockers: ${coverage.blockZones}, route islands: ${coverage.routeComponents}`
+      : "- Coverage has not been analyzed yet.",
+    coverage
+      ? `- Walk views covered: ${coverage.coveredWalkViews}/${coverage.walkViews}`
+      : "",
+    "",
+    "Movement settings:",
+    movement
+      ? `- Enabled: ${movement.enabled ? "yes" : "no"}, WASD: ${movement.keyboard ? "yes" : "no"}, click-to-move: ${movement.clickToMove ? "yes" : "no"}, drag look: ${movement.dragLook ? "yes" : "no"}`
+      : "- Movement controls are not loaded.",
+    movement ? `- Move speed: ${movement.moveSpeed}, click glide: ${movement.clickMoveSpeed ?? "default"}, wheel glide: ${movement.wheelMoveSpeed ?? "default"}` : "",
+    movement ? `- Body radius: ${movement.collisionRadius ?? 0.28}, step up/down: ${movement.maxStepUp ?? 0.38}/${movement.maxStepDown ?? 0.72}` : "",
+    movement ? `- Height glide: ${movement.floorHeightSmoothing ?? 0.9}, floor bump ignore: ${movement.floorBumpTolerance ?? 0.48}` : "",
+    "",
+    "Recommended next fix:",
+    `- ${quickFix.title}: ${quickFix.detail}`,
+    `- Button: ${quickFix.button}`,
+    "",
+    "Navigation issues:",
+    issues.length > 0 ? `- ${issues.length} issue(s) currently listed.` : "- No navigation QA issues are currently listed.",
+    ...issues.slice(0, 8).map((issue) => `- ${issue.severity.toUpperCase()}: ${issue.title} - ${issue.detail}${issue.action ? ` Action: ${issue.action}` : ""}`),
+    passIssues.length > 0 ? "" : "",
+    passIssues.length > 0 ? "Door/pass focus:" : "",
+    ...passIssues.slice(0, 5).map((issue) => `- ${issue.title}: ${issue.detail}`),
+    blockerIssues.length > 0 ? "" : "",
+    blockerIssues.length > 0 ? "Blocker focus:" : "",
+    ...blockerIssues.slice(0, 5).map((issue) => `- ${issue.title}: ${issue.detail}`),
+    repairDraft ? "" : "",
+    repairDraft ? "Viewer blocked-click context:" : "",
+    repairDraft ? `- Reason: ${repairDraft.reason}` : "",
+    repairDraft?.hint ? `- Viewer hint: ${repairDraft.hint}` : "",
+    repairDraft?.action ? `- Viewer recommended action: ${navigationRepairActionLabel(repairDraft.action)}` : "",
+    repairDraft?.blockerName ? `- Blocker: ${repairDraft.blockerName}${repairDraft.blockerKind ? ` (${repairDraft.blockerKind})` : ""}` : "",
+    repairDraft?.objectName ? `- Object: ${repairDraft.objectName}` : "",
+    repairDraft?.from ? `- From: ${vec3Summary(repairDraft.from)}` : "",
+    repairDraft?.target ? `- Target: ${vec3Summary(repairDraft.target)}` : "",
+    repairDraft?.point ? `- Blocked point: ${vec3Summary(repairDraft.point)}` : "",
+    repairDraft?.bodyRadius ? `- Body radius at failure: ${repairDraft.bodyRadius.toFixed(2)}` : "",
+    "",
+    "Retest script:",
+    "- Save Studio changes, then open the navigation debug viewer.",
+    "- Retry the exact failed click or doorway first; do not judge from a different room.",
+    "- Confirm the blue marker appears only on valid walkable floor.",
+    "- Confirm walls, cupboards, windows, balcony/exterior bounds, and authored blockers reject movement.",
+    "- If the camera bounces over thresholds or rugs, apply Ridge Safe or Steps and retest before repainting zones.",
+    "- If the camera reaches a doorway but cannot enter, inspect route islands, one-sided door passes, blocked passes, and body radius.",
+    "- Return to Repair Center or Controls only after the same failed click is either fixed or explained."
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
 function interactionSetupRequestText({
   projectId,
   title,
@@ -14617,6 +14703,27 @@ function App() {
                         >
                           <Wrench size={16} aria-hidden="true" />
                           Auto Fix
+                        </button>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() =>
+                            void copyText(
+                              navigationQaBriefText({
+                                projectId: activeProjectId,
+                                manifest,
+                                controls: controlsDoc,
+                                coverage: navigationCoverageSummary,
+                                issues: navigationIssues,
+                                repairDraft: navigationRepairDraft,
+                                quickFix: navigationQuickFix,
+                                navigationViewerUrl: navigationDebugViewerUrl(activeProjectId)
+                              })
+                            )
+                          }
+                        >
+                          <Copy size={16} aria-hidden="true" />
+                          Copy QA
                         </button>
                         <button
                           type="button"

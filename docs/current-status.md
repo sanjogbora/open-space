@@ -56,6 +56,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Asset Health and related material/bake guidance now use outcome labels like Review Materials, Review Performance, and Review Bake instead of broad tab names.
 - Room, view, object, and source repair handoffs now use outcome labels like Set Views, Fix Walk Areas, Review Objects, and Review Source QA.
 - Studio Navigation Repair now shows a doorway health board for route islands, door passes, body clearance, blocker overlap, and bounds before the detailed QA list.
+- Studio Controls can now copy a navigation QA brief with movement settings, route-island/door/blocker issues, viewer blocked-click context, and a focused retest script.
 - Studio Controls now shows a movement setup board for movement enablement, WASD, click-to-move, drag/wheel input, and collision/bounds before numeric tuning.
 - Studio Controls now shows a navigation-zone setup board for clickable floor, door connectors, hard boundaries, and auto detection before the zone map and advanced coordinate details.
 - Studio Rooms now shows a room setup board for labels, floorplan regions, linked walk views, top-view bounds, and walk-area syncing before manual room editing.
