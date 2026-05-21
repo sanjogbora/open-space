@@ -16605,16 +16605,16 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
     return {
       action,
       title: "Optimize for web",
-      detail: "Create the optimized GLB artifact, apply compression, refresh stats, and reduce mobile loading risk.",
-      button: "Optimize"
+      detail: "Review the performance board, then create an optimized GLB artifact when the risk is clear.",
+      button: "Review Performance"
     };
   }
   if (action === "bake") {
     return {
       action,
       title: "Improve lighting",
-      detail: "Run the Blender/Cycles lightmap workflow when Blender is installed, then inspect the viewer result.",
-      button: "Bake Lightmaps"
+      detail: "Review bake readiness and lightmap risk before running the Blender/Cycles workflow.",
+      button: "Review Bake"
     };
   }
   if (action === "review") {
@@ -16629,32 +16629,32 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
     return {
       action,
       title: "Fix exterior context",
-      detail: "Open Environment to disable generated ground/enclosure or choose a neutral review preset when the scene opens on grass, terrain, or empty exterior space.",
-      button: "Open Environment"
+      detail: "Review ground, enclosure, sky, and first-frame context when the scene opens on grass, terrain, or empty exterior space.",
+      button: "Fix Context"
     };
   }
   if (action === "materials") {
     return {
       action,
       title: "Repair materials",
-      detail: "Open Materials to inspect missing, loose, broken, or placeholder texture assignments before judging the model quality.",
-      button: "Open Materials"
+      detail: "Inspect missing, loose, broken, or placeholder texture assignments before judging model quality.",
+      button: "Review Materials"
     };
   }
   if (action === "variants") {
     return {
       action,
       title: "Fix finish variants",
-      detail: "Open Variants to target the right mesh/material and add visible color or texture options.",
-      button: "Open Variants"
+      detail: "Target the right mesh/material and add visible color or texture options.",
+      button: "Set Finishes"
     };
   }
   if (action === "views") {
     return {
       action,
       title: "Create views",
-      detail: "Open Views to create a starting camera and client-facing room viewpoints.",
-      button: "Open Views"
+      detail: "Create a starting camera and client-facing room viewpoints.",
+      button: "Set Views"
     };
   }
   if (action === "navigation") {
@@ -16669,24 +16669,24 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
     return {
       action,
       title: "Review object visibility",
-      detail: "Open Objects to check ceilings, roof shells, helper meshes, and object roles that affect top view or movement.",
-      button: "Open Objects"
+      detail: "Check ceilings, roof shells, helper meshes, and object roles that affect top view or movement.",
+      button: "Review Objects"
     };
   }
   if (action === "rooms") {
     return {
       action,
       title: "Map rooms",
-      detail: "Open Rooms to create room labels, floorplan areas, and links from room buttons to saved walk views.",
-      button: "Open Rooms"
+      detail: "Create room labels, floorplan areas, and links from room buttons to saved walk views.",
+      button: "Map Rooms"
     };
   }
   if (action === "interactions") {
     return {
       action,
       title: "Fix interactions",
-      detail: "Open Interactions to finish video screens, hotspots, links, and object toggles.",
-      button: "Open Interactions"
+      detail: "Finish video screens, hotspots, links, and object toggles.",
+      button: "Set Interactions"
     };
   }
   return {
@@ -16983,60 +16983,60 @@ function diagnosticVisualSymptomSummary(diagnostics: readonly { code: string }[]
 
 function repairCenterDestinationForItem(item: RepairCenterItem): string {
   if (item.id === "upload") {
-    return "Opens Import upload.";
+    return "Opens the upload drop zone.";
   }
   if (item.id === "scene-framing") {
-    return "Opens Import scene framing health.";
+    return "Opens scene framing repair.";
   }
   if (item.id === "green-placeholder-material") {
-    return "Opens Materials review.";
+    return "Opens material diagnosis.";
   }
   if (item.id === "texture-connection") {
-    return "Opens Materials texture previews.";
+    return "Opens texture previews.";
   }
   if (item.id === "lightmap-artifacts") {
-    return "Opens Bake lightmap review.";
+    return "Opens lightmap preview.";
   }
   if (item.id === "source-structure") {
-    return "Opens source export diagnostics.";
+    return "Opens Source QA.";
   }
   if (item.action === "repair") {
-    return "Opens Import repair.";
+    return "Opens import repair.";
   }
   if (item.action === "apply-textures" || item.action === "materials") {
-    return "Opens Materials review.";
+    return "Opens material diagnosis.";
   }
   if (item.action === "variants") {
-    return "Opens Variants setup.";
+    return "Opens finish setup.";
   }
   if (item.action === "navigation") {
-    return "Opens Controls zone map.";
+    return "Opens guided navigation repair.";
   }
   if (item.action === "objects") {
-    return "Opens Objects visibility and roles.";
+    return "Opens object visibility and roles.";
   }
   if (item.action === "rooms") {
-    return "Opens Rooms map.";
+    return "Opens room map.";
   }
   if (item.action === "interactions") {
     return "Opens screen planner.";
   }
   if (item.action === "bake") {
-    return "Opens Bake setup.";
+    return "Opens bake readiness.";
   }
   if (item.action === "environment") {
-    return "Opens Environment preview.";
+    return "Opens context preview.";
   }
   if (item.action === "views") {
-    return "Opens Views editor.";
+    return "Opens view setup.";
   }
   if (item.action === "optimize") {
-    return "Opens Optimization review.";
+    return "Opens performance review.";
   }
   if (item.action === "test") {
     return "Opens the viewer.";
   }
-  return "Opens diagnostics.";
+  return "Opens Source QA.";
 }
 
 function repairCenterVerifyForItem(item: RepairCenterItem): string {
