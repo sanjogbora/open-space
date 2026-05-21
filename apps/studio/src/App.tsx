@@ -4054,6 +4054,7 @@ function App() {
   const [publishState, setPublishState] = useState<PublishState>("idle");
   const [activePublishVersion, setActivePublishVersion] = useState("");
   const [publishError, setPublishError] = useState("");
+  const [publishSuccess, setPublishSuccess] = useState("");
   const [optimizeState, setOptimizeState] = useState<OptimizeState>("idle");
   const [optimizeError, setOptimizeError] = useState("");
   const [bakeState, setBakeState] = useState<BakeState>("idle");
@@ -8374,6 +8375,7 @@ function App() {
 
     setPublishState("publishing");
     setPublishError("");
+    setPublishSuccess("");
     try {
       const saved = await persistDraft();
       if (!saved) {
@@ -8389,6 +8391,8 @@ function App() {
         throw new Error(error.error ?? `Publish failed with ${response.status}.`);
       }
       const result = (await response.json()) as {
+        entry: PublishEntry;
+        active: { version: string } | null;
         publishHistory: PublishHistoryDocument;
       };
       setPublishHistory(result.publishHistory);
@@ -8409,10 +8413,17 @@ function App() {
         })
       );
       setPublishState("done");
+      const deliveryMode = publishEntryDeliveryMode(result.entry);
+      setPublishSuccess(
+        result.active
+          ? `${deliveryMode} version ${result.entry.version} is now the live client link.`
+          : `${deliveryMode} version ${result.entry.version} was created for internal QA and is not live yet. Use Set Draft Live only after review.`
+      );
       setNotice("saved");
     } catch (error) {
       setPublishState("error");
       setPublishError(error instanceof Error ? error.message : "Publish failed.");
+      setPublishSuccess("");
     }
   };
 
@@ -8431,6 +8442,7 @@ function App() {
     }
     setActivePublishVersion(entry.version);
     setPublishError("");
+    setPublishSuccess("");
     try {
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/publish/active`, {
         method: "POST",
@@ -8445,6 +8457,7 @@ function App() {
         publishHistory: PublishHistoryDocument;
       };
       setPublishHistory(result.publishHistory);
+      setPublishSuccess(`${publishEntryDeliveryMode(entry)} version ${entry.version} is now the live client link.`);
       setNotice("saved");
     } catch (error) {
       setPublishError(error instanceof Error ? error.message : "Could not set live version.");
@@ -11166,6 +11179,7 @@ function App() {
               </div>
 
               {publishError && <p className="error-note">{publishError}</p>}
+              {publishSuccess && <p className="success-note">{publishSuccess}</p>}
 
               <div className="publish-readiness-list" aria-label="Publish readiness">
                 {publishChecks.map((check) => (
