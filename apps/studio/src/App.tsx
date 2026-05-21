@@ -8294,7 +8294,7 @@ function App() {
     if (material) {
       setSelectedMaterialId(material.id);
     }
-    setSelectedTab("materials");
+    openStudioVisualTarget("materials", ".material-diagnosis-card, .texture-candidate-panel, .material-preview-strip");
     setRepairSummary(
       `Review ${suggestion.materialName} ${materialTextureFieldLabels[suggestion.field]} using ${suggestion.source}.`
     );
@@ -9599,7 +9599,7 @@ function App() {
                           applyMaterialTextureSuggestions();
                           return;
                         }
-                        setSelectedTab("materials");
+                        openMaterialsWorkflow();
                         return;
                       }
                       if (step.id === "movement") {
@@ -11135,7 +11135,7 @@ function App() {
                           syncRoomsFromViews();
                           return;
                         }
-                        setSelectedTab("views");
+                        openViewsWorkflow();
                         return;
                       }
                       if (step.id === "bounds") {
@@ -11217,7 +11217,7 @@ function App() {
                             syncRoomsFromViews();
                             return;
                           }
-                          setSelectedTab("views");
+                          openViewsWorkflow();
                           return;
                         }
                         if (step.id === "map") {
@@ -14469,7 +14469,7 @@ function App() {
                                 className="button secondary"
                                 onClick={() => {
                                   setSelectedObjectId(navigationRepairObjectMatch.object.id);
-                                  setSelectedTab("objects");
+                                  openStudioVisualTarget("objects", ".object-review-tools, .object-detail");
                                 }}
                               >
                                 Open Object
@@ -14494,7 +14494,7 @@ function App() {
                                 onClick={() => {
                                   setObjectSearchQuery(navigationRepairDraft.objectName ?? "");
                                   setObjectListFilter("all");
-                                  setSelectedTab("objects");
+                                  openStudioVisualTarget("objects", ".object-setup-board, .object-review-tools");
                                 }}
                               >
                                 Review Object

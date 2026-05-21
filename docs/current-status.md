@@ -350,6 +350,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import can now copy a source QA handoff with malformed GLB, invalid reference, missing resource, stale override, and re-export/repair recommendations.
 - Source/export review actions now open the visual Source QA handoff before raw diagnostics, so malformed or missing-resource uploads get a clearer non-technical triage path.
 - Source QA cards now reveal a selected plain-language issue preview with likely visible symptoms and next actions before users open raw diagnostic evidence.
+- Import, room, material texture, and navigation object-review actions now route to the matching visual repair panels instead of opening broad raw tabs.
 - Studio/API expose Blender/Cycles lightmap bake jobs with quality presets, UV2 generation, generated lightmap assets, and material assignment.
 - Lightmap bake jobs now report generated lightmap URLs, resolutions, byte sizes, total lightmap bytes, and the exported lightmapped scene artifact in Studio.
 - Studio now shows lightmap bake QA checks and thumbnails for generated lightmaps so empty, tiny, incomplete, or low-quality bakes are visible before publish.
