@@ -2396,7 +2396,19 @@ function navigationZonesOverlap(a, b, padding = 0.2) {
   );
 }
 
-function navigationComponents(zones) {
+function navigationZoneConnectionPadding(a, b, bodyRadius = 0.28) {
+  const basePadding = Math.max(0.22, bodyRadius * 1.35);
+  if (a?.kind !== "pass" && b?.kind !== "pass") {
+    return basePadding;
+  }
+  return Math.max(basePadding, Math.min(1.15, bodyRadius * 2.8));
+}
+
+function navigationZonesConnect(a, b, bodyRadius = 0.28) {
+  return navigationZonesOverlap(a, b, navigationZoneConnectionPadding(a, b, bodyRadius));
+}
+
+function navigationComponents(zones, bodyRadius = 0.28) {
   if (zones.length === 0) {
     return [];
   }
@@ -2413,7 +2425,7 @@ function navigationComponents(zones) {
       const current = queue.shift();
       component.push(current);
       for (const candidate of zones) {
-        if (!seen.has(candidate.id) && navigationZonesOverlap(current, candidate)) {
+        if (!seen.has(candidate.id) && navigationZonesConnect(current, candidate, bodyRadius)) {
           seen.add(candidate.id);
           queue.push(candidate);
         }
@@ -2474,8 +2486,8 @@ function createBridgePassZone(from, to, index, cameraHeight) {
   }, "navigation-island-bridge");
 }
 
-function autoBridgePassZones(routeZones, cameraHeight) {
-  const components = navigationComponents(routeZones);
+function autoBridgePassZones(routeZones, cameraHeight, bodyRadius = 0.28) {
+  const components = navigationComponents(routeZones, bodyRadius);
   if (components.length <= 1) {
     return [];
   }
@@ -2598,7 +2610,8 @@ function importedNavigationZones(
   cameraHeight = 1.65,
   views = [],
   modelOffset = [0, 0, 0],
-  offsetDelta = [0, 0, 0]
+  offsetDelta = [0, 0, 0],
+  bodyRadius = 0.28
 ) {
   const preservedZones = Array.isArray(existingZones)
     ? existingZones
@@ -2611,7 +2624,7 @@ function importedNavigationZones(
     ...autoPassZonesBetweenWalkZones(graphZones, cameraHeight)
   ];
   const viewZones = autoWalkZonesForViews(views, [...graphZones, ...passZones, ...preservedZones], bounds, cameraHeight);
-  const bridgeZones = autoBridgePassZones([...graphZones, ...passZones, ...viewZones], cameraHeight);
+  const bridgeZones = autoBridgePassZones([...graphZones, ...passZones, ...viewZones], cameraHeight, bodyRadius);
   const boundaryZones = autoBoundaryBlockZones(bounds, cameraHeight);
   if (graphZones.length > 0) {
     return [...graphZones, ...passZones, ...viewZones, ...bridgeZones, ...boundaryZones, ...preservedZones];
@@ -2655,6 +2668,9 @@ async function resetManifestForUploadedModel(
     readJson(path.join(target, "scene.manifest.json")),
     readJson(path.join(target, "scene.graph.json"))
   ]);
+  const controls = options.resetControls
+    ? defaultControlsDocument
+    : await readJsonDefault(path.join(target, "controls.json"), defaultControlsDocument);
   const rawSceneBounds = combineGraphBounds(graph);
   const rawBounds = graphFocusBounds(graph) ?? rawSceneBounds;
   const modelScale = unitScaleForBounds(rawBounds);
@@ -2665,6 +2681,10 @@ async function resetManifestForUploadedModel(
   const offsetDelta = vectorDelta(modelOffset, previousModelOffset);
   const bounds = scaleBounds(rawBounds, modelScale, modelOffset);
   const cameraHeight = manifest.navigation?.cameraHeight ?? 1.65;
+  const bodyRadius =
+    typeof controls?.movement?.collisionRadius === "number"
+      ? controls.movement.collisionRadius
+      : defaultControlsDocument.movement.collisionRadius;
   const roomCandidates = graphRoomCandidates(graph, modelScale, cameraHeight, modelOffset);
   const walkZoneCandidates = graphWalkZoneCandidates(graph, modelScale, modelOffset);
   const effectiveRoomCandidates =
@@ -2707,7 +2727,8 @@ async function resetManifestForUploadedModel(
     cameraHeight,
     views,
     modelOffset,
-    offsetDelta
+    offsetDelta,
+    bodyRadius
   );
   const roomMapCandidates = [
     ...effectiveRoomCandidates,

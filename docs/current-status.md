@@ -187,6 +187,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Viewer route planning now tolerates small top-view authoring gaps between door/pass zones and adjacent walk patches, then still validates the route with swept collision and step checks before moving.
 - Studio and analyzer route-island QA now use the same small-gap tolerance for door/pass zone connections, reducing false "isolated pass" repairs after a doorway route is already reachable.
 - Viewer and Studio now share one navigation connection-padding helper, reducing future drift between runtime doorway routing and visual Repair Center checks.
+- API import repair and Auto Bridge now use Body Radius-aware pass-zone connection tolerance, so generated doorway repairs better match the viewer and Studio checks.
 - Viewer and Studio now share the same polygon-distance helper for route islands, door-pass overlap, and nearest-edge bridge checks, reducing mismatches between QA and runtime movement.
 - Studio and import diagnostics now name the disconnected walk/pass islands when route zones are split, making doorway repair easier without reading coordinates.
 - Analyzer now warns when walk zones overlap wall/boundary block zones, so Studio can explain why a floor area looks reachable but still refuses movement.
