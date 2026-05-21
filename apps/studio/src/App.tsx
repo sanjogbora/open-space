@@ -19870,6 +19870,7 @@ function AssetHealth({
   const canRunRepair = Boolean(onRepair) && apiConnected && repairState !== "repairing";
   const hasTextureRepairWork = missingResources.length > 0 || missingAssets.length > 0;
   const hasLightmapRepairWork = missingLightmapAssets.length > 0 || tinyLightmapAssets.length > 0;
+  const needsBakePlanning = (stats.materialCount ?? 0) > 0 && (stats.lightmapMaterialCount ?? 0) === 0;
   const hasLooseUnmappedTextures = looseImages.length > 0 && textureSuggestions.length === 0;
   const hasDisconnectedTextureFolder = Boolean(looseTexturesNotReferencedDiagnostic);
   const hasDetails =
@@ -19877,6 +19878,7 @@ function AssetHealth({
     missingAssets.length > 0 ||
     missingResources.length > 0 ||
     hasLightmapRepairWork ||
+    needsBakePlanning ||
     Boolean(highTextureMemoryDiagnostic) ||
     looseImages.length > 0 ||
     hasTextureAssignmentGap ||
@@ -19921,8 +19923,10 @@ function AssetHealth({
       label: "Lightmaps",
       detail: hasLightmapRepairWork
         ? `${missingLightmapAssets.length + tinyLightmapAssets.length} issue${missingLightmapAssets.length + tinyLightmapAssets.length === 1 ? "" : "s"}`
+        : needsBakePlanning
+          ? "Not baked yet"
         : `${stats.lightmapAssetCount ?? 0}/${stats.lightmapMaterialCount ?? 0} linked`,
-      status: hasLightmapRepairWork ? "warning" : "ready",
+      status: hasLightmapRepairWork || needsBakePlanning ? "warning" : "ready",
       action: "Review Bake"
     }
   ];
@@ -19963,7 +19967,7 @@ function AssetHealth({
               (step.id === "paths" && !hasTextureRepairWork) ||
               (step.id === "assignments" && !hasTextureAssignmentGap && textureSuggestions.length === 0) ||
               (step.id === "memory" && !highTextureMemoryDiagnostic) ||
-              (step.id === "lightmaps" && !hasLightmapRepairWork)
+              (step.id === "lightmaps" && !hasLightmapRepairWork && !needsBakePlanning)
             }
             onClick={() => {
               if (step.id === "paths" && hasTextureRepairWork && onRepair) {
@@ -20009,6 +20013,7 @@ function AssetHealth({
       {(hasTextureRepairWork ||
         hasSceneFramingWork ||
         hasLightmapRepairWork ||
+        needsBakePlanning ||
         Boolean(highTextureMemoryDiagnostic) ||
         textureSuggestions.length > 0 ||
         hasLooseUnmappedTextures ||
@@ -20073,6 +20078,12 @@ function AssetHealth({
                 ? `${missingLightmapAssets.length} lightmap file${missingLightmapAssets.length === 1 ? "" : "s"} referenced by Materials are missing from the bundle.`
                 : `${tinyLightmapAssets.length} lightmap file${tinyLightmapAssets.length === 1 ? "" : "s"} look too small to trust.`}{" "}
               Re-run the bake or relink the material lightmap before publishing.
+            </p>
+          )}
+          {needsBakePlanning && !hasLightmapRepairWork && (
+            <p>
+              No baked lightmaps are linked yet. Review Bake before client visual review so the scene can get
+              Shapespark-style soft shadows and stable lighting instead of relying only on real-time lights.
             </p>
           )}
           <div className="asset-health-actions">
