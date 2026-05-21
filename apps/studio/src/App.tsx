@@ -9806,6 +9806,7 @@ function App() {
                     onBake={openBakeWorkflow}
                     onReviewTextureSuggestion={reviewMaterialTextureSuggestion}
                     onCopyPlan={() => void copyText(assetHealthRepairPlanText(bundleStats, activeProjectId))}
+                    onCopyTextureRequest={() => void copyText(assetHealthTextureRequestText(bundleStats, activeProjectId))}
                   />
                   <DiagnosticList
                     diagnostics={bundleStats.diagnostics ?? []}
@@ -18816,6 +18817,57 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
   return lines.filter(Boolean).join("\n");
 }
 
+function assetHealthTextureRequestText(stats: BundleStats, projectId: string): string {
+  const looseImages = stats.looseImages ?? [];
+  const textureSuggestions = stats.materialTextureSuggestions ?? [];
+  const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
+  const missingResources = externalResources.filter((resource) => !resource.exists);
+  const textureDiagnostics = (stats.diagnostics ?? []).filter((diagnostic) =>
+    isTextureConnectionDiagnostic(diagnostic.code) ||
+    [
+      "model-has-no-texture-images",
+      "invalid-texture-references",
+      "textures-without-images",
+      "embedded-texture-decode-failed",
+      "sidecar-texture-decode-failed",
+      "textured-primitives-missing-uvs",
+      "missing-uv-attributes",
+      "invalid-uv-accessor-shapes"
+    ].includes(diagnostic.code)
+  );
+  return [
+    `Open Space texture/source request - ${projectId}`,
+    "",
+    "Please resend the model export so the web walkthrough can preserve the same texture quality as the reference viewer.",
+    "",
+    "What we need:",
+    "- Prefer one self-contained GLB with textures embedded, or a ZIP that keeps the original GLTF/GLB plus its texture folders exactly as exported.",
+    "- Preserve original texture filenames, material names, UVs, and material-to-texture assignments.",
+    "- Avoid generic renamed texture files only, such as gltf_embedded_0.png, unless the model itself still references those files correctly.",
+    "- Include base color, normal, roughness/metalness, emissive, alpha, and any baked/lightmap textures used by the source render.",
+    "",
+    "Detected texture symptoms:",
+    `- Textured materials: ${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0}`,
+    `- Images in model: ${stats.imageCount ?? 0}`,
+    `- Loose texture-folder images: ${looseImages.length}`,
+    `- Missing referenced resources: ${missingResources.length}`,
+    `- Auto texture matches found: ${textureSuggestions.length}`,
+    ...textureDiagnostics.slice(0, 6).map((diagnostic) => `- ${diagnostic.title}: ${diagnostic.message}`),
+    "",
+    looseImages.length > 0 ? "Loose images we received:" : "",
+    ...looseImages.slice(0, 10).map((image) => `- ${image.source} (${formatBytes(image.bytes)})`),
+    missingResources.length > 0 ? "Missing files referenced by the model:" : "",
+    ...missingResources.slice(0, 10).map((resource) => `- ${resource.source}`),
+    textureSuggestions.length > 0 ? "Potential matches Studio found, but these still need visual confirmation:" : "",
+    ...textureSuggestions.slice(0, 10).map(
+      (suggestion) =>
+        `- ${suggestion.materialName}: ${materialTextureFieldLabels[suggestion.field]} may use ${suggestion.source} (${textureSuggestionConfidenceLabel(suggestion.score)})`
+    ),
+    "",
+    "After resending, we will reimport, rerun texture QA, and only then judge materials or publish."
+  ].filter(Boolean).join("\n");
+}
+
 function textureDeliveryPlanText(
   plan: NonNullable<OptimizationDocument["texturePlans"]>[number],
   projectId: string
@@ -18899,7 +18951,8 @@ function AssetHealth({
   onOptimize,
   onBake,
   onReviewTextureSuggestion,
-  onCopyPlan
+  onCopyPlan,
+  onCopyTextureRequest
 }: {
   stats: BundleStats;
   projectId: string;
@@ -18915,6 +18968,7 @@ function AssetHealth({
   onBake?: () => void;
   onReviewTextureSuggestion?: (suggestion: MaterialTextureSuggestion) => void;
   onCopyPlan?: () => void;
+  onCopyTextureRequest?: () => void;
 }) {
   const missingAssets = (stats.assets ?? []).filter((asset) => !asset.exists);
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
@@ -19030,6 +19084,12 @@ function AssetHealth({
           <button type="button" className="button secondary compact-button" onClick={onCopyPlan}>
             <Copy size={15} aria-hidden="true" />
             Copy Plan
+          </button>
+        )}
+        {onCopyTextureRequest && (looseImages.length > 0 || textureSuggestions.length > 0 || hasTextureAssignmentGap) && (
+          <button type="button" className="button secondary compact-button" onClick={onCopyTextureRequest}>
+            <Copy size={15} aria-hidden="true" />
+            Copy Texture Request
           </button>
         )}
       </div>

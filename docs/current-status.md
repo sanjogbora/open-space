@@ -285,6 +285,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio stats now expose the strip-texture count beside texture size/compression, making that visual-risk signal visible without opening diagnostics.
 - Studio Asset Health now surfaces texture assignment coverage and routes weak coverage directly to Materials.
 - Studio Asset Health can now copy a texture repair plan with missing paths, loose images, texture suggestions, lightmap asset issues, and the recommended repair order.
+- Studio Asset Health can now copy a focused texture/source re-export request for loose texture folders, weak material coverage, and auto-mapping cases.
 - Studio Materials now shows loose texture previews with Base/Normal/Emissive/Lightmap assignment buttons and warns when generic embedded filenames need human review.
 - Studio Materials list now shows per-material texture status so users can see assigned maps, ready suggestions, and review-needed matches before opening each material.
 - Studio Materials now shows a selected-material texture decision board for base image, match confidence, filename safety, and baked lighting before raw texture URL fields.
