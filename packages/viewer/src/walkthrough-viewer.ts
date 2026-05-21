@@ -2793,7 +2793,7 @@ export class WalkthroughViewer {
   private navigationMeshesConnect(a: THREE.Mesh, b: THREE.Mesh): boolean {
     const boxA = this.navigationMeshBounds2D(a);
     const boxB = this.navigationMeshBounds2D(b);
-    const padding = Math.max(0.22, this.collisionBodyRadius() * 1.35);
+    const padding = this.navigationMeshConnectionPadding(a, b);
     const boundsMayTouch =
       boxA.minX - padding <= boxB.maxX &&
       boxA.maxX + padding >= boxB.minX &&
@@ -2808,6 +2808,19 @@ export class WalkthroughViewer {
       return polygonDistance2D(footprintA, footprintB) <= padding;
     }
     return true;
+  }
+
+  private navigationMeshConnectionPadding(a: THREE.Mesh, b: THREE.Mesh): number {
+    const bodyRadius = this.collisionBodyRadius();
+    const basePadding = Math.max(0.22, bodyRadius * 1.35);
+    if (!this.navigationMeshIsPass(a) && !this.navigationMeshIsPass(b)) {
+      return basePadding;
+    }
+
+    // Door/pass zones are often drawn from a top view and can miss the walk
+    // patch by a small threshold or frame thickness. Keep the graph tolerant
+    // here, then let swept collision/step checks reject unsafe routes.
+    return Math.max(basePadding, Math.min(1.15, bodyRadius * 2.8));
   }
 
   private navigationMeshIsPass(mesh: THREE.Mesh): boolean {
