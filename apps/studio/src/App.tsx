@@ -17384,7 +17384,9 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
 
 function sourceQaReexportRequestText(projectId: string, group: SourceQaGroup, issues: readonly SourceQaIssue[]): string {
   const selectedIssues = issues.length > 0 ? issues : group.issues;
-  const issueLines = selectedIssues.slice(0, 6).flatMap((issue, index) => [
+  const shownIssues = selectedIssues.slice(0, 6);
+  const hiddenIssueCount = Math.max(0, selectedIssues.length - shownIssues.length);
+  const issueLines = shownIssues.flatMap((issue, index) => [
     `${index + 1}. ${issue.title}`,
     `   Problem: ${issue.detail}`,
     issue.symptom ? `   Visible symptom: ${issue.symptom}` : "",
@@ -17408,6 +17410,9 @@ function sourceQaReexportRequestText(projectId: string, group: SourceQaGroup, is
     "",
     "Detected issues:",
     ...issueLines.filter(Boolean),
+    hiddenIssueCount > 0
+      ? `Plus ${hiddenIssueCount} more issue${hiddenIssueCount === 1 ? "" : "s"} in this Source QA area.`
+      : "",
     "",
     "After resending, we will reimport and rerun Studio QA before editing materials, rooms, navigation, or publishing."
   ].join("\n");
