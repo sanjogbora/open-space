@@ -16196,29 +16196,54 @@ interface SourceQaGroup {
   detail: string;
   count: number;
   severity: "error" | "warning" | "ready";
+  issues: SourceQaIssue[];
+}
+
+interface SourceQaIssue {
+  title: string;
+  detail: string;
+  severity: "error" | "warning";
+  symptom: string | null;
+  action: string | undefined;
 }
 
 function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
   const diagnostics = stats.diagnostics ?? [];
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
+  const issueFromDiagnostic = (diagnostic: NonNullable<BundleStats["diagnostics"]>[number]): SourceQaIssue => ({
+    title: diagnostic.title,
+    detail: diagnostic.message,
+    severity: diagnostic.severity === "error" ? "error" : "warning",
+    symptom: diagnosticVisualSymptom(diagnostic.code),
+    action: diagnostic.action
+  });
+  const missingResourceIssues: SourceQaIssue[] = missingResources.slice(0, 5).map((resource) => ({
+    title: `Missing ${resource.kind}: ${resource.source}`,
+    detail: "The model references this external file, but it is not present in the uploaded bundle.",
+    severity: "warning",
+    symptom: "textures, buffers, or linked model parts may be missing even though the scene opens.",
+    action: "Upload the original ZIP/folder with this resource, or re-export as a GLB with resources embedded."
+  }));
   const groupFromDiagnostics = (
     id: string,
     label: string,
     detail: string,
     matches: (code: string) => boolean,
-    extraCount = 0
+    extraIssues: SourceQaIssue[] = []
   ): SourceQaGroup => {
     const groupDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "info" && matches(diagnostic.code));
+    const issues = [...groupDiagnostics.map(issueFromDiagnostic), ...extraIssues];
     const hasError = groupDiagnostics.some((diagnostic) => diagnostic.severity === "error");
     const hasWarning = groupDiagnostics.some((diagnostic) => diagnostic.severity === "warning");
-    const count = groupDiagnostics.length + extraCount;
+    const count = issues.length;
     return {
       id,
       label,
       detail,
       count,
-      severity: hasError ? "error" : hasWarning || extraCount > 0 ? "warning" : "ready"
+      severity: hasError ? "error" : hasWarning || extraIssues.length > 0 ? "warning" : "ready",
+      issues
     };
   };
 
@@ -16243,7 +16268,7 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
           "sidecar-texture-decode-failed",
           "relocatable-texture-resources"
         ].includes(code),
-      missingResources.length
+      missingResourceIssues
     ),
     groupFromDiagnostics(
       "framing",
@@ -16294,6 +16319,9 @@ function SourceQaSummary({
 }) {
   const groups = sourceQaGroups(stats);
   const issueGroups = groups.filter((group) => group.count > 0);
+  const [selectedGroupId, setSelectedGroupId] = useState(issueGroups[0]?.id ?? groups[0]?.id ?? "");
+  const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? issueGroups[0] ?? groups[0];
+  const selectedIssues = selectedGroup?.issues ?? [];
   const hasErrors = groups.some((group) => group.severity === "error");
   const hasWarnings = groups.some((group) => group.severity === "warning");
   const status = hasErrors ? "error" : hasWarnings ? "warning" : "ready";
@@ -16330,8 +16358,8 @@ function SourceQaSummary({
           <button
             key={group.id}
             type="button"
-            className={`source-qa-item ${group.severity}`}
-            onClick={onReviewDiagnostics}
+            className={`source-qa-item ${group.severity}${selectedGroup?.id === group.id ? " active" : ""}`}
+            onClick={() => setSelectedGroupId(group.id)}
             disabled={group.count === 0}
           >
             <span>{group.count > 0 ? group.count : <Check size={15} aria-hidden="true" />}</span>
@@ -16340,6 +16368,36 @@ function SourceQaSummary({
           </button>
         ))}
       </div>
+      {selectedGroup && selectedGroup.count > 0 && (
+        <div className={`source-qa-detail ${selectedGroup.severity}`}>
+          <div className="source-qa-detail-heading">
+            <div>
+              <span>Selected source issue</span>
+              <strong>{selectedGroup.label}</strong>
+              <p>{selectedGroup.detail}</p>
+            </div>
+            <button type="button" className="button secondary compact-button" onClick={onReviewDiagnostics}>
+              <AlertTriangle size={15} aria-hidden="true" />
+              Raw Evidence
+            </button>
+          </div>
+          <div className="source-qa-issue-list">
+            {selectedIssues.slice(0, 4).map((issue, index) => (
+              <div key={`${selectedGroup.id}-${issue.title}-${index}`} className={`source-qa-issue ${issue.severity}`}>
+                <strong>{issue.title}</strong>
+                <p>{issue.detail}</p>
+                {issue.symptom && <small>Likely symptom: {issue.symptom}</small>}
+                {issue.action && <small>Next action: {issue.action}</small>}
+              </div>
+            ))}
+            {selectedIssues.length > 4 && (
+              <p className="quiet-note">
+                {selectedIssues.length - 4} more issue{selectedIssues.length - 4 === 1 ? "" : "s"} in raw diagnostics.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
