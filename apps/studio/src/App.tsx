@@ -16378,7 +16378,7 @@ function SourceQaSummary({
             </div>
             <button type="button" className="button secondary compact-button" onClick={onReviewDiagnostics}>
               <AlertTriangle size={15} aria-hidden="true" />
-              Raw Evidence
+              Technical Evidence
             </button>
           </div>
           <div className="source-qa-issue-list">
@@ -16392,7 +16392,7 @@ function SourceQaSummary({
             ))}
             {selectedIssues.length > 4 && (
               <p className="quiet-note">
-                {selectedIssues.length - 4} more issue{selectedIssues.length - 4 === 1 ? "" : "s"} in raw diagnostics.
+                {selectedIssues.length - 4} more issue{selectedIssues.length - 4 === 1 ? "" : "s"} in technical diagnostics.
               </p>
             )}
           </div>
@@ -16621,7 +16621,7 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
     return {
       action,
       title: "Fix the source export",
-      detail: "Review Source QA first, then use the raw diagnostics underneath only as evidence for re-export or source-file fixes.",
+      detail: "Review Source QA first, then use the technical diagnostics underneath only as evidence for re-export or source-file fixes.",
       button: "Review Source QA"
     };
   }
@@ -16886,7 +16886,7 @@ function repairCenterVisualFixForAction(action: ImportNextStepAction): string {
   if (action === "repair") {
     return "Use Import health cards to review the visible symptom, then run repair to rebuild bounds, views, rooms, navigation, and missing paths.";
   }
-  return "Use the guided card first; raw diagnostics stay available only when deeper source repair is needed.";
+  return "Use the guided card first; technical diagnostics stay available only when deeper source repair is needed.";
 }
 
 function diagnosticVisualSymptom(code: string): string | null {
@@ -17146,7 +17146,7 @@ function repairCenterChangeForItem(item: RepairCenterItem): string {
   if (item.action === "repair") {
     return "Rebuilds generated bounds, focused views, room regions, navigation, and missing-path repair data.";
   }
-  return "Routes to the relevant review panel without hiding the raw diagnostic evidence.";
+  return "Routes to the relevant review panel without hiding the technical diagnostic evidence.";
 }
 
 function repairCenterRiskForItem(item: RepairCenterItem): { label: string; detail: string; tone: RepairCenterSeverity } {

@@ -49,9 +49,9 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Bake lightmap previews now link directly to the matching material review, with the Materials list filtered to lightmapped materials.
 - Studio Bake now shows a visual setup board for Blender readiness, bake quality, raw lightmap size, preflight issues, and last output before detailed settings.
 - Studio Bake now adds symptom-first cards for missing soft shadows, blank/tiny bake output, heavy bake settings, and Blender/tool setup.
-- Studio Import now summarizes Source QA into visual export-structure, missing-resource, framing, material-reference, and saved-override cards before raw diagnostics.
+- Studio Import now summarizes Source QA into visual export-structure, missing-resource, framing, material-reference, and saved-override cards before technical diagnostics.
 - Studio Import now adds symptom-first cards for blank/partial imports, wrong first view/framing, poor or green visuals, and room-entry movement failures.
-- Studio diagnostics now show grouped visual fix areas and likely user-visible symptoms before the raw diagnostic details.
+- Studio diagnostics now show grouped visual fix areas and likely user-visible symptoms before technical diagnostic details.
 - Asset Health now shows a visual texture repair roadmap for path repair, material map assignment, texture memory, and lightmap asset issues before detailed file lists.
 - Asset Health and related material/bake guidance now use outcome labels like Review Materials, Review Performance, and Review Bake instead of broad tab names.
 - Room, view, object, and source repair handoffs now use outcome labels like Set Views, Fix Walk Areas, Review Objects, and Review Source QA.
@@ -350,8 +350,8 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import now routes navigation-specific diagnostics directly to the guided Controls editor instead of hiding them behind the generic repair action.
 - Studio Import now routes exterior/terrain context diagnostics directly to Environment and visual/texture diagnostics directly to Materials.
 - Studio Import can now copy a source QA handoff with malformed GLB, invalid reference, missing resource, stale override, and re-export/repair recommendations.
-- Source/export review actions now open the visual Source QA handoff before raw diagnostics, so malformed or missing-resource uploads get a clearer non-technical triage path.
-- Source QA cards now reveal a selected plain-language issue preview with likely visible symptoms and next actions before users open raw diagnostic evidence.
+- Source/export review actions now open the visual Source QA handoff before technical diagnostics, so malformed or missing-resource uploads get a clearer non-technical triage path.
+- Source QA cards now reveal a selected plain-language issue preview with likely visible symptoms and next actions before users open technical diagnostic evidence.
 - Import, room, material texture, and navigation object-review actions now route to the matching visual repair panels instead of opening broad raw tabs.
 - Repair Center action labels and destination hints now describe the visual outcome, such as Review Materials, Set Views, Fix Context, and Review Performance, instead of broad tab names.
 - Import Viewer QA checklist actions now use the same outcome-oriented language so users review materials, set views, map rooms, and review performance from the checklist.
