@@ -22,6 +22,7 @@ import {
   Video
 } from "lucide-react";
 import {
+  navigationZoneConnectionPadding,
   pointInPolygon2D,
   pointToPolygonDistance2D,
   polygonDistance2D,
@@ -1763,16 +1764,8 @@ function navigationZonesOverlap(a: NavigationZone, b: NavigationZone, padding = 
   return polygonDistance2D(navigationZoneFootprint(a), navigationZoneFootprint(b)) <= padding;
 }
 
-function navigationZoneConnectionPadding(a: NavigationZone, b: NavigationZone, bodyRadius = 0.28): number {
-  const basePadding = Math.max(0.22, bodyRadius * 1.35);
-  if (a.kind !== "pass" && b.kind !== "pass") {
-    return basePadding;
-  }
-  return Math.max(basePadding, Math.min(1.15, bodyRadius * 2.8));
-}
-
 function navigationZonesConnect(a: NavigationZone, b: NavigationZone, bodyRadius = 0.28): boolean {
-  return navigationZonesOverlap(a, b, navigationZoneConnectionPadding(a, b, bodyRadius));
+  return navigationZonesOverlap(a, b, navigationZoneConnectionPadding(a.kind, b.kind, bodyRadius));
 }
 
 function navigationZoneOutsideBounds(

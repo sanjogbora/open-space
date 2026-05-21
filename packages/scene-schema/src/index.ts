@@ -4,6 +4,7 @@ export type Euler3 = readonly [number, number, number];
 
 export {
   closestPolygonPointPair2D,
+  navigationZoneConnectionPadding,
   pointInPolygon2D,
   pointToPolygonDistance2D,
   pointToSegmentDistance2D,

@@ -21,6 +21,7 @@ import type {
 } from "@walkthrough/scene-schema";
 import {
   closestPolygonPointPair2D,
+  navigationZoneConnectionPadding,
   pointToPolygonDistance2D,
   polygonDistance2D
 } from "@walkthrough/scene-schema";
@@ -2811,16 +2812,14 @@ export class WalkthroughViewer {
   }
 
   private navigationMeshConnectionPadding(a: THREE.Mesh, b: THREE.Mesh): number {
-    const bodyRadius = this.collisionBodyRadius();
-    const basePadding = Math.max(0.22, bodyRadius * 1.35);
-    if (!this.navigationMeshIsPass(a) && !this.navigationMeshIsPass(b)) {
-      return basePadding;
-    }
-
     // Door/pass zones are often drawn from a top view and can miss the walk
     // patch by a small threshold or frame thickness. Keep the graph tolerant
     // here, then let swept collision/step checks reject unsafe routes.
-    return Math.max(basePadding, Math.min(1.15, bodyRadius * 2.8));
+    return navigationZoneConnectionPadding(
+      `${a.userData["navigationZoneKind"] ?? ""}`,
+      `${b.userData["navigationZoneKind"] ?? ""}`,
+      this.collisionBodyRadius()
+    );
   }
 
   private navigationMeshIsPass(mesh: THREE.Mesh): boolean {

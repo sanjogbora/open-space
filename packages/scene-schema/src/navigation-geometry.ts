@@ -7,6 +7,18 @@ export interface ClosestPolygonPointPair2D {
   b: Vec2;
 }
 
+export function navigationZoneConnectionPadding(
+  aKind: string | undefined,
+  bKind: string | undefined,
+  bodyRadius = 0.28
+): number {
+  const basePadding = Math.max(0.22, bodyRadius * 1.35);
+  if (aKind !== "pass" && bKind !== "pass") {
+    return basePadding;
+  }
+  return Math.max(basePadding, Math.min(1.15, bodyRadius * 2.8));
+}
+
 export function pointToSegmentDistance2D(point: Vec2, start: Vec2, end: Vec2): number {
   const segmentX = end[0] - start[0];
   const segmentZ = end[1] - start[1];
