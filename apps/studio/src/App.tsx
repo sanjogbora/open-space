@@ -17525,6 +17525,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "missing-normal-attributes",
       "invalid-normal-accessor-shapes",
       "unbaked-materials",
+      "partial-lightmap-coverage",
       "lightmaps-missing-secondary-uvs",
       "some-lightmap-secondary-uvs-missing"
     ].includes(code)
@@ -17950,6 +17951,9 @@ function diagnosticVisualSymptom(code: string): string | null {
   }
   if (code === "unbaked-materials") {
     return "the walkthrough may look flat or real-time-lit instead of having soft baked shadows and interior light depth.";
+  }
+  if (code === "partial-lightmap-coverage") {
+    return "some rooms or surfaces may have baked depth while others still look flat or disconnected.";
   }
   if (
     [
@@ -19045,6 +19049,7 @@ function ViewerQaChecklist({
     "missing-lightmap-assets",
     "tiny-lightmap-assets",
     "unbaked-materials",
+    "partial-lightmap-coverage",
     "lightmaps-missing-secondary-uvs",
     "some-lightmap-secondary-uvs-missing",
     "missing-normal-attributes",
@@ -19903,6 +19908,8 @@ function AssetHealth({
   const hasTextureRepairWork = missingResources.length > 0 || missingAssets.length > 0;
   const hasLightmapRepairWork = missingLightmapAssets.length > 0 || tinyLightmapAssets.length > 0;
   const needsBakePlanning = (stats.materialCount ?? 0) > 0 && (stats.lightmapMaterialCount ?? 0) === 0;
+  const hasPartialLightmapCoverage =
+    (stats.lightmapMaterialCount ?? 0) > 0 && (stats.lightmapMaterialCount ?? 0) < (stats.materialCount ?? 0);
   const hasLooseUnmappedTextures = looseImages.length > 0 && textureSuggestions.length === 0;
   const hasDisconnectedTextureFolder = Boolean(looseTexturesNotReferencedDiagnostic);
   const hasDetails =
@@ -19911,6 +19918,7 @@ function AssetHealth({
     missingResources.length > 0 ||
     hasLightmapRepairWork ||
     needsBakePlanning ||
+    hasPartialLightmapCoverage ||
     Boolean(highTextureMemoryDiagnostic) ||
     looseImages.length > 0 ||
     hasTextureAssignmentGap ||
@@ -19957,8 +19965,10 @@ function AssetHealth({
         ? `${missingLightmapAssets.length + tinyLightmapAssets.length} issue${missingLightmapAssets.length + tinyLightmapAssets.length === 1 ? "" : "s"}`
         : needsBakePlanning
           ? "Not baked yet"
+        : hasPartialLightmapCoverage
+          ? `${stats.lightmapMaterialCount ?? 0}/${stats.materialCount ?? 0} baked`
         : `${stats.lightmapAssetCount ?? 0}/${stats.lightmapMaterialCount ?? 0} linked`,
-      status: hasLightmapRepairWork || needsBakePlanning ? "warning" : "ready",
+      status: hasLightmapRepairWork || needsBakePlanning || hasPartialLightmapCoverage ? "warning" : "ready",
       action: "Review Bake"
     }
   ];
@@ -19999,7 +20009,7 @@ function AssetHealth({
               (step.id === "paths" && !hasTextureRepairWork) ||
               (step.id === "assignments" && !hasTextureAssignmentGap && textureSuggestions.length === 0) ||
               (step.id === "memory" && !highTextureMemoryDiagnostic) ||
-              (step.id === "lightmaps" && !hasLightmapRepairWork && !needsBakePlanning)
+              (step.id === "lightmaps" && !hasLightmapRepairWork && !needsBakePlanning && !hasPartialLightmapCoverage)
             }
             onClick={() => {
               if (step.id === "paths" && hasTextureRepairWork && onRepair) {
@@ -20046,6 +20056,7 @@ function AssetHealth({
         hasSceneFramingWork ||
         hasLightmapRepairWork ||
         needsBakePlanning ||
+        hasPartialLightmapCoverage ||
         Boolean(highTextureMemoryDiagnostic) ||
         textureSuggestions.length > 0 ||
         hasLooseUnmappedTextures ||
@@ -20116,6 +20127,12 @@ function AssetHealth({
             <p>
               No baked lightmaps are linked yet. Review Bake before client visual review so the scene can get
               Shapespark-style soft shadows and stable lighting instead of relying only on real-time lights.
+            </p>
+          )}
+          {hasPartialLightmapCoverage && !hasLightmapRepairWork && (
+            <p>
+              {stats.lightmapMaterialCount ?? 0}/{stats.materialCount ?? 0} material(s) currently have baked lightmaps.
+              Review Bake and Materials to confirm the remaining unbaked materials are intentional before client delivery.
             </p>
           )}
           <div className="asset-health-actions">

@@ -3540,6 +3540,14 @@ function createDiagnostics(manifest, report, graphs, controls) {
       message: `${report.materialCount} material(s) are present, but none have linked lightmap textures.`,
       action: "Use Bake to generate and review lightmaps before treating the scene as a Shapespark-style client walkthrough."
     });
+  } else if ((report.lightmapMaterialCount ?? 0) > 0 && (report.lightmapMaterialCount ?? 0) < (report.materialCount ?? 0)) {
+    diagnostics.push({
+      severity: "warning",
+      code: "partial-lightmap-coverage",
+      title: "Some materials are not baked",
+      message: `${report.lightmapMaterialCount}/${report.materialCount} material(s) have linked lightmap textures.`,
+      action: "Review Bake and Materials to confirm unbaked glass, video, or helper materials are intentional before client delivery."
+    });
   }
 
   if (nonTrianglePrimitiveCount > 0) {
@@ -5030,6 +5038,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "high-texture-memory-estimate",
     "missing-texture-compression",
     "unbaked-materials",
+    "partial-lightmap-coverage",
     "some-lightmap-secondary-uvs-missing",
     "tiny-lightmap-assets",
     "hotspots-missing-content",
