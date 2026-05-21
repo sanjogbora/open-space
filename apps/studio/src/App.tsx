@@ -5311,9 +5311,11 @@ function App() {
         label: "4. Test as client",
         detail: hasLiveVersion
           ? "Open the live viewer and test movement, rooms, top view, screens, lighting, and mobile."
-          : "Use the published or draft viewer only after the live link is selected.",
+          : hasPublishedVersion
+            ? "Open the latest published draft exactly as a reviewer would see it before setting it live."
+            : "Use the editable draft viewer until a published version exists.",
         status: hasLiveVersion && !hasBlockingPublishErrors && !hasPublishWarnings ? "ready" : hasLiveVersion ? "active" : "todo",
-        actionLabel: hasLiveVersion ? "Open Live Viewer" : "Open Draft Viewer"
+        actionLabel: hasLiveVersion ? "Open Live Viewer" : hasPublishedVersion ? "Open Published Draft" : "Open Draft Viewer"
       }
     ];
   }, [
@@ -10943,8 +10945,11 @@ function App() {
                       (() => {
                         const testViewerUrl = activePublishedEntry
                           ? livePublishedViewerUrl(activeProjectId, publishHistory!)
+                          : latestPublishedEntry
+                            ? publishedViewerUrl(latestPublishedEntry)
                           : viewerUrl(activeProjectId);
-                        const versionLabel = activePublishedEntry?.version ?? "draft";
+                        const testEntry = activePublishedEntry ?? latestPublishedEntry;
+                        const versionLabel = testEntry?.version ?? "draft";
                         return (
                           <div className="client-share-actions">
                             <button
@@ -10957,8 +10962,8 @@ function App() {
                                     title: manifest.branding.clientName ?? manifest.branding.title,
                                     viewerUrl: testViewerUrl,
                                     versionLabel,
-                                    ...(activePublishedEntry
-                                      ? { versionDeliveryMode: publishEntryDeliveryMode(activePublishedEntry) }
+                                    ...(testEntry
+                                      ? { versionDeliveryMode: publishEntryDeliveryMode(testEntry) }
                                       : {}),
                                     manifest,
                                     stats: bundleStats

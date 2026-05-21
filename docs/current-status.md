@@ -374,6 +374,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Live publish metadata now records the active delivery mode, draft activation flag, and saved quality gate in `active-publish.json` and publish history.
 - Publishing a warning-state draft now creates the version without auto-setting it live; the separate Set Draft Live action remains the explicit activation step.
 - Studio Publish now shows a success note that distinguishes client-live publishes from internal draft versions that are not live yet.
+- Studio Publish client-test actions now open the exact published draft URL when a draft version exists but no live link has been selected.
 - Studio Import now treats disconnected loose texture folders as a source-export review issue instead of implying generic repair can always attach them.
 - Studio Import now routes navigation-specific diagnostics directly to the guided Controls editor instead of hiding them behind the generic repair action.
 - Studio Import now routes exterior/terrain context diagnostics directly to Environment and visual/texture diagnostics directly to Materials.
