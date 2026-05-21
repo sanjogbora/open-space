@@ -5058,6 +5058,8 @@ function App() {
   const hasBlockingPublishErrors = publishChecks.some((check) => check.blocking && !check.ready);
   const publishWarningCount = bundleStats?.publishReadiness?.warnings.length ?? 0;
   const hasPublishWarnings = publishWarningCount > 0;
+  const publishPrimaryActionLabel =
+    publishState === "publishing" ? "Publishing" : hasPublishWarnings ? "Publish Draft" : "Publish";
   const firstPublishCheckIssue = publishChecks.find((check) => check.blocking && !check.ready) ?? publishChecks.find((check) => !check.ready);
   const firstPublishGateIssue =
     bundleStats?.publishReadiness?.blockers[0] ?? bundleStats?.publishReadiness?.warnings[0];
@@ -5100,9 +5102,20 @@ function App() {
         label: "Version",
         detail: hasPublishedVersion
           ? `Latest static bundle is ${latestPublishedEntry?.version ?? "ready"}.`
-          : "Create the versioned static bundle clients can open.",
+          : hasPublishWarnings
+            ? "Create a warning-marked draft bundle for internal QA before client delivery."
+            : "Create the versioned static bundle clients can open.",
         status: publishState === "publishing" ? "active" : hasPublishedVersion ? "ready" : hasBlockingPublishErrors ? "blocked" : "todo",
-        actionLabel: publishState === "publishing" ? "Publishing" : hasPublishedVersion ? "Publish Again" : "Publish"
+        actionLabel:
+          publishState === "publishing"
+            ? "Publishing"
+            : hasPublishWarnings
+              ? hasPublishedVersion
+                ? "Publish Draft Again"
+                : "Publish Draft"
+              : hasPublishedVersion
+                ? "Publish Again"
+                : "Publish"
       },
       {
         id: "live",
@@ -5221,9 +5234,11 @@ function App() {
         label: "2. Create version",
         detail: hasPublishedVersion
           ? `Latest bundle: ${latestPublishedEntry?.version ?? "published"}`
-          : "Create a static bundle that can be opened, embedded, or deployed.",
+          : hasPublishWarnings
+            ? "Create a draft bundle for internal QA; warnings remain before client handoff."
+            : "Create a static bundle that can be opened, embedded, or deployed.",
         status: publishState === "publishing" ? "active" : hasPublishedVersion ? "ready" : "todo",
-        actionLabel: publishState === "publishing" ? "Publishing" : "Publish"
+        actionLabel: publishPrimaryActionLabel
       },
       {
         id: "live",
@@ -5253,6 +5268,7 @@ function App() {
     hasPublishWarnings,
     latestPublishedEntry,
     publishHistory?.activeVersion,
+    publishPrimaryActionLabel,
     publishWarningCount,
     publishState
   ]);
@@ -10750,10 +10766,12 @@ function App() {
                 detail="Treat publishing as the final gate after visual, movement, room, interaction, lighting, and mobile checks are clear."
                 steps={[
                   "Fix every blocking readiness row before creating a share link.",
-                  "Publish a versioned bundle and open the generated URL.",
+                  hasPublishWarnings
+                    ? "Publish only as a draft until the warning rows are fixed or explicitly accepted."
+                    : "Publish a versioned bundle and open the generated URL.",
                   "Copy the embed or deployment checklist only after the published viewer passes the same manual test."
                 ]}
-                actionLabel={publishState === "publishing" ? "Publishing" : "Publish"}
+                actionLabel={publishPrimaryActionLabel}
                 actionDisabled={publishState === "publishing" || hasBlockingPublishErrors}
                 onAction={() => void publishProject()}
                 secondaryActionLabel="Repair Center"
@@ -11046,7 +11064,11 @@ function App() {
               <div className="publish-action-card">
                 <div>
                   <strong>{manifest.branding.clientName ?? manifest.branding.title}</strong>
-                  <p className="quiet-note">Save the current Studio edits, then create a static versioned bundle for sharing or embedding.</p>
+                  <p className="quiet-note">
+                    {hasPublishWarnings
+                      ? "Save the current Studio edits, then create a draft static bundle for internal QA before client sharing."
+                      : "Save the current Studio edits, then create a static versioned bundle for sharing or embedding."}
+                  </p>
                   {firstPublishCheckIssue && (
                     <div className={hasBlockingPublishErrors ? "publish-next-issue blocked" : "publish-next-issue"}>
                       <span>{hasBlockingPublishErrors ? "Publish blocked" : "Before client delivery"}</span>
@@ -11062,7 +11084,7 @@ function App() {
                   onClick={() => void publishProject()}
                 >
                   <Globe2 size={16} aria-hidden="true" />
-                  {publishState === "publishing" ? "Publishing" : "Publish"}
+                  {publishPrimaryActionLabel}
                 </button>
               </div>
 
