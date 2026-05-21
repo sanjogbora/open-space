@@ -19842,6 +19842,9 @@ function AssetHealth({
   const genericLooseTextureDiagnostic = (stats.diagnostics ?? []).find(
     (diagnostic) => diagnostic.code === "generic-loose-texture-names"
   );
+  const looseTexturesNotReferencedDiagnostic = (stats.diagnostics ?? []).find(
+    (diagnostic) => diagnostic.code === "loose-textures-not-referenced"
+  );
   const highTextureMemoryDiagnostic = (stats.diagnostics ?? []).find(
     (diagnostic) => diagnostic.code === "high-texture-memory-estimate"
   );
@@ -19868,6 +19871,7 @@ function AssetHealth({
   const hasTextureRepairWork = missingResources.length > 0 || missingAssets.length > 0;
   const hasLightmapRepairWork = missingLightmapAssets.length > 0 || tinyLightmapAssets.length > 0;
   const hasLooseUnmappedTextures = looseImages.length > 0 && textureSuggestions.length === 0;
+  const hasDisconnectedTextureFolder = Boolean(looseTexturesNotReferencedDiagnostic);
   const hasDetails =
     hasSceneFramingWork ||
     missingAssets.length > 0 ||
@@ -19895,11 +19899,13 @@ function AssetHealth({
         ? `${pendingTextureSuggestionCount} safe match${pendingTextureSuggestionCount === 1 ? "" : "es"} ready`
         : reviewTextureSuggestionCount > 0
           ? `${reviewTextureSuggestionCount} match${reviewTextureSuggestionCount === 1 ? "" : "es"} need review`
+          : hasDisconnectedTextureFolder
+            ? "Texture folder not linked"
           : hasTextureAssignmentGap
             ? `${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0} material(s) textured`
             : "Coverage looks usable",
       status: pendingTextureSuggestionCount > 0 ? "active" : reviewTextureSuggestionCount > 0 || hasTextureAssignmentGap ? "warning" : "ready",
-      action: pendingTextureSuggestionCount > 0 ? "Apply Matches" : "Review Materials"
+      action: pendingTextureSuggestionCount > 0 ? "Apply Matches" : hasDisconnectedTextureFolder ? "Copy Request" : "Review Materials"
     },
     {
       id: "memory",
@@ -19969,6 +19975,10 @@ function AssetHealth({
                   onApplyTextureSuggestions();
                   return;
                 }
+                if (hasDisconnectedTextureFolder && onCopyTextureRequest) {
+                  onCopyTextureRequest();
+                  return;
+                }
                 onMaterials?.();
                 return;
               }
@@ -20025,7 +20035,15 @@ function AssetHealth({
               the model ZIP or texture folder so matching files can be copied into place.
             </p>
           )}
-          {hasTextureAssignmentGap && !hasTextureRepairWork && (
+          {hasDisconnectedTextureFolder && !hasTextureRepairWork && (
+            <p>
+              {looseTexturesNotReferencedDiagnostic?.message ??
+                "A texture folder was uploaded, but the active model does not point to those images."}{" "}
+              Copy the texture request and ask for the original export with material-to-texture links preserved before
+              spending time on manual assignments.
+            </p>
+          )}
+          {hasTextureAssignmentGap && !hasTextureRepairWork && !hasDisconnectedTextureFolder && (
             <p>
               {textureAssignmentDiagnostic?.message ??
                 `${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0} material(s) currently use texture maps.`}{" "}
@@ -20041,7 +20059,7 @@ function AssetHealth({
                 : `${appliedTextureSuggestionCount} texture match${appliedTextureSuggestionCount === 1 ? "" : "es"} already assigned. Review the material previews before opening the viewer.`}
             </p>
           )}
-          {!hasTextureRepairWork && textureSuggestions.length === 0 && hasLooseUnmappedTextures && (
+          {!hasTextureRepairWork && textureSuggestions.length === 0 && hasLooseUnmappedTextures && !hasDisconnectedTextureFolder && (
             <p>
               {genericLooseTextureDiagnostic?.message ??
                 "Texture files are present, but the model does not reference them clearly."}{" "}
