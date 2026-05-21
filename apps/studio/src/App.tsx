@@ -3204,7 +3204,9 @@ function publishReadinessReportText({
   stats,
   publishChecks,
   draftViewerUrl,
-  liveViewerUrl
+  liveViewerUrl,
+  liveVersion,
+  liveDeliveryMode
 }: {
   projectId: string;
   title: string;
@@ -3213,6 +3215,8 @@ function publishReadinessReportText({
   publishChecks: readonly PublishCheck[];
   draftViewerUrl: string;
   liveViewerUrl?: string;
+  liveVersion?: string;
+  liveDeliveryMode?: string;
 }): string {
   const blockers = stats?.publishReadiness?.blockers ?? [];
   const warnings = stats?.publishReadiness?.warnings ?? [];
@@ -3223,6 +3227,11 @@ function publishReadinessReportText({
     `Generated: ${new Date().toISOString()}`,
     `Draft viewer: ${draftViewerUrl}`,
     liveViewerUrl ? `Live viewer: ${liveViewerUrl}` : "",
+    liveVersion ? `Live version: ${liveVersion}` : "",
+    liveDeliveryMode ? `Live delivery mode: ${liveDeliveryMode}` : "",
+    liveDeliveryMode && liveDeliveryMode !== "Client-ready"
+      ? "Live sharing note: Treat the live link as an internal draft until warnings are fixed or explicitly accepted."
+      : "",
     "",
     "Publish gate:",
     `- Status: ${stats?.publishReadiness?.status ?? "not analyzed"}`,
@@ -3275,6 +3284,7 @@ function clientViewerTestScriptText({
   title,
   viewerUrl,
   versionLabel,
+  versionDeliveryMode,
   manifest,
   stats
 }: {
@@ -3282,6 +3292,7 @@ function clientViewerTestScriptText({
   title: string;
   viewerUrl: string;
   versionLabel: string;
+  versionDeliveryMode?: string;
   manifest: SceneManifest;
   stats: BundleStats | null;
 }): string {
@@ -3297,6 +3308,7 @@ function clientViewerTestScriptText({
     `Open Space client viewer test - ${title}`,
     `Project: ${projectId}`,
     `Version: ${versionLabel}`,
+    versionDeliveryMode ? `Delivery mode: ${versionDeliveryMode}` : "",
     `Generated: ${new Date().toISOString()}`,
     `Viewer URL: ${viewerUrl}`,
     "",
@@ -10788,8 +10800,12 @@ function App() {
                         stats: bundleStats,
                         publishChecks,
                         draftViewerUrl: viewerUrl(activeProjectId),
-                        ...(publishHistory?.activeVersion
-                          ? { liveViewerUrl: livePublishedViewerUrl(activeProjectId, publishHistory) }
+                        ...(activePublishedEntry && publishHistory
+                          ? {
+                              liveViewerUrl: livePublishedViewerUrl(activeProjectId, publishHistory),
+                              liveVersion: activePublishedEntry.version,
+                              liveDeliveryMode: publishEntryDeliveryMode(activePublishedEntry)
+                            }
                           : {})
                       })
                     )
@@ -10852,8 +10868,12 @@ function App() {
                                   stats: bundleStats,
                                   publishChecks,
                                   draftViewerUrl: viewerUrl(activeProjectId),
-                                  ...(publishHistory?.activeVersion
-                                    ? { liveViewerUrl: livePublishedViewerUrl(activeProjectId, publishHistory) }
+                                  ...(activePublishedEntry && publishHistory
+                                    ? {
+                                        liveViewerUrl: livePublishedViewerUrl(activeProjectId, publishHistory),
+                                        liveVersion: activePublishedEntry.version,
+                                        liveDeliveryMode: publishEntryDeliveryMode(activePublishedEntry)
+                                      }
                                     : {})
                                 })
                               )
@@ -10913,6 +10933,9 @@ function App() {
                                     title: manifest.branding.clientName ?? manifest.branding.title,
                                     viewerUrl: testViewerUrl,
                                     versionLabel,
+                                    ...(activePublishedEntry
+                                      ? { versionDeliveryMode: publishEntryDeliveryMode(activePublishedEntry) }
+                                      : {}),
                                     manifest,
                                     stats: bundleStats
                                   })
@@ -10961,8 +10984,12 @@ function App() {
                                   stats: bundleStats,
                                   publishChecks,
                                   draftViewerUrl: viewerUrl(activeProjectId),
-                                  ...(publishHistory?.activeVersion
-                                    ? { liveViewerUrl: livePublishedViewerUrl(activeProjectId, publishHistory) }
+                                  ...(activePublishedEntry && publishHistory
+                                    ? {
+                                        liveViewerUrl: livePublishedViewerUrl(activeProjectId, publishHistory),
+                                        liveVersion: activePublishedEntry.version,
+                                        liveDeliveryMode: publishEntryDeliveryMode(activePublishedEntry)
+                                      }
                                     : {})
                                 })
                               )

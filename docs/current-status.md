@@ -370,6 +370,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Setting a warning or blocked published version as the live link now uses Set Draft Live copy and asks for confirmation before changing the client link.
 - The publish API now also requires an explicit draft override before a warning or blocked published version can become the live client link.
 - Studio Publish now warns directly beside the live URL when the active live client link is still a draft or blocked draft.
+- Copied Publish readiness and client-test reports now include the active live version's delivery mode, so draft warnings survive outside Studio.
 - Studio Import now treats disconnected loose texture folders as a source-export review issue instead of implying generic repair can always attach them.
 - Studio Import now routes navigation-specific diagnostics directly to the guided Controls editor instead of hiding them behind the generic repair action.
 - Studio Import now routes exterior/terrain context diagnostics directly to Environment and visual/texture diagnostics directly to Materials.
