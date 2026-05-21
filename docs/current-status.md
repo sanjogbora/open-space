@@ -380,6 +380,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Import now routes navigation-specific diagnostics directly to the guided Controls editor instead of hiding them behind the generic repair action.
 - Studio Import now routes exterior/terrain context diagnostics directly to Environment and visual/texture diagnostics directly to Materials.
 - Studio Import can now copy a source QA handoff with malformed GLB, invalid reference, missing resource, stale override, and re-export/repair recommendations.
+- Source QA re-export requests now list exact case-mismatched resource paths, catching texture/buffer names that work on Windows but fail on case-sensitive hosting.
 - Source/export review actions now open the visual Source QA handoff before technical diagnostics, so malformed or missing-resource uploads get a clearer non-technical triage path.
 - Source QA cards now reveal a selected plain-language issue preview with likely visible symptoms and next actions before users open technical diagnostic evidence.
 - Source QA cards can now copy a focused re-export request for the selected source/export issue, making it easier to send actionable feedback to whoever created the model.

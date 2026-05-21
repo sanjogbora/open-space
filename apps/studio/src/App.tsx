@@ -491,6 +491,8 @@ interface BundleStats {
       source: string;
       exists: boolean;
       bytes?: number;
+      caseMismatch?: boolean;
+      actualSource?: string;
     }[];
   }[];
 }
@@ -17200,6 +17202,7 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
   const diagnostics = stats.diagnostics ?? [];
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
+  const caseMismatchedResources = externalResources.filter((resource) => resource.exists && resource.caseMismatch);
   const issueFromDiagnostic = (diagnostic: NonNullable<BundleStats["diagnostics"]>[number]): SourceQaIssue => ({
     title: diagnostic.title,
     detail: diagnostic.message,
@@ -17213,6 +17216,15 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
     severity: "warning",
     symptom: "textures, buffers, or linked model parts may be missing even though the scene opens.",
     action: "Upload the original ZIP/folder with this resource, or re-export as a GLB with resources embedded."
+  }));
+  const caseMismatchIssues: SourceQaIssue[] = caseMismatchedResources.slice(0, 5).map((resource) => ({
+    title: `Case mismatch: ${resource.source}`,
+    detail: resource.actualSource
+      ? `The model asks for "${resource.source}", but the uploaded file is named "${resource.actualSource}".`
+      : "The model resource path differs from the uploaded filename only by letter casing.",
+    severity: "warning",
+    symptom: "the texture or buffer may load on Windows but fail after publishing to a case-sensitive CDN or Linux host.",
+    action: "Rename the file or re-export the source model so referenced resource paths exactly match the uploaded filenames."
   }));
   const groupFromDiagnostics = (
     id: string,
@@ -17257,7 +17269,7 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
           "sidecar-texture-decode-failed",
           "relocatable-texture-resources"
         ].includes(code),
-      missingResourceIssues
+      [...missingResourceIssues, ...caseMismatchIssues]
     ),
     groupFromDiagnostics(
       "framing",
