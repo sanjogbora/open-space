@@ -3460,7 +3460,7 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
       ? "2. Upload the original ZIP/texture folder and run Import Repair so missing resources can be copied into the scene bundle."
       : "2. External resource paths do not currently show missing files.",
     sourceDiagnostics.some((diagnostic) => diagnostic.code.includes("material") || diagnostic.code.includes("texture"))
-      ? "3. Open Materials and relink texture/material slots before judging visual quality."
+      ? "3. Review Materials and relink texture/material slots before judging visual quality."
       : "3. Material/texture references do not currently show source-level reference errors.",
     sourceDiagnostics.some((diagnostic) => diagnostic.code.includes("override") || diagnostic.code.includes("navigation-behavior"))
       ? "4. Review Objects after reimport and remove stale overrides or invalid navigation roles."
@@ -5835,7 +5835,7 @@ function App() {
         label: "Baked lighting",
         detail: selectedMaterial.lightMapUrl ? "Lightmap is linked." : "No lightmap on this material.",
         status: selectedMaterial.lightMapUrl ? "ready" : "warning",
-        action: selectedMaterial.lightMapUrl ? "Preview" : "Open Bake"
+        action: selectedMaterial.lightMapUrl ? "Preview" : "Review Bake"
       }
     ];
   }, [selectedMaterial, selectedMaterialTextureCandidates, selectedMaterialTexturePreviews.length]);
@@ -6112,7 +6112,7 @@ function App() {
             ? `${materialFilterCounts.lightmaps} lightmapped material${materialFilterCounts.lightmaps === 1 ? "" : "s"} assigned.`
             : "Bake or relink lightmaps for Shapespark-style lighting.",
         status: materialFilterCounts.lightmaps > 0 ? "ready" : "warning",
-        action: materialFilterCounts.lightmaps > 0 ? "Show Lightmaps" : "Open Bake"
+        action: materialFilterCounts.lightmaps > 0 ? "Show Lightmaps" : "Review Bake"
       }
     ],
     [
@@ -8236,7 +8236,7 @@ function App() {
       setRepairSummary(
         options?.scopeLabel
           ? `No high-confidence texture suggestions are ready in ${options.scopeLabel}. Try All or review weaker matches manually.`
-          : "No high-confidence texture suggestions are ready to apply. Open Materials to review weaker matches manually."
+          : "No high-confidence texture suggestions are ready to apply. Review Materials to check weaker matches manually."
       );
       return;
     }
@@ -8949,7 +8949,7 @@ function App() {
               ? `${visualIssueCount} visual/material issue${visualIssueCount === 1 ? "" : "s"} found.`
               : "Use when textures look missing, flat, or green.",
         status: pendingMaterialTextureSuggestionCount > 0 ? "active" : visualIssueCount > 0 ? "warning" : "ready",
-        action: pendingMaterialTextureSuggestionCount > 0 ? "Apply Matches" : "Open Materials"
+        action: pendingMaterialTextureSuggestionCount > 0 ? "Apply Matches" : "Review Materials"
       },
       {
         id: "movement",
@@ -17322,7 +17322,7 @@ function buildRepairCenterItems({
       stage: "Visuals",
       title: "Green/plain surface dominates",
       detail: `${greenPlaceholderDiagnostic.title}: ${greenPlaceholderDiagnostic.message}`,
-      visualFix: "Open Materials and compare the dominant green/plain material against loose texture previews. If it is only generated grass or exterior context, switch to Environment after confirming the building materials are correct.",
+      visualFix: "Review Materials and compare the dominant green/plain material against loose texture previews. If it is only generated grass or exterior context, switch to Environment after confirming the building materials are correct.",
       severity: greenPlaceholderDiagnostic.severity === "error" ? "error" : "warning",
       action: "materials",
       button: "Review Surface"
@@ -17338,8 +17338,8 @@ function buildRepairCenterItems({
       detail: `${textureConnectionDiagnostics.length} texture connection issue${textureConnectionDiagnostics.length === 1 ? "" : "s"} found: ${first.title}. ${first.message}`,
       visualFix:
         suggestions > 0
-          ? "Open Materials, compare the suggested texture thumbnails, then apply or reject them surface by surface before judging visual quality."
-          : "Open Materials and inspect loose texture previews. If the filenames are generic or no safe matches appear, ask for the original GLTF ZIP with texture paths preserved or re-export a GLB with embedded textures.",
+          ? "Review Materials, compare the suggested texture thumbnails, then apply or reject them surface by surface before judging visual quality."
+          : "Review Materials and inspect loose texture previews. If the filenames are generic or no safe matches appear, ask for the original GLTF ZIP with texture paths preserved or re-export a GLB with embedded textures.",
       severity: textureConnectionDiagnostics.some((diagnostic) => diagnostic.severity === "error") ? "error" : "warning",
       action: "materials",
       button: suggestions > 0 ? "Review Matches" : "Review Textures"
@@ -17352,7 +17352,7 @@ function buildRepairCenterItems({
       stage: "Lighting",
       title: "Review baked lightmap output",
       detail: `${lightmapArtifactDiagnostics.length} lightmap issue${lightmapArtifactDiagnostics.length === 1 ? "" : "s"} found: ${first.title}. ${first.message}`,
-      visualFix: "Open Bake, inspect the generated lightmap thumbnails for blank/tiny/flat images, then rebake or relink only the failing material lightmaps before publishing.",
+      visualFix: "Review Bake, inspect the generated lightmap thumbnails for blank/tiny/flat images, then rebake or relink only the failing material lightmaps before publishing.",
       severity: lightmapArtifactDiagnostics.some((diagnostic) => diagnostic.severity === "error") ? "error" : "warning",
       action: "bake",
       button: "Review Bake"
@@ -17771,7 +17771,7 @@ function ImportNextSteps({
         return {
           ...step,
           title: "Review texture matches",
-          detail: "Open Materials to inspect lower-confidence texture-folder matches before applying them.",
+          detail: "Review Materials to inspect lower-confidence texture-folder matches before applying them.",
           button: `Review ${reviewTextureSuggestionCount}`
         };
       }
@@ -18570,10 +18570,10 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
       ? `2. Apply ${strongSuggestions.length} high-confidence texture suggestion${strongSuggestions.length === 1 ? "" : "s"} from Asset Health.`
       : "2. No high-confidence automatic texture matches are waiting.",
     reviewSuggestions.length > 0 || looseImages.length > 0
-      ? "3. Open Materials and review loose texture candidates against the rendered material preview before assigning weaker matches."
+      ? "3. Review Materials and compare loose texture candidates against the rendered material preview before assigning weaker matches."
       : "3. Materials do not currently need manual loose-texture review.",
     missingLightmapAssets.length > 0 || tinyLightmapAssets.length > 0
-      ? "4. Open Bake and re-run or relink lightmaps before publishing."
+      ? "4. Review Bake and re-run or relink lightmaps before publishing."
       : "4. Lightmap asset links do not show missing or tiny file issues.",
     "5. Save changes, reopen the viewer, and compare the model against the source/reference viewer before publishing.",
     "",
@@ -18772,7 +18772,7 @@ function AssetHealth({
             ? `${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0} material(s) textured`
             : "Coverage looks usable",
       status: pendingTextureSuggestionCount > 0 ? "active" : reviewTextureSuggestionCount > 0 || hasTextureAssignmentGap ? "warning" : "ready",
-      action: pendingTextureSuggestionCount > 0 ? "Apply Matches" : "Open Materials"
+      action: pendingTextureSuggestionCount > 0 ? "Apply Matches" : "Review Materials"
     },
     {
       id: "memory",
@@ -18781,7 +18781,7 @@ function AssetHealth({
         ? formatBytes(stats.estimatedTextureMemoryBytes ?? 0)
         : "No high memory warning",
       status: highTextureMemoryDiagnostic ? "warning" : "ready",
-      action: "Open Optimization"
+      action: "Review Performance"
     },
     {
       id: "lightmaps",
@@ -18790,7 +18790,7 @@ function AssetHealth({
         ? `${missingLightmapAssets.length + tinyLightmapAssets.length} issue${missingLightmapAssets.length + tinyLightmapAssets.length === 1 ? "" : "s"}`
         : `${stats.lightmapAssetCount ?? 0}/${stats.lightmapMaterialCount ?? 0} linked`,
       status: hasLightmapRepairWork ? "warning" : "ready",
-      action: "Open Bake"
+      action: "Review Bake"
     }
   ];
 
@@ -18882,7 +18882,7 @@ function AssetHealth({
           )}
           {highTextureMemoryDiagnostic && (
             <p>
-              {highTextureMemoryDiagnostic.message} Open Optimization to downscale texture delivery or prepare KTX2/Basis
+              {highTextureMemoryDiagnostic.message} Review Performance to downscale texture delivery or prepare KTX2/Basis
               compression before publishing.
             </p>
           )}
@@ -18896,7 +18896,7 @@ function AssetHealth({
             <p>
               {textureAssignmentDiagnostic?.message ??
                 `${stats.texturedMaterialCount ?? 0}/${stats.materialCount ?? 0} material(s) currently use texture maps.`}{" "}
-              Open Materials to assign base, normal, or emissive maps before judging visual quality.
+              Review Materials to assign base, normal, or emissive maps before judging visual quality.
             </p>
           )}
           {!hasTextureRepairWork && textureSuggestions.length > 0 && (
@@ -18904,7 +18904,7 @@ function AssetHealth({
               {pendingTextureSuggestionCount > 0
                 ? `${pendingTextureSuggestionCount} high-confidence texture match${pendingTextureSuggestionCount === 1 ? "" : "es"} can be applied${reviewTextureSuggestionCount > 0 ? `; ${reviewTextureSuggestionCount} lower-confidence match${reviewTextureSuggestionCount === 1 ? "" : "es"} need review.` : "."}`
                 : reviewTextureSuggestionCount > 0
-                  ? `${reviewTextureSuggestionCount} lower-confidence texture match${reviewTextureSuggestionCount === 1 ? "" : "es"} need manual review in Materials.`
+                  ? `${reviewTextureSuggestionCount} lower-confidence texture match${reviewTextureSuggestionCount === 1 ? "" : "es"} need visual review in Materials.`
                 : `${appliedTextureSuggestionCount} texture match${appliedTextureSuggestionCount === 1 ? "" : "es"} already assigned. Review the material previews before opening the viewer.`}
             </p>
           )}
@@ -18912,7 +18912,7 @@ function AssetHealth({
             <p>
               {genericLooseTextureDiagnostic?.message ??
                 "Texture files are present, but the model does not reference them clearly."}{" "}
-              Open Materials and assign the right image to each material, or ask for a re-export that preserves original
+              Review Materials and assign the right image to each material, or ask for a re-export that preserves original
               texture paths.
             </p>
           )}
@@ -18940,19 +18940,19 @@ function AssetHealth({
             {onMaterials && (
               <button type="button" className="button secondary compact-button" onClick={onMaterials}>
                 <Palette size={15} aria-hidden="true" />
-                Open Materials
+                Review Materials
               </button>
             )}
             {highTextureMemoryDiagnostic && onOptimize && (
               <button type="button" className="button secondary compact-button" onClick={onOptimize}>
                 <Activity size={15} aria-hidden="true" />
-                Open Optimization
+                Review Performance
               </button>
             )}
             {hasLightmapRepairWork && onBake && (
               <button type="button" className="button secondary compact-button" disabled={!apiConnected} onClick={onBake}>
                 <Palette size={15} aria-hidden="true" />
-                Bake Lightmaps
+                Review Bake
               </button>
             )}
             {hasSceneFramingWork && onRepair && !hasTextureRepairWork && (
