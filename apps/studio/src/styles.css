@@ -2261,6 +2261,16 @@ button.list-row {
   white-space: nowrap;
 }
 
+.client-share-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
+}
+
+.client-share-actions .client-share-action {
+  width: 100%;
+}
+
 .publish-handoff-board {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -7036,6 +7046,7 @@ code {
   .repair-center-card-actions,
   .repair-center-issue-map,
   .client-share-board,
+  .client-share-actions,
   .publish-handoff-board,
   .publish-hosting-board,
   .bundle-snapshot-board,

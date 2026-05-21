@@ -75,6 +75,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Environment now shows a context setup board for sky, outside ground, landscape enclosure, ground height, and review mode before raw environment fields.
 - Repair Center now includes a visual issue map that groups Source, Visuals, Movement, Presentation, Lighting, Performance, and Delivery fixes before the detailed cards.
 - Studio Publish now shows a visual client-share checklist for clearing blockers, creating a version, setting the live link, and testing the exact viewer a client will open.
+- Studio Publish can now copy a client-viewer test script for the exact draft or live URL, including movement, door, top-view, interaction, lighting, and mobile checks.
 - Studio Publish now adds a visual handoff board for quality gate, draft testing, version creation, live link selection, and deployment checklist before dense version details.
 - Studio Publish now adds a visual hosting handoff board for bundle validation, local static package, S3/R2 upload, CDN cache headers, and domain handoff before dense deploy commands.
 - Studio Bundle now shows a plain bundle snapshot and hides manifest/environment JSON behind technical disclosures so non-technical users are not dropped straight into raw schema text.

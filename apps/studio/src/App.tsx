@@ -3239,6 +3239,73 @@ function publishReadinessReportText({
   return lines.filter(Boolean).join("\n");
 }
 
+function clientViewerTestScriptText({
+  projectId,
+  title,
+  viewerUrl,
+  versionLabel,
+  manifest,
+  stats
+}: {
+  projectId: string;
+  title: string;
+  viewerUrl: string;
+  versionLabel: string;
+  manifest: SceneManifest;
+  stats: BundleStats | null;
+}): string {
+  const walkViewCount = manifest.views.filter((view) => view.kind === "walk").length;
+  const topViewCount = manifest.views.filter((view) => view.kind === "top").length;
+  const roomCount = manifest.rooms?.length ?? 0;
+  const videoCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
+  const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;
+  const linkCount = manifest.interactions.filter((interaction) => interaction.kind === "link").length;
+  const objectToggleCount = manifest.interactions.filter((interaction) => interaction.kind === "object-toggle").length;
+  const publishReadiness = stats?.publishReadiness;
+  const lines = [
+    `Open Space client viewer test - ${title}`,
+    `Project: ${projectId}`,
+    `Version: ${versionLabel}`,
+    `Generated: ${new Date().toISOString()}`,
+    `Viewer URL: ${viewerUrl}`,
+    "",
+    "Scene setup expected:",
+    `- Views: ${manifest.views.length} total, ${walkViewCount} walk, ${topViewCount} top`,
+    `- Rooms: ${roomCount}`,
+    `- Interactions: ${videoCount} video screen(s), ${hotspotCount} hotspot(s), ${linkCount} link(s), ${objectToggleCount} object toggle(s)`,
+    stats
+      ? `- Bundle: ${formatBytes(stats.totalBytes)}, model: ${formatBytes(stats.modelBytes)}, triangles: ${stats.triangleCount}`
+      : "- Bundle analysis: not available",
+    publishReadiness
+      ? `- Publish gate: ${publishReadiness.status}, ${publishReadiness.blockers.length} blocker(s), ${publishReadiness.warnings.length} warning(s)`
+      : "- Publish gate: not analyzed",
+    "",
+    "Test steps:",
+    "1. Open the viewer URL in a clean browser window.",
+    "2. Wait for loading to finish and confirm the first camera frames the actual model, not empty space or only terrain.",
+    "3. Drag the mouse to look around and use the mouse wheel to move forward/backward.",
+    "4. Press W/A/S/D and confirm left/right/forward/back movement feels correct.",
+    "5. Click a valid floor area and confirm the blue marker appears, movement glides smoothly, and the camera stops at the target.",
+    "6. Try clicking a wall, window, cupboard, exterior area, or invalid surface and confirm movement is blocked instead of passing through.",
+    "7. Enter at least two rooms through doorways and confirm door passes work without jumping over ridges or clipping into walls.",
+    "8. Use every room button and top view; confirm labels, minimap/camera position, and top-view hiding are readable.",
+    "9. Inspect ceiling, doors, TV screens, windows/exterior context, and baked-lighting shadows from normal viewing height.",
+    "10. Test every configured video screen, hotspot, link, and object toggle.",
+    "11. Resize to mobile width or test on a phone; confirm load, touch look, click movement, and video playback are acceptable.",
+    "",
+    "Pass/fail notes:",
+    "- Visual match vs reference: ",
+    "- Movement and wall boundaries: ",
+    "- Doorway entry: ",
+    "- Rooms/top view: ",
+    "- Screens/hotspots/links/toggles: ",
+    "- Mobile performance: ",
+    "- Issues to fix before sharing: "
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
 function interactionSetupRequestText({
   projectId,
   title,
@@ -10517,27 +10584,44 @@ function App() {
                         </button>
                       ))}
                     {step.id === "client-test" &&
-                      (activePublishedEntry ? (
-                        <a
-                          className="button secondary compact-button client-share-action"
-                          href={livePublishedViewerUrl(activeProjectId, publishHistory!)}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <ExternalLink size={15} aria-hidden="true" />
-                          {step.actionLabel}
-                        </a>
-                      ) : (
-                        <a
-                          className="button secondary compact-button client-share-action"
-                          href={viewerUrl(activeProjectId)}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <ExternalLink size={15} aria-hidden="true" />
-                          {step.actionLabel}
-                        </a>
-                      ))}
+                      (() => {
+                        const testViewerUrl = activePublishedEntry
+                          ? livePublishedViewerUrl(activeProjectId, publishHistory!)
+                          : viewerUrl(activeProjectId);
+                        const versionLabel = activePublishedEntry?.version ?? "draft";
+                        return (
+                          <div className="client-share-actions">
+                            <button
+                              type="button"
+                              className="button secondary compact-button client-share-action"
+                              onClick={() =>
+                                void copyText(
+                                  clientViewerTestScriptText({
+                                    projectId: activeProjectId,
+                                    title: manifest.branding.clientName ?? manifest.branding.title,
+                                    viewerUrl: testViewerUrl,
+                                    versionLabel,
+                                    manifest,
+                                    stats: bundleStats
+                                  })
+                                )
+                              }
+                            >
+                              <Copy size={15} aria-hidden="true" />
+                              Copy Test
+                            </button>
+                            <a
+                              className="button secondary compact-button client-share-action"
+                              href={testViewerUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <ExternalLink size={15} aria-hidden="true" />
+                              {step.actionLabel}
+                            </a>
+                          </div>
+                        );
+                      })()}
                   </div>
                 ))}
               </div>
