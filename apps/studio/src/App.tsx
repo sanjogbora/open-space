@@ -494,6 +494,7 @@ interface BundleStats {
       caseMismatch?: boolean;
       actualSource?: string;
       decodeFailed?: boolean;
+      unsupportedMimeType?: string;
     }[];
     embeddedImages?: readonly {
       source: string;
@@ -503,6 +504,7 @@ interface BundleStats {
       width?: number;
       height?: number;
       decodeFailed?: boolean;
+      unsupportedMimeType?: string;
     }[];
     unsafeLocalResources?: readonly {
       kind: string;
@@ -17219,9 +17221,15 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
   const missingResources = externalResources.filter((resource) => !resource.exists);
   const caseMismatchedResources = externalResources.filter((resource) => resource.exists && resource.caseMismatch);
   const decodeFailedResources = externalResources.filter((resource) => resource.kind === "texture" && resource.decodeFailed);
+  const unsupportedMimeResources = externalResources.filter(
+    (resource) => resource.kind === "texture" && resource.unsupportedMimeType
+  );
   const decodeFailedEmbeddedImages = (stats.models ?? [])
     .flatMap((model) => model.embeddedImages ?? [])
     .filter((image) => image.decodeFailed);
+  const unsupportedMimeEmbeddedImages = (stats.models ?? [])
+    .flatMap((model) => model.embeddedImages ?? [])
+    .filter((image) => image.unsupportedMimeType);
   const unsafeResources = (stats.models ?? []).flatMap((model) => model.unsafeLocalResources ?? []);
   const issueFromDiagnostic = (diagnostic: NonNullable<BundleStats["diagnostics"]>[number]): SourceQaIssue => ({
     title: diagnostic.title,
@@ -17269,6 +17277,22 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
       action: "Re-export the model with valid embedded image data or replace the texture before export."
     }))
   ];
+  const unsupportedMimeIssues: SourceQaIssue[] = [
+    ...unsupportedMimeResources.slice(0, 5).map((resource) => ({
+      title: `Unsupported texture format: ${resource.source}`,
+      detail: `This texture uses ${resource.unsupportedMimeType}, which is outside the web delivery formats Studio supports.`,
+      severity: "warning" as const,
+      symptom: "the material may fail to load after publishing or may be skipped by optimization/compression tools.",
+      action: "Convert the texture to PNG, JPEG, WebP, AVIF, KTX2, or Basis and re-export/reupload the model."
+    })),
+    ...unsupportedMimeEmbeddedImages.slice(0, 5).map((image) => ({
+      title: `Unsupported embedded texture format: ${image.label}`,
+      detail: `${image.source} uses ${image.unsupportedMimeType}, which is outside the web delivery formats Studio supports.`,
+      severity: "warning" as const,
+      symptom: "the embedded texture may fail to load after publishing or may be skipped by optimization/compression tools.",
+      action: "Replace or convert this texture before export, then re-export the model as a web-safe GLB."
+    }))
+  ];
   const groupFromDiagnostics = (
     id: string,
     label: string,
@@ -17312,7 +17336,7 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
           "sidecar-texture-decode-failed",
           "relocatable-texture-resources"
         ].includes(code),
-      [...missingResourceIssues, ...caseMismatchIssues, ...unsafeResourceIssues, ...decodeFailedIssues]
+      [...missingResourceIssues, ...caseMismatchIssues, ...unsafeResourceIssues, ...decodeFailedIssues, ...unsupportedMimeIssues]
     ),
     groupFromDiagnostics(
       "framing",

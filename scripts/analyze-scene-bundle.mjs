@@ -198,6 +198,8 @@ function isLocalGltfUri(uri) {
 async function resourceStatus(asset, kind, source, label) {
   const localSource = stripLocalResourceUri(source);
   const fullPath = path.resolve(path.dirname(asset.path), localSource);
+  const mimeType = kind === "texture" ? mimeTypeFromUri(localSource) : undefined;
+  const unsupportedMimeType = Boolean(mimeType && !supportedImageMimeTypes.has(mimeType));
   try {
     await access(fullPath);
     const info = await stat(fullPath);
@@ -211,6 +213,7 @@ async function resourceStatus(asset, kind, source, label) {
       label,
       exists: true,
       bytes: info.size,
+      ...(unsupportedMimeType ? { unsupportedMimeType: mimeType } : {}),
       ...(caseMismatch ? { caseMismatch, actualSource: exactSource } : {}),
       ...(metadataStatus?.decodeFailed ? { decodeFailed: true } : {}),
       ...(metadata ? { width: metadata.width, height: metadata.height } : {})
@@ -221,7 +224,8 @@ async function resourceStatus(asset, kind, source, label) {
       source: localSource,
       label,
       exists: false,
-      bytes: 0
+      bytes: 0,
+      ...(unsupportedMimeType ? { unsupportedMimeType: mimeType } : {})
     };
   }
 }
@@ -1033,7 +1037,8 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   for (const [index, image] of (document.images ?? []).entries()) {
     const label = image.name || `Image ${index}`;
     const mimeType = image.mimeType ?? mimeTypeFromUri(image.uri);
-    if (mimeType && !supportedImageMimeTypes.has(mimeType)) {
+    const unsupportedMimeType = Boolean(mimeType && !supportedImageMimeTypes.has(mimeType));
+    if (unsupportedMimeType) {
       unsupportedImageMimeCount += 1;
     }
 
@@ -1056,6 +1061,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       label,
       bytes: payload.bytes.byteLength,
       ...(resolvedMimeType ? { mimeType: resolvedMimeType } : {}),
+      ...(unsupportedMimeType ? { unsupportedMimeType: resolvedMimeType ?? mimeType } : {}),
       ...(decodeFailed ? { decodeFailed: true } : {}),
       ...(metadataImage ? { width: metadataImage.width, height: metadataImage.height } : {})
     });
