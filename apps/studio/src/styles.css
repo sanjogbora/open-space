@@ -3890,6 +3890,14 @@ button.list-row {
   line-height: 1.35;
 }
 
+.source-qa-detail-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .source-qa-issue-list {
   display: grid;
   gap: 8px;
@@ -7067,6 +7075,7 @@ code {
   .publish-hosting-step,
   .bundle-snapshot-board,
   .source-qa-heading,
+  .source-qa-detail-heading,
   .toggle-grid,
   .bake-setup-board,
   .bake-triage-board,

@@ -9633,6 +9633,7 @@ function App() {
                   apiConnected={apiConnected}
                   repairState={repairState}
                   onCopy={() => void copyText(sourceQaPlanText(bundleStats, activeProjectId))}
+                  onCopyText={(value) => void copyText(value)}
                   onRepair={() => void repairImport()}
                   onReviewDiagnostics={() => document.querySelector(".diagnostic-list")?.scrollIntoView({ behavior: "smooth", block: "center" })}
                 />
@@ -16475,12 +16476,44 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
   ];
 }
 
+function sourceQaReexportRequestText(projectId: string, group: SourceQaGroup, issues: readonly SourceQaIssue[]): string {
+  const selectedIssues = issues.length > 0 ? issues : group.issues;
+  const issueLines = selectedIssues.slice(0, 6).flatMap((issue, index) => [
+    `${index + 1}. ${issue.title}`,
+    `   Problem: ${issue.detail}`,
+    issue.symptom ? `   Visible symptom: ${issue.symptom}` : "",
+    issue.action ? `   Requested fix: ${issue.action}` : ""
+  ]);
+  const requestByGroup: Record<string, string> = {
+    structure: "Please re-export this as a valid glTF 2.0 GLB with a valid default scene, valid node/mesh/accessor references, and usable geometry bounds.",
+    resources: "Please send the original zipped export with all texture/buffer folders preserved, or re-export as a self-contained GLB with resources embedded.",
+    framing: "Please export the actual building near world origin and avoid letting large terrain/helper planes drive the scene bounds, first camera, or floorplan framing.",
+    references: "Please preserve material texture assignments, UVs, texture image references, and material names so the web viewer can match the reference render.",
+    overrides: "The model structure changed after a reimport. Please keep stable object/material names where possible so saved visibility, navigation, and interaction targets can be matched."
+  };
+  return [
+    `Open Space source/export request - ${projectId}`,
+    "",
+    `Area: ${group.label}`,
+    group.detail,
+    "",
+    "What we need:",
+    requestByGroup[group.id] ?? "Please fix the source export issue below and resend the repaired GLB/ZIP.",
+    "",
+    "Detected issues:",
+    ...issueLines.filter(Boolean),
+    "",
+    "After resending, we will reimport and rerun Studio QA before editing materials, rooms, navigation, or publishing."
+  ].join("\n");
+}
+
 function SourceQaSummary({
   stats,
   projectId,
   apiConnected,
   repairState,
   onCopy,
+  onCopyText,
   onRepair,
   onReviewDiagnostics
 }: {
@@ -16489,6 +16522,7 @@ function SourceQaSummary({
   apiConnected: boolean;
   repairState: RepairState;
   onCopy: () => void;
+  onCopyText: (value: string) => void;
   onRepair: () => void;
   onReviewDiagnostics: () => void;
 }) {
@@ -16551,10 +16585,20 @@ function SourceQaSummary({
               <strong>{selectedGroup.label}</strong>
               <p>{selectedGroup.detail}</p>
             </div>
-            <button type="button" className="button secondary compact-button" onClick={onReviewDiagnostics}>
-              <AlertTriangle size={15} aria-hidden="true" />
-              Technical Evidence
-            </button>
+            <div className="source-qa-detail-actions">
+              <button
+                type="button"
+                className="button secondary compact-button"
+                onClick={() => onCopyText(sourceQaReexportRequestText(projectId, selectedGroup, selectedIssues))}
+              >
+                <Copy size={15} aria-hidden="true" />
+                Copy Request
+              </button>
+              <button type="button" className="button secondary compact-button" onClick={onReviewDiagnostics}>
+                <AlertTriangle size={15} aria-hidden="true" />
+                Technical Evidence
+              </button>
+            </div>
           </div>
           <div className="source-qa-issue-list">
             {selectedIssues.slice(0, 4).map((issue, index) => (
