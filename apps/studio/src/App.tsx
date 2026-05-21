@@ -4051,7 +4051,7 @@ function App() {
           ? `${linkedRoomViewCount}/${walkViewCount} walk view${walkViewCount === 1 ? "" : "s"} linked`
           : "No walk views to link",
         status: walkViewCount > 0 && linkedRoomViewCount >= walkViewCount ? "ready" : "warning",
-        action: walkViewCount > 0 ? "Sync Views" : "Open Views"
+        action: walkViewCount > 0 ? "Sync Views" : "Set Views"
       },
       {
         id: "bounds",
@@ -4283,7 +4283,7 @@ function App() {
               ? `${roomWalkZoneCount} walk area${roomWalkZoneCount === 1 ? "" : "s"} available`
               : "No walk coverage yet",
         status: walkViewCount > 0 && coveredWalkViews >= walkViewCount ? "ready" : "warning",
-        action: walkViewCount > 0 ? "Create Zones" : "Open Controls"
+        action: walkViewCount > 0 ? "Create Zones" : "Fix Walk Areas"
       }
     ];
   }, [
@@ -14472,7 +14472,7 @@ function App() {
                                   openStudioVisualTarget("objects", ".object-review-tools, .object-detail");
                                 }}
                               >
-                                Open Object
+                                Review Object
                               </button>
                             </div>
                           </div>
@@ -14483,7 +14483,7 @@ function App() {
                               <strong>Clicked object needs review</strong>
                               <p>
                                 Studio could not automatically match {navigationRepairDraft.objectName} to a saved object
-                                override. Open Objects with this name prefilled, then choose whether it should be ignored,
+                                override. Review Objects with this name prefilled, then choose whether it should be ignored,
                                 walkable, or a wall.
                               </p>
                             </div>
@@ -16621,7 +16621,7 @@ function nextStepCopy(action: ImportNextStepAction): ImportNextStep {
     return {
       action,
       title: "Fix the source export",
-      detail: "Open Source QA first, then use the raw diagnostics underneath only as evidence for re-export or source-file fixes.",
+      detail: "Review Source QA first, then use the raw diagnostics underneath only as evidence for re-export or source-file fixes.",
       button: "Review Source QA"
     };
   }
@@ -16860,7 +16860,7 @@ function repairCenterVisualFixForAction(action: ImportNextStepAction): string {
     return "Use the zone map to paint walk areas, door passes, and blockers over the floorplan.";
   }
   if (action === "objects") {
-    return "Open Objects, review ceiling/roof/top-view meshes, and set visibility or navigation roles from the visual object list.";
+    return "Review Objects, check ceiling/roof/top-view meshes, and set visibility or navigation roles from the visual object list.";
   }
   if (action === "rooms") {
     return "Sync walk areas into room regions, then adjust the room map visually.";
@@ -17366,7 +17366,7 @@ function buildRepairCenterItems({
       stage: "Presentation",
       title: hasCeilingIssue ? "Review ceiling and top-view objects" : "Review object roles",
       detail: `${objectVisibilityDiagnostics.length} object visibility issue${objectVisibilityDiagnostics.length === 1 ? "" : "s"} found: ${first.title}. ${first.message}`,
-      visualFix: "Open Objects and use the visual list to hide ceiling/roof shell meshes from top view only, confirm key interior objects stay visible, and fix any stale navigation roles after reimport.",
+      visualFix: "Review Objects and use the visual list to hide ceiling/roof shell meshes from top view only, confirm key interior objects stay visible, and fix any stale navigation roles after reimport.",
       severity: objectVisibilityDiagnostics.some((diagnostic) => diagnostic.severity === "error") ? "error" : "warning",
       action: "objects",
       button: "Review Objects"
@@ -17441,7 +17441,7 @@ function buildRepairCenterItems({
       visualFix: repairCenterVisualFixForAction("views"),
       severity: "error",
       action: "views",
-      button: "Open Views"
+      button: "Set Views"
     });
   }
 
