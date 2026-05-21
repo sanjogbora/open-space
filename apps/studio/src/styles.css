@@ -2220,6 +2220,11 @@ button.list-row {
   background: #fff5f5;
 }
 
+.client-share-step.warning {
+  border-color: rgba(201, 129, 36, 0.32);
+  background: #fffaf1;
+}
+
 .client-share-step.active,
 .client-share-step.todo {
   border-color: rgba(33, 132, 220, 0.24);
@@ -2248,6 +2253,12 @@ button.list-row {
   color: #9a2d2d;
   border-color: #efc3c3;
   background: #fffafa;
+}
+
+.client-share-step.warning .client-share-step-status {
+  color: #9a5a13;
+  border-color: #efd3a2;
+  background: #fffaf1;
 }
 
 .client-share-step-main {
@@ -2310,6 +2321,11 @@ button.list-row {
   background: #fff5f5;
 }
 
+.publish-handoff-step.warning {
+  border-color: rgba(201, 129, 36, 0.32);
+  background: #fffaf1;
+}
+
 .publish-handoff-step.active,
 .publish-handoff-step.todo {
   border-color: rgba(33, 132, 220, 0.24);
@@ -2340,6 +2356,12 @@ button.list-row {
   color: #9a2d2d;
   border-color: #efc3c3;
   background: #fffafa;
+}
+
+.publish-handoff-step.warning .publish-handoff-index {
+  color: #9a5a13;
+  border-color: #efd3a2;
+  background: #fffaf1;
 }
 
 .publish-handoff-main {

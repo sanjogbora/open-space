@@ -718,7 +718,7 @@ interface ClientDeliveryStep {
   id: string;
   label: string;
   detail: string;
-  status: "ready" | "blocked" | "active" | "todo";
+  status: "ready" | "blocked" | "warning" | "active" | "todo";
   actionLabel: string;
 }
 
@@ -5056,6 +5056,8 @@ function App() {
     ];
   }, [bundleStats, manifest, navigationIssues]);
   const hasBlockingPublishErrors = publishChecks.some((check) => check.blocking && !check.ready);
+  const publishWarningCount = bundleStats?.publishReadiness?.warnings.length ?? 0;
+  const hasPublishWarnings = publishWarningCount > 0;
   const firstPublishCheckIssue = publishChecks.find((check) => check.blocking && !check.ready) ?? publishChecks.find((check) => !check.ready);
   const firstPublishGateIssue =
     bundleStats?.publishReadiness?.blockers[0] ?? bundleStats?.publishReadiness?.warnings[0];
@@ -5076,17 +5078,21 @@ function App() {
           ? firstPublishCheckIssue
             ? `${firstPublishCheckIssue.label}: ${firstPublishCheckIssue.detail}`
             : "Clear publish blockers before making a client link."
-          : "No blocking rows are stopping publish.",
-        status: hasBlockingPublishErrors ? "blocked" : "ready",
-        actionLabel: hasBlockingPublishErrors ? "Fix First" : "Copy Report"
+          : hasPublishWarnings
+            ? `${publishWarningCount} client warning${publishWarningCount === 1 ? "" : "s"} remain: ${firstPublishGateIssue?.title ?? "review publish warnings"}.`
+            : "No blocking rows or client warnings are open.",
+        status: hasBlockingPublishErrors ? "blocked" : hasPublishWarnings ? "warning" : "ready",
+        actionLabel: hasBlockingPublishErrors ? "Fix First" : hasPublishWarnings ? "Copy Warnings" : "Copy Report"
       },
       {
         id: "draft",
         label: "Draft test",
         detail: hasBlockingPublishErrors
           ? "Use the draft viewer to inspect fixes before publishing."
-          : "Open the current viewer and test movement, rooms, lights, and screens.",
-        status: hasBlockingPublishErrors ? "active" : "ready",
+          : hasPublishWarnings
+            ? "Open the current viewer as a draft and confirm each warning is acceptable before client delivery."
+            : "Open the current viewer and test movement, rooms, lights, and screens.",
+        status: hasBlockingPublishErrors ? "active" : hasPublishWarnings ? "warning" : "ready",
         actionLabel: "Open Draft"
       },
       {
@@ -5124,10 +5130,13 @@ function App() {
   }, [
     activePublishedEntry,
     firstPublishCheckIssue,
+    firstPublishGateIssue?.title,
     hasBlockingPublishErrors,
+    hasPublishWarnings,
     latestPublishedEntry,
     publishHandoffEntry?.deploymentPath,
     publishHistory?.activeVersion,
+    publishWarningCount,
     publishState
   ]);
   const publishHostingSteps = useMemo<HostingHandoffStep[]>(() => {
@@ -5201,9 +5210,11 @@ function App() {
             : "Fix the blocking readiness rows before sharing."
           : firstPublishCheckIssue
             ? `${firstPublishCheckIssue.label}: ${firstPublishCheckIssue.detail}`
-            : "No blocking publish rows are open.",
-        status: hasBlockingPublishErrors ? "blocked" : "ready",
-        actionLabel: hasBlockingPublishErrors ? "Open Repair Center" : "Copy Readiness"
+            : hasPublishWarnings
+              ? `${publishWarningCount} client warning${publishWarningCount === 1 ? "" : "s"} remain.`
+              : "No blocking publish rows or client warnings are open.",
+        status: hasBlockingPublishErrors ? "blocked" : hasPublishWarnings ? "warning" : "ready",
+        actionLabel: hasBlockingPublishErrors ? "Open Repair Center" : hasPublishWarnings ? "Copy Warnings" : "Copy Readiness"
       },
       {
         id: "version",
@@ -5231,7 +5242,7 @@ function App() {
         detail: hasLiveVersion
           ? "Open the live viewer and test movement, rooms, top view, screens, lighting, and mobile."
           : "Use the published or draft viewer only after the live link is selected.",
-        status: hasLiveVersion && !hasBlockingPublishErrors ? "ready" : hasLiveVersion ? "active" : "todo",
+        status: hasLiveVersion && !hasBlockingPublishErrors && !hasPublishWarnings ? "ready" : hasLiveVersion ? "active" : "todo",
         actionLabel: hasLiveVersion ? "Open Live Viewer" : "Open Draft Viewer"
       }
     ];
@@ -5239,8 +5250,10 @@ function App() {
     activePublishedEntry,
     firstPublishCheckIssue,
     hasBlockingPublishErrors,
+    hasPublishWarnings,
     latestPublishedEntry,
     publishHistory?.activeVersion,
+    publishWarningCount,
     publishState
   ]);
   const environmentSetupSteps = useMemo(() => {
@@ -10745,6 +10758,8 @@ function App() {
                       {step.status === "ready" ? (
                         <Check size={16} aria-hidden="true" />
                       ) : step.status === "blocked" ? (
+                        <AlertTriangle size={16} aria-hidden="true" />
+                      ) : step.status === "warning" ? (
                         <AlertTriangle size={16} aria-hidden="true" />
                       ) : step.status === "active" ? (
                         <Activity size={16} aria-hidden="true" />
