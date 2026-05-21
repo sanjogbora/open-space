@@ -286,6 +286,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Import diagnostics now flag models that have materials but no texture/image definitions, which helps explain flat or poor-looking imports.
 - Analyzer now flags models that contain image textures but do not assign them to material slots, or assign them to only a tiny share of materials.
 - Analyzer now flags extreme wide/tall texture strips, which can explain web-viewer blur, shimmer, or poor compression after optimization.
+- Analyzer now flags normal-mapped surfaces with missing or invalid tangents, catching exports where tiles, walls, fabric, or detailed surfaces shade incorrectly in WebGL.
 - Studio stats now expose the strip-texture count beside texture size/compression, making that visual-risk signal visible without opening diagnostics.
 - Studio Asset Health now surfaces texture assignment coverage and routes weak coverage directly to Materials.
 - Studio Asset Health can now copy a texture repair plan with missing paths, loose images, texture suggestions, lightmap asset issues, and the recommended repair order.

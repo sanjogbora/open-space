@@ -717,6 +717,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   let usesDraco = extensionsUsed.includes("KHR_draco_mesh_compression");
   let missingPositionPrimitiveCount = 0;
   let missingNormalPrimitiveCount = 0;
+  let missingTangentNormalMapPrimitiveCount = 0;
   let missingUvPrimitiveCount = 0;
   let uv1PrimitiveCount = 0;
   let texturedMissingUvPrimitiveCount = 0;
@@ -725,6 +726,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
   let collapsedPositionBoundsPrimitiveCount = 0;
   let invalidPositionAccessorShapeCount = 0;
   let invalidNormalAccessorShapeCount = 0;
+  let invalidTangentAccessorShapeCount = 0;
   let invalidUvAccessorShapeCount = 0;
   let invalidIndexAccessorShapeCount = 0;
   let invalidAccessorReferenceCount = 0;
@@ -755,6 +757,11 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       .flatMap((material) => materialTextureIndices(material))
       .filter((index) => typeof index === "number")
   );
+  const normalMappedMaterialIndices = new Set(
+    materials
+      .map((material, index) => (materialUsesNormalMap(material) ? index : undefined))
+      .filter((index) => typeof index === "number")
+  );
   const materialImageIndexSet = new Set();
   for (const textureIndex of materialTextureIndexSet) {
     const texture = document.textures?.[textureIndex];
@@ -776,6 +783,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       primitiveCount += 1;
       const positionAccessorIndex = primitive.attributes?.POSITION;
       const normalAccessorIndex = primitive.attributes?.NORMAL;
+      const tangentAccessorIndex = primitive.attributes?.TANGENT;
       const uvAccessorIndices = [
         primitive.attributes?.TEXCOORD_0,
         primitive.attributes?.TEXCOORD_1
@@ -799,6 +807,13 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       if (typeof normalAccessorIndex !== "number") {
         missingNormalPrimitiveCount += 1;
       }
+      if (
+        typeof primitive.material === "number" &&
+        normalMappedMaterialIndices.has(primitive.material) &&
+        typeof tangentAccessorIndex !== "number"
+      ) {
+        missingTangentNormalMapPrimitiveCount += 1;
+      }
       if (typeof primitive.attributes?.TEXCOORD_0 !== "number") {
         missingUvPrimitiveCount += 1;
         if (typeof primitive.material === "number" && texturedMaterialIndices.has(primitive.material)) {
@@ -815,6 +830,8 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
         typeof positionAccessorIndex === "number" ? accessors[positionAccessorIndex] : undefined;
       const normalAccessor =
         typeof normalAccessorIndex === "number" ? accessors[normalAccessorIndex] : undefined;
+      const tangentAccessor =
+        typeof tangentAccessorIndex === "number" ? accessors[tangentAccessorIndex] : undefined;
       const indexAccessor =
         typeof primitive.indices === "number" ? accessors[primitive.indices] : undefined;
       if (positionAccessor && !accessorHasShape(positionAccessor, "VEC3")) {
@@ -822,6 +839,9 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       }
       if (normalAccessor && !accessorHasShape(normalAccessor, "VEC3")) {
         invalidNormalAccessorShapeCount += 1;
+      }
+      if (tangentAccessor && !accessorHasShape(tangentAccessor, "VEC4", [5126])) {
+        invalidTangentAccessorShapeCount += 1;
       }
       for (const uvAccessorIndex of uvAccessorIndices) {
         const uvAccessor = accessors[uvAccessorIndex];
@@ -1107,6 +1127,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     unsupportedRequiredExtensions: extensionsRequired.filter((extension) => !supportedRequiredExtensions.has(extension)),
     missingPositionPrimitiveCount,
     missingNormalPrimitiveCount,
+    missingTangentNormalMapPrimitiveCount,
     missingUvPrimitiveCount,
     uv1PrimitiveCount,
     texturedMissingUvPrimitiveCount,
@@ -1115,6 +1136,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     collapsedPositionBoundsPrimitiveCount,
     invalidPositionAccessorShapeCount,
     invalidNormalAccessorShapeCount,
+    invalidTangentAccessorShapeCount,
     invalidUvAccessorShapeCount,
     invalidIndexAccessorShapeCount,
     invalidAccessorReferenceCount,
@@ -1181,6 +1203,10 @@ function materialUsesTexture(material) {
         extension && typeof extension === "object" && Object.keys(extension).some((key) => key.endsWith("Texture"))
       )
   );
+}
+
+function materialUsesNormalMap(material) {
+  return Boolean(material && typeof material === "object" && material.normalTexture);
 }
 
 function materialTextureIndices(value, indices = []) {
@@ -2673,6 +2699,10 @@ function createDiagnostics(manifest, report, graphs, controls) {
     (sum, model) => sum + (model.missingNormalPrimitiveCount ?? 0),
     0
   );
+  const missingTangentNormalMapPrimitiveCount = report.models.reduce(
+    (sum, model) => sum + (model.missingTangentNormalMapPrimitiveCount ?? 0),
+    0
+  );
   const missingUvPrimitiveCount = report.models.reduce(
     (sum, model) => sum + (model.missingUvPrimitiveCount ?? 0),
     0
@@ -2946,6 +2976,10 @@ function createDiagnostics(manifest, report, graphs, controls) {
     (sum, model) => sum + (model.invalidNormalAccessorShapeCount ?? 0),
     0
   );
+  const invalidTangentAccessorShapeCount = report.models.reduce(
+    (sum, model) => sum + (model.invalidTangentAccessorShapeCount ?? 0),
+    0
+  );
   const invalidUvAccessorShapeCount = report.models.reduce(
     (sum, model) => sum + (model.invalidUvAccessorShapeCount ?? 0),
     0
@@ -3213,6 +3247,16 @@ function createDiagnostics(manifest, report, graphs, controls) {
     });
   }
 
+  if (invalidTangentAccessorShapeCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "invalid-tangent-accessor-shapes",
+      title: "Tangent accessors have invalid shapes",
+      message: `${invalidTangentAccessorShapeCount} TANGENT accessor(s) are not valid VEC4 float attributes.`,
+      action: "Regenerate tangents in Blender before export; invalid tangents can make normal maps shade seams, corners, or walls incorrectly."
+    });
+  }
+
   if (invalidUvAccessorShapeCount > 0) {
     diagnostics.push({
       severity: "warning",
@@ -3407,6 +3451,16 @@ function createDiagnostics(manifest, report, graphs, controls) {
       title: "Mesh normals missing",
       message: `${missingNormalPrimitiveCount} primitive(s) do not include NORMAL attributes, which can make lighting look poor.`,
       action: "Recalculate normals in Blender before export."
+    });
+  }
+
+  if (missingTangentNormalMapPrimitiveCount > 0) {
+    diagnostics.push({
+      severity: "warning",
+      code: "normal-maps-missing-tangents",
+      title: "Normal-mapped surfaces are missing tangents",
+      message: `${missingTangentNormalMapPrimitiveCount} primitive(s) use materials with normal maps but do not include TANGENT attributes.`,
+      action: "Export tangents with the model or regenerate tangents before publishing; affected walls, floors, fabrics, or tiles can look flat, inverted, or seam-heavy in WebGL."
     });
   }
 

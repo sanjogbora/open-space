@@ -17101,6 +17101,8 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
           "invalid-texture-references",
           "textures-without-images",
           "invalid-uv-accessor-shapes",
+          "invalid-tangent-accessor-shapes",
+          "normal-maps-missing-tangents",
           "missing-uv-attributes",
           "textured-primitives-missing-uvs",
           "unassigned-primitive-materials"
@@ -17381,8 +17383,10 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "embedded-texture-decode-failed",
       "sidecar-texture-decode-failed",
       "textured-primitives-missing-uvs",
+      "normal-maps-missing-tangents",
       "unassigned-primitive-materials",
       "invalid-uv-accessor-shapes",
+      "invalid-tangent-accessor-shapes",
       "missing-uv-attributes",
       "mostly-unlit-materials",
       "vertex-colors-detected",
@@ -17911,7 +17915,15 @@ function diagnosticVisualSymptom(code: string): string | null {
     }
     return "the model can look much poorer than the reference because material images are not actually assigned.";
   }
-  if (["tiny-texture-dimensions", "extreme-texture-aspect-ratios", "textured-primitives-missing-uvs"].includes(code)) {
+  if (
+    [
+      "tiny-texture-dimensions",
+      "extreme-texture-aspect-ratios",
+      "textured-primitives-missing-uvs",
+      "normal-maps-missing-tangents",
+      "invalid-tangent-accessor-shapes"
+    ].includes(code)
+  ) {
     return "textures may look blurry, stretched, shimmering, or mismatched on the surface.";
   }
   if (["no-named-ceiling-meshes"].includes(code)) {
@@ -19666,8 +19678,10 @@ function assetHealthTextureRequestText(stats: BundleStats, projectId: string): s
       "embedded-texture-decode-failed",
       "sidecar-texture-decode-failed",
       "textured-primitives-missing-uvs",
+      "normal-maps-missing-tangents",
       "missing-uv-attributes",
-      "invalid-uv-accessor-shapes"
+      "invalid-uv-accessor-shapes",
+      "invalid-tangent-accessor-shapes"
     ].includes(diagnostic.code)
   );
   return [
