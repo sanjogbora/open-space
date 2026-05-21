@@ -3036,6 +3036,19 @@ function publishedViewerUrl(entry: PublishEntry): string {
   return `${viewerBaseUrl}/?scene=${encodeURIComponent(entry.scenePath)}`;
 }
 
+function publishEntryDeliveryMode(entry: PublishEntry): string {
+  if (entry.qualityGate?.status === "ready") {
+    return "Client-ready";
+  }
+  if (entry.qualityGate?.status === "blocked") {
+    return "Blocked draft";
+  }
+  if (entry.qualityGate?.status === "warning") {
+    return "Draft";
+  }
+  return "Unverified draft";
+}
+
 function livePublishedViewerUrl(projectId: string, history: PublishHistoryDocument | null): string {
   if (history?.liveViewerUrl) {
     return `${viewerBaseUrl}${history.liveViewerUrl}`;
@@ -3130,10 +3143,13 @@ function publishedRuntimeChecklistLines(entry: PublishEntry): string[] {
 
 function publishedDeploymentChecklist(entry: PublishEntry, title: string): string {
   const gate = entry.qualityGate;
+  const deliveryMode = publishEntryDeliveryMode(entry);
+  const isClientReady = gate?.status === "ready";
   const lines = [
     `Open Space deployment checklist - ${title}`,
     `Version: ${entry.version}`,
     `Published at: ${entry.publishedAt}`,
+    `Delivery mode: ${deliveryMode}`,
     `Viewer URL: ${publishedViewerUrl(entry)}`,
     `Embed snippet:`,
     publishedEmbedSnippet(entry, title),
@@ -3163,6 +3179,9 @@ function publishedDeploymentChecklist(entry: PublishEntry, title: string): strin
     entry.deploymentPath ? `4. S3-compatible endpoint example:\n${publishedS3CompatibleDeployCommand(entry)}` : "",
     "",
     "After upload:",
+    isClientReady
+      ? "- This version is marked client-ready by the saved quality gate."
+      : "- Treat this package as an internal draft until blockers/warnings are fixed or explicitly accepted.",
     "- Open the viewer URL on desktop and mobile.",
     "- Test WASD, click-to-move, mouse wheel movement, room buttons, top view, TV/video screens, and hotspots.",
     "- Confirm CDN URLs are HTTPS and cache headers are applied to GLB, texture, video, KTX2, WebP, and AVIF assets."
@@ -11247,6 +11266,9 @@ function App() {
                             {publishHistory.activeVersion === entry.version && (
                               <span className="publish-live-pill">Live</span>
                             )}
+                            <span className={`publish-delivery-pill ${entry.qualityGate?.status ?? "unknown"}`}>
+                              {publishEntryDeliveryMode(entry)}
+                            </span>
                           </div>
                           <span>{entry.publishedAt}</span>
                           {typeof entry.assetCount === "number" && (

@@ -2920,6 +2920,39 @@ button.list-row {
   text-transform: uppercase;
 }
 
+.publish-delivery-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid #cfdde5;
+  border-radius: 999px;
+  color: #485966;
+  background: #f7fafc;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.publish-delivery-pill.ready {
+  color: #146c43;
+  border-color: #bfe5d3;
+  background: #f1fbf6;
+}
+
+.publish-delivery-pill.warning {
+  color: #7b4c00;
+  border-color: #f3d0a1;
+  background: #fff7e8;
+}
+
+.publish-delivery-pill.blocked {
+  color: #8f1e2b;
+  border-color: #f0bdc5;
+  background: #fff1f3;
+}
+
 .publish-gate-pill {
   display: inline-flex;
   align-items: center;
