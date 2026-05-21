@@ -1047,7 +1047,8 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
     }
     const resolvedMimeType = payload.mimeType ?? mimeType;
     const metadataImage = await imageMetadataFromBuffer(payload.bytes, resolvedMimeType);
-    if (!metadataImage && isInspectableRasterMimeType(resolvedMimeType)) {
+    const decodeFailed = !metadataImage && isInspectableRasterMimeType(resolvedMimeType);
+    if (decodeFailed) {
       embeddedImageDecodeFailureCount += 1;
     }
     embeddedImages.push({
@@ -1055,6 +1056,7 @@ async function analyzeGltfDocument(document, format, asset, metadata = {}) {
       label,
       bytes: payload.bytes.byteLength,
       ...(resolvedMimeType ? { mimeType: resolvedMimeType } : {}),
+      ...(decodeFailed ? { decodeFailed: true } : {}),
       ...(metadataImage ? { width: metadataImage.width, height: metadataImage.height } : {})
     });
   }

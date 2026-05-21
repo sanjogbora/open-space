@@ -493,6 +493,16 @@ interface BundleStats {
       bytes?: number;
       caseMismatch?: boolean;
       actualSource?: string;
+      decodeFailed?: boolean;
+    }[];
+    embeddedImages?: readonly {
+      source: string;
+      label: string;
+      bytes: number;
+      mimeType?: string;
+      width?: number;
+      height?: number;
+      decodeFailed?: boolean;
     }[];
     unsafeLocalResources?: readonly {
       kind: string;
@@ -17208,6 +17218,10 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
   const caseMismatchedResources = externalResources.filter((resource) => resource.exists && resource.caseMismatch);
+  const decodeFailedResources = externalResources.filter((resource) => resource.kind === "texture" && resource.decodeFailed);
+  const decodeFailedEmbeddedImages = (stats.models ?? [])
+    .flatMap((model) => model.embeddedImages ?? [])
+    .filter((image) => image.decodeFailed);
   const unsafeResources = (stats.models ?? []).flatMap((model) => model.unsafeLocalResources ?? []);
   const issueFromDiagnostic = (diagnostic: NonNullable<BundleStats["diagnostics"]>[number]): SourceQaIssue => ({
     title: diagnostic.title,
@@ -17239,6 +17253,22 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
     symptom: "the resource cannot be packaged safely and will fail after upload, optimization, or publishing.",
     action: "Re-export with resources beside the GLTF/GLB, use relative paths only, or embed textures and buffers in a self-contained GLB."
   }));
+  const decodeFailedIssues: SourceQaIssue[] = [
+    ...decodeFailedResources.slice(0, 5).map((resource) => ({
+      title: `Unreadable texture: ${resource.source}`,
+      detail: "The texture file exists, but Studio could not read it as valid image data.",
+      severity: "warning" as const,
+      symptom: "the material may render flat, black, missing, or different from the source/reference viewer.",
+      action: "Replace this texture with a valid PNG, JPEG, WebP, AVIF, KTX2, or Basis file and re-export/reupload the model."
+    })),
+    ...decodeFailedEmbeddedImages.slice(0, 5).map((image) => ({
+      title: `Unreadable embedded texture: ${image.label}`,
+      detail: `${image.source} is embedded in the model but could not be decoded${image.mimeType ? ` as ${image.mimeType}` : ""}.`,
+      severity: "warning" as const,
+      symptom: "embedded material textures may render flat, black, missing, or different from the source/reference viewer.",
+      action: "Re-export the model with valid embedded image data or replace the texture before export."
+    }))
+  ];
   const groupFromDiagnostics = (
     id: string,
     label: string,
@@ -17282,7 +17312,7 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
           "sidecar-texture-decode-failed",
           "relocatable-texture-resources"
         ].includes(code),
-      [...missingResourceIssues, ...caseMismatchIssues, ...unsafeResourceIssues]
+      [...missingResourceIssues, ...caseMismatchIssues, ...unsafeResourceIssues, ...decodeFailedIssues]
     ),
     groupFromDiagnostics(
       "framing",
