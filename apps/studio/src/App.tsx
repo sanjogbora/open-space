@@ -18074,7 +18074,7 @@ function ViewerQaChecklist({
         ? "Material or texture diagnostics should be reviewed before judging model quality."
         : "Open the viewer and compare textures, colors, glass, ceiling, and exterior context.",
       status: visualIssue && errorCodes.has(visualIssue) ? "blocked" : visualIssue ? "warn" : "ready",
-      button: visualIssue ? "Open Materials" : "Open Viewer",
+      button: visualIssue ? "Review Materials" : "Open Viewer",
       onClick: visualIssue ? onMaterials : onSaveAndTest
     },
     {
@@ -18082,7 +18082,7 @@ function ViewerQaChecklist({
       label: "Render profile",
       detail: `Tone mapping is ${toneMappingLabel}; exposure is ${exposureLabel}. If a reference GLB viewer looks closer, try Linear match or None/raw before changing materials.`,
       status: "ready",
-      button: "Open Controls",
+      button: "Tune Render",
       onClick: onNavigation
     },
     {
@@ -18094,7 +18094,7 @@ function ViewerQaChecklist({
           ? "Check windows, exterior views, grass/ground, and landscape enclosure scale."
           : "Environment is in neutral/interior mode; confirm windows and outside areas do not look empty.",
       status: environmentIssue && errorCodes.has(environmentIssue) ? "blocked" : environmentIssue ? "warn" : "ready",
-      button: environmentIssue ? "Open Environment" : "Open Viewer",
+      button: environmentIssue ? "Fix Context" : "Open Viewer",
       onClick: environmentIssue ? onEnvironment : onSaveAndTest
     },
     {
@@ -18104,7 +18104,7 @@ function ViewerQaChecklist({
         ? "Starting, walk, or top views need setup before viewer review."
         : `${manifest.views.length} saved view(s): ${walkViewCount} walk, ${topViewCount} top. Check first load, room buttons, and top-view framing.`,
       status: viewIssue ? "blocked" : manifest.views.length === 0 || walkViewCount === 0 ? "warn" : "ready",
-      button: viewIssue || manifest.views.length === 0 || walkViewCount === 0 ? "Open Views" : "Open Viewer",
+      button: viewIssue || manifest.views.length === 0 || walkViewCount === 0 ? "Set Views" : "Open Viewer",
       onClick: viewIssue || manifest.views.length === 0 || walkViewCount === 0 ? onViews : onSaveAndTest
     },
     {
@@ -18116,7 +18116,7 @@ function ViewerQaChecklist({
           ? `${hiddenTopViewObjectCount} object(s) hidden in top view; ${navigationRoleObjectCount} object(s) have explicit navigation roles.`
           : "Object graph is not loaded yet; run analysis before checking top-view hiding or navigation roles.",
       status: objectIssue && errorCodes.has(objectIssue) ? "blocked" : objectIssue || !objects ? "warn" : "ready",
-      button: objectIssue || !objects || topViewCount > 0 ? "Open Objects" : "Open Viewer",
+      button: objectIssue || !objects || topViewCount > 0 ? "Review Objects" : "Open Viewer",
       onClick: objectIssue || !objects || topViewCount > 0 ? onObjects : onSaveAndTest
     },
     {
@@ -18128,7 +18128,7 @@ function ViewerQaChecklist({
           ? "Open the viewer and inspect soft shadows, bright seams, blank lightmaps, and flat baked areas."
           : "No lightmapped materials are configured yet; bake lighting when the scene needs Shapespark-like realism.",
       status: lightingIssue && errorCodes.has(lightingIssue) ? "blocked" : lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? "warn" : "ready",
-      button: lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? "Open Bake" : "Open Viewer",
+      button: lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? "Review Bake" : "Open Viewer",
       onClick: lightingIssue || (stats?.lightmapMaterialCount ?? 0) === 0 ? onBake : onSaveAndTest
     },
     {
@@ -18160,7 +18160,7 @@ function ViewerQaChecklist({
         ? "Room labels, floorplan regions, or view links need setup."
         : "Check room buttons, minimap position, and top-view readability.",
       status: roomIssue ? "warn" : "ready",
-      button: roomIssue ? "Open Rooms" : "Open Views",
+      button: roomIssue ? "Map Rooms" : "Set Views",
       onClick: roomIssue ? onRooms : onViews
     },
     {
@@ -18172,7 +18172,7 @@ function ViewerQaChecklist({
           ? `Test ${videoTextureCount} video screen(s), ${hotspotCount} hotspot(s), ${linkCount} link(s), and ${objectToggleCount} object toggle(s).`
           : "No TV screens, hotspots, links, or object toggles are configured yet.",
       status: interactionIssue && errorCodes.has(interactionIssue) ? "blocked" : interactionIssue || interactionCount === 0 ? "warn" : "ready",
-      button: interactionIssue || interactionCount === 0 ? "Open Interactions" : "Open Viewer",
+      button: interactionIssue || interactionCount === 0 ? "Set Interactions" : "Open Viewer",
       onClick: interactionIssue || interactionCount === 0 ? onInteractions : onSaveAndTest
     },
     {
@@ -18184,7 +18184,7 @@ function ViewerQaChecklist({
           ? `Check load time and smoothness; ${stats.triangleCount} triangles, ${stats.meshCount} meshes, ${formatBytes(stats.totalBytes)} total bundle.`
           : "Run analysis before checking mobile performance.",
       status: performanceIssue && (performanceDiagnosticIssue ? errorCodes.has(performanceDiagnosticIssue) : false) ? "blocked" : performanceIssue || !stats ? "warn" : "ready",
-      button: performanceIssue || !stats ? "Open Optimization" : "Open Viewer",
+      button: performanceIssue || !stats ? "Review Performance" : "Open Viewer",
       onClick: performanceIssue || !stats ? onOptimize : onSaveAndTest
     },
     {
@@ -18199,7 +18199,7 @@ function ViewerQaChecklist({
               ? "Publish has warnings; fix them or treat the build as a draft."
               : "Run analysis before checking publish readiness.",
       status: publishStatus === "ready" ? "ready" : publishStatus === "blocked" ? "blocked" : "warn",
-      button: "Open Publish",
+      button: "Publish Checklist",
       onClick: onPublish
     }
   ] as const;
@@ -18224,16 +18224,16 @@ function ViewerQaChecklist({
             <button type="button" className="button secondary compact-button readiness-action" onClick={check.onClick}>
               {check.button === "Open Viewer" && <ExternalLink size={15} aria-hidden="true" />}
               {check.button === "Debug Viewer" && <ExternalLink size={15} aria-hidden="true" />}
-              {check.button === "Open Materials" && <Palette size={15} aria-hidden="true" />}
-              {check.button === "Open Environment" && <Globe2 size={15} aria-hidden="true" />}
-              {check.button === "Open Bake" && <Palette size={15} aria-hidden="true" />}
-              {(check.button === "Open Controls" || check.button === "Fix Navigation") && <MapPin size={15} aria-hidden="true" />}
-              {check.button === "Open Rooms" && <Layers3 size={15} aria-hidden="true" />}
-              {check.button === "Open Views" && <MapPin size={15} aria-hidden="true" />}
-              {check.button === "Open Objects" && <Eye size={15} aria-hidden="true" />}
-              {check.button === "Open Interactions" && <Video size={15} aria-hidden="true" />}
-              {check.button === "Open Optimization" && <Activity size={15} aria-hidden="true" />}
-              {check.button === "Open Publish" && <ExternalLink size={15} aria-hidden="true" />}
+              {check.button === "Review Materials" && <Palette size={15} aria-hidden="true" />}
+              {check.button === "Fix Context" && <Globe2 size={15} aria-hidden="true" />}
+              {check.button === "Review Bake" && <Palette size={15} aria-hidden="true" />}
+              {(check.button === "Tune Render" || check.button === "Fix Navigation") && <MapPin size={15} aria-hidden="true" />}
+              {check.button === "Map Rooms" && <Layers3 size={15} aria-hidden="true" />}
+              {check.button === "Set Views" && <MapPin size={15} aria-hidden="true" />}
+              {check.button === "Review Objects" && <Eye size={15} aria-hidden="true" />}
+              {check.button === "Set Interactions" && <Video size={15} aria-hidden="true" />}
+              {check.button === "Review Performance" && <Activity size={15} aria-hidden="true" />}
+              {check.button === "Publish Checklist" && <ExternalLink size={15} aria-hidden="true" />}
               {check.button === "Review Source QA" && <AlertTriangle size={15} aria-hidden="true" />}
               {check.button}
             </button>

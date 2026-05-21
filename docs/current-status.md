@@ -352,6 +352,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Source QA cards now reveal a selected plain-language issue preview with likely visible symptoms and next actions before users open raw diagnostic evidence.
 - Import, room, material texture, and navigation object-review actions now route to the matching visual repair panels instead of opening broad raw tabs.
 - Repair Center action labels and destination hints now describe the visual outcome, such as Review Materials, Set Views, Fix Context, and Review Performance, instead of broad tab names.
+- Import Viewer QA checklist actions now use the same outcome-oriented language so users review materials, set views, map rooms, and review performance from the checklist.
 - Studio/API expose Blender/Cycles lightmap bake jobs with quality presets, UV2 generation, generated lightmap assets, and material assignment.
 - Lightmap bake jobs now report generated lightmap URLs, resolutions, byte sizes, total lightmap bytes, and the exported lightmapped scene artifact in Studio.
 - Studio now shows lightmap bake QA checks and thumbnails for generated lightmaps so empty, tiny, incomplete, or low-quality bakes are visible before publish.
