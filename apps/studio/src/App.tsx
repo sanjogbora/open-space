@@ -3408,6 +3408,88 @@ function lightmapBakePlanText({
   return lines.filter(Boolean).join("\n");
 }
 
+function lightmapBakeQaReportText({
+  projectId,
+  job,
+  materialCount,
+  viewerUrl
+}: {
+  projectId: string;
+  job: LightmapBakeJobDocument;
+  materialCount: number;
+  viewerUrl: string;
+}): string {
+  const lightmaps = job.lightmaps ?? [];
+  const lightmapCount = job.lightmapCount ?? lightmaps.length;
+  const expectedCount = Math.min(materialCount, job.maxMaterials ?? materialCount);
+  const reviewLightmaps = lightmaps.filter((lightmap) => lightmapPreviewQuality(lightmap) === "warning");
+  const readyLightmaps = Math.max(0, lightmaps.length - reviewLightmaps.length);
+  const totalBytes = job.totalLightmapBytes ?? 0;
+  const averageBytes = lightmapCount > 0 ? totalBytes / lightmapCount : 0;
+  const missingOutput = lightmapCount <= 0 || !job.outputSceneUrl;
+  const incompleteOutput = expectedCount > 0 && lightmapCount > 0 && lightmapCount < expectedCount;
+  const lowSettings =
+    ((job.resolution ?? 0) > 0 && (job.resolution ?? 0) < 1024) ||
+    ((job.samples ?? 0) > 0 && (job.samples ?? 0) < 64);
+  const result =
+    missingOutput
+      ? "blocked"
+      : reviewLightmaps.length > 0 || incompleteOutput || lowSettings
+        ? "needs visual review"
+        : "ready for viewer test";
+  const recommendedAction =
+    missingOutput
+      ? "Re-run the bake after checking Blender output and material eligibility."
+      : reviewLightmaps.length > 0
+        ? "Review the flagged thumbnails first, then rebake or relink only the failing material lightmaps."
+        : incompleteOutput
+          ? "Inspect materials without lightmaps and decide whether they need baked lighting before publishing."
+          : lowSettings
+            ? "Use Medium or High settings before client review if shadows look noisy or soft."
+            : "Open the viewer and compare lighting against the reference render before publishing.";
+  const lines = [
+    `Open Space lightmap bake QA - ${projectId}`,
+    `Generated: ${new Date().toISOString()}`,
+    `Viewer: ${viewerUrl}`,
+    "",
+    "Bake result:",
+    `- Status: ${job.status}`,
+    `- Result: ${result}`,
+    job.message ? `- Message: ${job.message}` : "",
+    job.outputSceneUrl ? `- Output scene: ${job.outputSceneUrl}` : "- Output scene: missing",
+    `- Engine: ${job.engine}`,
+    `- Bake pass: ${job.bakeMode ?? "unknown"}`,
+    `- Preset: ${job.preset ?? "unknown"}`,
+    `- Resolution: ${job.resolution ?? "unknown"}px`,
+    `- Samples: ${job.samples ?? "unknown"}`,
+    `- Denoise: ${job.denoise === false ? "off" : "on"}`,
+    "",
+    "Lightmap coverage:",
+    `- Expected materials: ${expectedCount}`,
+    `- Generated lightmaps: ${lightmapCount}`,
+    `- Ready previews: ${readyLightmaps}`,
+    `- Review previews: ${reviewLightmaps.length}`,
+    `- Total bytes: ${formatBytes(totalBytes)}`,
+    `- Average bytes: ${formatBytes(averageBytes)}`,
+    "",
+    "Recommended action:",
+    `- ${recommendedAction}`,
+    reviewLightmaps.length > 0 ? "Lightmaps to inspect:" : "",
+    ...reviewLightmaps.slice(0, 12).map((lightmap) => {
+      const issue = lightmapPreviewIssue(lightmap) ?? "Review this lightmap preview before publishing.";
+      return `- ${lightmap.materialName}: ${issue} ${lightmap.url} (${lightmap.resolution ?? "unknown"}px, ${formatBytes(lightmap.bytes ?? 0)})`;
+    }),
+    "",
+    "Viewer QA:",
+    "- Open the viewer after saving Studio changes.",
+    "- Compare soft shadows, corners, ceiling/wall contact, and bright seam artifacts against the reference render.",
+    "- Check at least one bright room, one dark room, one hallway, and one material with a manually uploaded or generated lightmap.",
+    "- If the scene looks flat, noisy, blank, or overly dark, return to Bake before publishing."
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
 function sceneFramingReportLines(stats: BundleStats | null): string[] {
   if (!stats) {
     return ["- Scene framing data is not available yet."];
@@ -12801,6 +12883,25 @@ function App() {
                           <Stat label="Denoise" value={lightmapBakeJob.denoise === false ? "Off" : "On"} />
                         </div>
                         <LightmapBakeQuality job={lightmapBakeJob} materialCount={materialCountForBake} />
+                        <div className="inline-actions">
+                          <button
+                            type="button"
+                            className="button secondary compact-button"
+                            onClick={() =>
+                              void copyText(
+                                lightmapBakeQaReportText({
+                                  projectId: activeProjectId,
+                                  job: lightmapBakeJob,
+                                  materialCount: materialCountForBake,
+                                  viewerUrl: viewerUrl(activeProjectId)
+                                })
+                              )
+                            }
+                          >
+                            <Copy size={15} aria-hidden="true" />
+                            Copy Bake QA
+                          </button>
+                        </div>
                       </>
                     )}
                     {lightmapBakeJob.lightmaps && lightmapBakeJob.lightmaps.length > 0 && (
