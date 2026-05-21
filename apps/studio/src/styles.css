@@ -761,6 +761,16 @@ h2 {
   white-space: nowrap;
 }
 
+.repair-center-card-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
+}
+
+.repair-center-card-actions .repair-center-action {
+  width: 100%;
+}
+
 .visual-guide-card {
   display: grid;
   gap: 10px;
@@ -7023,6 +7033,7 @@ code {
   .repair-center-fix-preview,
   .repair-center-preview-grid,
   .repair-center-card,
+  .repair-center-card-actions,
   .repair-center-issue-map,
   .client-share-board,
   .publish-handoff-board,

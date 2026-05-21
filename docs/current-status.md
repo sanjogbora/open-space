@@ -301,6 +301,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Repair Center progress tiles now jump to their matching work section, making the overview act as visual navigation instead of a passive status row.
 - Repair Center now has a primary hero action for the next visual fix, and empty progress tiles are disabled so the overview does not create dead clicks.
 - Repair Center now previews the current fix with what will change, risk level, and the exact visual check before sending users into the detailed tool.
+- Repair Center can copy a fix brief for the current card or any listed issue, including the visual fix, destination panel, risk, verification step, and publish context.
 - Repair Center cards now say which visual panel they open, such as Import repair, Materials review, Controls zone map, Rooms map, screen planner, Bake setup, or the viewer.
 - Repair Center cards now include a visual verification cue so users know how to confirm each fix worked before moving on.
 - Studio target panels now show visual guide cards for Import, Materials, Rooms, Interactions, Controls, Views, Objects, Environment, Optimization, and Publish so Repair Center handoffs stay guided after the jump.

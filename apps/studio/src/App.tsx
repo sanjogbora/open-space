@@ -9655,6 +9655,19 @@ function App() {
                 navigationDebug ? navigationDebugViewerUrl(activeProjectId) : viewerUrl(activeProjectId)
               )
             }
+            onCopyFixBrief={(item, itemIndex, totalItems) =>
+              void copyText(
+                repairCenterFixBriefText({
+                  projectId: activeProjectId,
+                  title: manifest.branding.clientName ?? manifest.branding.title,
+                  item,
+                  itemIndex,
+                  totalItems,
+                  stats: bundleStats,
+                  publishChecks
+                })
+              )
+            }
           />
         )}
 
@@ -17567,6 +17580,76 @@ function repairCenterRiskForItem(item: RepairCenterItem): { label: string; detai
   };
 }
 
+function repairCenterFixBriefText({
+  projectId,
+  title,
+  item,
+  itemIndex,
+  totalItems,
+  stats,
+  publishChecks
+}: {
+  projectId: string;
+  title: string;
+  item: RepairCenterItem;
+  itemIndex: number;
+  totalItems: number;
+  stats: BundleStats | null;
+  publishChecks: readonly PublishCheck[];
+}): string {
+  const risk = repairCenterRiskForItem(item);
+  const unresolvedPublishChecks = publishChecks.filter((check) => !check.ready);
+  const lines = [
+    `Open Space repair brief - ${title}`,
+    `Project: ${projectId}`,
+    `Generated: ${new Date().toISOString()}`,
+    "",
+    "Priority:",
+    `- Queue position: ${itemIndex + 1} of ${Math.max(totalItems, 1)}`,
+    `- Stage: ${item.stage}`,
+    `- Severity: ${item.severity}`,
+    `- Action: ${item.button}`,
+    "",
+    "Issue:",
+    `- ${item.title}`,
+    `- ${item.detail}`,
+    "",
+    "Visual fix:",
+    `- ${item.visualFix}`,
+    `- Opens: ${repairCenterDestinationForItem(item)}`,
+    "",
+    "What changes:",
+    `- ${repairCenterChangeForItem(item)}`,
+    "",
+    "Risk:",
+    `- ${risk.label}: ${risk.detail}`,
+    "",
+    "How to verify:",
+    `- ${repairCenterVerifyForItem(item)}`,
+    "",
+    "Scene context:",
+    stats
+      ? `- Bundle: ${formatBytes(stats.totalBytes)}, model: ${formatBytes(stats.modelBytes)}, triangles: ${stats.triangleCount}, draw primitives: ${stats.primitiveCount ?? stats.meshCount}`
+      : "- Bundle analysis has not run yet.",
+    stats?.publishReadiness
+      ? `- Publish gate: ${stats.publishReadiness.status}, ${stats.publishReadiness.blockers.length} blocker(s), ${stats.publishReadiness.warnings.length} warning(s)`
+      : "- Publish gate: not analyzed",
+    unresolvedPublishChecks.length > 0
+      ? `- Other publish rows needing attention: ${unresolvedPublishChecks.slice(0, 4).map((check) => check.label).join(", ")}`
+      : "- Other publish rows needing attention: none",
+    "",
+    "Operator notes:",
+    "- Start from the visual panel named above instead of editing JSON.",
+    "- Save and open the viewer after the fix.",
+    item.action === "navigation"
+      ? "- Use the navigation debug viewer and retest the exact blocked doorway, floor click, or wall boundary."
+      : "- Use the normal viewer and compare the result against the original reference or client expectation.",
+    "- Return to Repair Center and confirm this card is cleared or lower priority before publishing."
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
 function buildRepairCenterItems({
   stats,
   manifest,
@@ -17842,7 +17925,8 @@ function RepairCenter({
   bakeState,
   onImport,
   onAction,
-  onSaveAndTest
+  onSaveAndTest,
+  onCopyFixBrief
 }: {
   stats: BundleStats | null;
   manifest: SceneManifest;
@@ -17855,6 +17939,7 @@ function RepairCenter({
   onImport: () => void;
   onAction: (action: ImportNextStepAction) => void;
   onSaveAndTest: (navigationDebug?: boolean) => void;
+  onCopyFixBrief: (item: RepairCenterItem, itemIndex: number, totalItems: number) => void;
 }) {
   const items = buildRepairCenterItems({
     stats,
@@ -17911,6 +17996,7 @@ function RepairCenter({
       ? "Open Viewer"
       : "Start Visual Fix";
   const currentRisk = repairCenterRiskForItem(currentItem);
+  const currentItemIndex = Math.max(0, items.findIndex((item) => item.id === currentItem.id));
 
   return (
     <section className="repair-center-layout">
@@ -17931,6 +18017,14 @@ function RepairCenter({
             <small>{warningCount} warning{warningCount === 1 ? "" : "s"}</small>
           </div>
           <div className="repair-center-side-actions">
+            <button
+              type="button"
+              className="button secondary repair-center-next"
+              onClick={() => onCopyFixBrief(currentItem, currentItemIndex, items.length)}
+            >
+              <Copy size={16} aria-hidden="true" />
+              Copy Fix Brief
+            </button>
             <button type="button" className="button primary repair-center-next" onClick={() => runRepairCenterItem(currentItem)}>
               {repairCenterIcon(currentItem.action)}
               {currentButtonLabel}
@@ -18056,14 +18150,24 @@ function RepairCenter({
                     <small className="repair-center-verify">Check: {repairCenterVerifyForItem(item)}</small>
                     <small className="repair-center-destination">{repairCenterDestinationForItem(item)}</small>
                   </div>
-                  <button
-                    type="button"
-                    className="button secondary repair-center-action"
-                    onClick={() => runRepairCenterItem(item)}
-                  >
-                    {repairCenterIcon(item.action)}
-                    {buttonLabel}
-                  </button>
+                  <div className="repair-center-card-actions">
+                    <button
+                      type="button"
+                      className="button secondary repair-center-action"
+                      onClick={() => onCopyFixBrief(item, itemIndex, items.length)}
+                    >
+                      <Copy size={15} aria-hidden="true" />
+                      Copy Brief
+                    </button>
+                    <button
+                      type="button"
+                      className="button secondary repair-center-action"
+                      onClick={() => runRepairCenterItem(item)}
+                    >
+                      {repairCenterIcon(item.action)}
+                      {buttonLabel}
+                    </button>
+                  </div>
                 </div>
               );
             })}
