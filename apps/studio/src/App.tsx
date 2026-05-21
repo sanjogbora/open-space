@@ -5309,6 +5309,10 @@ function App() {
     materialsDoc?.materials.filter((material) => Boolean(material.lightMapUrl)).length ??
     bundleStats?.lightmapMaterialCount ??
     0;
+  const hasPartialLightmapCoverageForBake =
+    lightmappedMaterialCountForBake > 0 && lightmappedMaterialCountForBake < materialCountForBake;
+  const hasCompleteLightmapCoverageForBake =
+    materialCountForBake > 0 && lightmappedMaterialCountForBake >= materialCountForBake;
   const estimatedBakeMaterialCount = Math.min(materialCountForBake, bakeSettings.maxMaterials);
   const estimatedBakeTextureBytes =
     estimatedBakeMaterialCount * bakeSettings.resolution * bakeSettings.resolution * 4;
@@ -5462,11 +5466,13 @@ function App() {
         id: "shadows",
         label: "No soft shadows",
         detail:
-          lightmappedMaterialCountForBake > 0
-            ? `${lightmappedMaterialCountForBake} material${lightmappedMaterialCountForBake === 1 ? "" : "s"} already use lightmaps.`
-            : "Bake lighting when the scene looks flat compared with Shapespark.",
-        status: lightmappedMaterialCountForBake > 0 ? "ready" : "warning",
-        action: lightmappedMaterialCountForBake > 0 ? "Review" : "Bake Medium"
+          hasCompleteLightmapCoverageForBake
+            ? `${lightmappedMaterialCountForBake}/${materialCountForBake} material(s) use lightmaps.`
+            : hasPartialLightmapCoverageForBake
+              ? `${lightmappedMaterialCountForBake}/${materialCountForBake} material(s) use lightmaps; confirm the rest are intentionally unbaked.`
+              : "Bake lighting when the scene looks flat compared with Shapespark.",
+        status: hasCompleteLightmapCoverageForBake ? "ready" : "warning",
+        action: hasCompleteLightmapCoverageForBake ? "Review" : hasPartialLightmapCoverageForBake ? "Review Gaps" : "Bake Medium"
       },
       {
         id: "blank-output",
@@ -5509,8 +5515,11 @@ function App() {
       blenderTool?.action,
       blenderTool?.ready,
       estimatedBakeTextureBytes,
+      hasCompleteLightmapCoverageForBake,
+      hasPartialLightmapCoverageForBake,
       lightmapBakeJob?.status,
-      lightmappedMaterialCountForBake
+      lightmappedMaterialCountForBake,
+      materialCountForBake
     ]
   );
   const resetBakeSettingsToPreset = () => {
