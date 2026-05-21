@@ -484,6 +484,7 @@ interface BundleStats {
   models?: readonly {
     format: string;
     embeddedImageCount?: number;
+    unsupportedRequiredExtensions?: readonly string[];
     externalResourceCount?: number;
     missingExternalResourceCount?: number;
     externalResources?: readonly {
@@ -17218,6 +17219,9 @@ interface SourceQaIssue {
 function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
   const diagnostics = stats.diagnostics ?? [];
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
+  const unsupportedRequiredExtensions = [
+    ...new Set((stats.models ?? []).flatMap((model) => model.unsupportedRequiredExtensions ?? []))
+  ];
   const missingResources = externalResources.filter((resource) => !resource.exists);
   const caseMismatchedResources = externalResources.filter((resource) => resource.exists && resource.caseMismatch);
   const decodeFailedResources = externalResources.filter((resource) => resource.kind === "texture" && resource.decodeFailed);
@@ -17238,6 +17242,13 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
     symptom: diagnosticVisualSymptom(diagnostic.code),
     action: diagnostic.action
   });
+  const unsupportedExtensionIssues: SourceQaIssue[] = unsupportedRequiredExtensions.slice(0, 8).map((extension) => ({
+    title: `Unsupported required extension: ${extension}`,
+    detail: "The model marks this extension as required, so the viewer must support it before the scene can be safely delivered.",
+    severity: "error",
+    symptom: "the model may fail to load, skip geometry/material features, or render differently from the source viewer.",
+    action: "Re-export without this required extension, bake/flatten the feature into standard glTF data, or add viewer loader support before publishing."
+  }));
   const missingResourceIssues: SourceQaIssue[] = missingResources.slice(0, 5).map((resource) => ({
     title: `Missing ${resource.kind}: ${resource.source}`,
     detail: "The model references this external file, but it is not present in the uploaded bundle.",
@@ -17320,7 +17331,8 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
       "structure",
       "Export structure",
       "Bad GLB/GLTF structure can make the model open blank, partial, mirrored, or impossible to analyze reliably.",
-      isSourceStructureDiagnostic
+      isSourceStructureDiagnostic,
+      unsupportedExtensionIssues
     ),
     groupFromDiagnostics(
       "resources",
