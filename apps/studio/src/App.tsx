@@ -17351,8 +17351,12 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
   ): SourceQaGroup => {
     const groupDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "info" && matches(diagnostic.code));
     const issues = [...groupDiagnostics.map(issueFromDiagnostic), ...extraIssues];
-    const hasError = groupDiagnostics.some((diagnostic) => diagnostic.severity === "error");
-    const hasWarning = groupDiagnostics.some((diagnostic) => diagnostic.severity === "warning");
+    const hasError =
+      groupDiagnostics.some((diagnostic) => diagnostic.severity === "error") ||
+      extraIssues.some((issue) => issue.severity === "error");
+    const hasWarning =
+      groupDiagnostics.some((diagnostic) => diagnostic.severity === "warning") ||
+      extraIssues.some((issue) => issue.severity === "warning");
     const count = issues.length;
     return {
       id,
