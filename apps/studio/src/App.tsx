@@ -3914,6 +3914,7 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     "collapsed-position-bounds",
     "invalid-material-references",
     "invalid-texture-references",
+    "invalid-image-buffer-references",
     "unsafe-gltf-resource-paths",
     "unsupported-required-extensions",
     "embedded-texture-decode-failed",
@@ -17417,6 +17418,7 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
       (code) =>
         [
           "missing-model-resources",
+          "invalid-image-buffer-references",
           "case-mismatched-model-resources",
           "unsafe-gltf-resource-paths",
           "unsupported-required-extensions",
@@ -17854,6 +17856,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "suspicious-node-scales",
       "invalid-material-references",
       "invalid-texture-references",
+      "invalid-image-buffer-references",
       "unsafe-gltf-resource-paths",
       "unsupported-required-extensions",
       "unsupported-image-mime-types",
@@ -18229,6 +18232,7 @@ function diagnosticVisualSymptom(code: string): string | null {
   if (
     [
       "missing-model-resources",
+      "invalid-image-buffer-references",
       "case-mismatched-model-resources",
       "unsafe-gltf-resource-paths",
       "unsupported-required-extensions",
@@ -19422,6 +19426,7 @@ function ViewerQaChecklist({
     "invalid-index-accessor-shapes",
     "invalid-material-references",
     "invalid-texture-references",
+    "invalid-image-buffer-references",
     "large-coordinate-units",
     "scene-far-from-origin",
     "missing-scene-bounds",
@@ -19697,6 +19702,7 @@ function viewerQaReportText(
       "invalid-index-accessor-shapes",
       "invalid-material-references",
       "invalid-texture-references",
+      "invalid-image-buffer-references",
       "large-coordinate-units",
       "scene-far-from-origin",
       "missing-scene-bounds",
