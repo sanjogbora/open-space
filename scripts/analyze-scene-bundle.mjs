@@ -5001,6 +5001,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "initial-view-on-dominant-plane",
     "focused-model-small-in-scene",
     "missing-scene-bounds",
+    "missing-gltf-scene-definitions",
     "large-coordinate-units",
     "scene-far-from-origin",
     "no-named-floor-meshes",

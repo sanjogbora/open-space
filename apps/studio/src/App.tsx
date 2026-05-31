@@ -3891,6 +3891,7 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     "malformed-model",
     "invalid-default-scene",
     "default-scene-has-no-renderable-meshes",
+    "missing-gltf-scene-definitions",
     "invalid-scene-node-references",
     "invalid-node-child-references",
     "invalid-node-mesh-references",
@@ -3915,6 +3916,8 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     "invalid-material-references",
     "invalid-texture-references",
     "invalid-image-buffer-references",
+    "duplicate-node-names",
+    "duplicate-material-names",
     "unsafe-gltf-resource-paths",
     "unsupported-required-extensions",
     "embedded-texture-decode-failed",
@@ -17215,6 +17218,7 @@ function isSourceStructureDiagnostic(code: string): boolean {
     "malformed-model",
     "invalid-default-scene",
     "default-scene-has-no-renderable-meshes",
+    "missing-gltf-scene-definitions",
     "invalid-scene-node-references",
     "invalid-node-child-references",
     "invalid-node-mesh-references",
@@ -17448,14 +17452,15 @@ function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
           "normal-maps-missing-tangents",
           "missing-uv-attributes",
           "textured-primitives-missing-uvs",
-          "unassigned-primitive-materials"
+          "unassigned-primitive-materials",
+          "duplicate-material-names"
         ].includes(code)
     ),
     groupFromDiagnostics(
       "overrides",
       "Saved overrides",
       "Stale object or navigation overrides after reimport can make hidden objects, blockers, top view, or movement roles behave unexpectedly.",
-      (code) => ["stale-object-overrides", "invalid-object-navigation-behavior"].includes(code)
+      (code) => ["stale-object-overrides", "invalid-object-navigation-behavior", "duplicate-node-names"].includes(code)
     )
   ];
 }
@@ -17861,6 +17866,8 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "unsafe-gltf-resource-paths",
       "unsupported-required-extensions",
       "unsupported-image-mime-types",
+      "duplicate-node-names",
+      "duplicate-material-names",
       "repeated-large-mesh-instances"
     ].includes(code)
   ) {
@@ -18211,6 +18218,7 @@ function diagnosticVisualSymptom(code: string): string | null {
       "malformed-model",
       "invalid-default-scene",
       "default-scene-has-no-renderable-meshes",
+      "missing-gltf-scene-definitions",
       "invalid-scene-node-references",
       "invalid-node-child-references",
       "invalid-node-mesh-references"
@@ -18301,6 +18309,9 @@ function diagnosticVisualSymptom(code: string): string | null {
   }
   if (["repeated-large-mesh-instances"].includes(code)) {
     return "the scene may load slowly or feel heavy because duplicated geometry dominates the model.";
+  }
+  if (["duplicate-node-names", "duplicate-material-names"].includes(code)) {
+    return "saved object, screen, finish, interaction, or lightmap targets may attach to the wrong surface after import or reimport.";
   }
   if (code === "generated-walk-zones-on-non-floor-objects") {
     return "click-to-move may jump onto furniture, decor, doors, windows, ceilings, or roofs instead of staying on real floors.";
@@ -19420,6 +19431,7 @@ function ViewerQaChecklist({
     "malformed-model",
     "invalid-default-scene",
     "default-scene-has-no-renderable-meshes",
+    "missing-gltf-scene-definitions",
     "invalid-scene-node-references",
     "invalid-node-child-references",
     "invalid-node-mesh-references",
@@ -19432,6 +19444,8 @@ function ViewerQaChecklist({
     "invalid-material-references",
     "invalid-texture-references",
     "invalid-image-buffer-references",
+    "duplicate-node-names",
+    "duplicate-material-names",
     "large-coordinate-units",
     "scene-far-from-origin",
     "missing-scene-bounds",
@@ -19696,6 +19710,7 @@ function viewerQaReportText(
       "malformed-model",
       "invalid-default-scene",
       "default-scene-has-no-renderable-meshes",
+      "missing-gltf-scene-definitions",
       "invalid-scene-node-references",
       "invalid-node-child-references",
       "invalid-node-mesh-references",
@@ -19708,6 +19723,8 @@ function viewerQaReportText(
       "invalid-material-references",
       "invalid-texture-references",
       "invalid-image-buffer-references",
+      "duplicate-node-names",
+      "duplicate-material-names",
       "large-coordinate-units",
       "scene-far-from-origin",
       "missing-scene-bounds",

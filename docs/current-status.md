@@ -397,6 +397,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Import source-QA handoffs now count unreadable and unsupported texture formats in the source diagnostic summary, route unsupported image formats to source review, and explain their likely missing-texture symptoms.
 - Publish readiness now carries case-sensitive resource-path risks and unsupported image-format warnings into the client-delivery gate.
 - Studio Source QA and Viewer QA now surface invalid embedded image-buffer references as a source-export repair issue, so broken GLB-embedded textures get a visible re-export path before material tuning or baking.
+- Studio Source QA, Viewer QA, and publish readiness now surface missing glTF scene definitions and duplicate object or material names, giving unstable browser loading and ambiguous interaction or lightmap targets a visible re-export path.
 - Source/export review actions now open the visual Source QA handoff before technical diagnostics, so malformed or missing-resource uploads get a clearer non-technical triage path.
 - Source QA cards now reveal a selected plain-language issue preview with likely visible symptoms and next actions before users open technical diagnostic evidence.
 - Source QA cards can now copy a focused re-export request for the selected source/export issue, making it easier to send actionable feedback to whoever created the model.
