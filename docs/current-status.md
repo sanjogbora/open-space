@@ -388,6 +388,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Source QA re-export requests now state when more diagnostics exist beyond the first copied issues.
 - Source QA's full Copy QA handoff now includes grouped plain-language repair issues with exact file/path/extension evidence, so users do not need to copy each issue card one by one.
 - Source QA severity now accounts for generated exact issue rows as well as raw analyzer diagnostics, preventing serious source-export problems from being visually downgraded.
+- Source QA hidden-count copy now refers to source findings and Source QA areas instead of implying every hidden plain-language issue is a raw technical diagnostic.
 - Source/export review actions now open the visual Source QA handoff before technical diagnostics, so malformed or missing-resource uploads get a clearer non-technical triage path.
 - Source QA cards now reveal a selected plain-language issue preview with likely visible symptoms and next actions before users open technical diagnostic evidence.
 - Source QA cards can now copy a focused re-export request for the selected source/export issue, making it easier to send actionable feedback to whoever created the model.

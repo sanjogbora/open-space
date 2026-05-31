@@ -17601,7 +17601,7 @@ function SourceQaSummary({
             <strong>Technical evidence</strong>
             <small>
               {totalIssueCount > 0
-                ? `${totalIssueCount} diagnostic finding${totalIssueCount === 1 ? "" : "s"} are available if the model author needs proof.`
+                ? `${totalIssueCount} source finding${totalIssueCount === 1 ? "" : "s"} are available if the model author needs proof.`
                 : "No technical diagnostic evidence is needed right now."}
             </small>
           </div>
@@ -17665,7 +17665,7 @@ function SourceQaSummary({
             ))}
             {selectedIssues.length > 4 && (
               <p className="quiet-note">
-                {selectedIssues.length - 4} more issue{selectedIssues.length - 4 === 1 ? "" : "s"} in technical diagnostics.
+                {selectedIssues.length - 4} more issue{selectedIssues.length - 4 === 1 ? "" : "s"} in this Source QA area.
               </p>
             )}
           </div>
