@@ -17758,6 +17758,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "no-named-floor-meshes",
       "ambiguous-flat-walk-surfaces",
       "flat-object-surfaces-may-catch-clicks",
+      "generated-walk-zones-on-non-floor-objects",
       "multiple-floor-heights-detected",
       "no-named-collision-meshes",
       "missing-walk-zones",
@@ -18300,6 +18301,9 @@ function diagnosticVisualSymptom(code: string): string | null {
   }
   if (["repeated-large-mesh-instances"].includes(code)) {
     return "the scene may load slowly or feel heavy because duplicated geometry dominates the model.";
+  }
+  if (code === "generated-walk-zones-on-non-floor-objects") {
+    return "click-to-move may jump onto furniture, decor, doors, windows, ceilings, or roofs instead of staying on real floors.";
   }
   return null;
 }
@@ -19356,6 +19360,7 @@ function ViewerQaChecklist({
     "one-sided-pass-zones",
     "pass-zones-overlap-block-zones",
     "walk-zones-overlap-block-zones",
+    "generated-walk-zones-on-non-floor-objects",
     "walk-zones-outside-navigation-bounds",
     "pass-zones-outside-navigation-bounds",
     "walk-views-inside-block-zones",

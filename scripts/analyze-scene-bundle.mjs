@@ -5010,6 +5010,7 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "no-named-collision-meshes",
     "no-named-ceiling-meshes",
     "missing-walk-zones",
+    "generated-walk-zones-on-non-floor-objects",
     "disconnected-navigation-zones",
     "missing-pass-zones",
     "orphan-pass-zones",

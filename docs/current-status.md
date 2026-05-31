@@ -177,6 +177,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio zone map now has paint tools for adding walk areas, door passes, and blockers visually.
 - Imported auto-walk generation now rejects obvious furniture/decor/door/window/ceiling/roof surfaces and labels generic flat surfaces as detected walk surfaces instead of exposing confusing source mesh names.
 - Bundle analysis now warns when existing generated walk zones appear to sit on non-floor objects, so Studio can explain confusing navigation repair results.
+- Generated walk zones on non-floor objects now route directly into guided navigation repair, Viewer QA, publish readiness, and plain-language symptom copy before client testing.
 - Studio zone map now supports click-to-add polygon drawing for walk, pass, and block zones before fine-tuning vertices.
 - Studio can drag polygon vertices directly on the zone map, insert points from edge handles, and Advanced zone editing can still edit polygon X/Z points.
 - Studio Auto Fix can add detected door/pass zones from likely door, opening, passage, and threshold meshes.
