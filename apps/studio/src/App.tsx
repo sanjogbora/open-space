@@ -3927,9 +3927,27 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
   const sourceDiagnostics = diagnostics.filter((diagnostic) => sourceReviewCodes.has(diagnostic.code));
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
   const missingResources = externalResources.filter((resource) => !resource.exists);
+  const sourceGroups = sourceQaGroups(stats);
+  const sourceIssueGroups = sourceGroups.filter((group) => group.count > 0);
   const modelFormats = Array.from(new Set((stats.models ?? []).map((model) => model.format))).filter(Boolean);
   const errorCount = sourceDiagnostics.filter((diagnostic) => diagnostic.severity === "error").length;
   const warningCount = sourceDiagnostics.filter((diagnostic) => diagnostic.severity === "warning").length;
+  const sourceIssueLines = sourceIssueGroups.flatMap((group) => {
+    const shownIssues = group.issues.slice(0, 4);
+    const hiddenIssueCount = Math.max(0, group.issues.length - shownIssues.length);
+    return [
+      `- ${group.label}: ${group.count} issue${group.count === 1 ? "" : "s"}`,
+      ...shownIssues.flatMap((issue, index) =>
+        sourceQaIssueEvidenceLines(issue, {
+          index: index + 1,
+          indent: "  "
+        })
+      ),
+      hiddenIssueCount > 0
+        ? `  Plus ${hiddenIssueCount} more issue${hiddenIssueCount === 1 ? "" : "s"} in ${group.label}.`
+        : ""
+    ];
+  });
 
   const lines = [
     `Open Space source QA handoff - ${projectId}`,
@@ -3972,6 +3990,12 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
         return `- ${diagnostic.severity.toUpperCase()} ${diagnostic.code}: ${diagnostic.title} - ${diagnostic.message}${symptom ? ` Likely symptom: ${symptom}` : ""}${diagnostic.action ? ` Action: ${diagnostic.action}` : ""}`;
       }
     ),
+    "",
+    "Plain-language repair issues:",
+    sourceIssueLines.length > 0
+      ? ""
+      : "- No grouped visual repair issues are currently flagged.",
+    ...sourceIssueLines,
     "",
     "Recommended order:",
     sourceDiagnostics.some((diagnostic) => isSourceStructureDiagnostic(diagnostic.code))
@@ -17216,6 +17240,20 @@ interface SourceQaIssue {
   action: string | undefined;
 }
 
+function sourceQaIssueEvidenceLines(
+  issue: SourceQaIssue,
+  options: { index?: number; indent?: string } = {}
+): string[] {
+  const indent = options.indent ?? "";
+  const label = typeof options.index === "number" ? `${options.index}. ` : "- ";
+  return [
+    `${indent}${label}${issue.title}`,
+    `${indent}   Problem: ${issue.detail}`,
+    issue.symptom ? `${indent}   Visible symptom: ${issue.symptom}` : "",
+    issue.action ? `${indent}   Requested fix: ${issue.action}` : ""
+  ].filter(Boolean);
+}
+
 function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
   const diagnostics = stats.diagnostics ?? [];
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
@@ -17386,12 +17424,7 @@ function sourceQaReexportRequestText(projectId: string, group: SourceQaGroup, is
   const selectedIssues = issues.length > 0 ? issues : group.issues;
   const shownIssues = selectedIssues.slice(0, 6);
   const hiddenIssueCount = Math.max(0, selectedIssues.length - shownIssues.length);
-  const issueLines = shownIssues.flatMap((issue, index) => [
-    `${index + 1}. ${issue.title}`,
-    `   Problem: ${issue.detail}`,
-    issue.symptom ? `   Visible symptom: ${issue.symptom}` : "",
-    issue.action ? `   Requested fix: ${issue.action}` : ""
-  ]);
+  const issueLines = shownIssues.flatMap((issue, index) => sourceQaIssueEvidenceLines(issue, { index: index + 1 }));
   const requestByGroup: Record<string, string> = {
     structure: "Please re-export this as a valid glTF 2.0 GLB with a valid default scene, valid node/mesh/accessor references, and usable geometry bounds.",
     resources: "Please send the original zipped export with all texture/buffer folders preserved, or re-export as a self-contained GLB with resources embedded.",

@@ -386,6 +386,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Source QA re-export requests now list unsupported sidecar or embedded texture MIME types by texture name.
 - Source QA re-export requests now list unsupported required glTF extensions as individual source-export issues.
 - Source QA re-export requests now state when more diagnostics exist beyond the first copied issues.
+- Source QA's full Copy QA handoff now includes grouped plain-language repair issues with exact file/path/extension evidence, so users do not need to copy each issue card one by one.
 - Source/export review actions now open the visual Source QA handoff before technical diagnostics, so malformed or missing-resource uploads get a clearer non-technical triage path.
 - Source QA cards now reveal a selected plain-language issue preview with likely visible symptoms and next actions before users open technical diagnostic evidence.
 - Source QA cards can now copy a focused re-export request for the selected source/export issue, making it easier to send actionable feedback to whoever created the model.
