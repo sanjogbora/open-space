@@ -19924,6 +19924,10 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
   const genericLooseTextureDiagnostic = (stats.diagnostics ?? []).find(
     (diagnostic) => diagnostic.code === "generic-loose-texture-names"
   );
+  const textureSourceIssues = sourceQaGroups(stats)
+    .filter((group) => group.id === "resources" || group.id === "references")
+    .flatMap((group) => group.issues)
+    .slice(0, 8);
 
   const lines = [
     `Open Space asset health repair plan - ${projectId}`,
@@ -19945,6 +19949,16 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
     `- Auto texture suggestions: ${textureSuggestions.length} (${strongSuggestions.length} apply-ready, ${reviewSuggestions.length} review)`,
     `- Lightmap assets: ${stats.lightmapAssetCount ?? 0}/${stats.lightmapMaterialCount ?? 0}`,
     `- Lightmap bytes: ${formatBytes(stats.lightmapAssetBytes ?? 0)}`,
+    "",
+    "Source/resource findings:",
+    textureSourceIssues.length > 0
+      ? ""
+      : "- No exact source/resource repair issue is currently flagged.",
+    ...textureSourceIssues.flatMap((issue, index) =>
+      sourceQaIssueEvidenceLines(issue, {
+        index: index + 1
+      })
+    ),
     "",
     "Recommended order:",
     missingResources.length > 0 || missingAssets.length > 0
@@ -20001,6 +20015,10 @@ function assetHealthTextureRequestText(stats: BundleStats, projectId: string): s
       "invalid-tangent-accessor-shapes"
     ].includes(diagnostic.code)
   );
+  const textureSourceIssues = sourceQaGroups(stats)
+    .filter((group) => group.id === "resources" || group.id === "references")
+    .flatMap((group) => group.issues)
+    .slice(0, 8);
   return [
     `Open Space texture/source request - ${projectId}`,
     "",
@@ -20019,6 +20037,16 @@ function assetHealthTextureRequestText(stats: BundleStats, projectId: string): s
     `- Missing referenced resources: ${missingResources.length}`,
     `- Auto texture matches found: ${textureSuggestions.length}`,
     ...textureDiagnostics.slice(0, 6).map((diagnostic) => `- ${diagnostic.title}: ${diagnostic.message}`),
+    "",
+    "Exact source/resource findings:",
+    textureSourceIssues.length > 0
+      ? ""
+      : "- No exact source/resource repair issue is currently flagged.",
+    ...textureSourceIssues.flatMap((issue, index) =>
+      sourceQaIssueEvidenceLines(issue, {
+        index: index + 1
+      })
+    ),
     "",
     looseImages.length > 0 ? "Loose images we received:" : "",
     ...looseImages.slice(0, 10).map((image) => `- ${image.source} (${formatBytes(image.bytes)})`),
