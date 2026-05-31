@@ -3892,6 +3892,8 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     "invalid-default-scene",
     "default-scene-has-no-renderable-meshes",
     "missing-gltf-scene-definitions",
+    "meshes-outside-default-scene",
+    "non-triangle-primitives",
     "invalid-scene-node-references",
     "invalid-node-child-references",
     "invalid-node-mesh-references",
@@ -17219,6 +17221,8 @@ function isSourceStructureDiagnostic(code: string): boolean {
     "invalid-default-scene",
     "default-scene-has-no-renderable-meshes",
     "missing-gltf-scene-definitions",
+    "meshes-outside-default-scene",
+    "non-triangle-primitives",
     "invalid-scene-node-references",
     "invalid-node-child-references",
     "invalid-node-mesh-references",
@@ -18219,6 +18223,7 @@ function diagnosticVisualSymptom(code: string): string | null {
       "invalid-default-scene",
       "default-scene-has-no-renderable-meshes",
       "missing-gltf-scene-definitions",
+      "meshes-outside-default-scene",
       "invalid-scene-node-references",
       "invalid-node-child-references",
       "invalid-node-mesh-references"
@@ -18234,6 +18239,9 @@ function diagnosticVisualSymptom(code: string): string | null {
   }
   if (["invalid-position-accessor-shapes", "invalid-index-accessor-shapes"].includes(code)) {
     return "geometry may look missing, torn, spiky, or impossible to click/walk on reliably.";
+  }
+  if (code === "non-triangle-primitives") {
+    return "line, point, strip, or fan geometry may optimize inconsistently or behave unpredictably as a click/collision surface.";
   }
   if (["invalid-material-references", "invalid-texture-references", "textures-without-images"].includes(code)) {
     return "surfaces may render as flat colors, black/green placeholders, or missing textures.";
@@ -19432,6 +19440,8 @@ function ViewerQaChecklist({
     "invalid-default-scene",
     "default-scene-has-no-renderable-meshes",
     "missing-gltf-scene-definitions",
+    "meshes-outside-default-scene",
+    "non-triangle-primitives",
     "invalid-scene-node-references",
     "invalid-node-child-references",
     "invalid-node-mesh-references",
@@ -19711,6 +19721,8 @@ function viewerQaReportText(
       "invalid-default-scene",
       "default-scene-has-no-renderable-meshes",
       "missing-gltf-scene-definitions",
+      "meshes-outside-default-scene",
+      "non-triangle-primitives",
       "invalid-scene-node-references",
       "invalid-node-child-references",
       "invalid-node-mesh-references",

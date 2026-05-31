@@ -3139,7 +3139,7 @@ function createDiagnostics(manifest, report, graphs, controls) {
     unreferencedDefaultSceneMeshCount / meshCount > 0.25
   ) {
     diagnostics.push({
-      severity: "info",
+      severity: "warning",
       code: "meshes-outside-default-scene",
       title: "Meshes exist outside the default scene",
       message: `${unreferencedDefaultSceneMeshCount}/${meshCount} mesh definition(s) are not reachable from the default scene.`,
@@ -3560,7 +3560,7 @@ function createDiagnostics(manifest, report, graphs, controls) {
 
   if (nonTrianglePrimitiveCount > 0) {
     diagnostics.push({
-      severity: "info",
+      severity: "warning",
       code: "non-triangle-primitives",
       title: "Non-triangle primitive modes detected",
       message: `${nonTrianglePrimitiveCount} primitive(s) use line, point, strip, or fan modes.`,
@@ -5002,6 +5002,8 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "focused-model-small-in-scene",
     "missing-scene-bounds",
     "missing-gltf-scene-definitions",
+    "meshes-outside-default-scene",
+    "non-triangle-primitives",
     "large-coordinate-units",
     "scene-far-from-origin",
     "no-named-floor-meshes",
