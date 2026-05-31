@@ -3916,6 +3916,9 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
     "invalid-texture-references",
     "unsafe-gltf-resource-paths",
     "unsupported-required-extensions",
+    "embedded-texture-decode-failed",
+    "sidecar-texture-decode-failed",
+    "unsupported-image-mime-types",
     "missing-model-resources",
     "case-mismatched-model-resources",
     "large-coordinate-units",
@@ -17853,6 +17856,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "invalid-texture-references",
       "unsafe-gltf-resource-paths",
       "unsupported-required-extensions",
+      "unsupported-image-mime-types",
       "repeated-large-mesh-instances"
     ].includes(code)
   ) {
@@ -18225,10 +18229,13 @@ function diagnosticVisualSymptom(code: string): string | null {
   if (
     [
       "missing-model-resources",
+      "case-mismatched-model-resources",
       "unsafe-gltf-resource-paths",
       "unsupported-required-extensions",
       "embedded-texture-decode-failed",
-      "sidecar-texture-decode-failed"
+      "sidecar-texture-decode-failed",
+      "unsupported-image-mime-types",
+      "relocatable-texture-resources"
     ].includes(code)
   ) {
     return "textures, buffers, or model features may be missing even if the file technically loads.";
