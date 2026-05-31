@@ -410,6 +410,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio bake repair actions now open and focus the bake workflow instead of starting Blender immediately, so users can review preflight settings first.
 - Studio now shows a bake preflight estimate for material count, target resolution, sample count, and raw lightmap texture footprint before Blender starts.
 - Studio bake preflight now lists specific blocking errors and warnings for material limits, raw lightmap memory, resolution, and sample count before Blender starts.
+- Studio bake preflight now includes Source QA export/resource/material-reference findings, and hard source-export errors block Blender work until the import is repaired.
 - Studio bake settings now show when resolution, samples, or margin differ from the selected preset and can reset those values back to the preset defaults.
 - Studio/API/Blender bake jobs now expose a denoise toggle and record whether denoise was used in the bake job output.
 - Studio Bake can now copy a lightmap bake plan with current settings, Blender readiness, preflight issues, estimated memory, last bake output, and lightmap thumbnails that need review.

@@ -5432,7 +5432,21 @@ function App() {
     bakeSettings.resolution !== activeBakePresetDefaults.resolution ||
     bakeSettings.samples !== activeBakePresetDefaults.samples ||
     bakeSettings.margin !== activeBakePresetDefaults.margin;
+  const bakeSourceQaGroups = bundleStats
+    ? sourceQaGroups(bundleStats).filter(
+        (group) =>
+          group.count > 0 &&
+          (group.id === "structure" || group.id === "resources" || group.id === "references")
+      )
+    : [];
   const bakePreflightIssues: BakePreflightIssue[] = [
+    ...bakeSourceQaGroups.map((group) => ({
+      severity: group.severity === "error" ? ("error" as const) : ("warning" as const),
+      message:
+        group.severity === "error"
+          ? `Source QA ${group.label}: ${group.count} blocking export issue${group.count === 1 ? "" : "s"} must be fixed before baking.`
+          : `Source QA ${group.label}: review ${group.count} source warning${group.count === 1 ? "" : "s"} before baking.`
+    })),
     bakeMaterialLimitExceeded
       ? {
           severity: "error",
