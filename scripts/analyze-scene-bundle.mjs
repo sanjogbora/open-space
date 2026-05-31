@@ -5029,6 +5029,8 @@ function createPublishReadiness(manifest, report, optimizationReport) {
     "mostly-unlit-materials",
     "vertex-colors-detected",
     "dominant-transparent-surface",
+    "case-mismatched-model-resources",
+    "unsupported-image-mime-types",
     "relocatable-texture-resources",
     "loose-textures-not-referenced",
     "generic-loose-texture-names",
