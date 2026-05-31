@@ -3245,22 +3245,7 @@ function publishReadinessReportText({
   const warnings = stats?.publishReadiness?.warnings ?? [];
   const failedChecks = publishChecks.filter((check) => !check.ready);
   const sourceQaIssueGroups = stats ? sourceQaGroups(stats).filter((group) => group.count > 0) : [];
-  const sourceQaIssueLines = sourceQaIssueGroups.flatMap((group) => {
-    const shownIssues = group.issues.slice(0, 3);
-    const hiddenIssueCount = Math.max(0, group.issues.length - shownIssues.length);
-    return [
-      `- ${group.label}: ${group.count} issue${group.count === 1 ? "" : "s"}`,
-      ...shownIssues.flatMap((issue, index) =>
-        sourceQaIssueEvidenceLines(issue, {
-          index: index + 1,
-          indent: "  "
-        })
-      ),
-      hiddenIssueCount > 0
-        ? `  Plus ${hiddenIssueCount} more issue${hiddenIssueCount === 1 ? "" : "s"} in ${group.label}.`
-        : ""
-    ];
-  });
+  const sourceQaIssueLines = sourceQaIssueGroupEvidenceLines(sourceQaIssueGroups, { issuesPerGroup: 3 });
   const lines = [
     `Open Space pre-publish readiness - ${title}`,
     `Project: ${projectId}`,
@@ -3955,22 +3940,7 @@ function sourceQaPlanText(stats: BundleStats, projectId: string): string {
   const modelFormats = Array.from(new Set((stats.models ?? []).map((model) => model.format))).filter(Boolean);
   const errorCount = sourceDiagnostics.filter((diagnostic) => diagnostic.severity === "error").length;
   const warningCount = sourceDiagnostics.filter((diagnostic) => diagnostic.severity === "warning").length;
-  const sourceIssueLines = sourceIssueGroups.flatMap((group) => {
-    const shownIssues = group.issues.slice(0, 4);
-    const hiddenIssueCount = Math.max(0, group.issues.length - shownIssues.length);
-    return [
-      `- ${group.label}: ${group.count} issue${group.count === 1 ? "" : "s"}`,
-      ...shownIssues.flatMap((issue, index) =>
-        sourceQaIssueEvidenceLines(issue, {
-          index: index + 1,
-          indent: "  "
-        })
-      ),
-      hiddenIssueCount > 0
-        ? `  Plus ${hiddenIssueCount} more issue${hiddenIssueCount === 1 ? "" : "s"} in ${group.label}.`
-        : ""
-    ];
-  });
+  const sourceIssueLines = sourceQaIssueGroupEvidenceLines(sourceIssueGroups, { issuesPerGroup: 4 });
 
   const lines = [
     `Open Space source QA handoff - ${projectId}`,
@@ -17277,6 +17247,30 @@ function sourceQaIssueEvidenceLines(
   ].filter(Boolean);
 }
 
+function sourceQaIssueGroupEvidenceLines(
+  groups: readonly SourceQaGroup[],
+  options: { issuesPerGroup?: number; indent?: string } = {}
+): string[] {
+  const issuesPerGroup = options.issuesPerGroup ?? 4;
+  const indent = options.indent ?? "  ";
+  return groups.flatMap((group) => {
+    const shownIssues = group.issues.slice(0, issuesPerGroup);
+    const hiddenIssueCount = Math.max(0, group.issues.length - shownIssues.length);
+    return [
+      `- ${group.label}: ${group.count} issue${group.count === 1 ? "" : "s"}`,
+      ...shownIssues.flatMap((issue, index) =>
+        sourceQaIssueEvidenceLines(issue, {
+          index: index + 1,
+          indent
+        })
+      ),
+      hiddenIssueCount > 0
+        ? `${indent}Plus ${hiddenIssueCount} more issue${hiddenIssueCount === 1 ? "" : "s"} in ${group.label}.`
+        : ""
+    ].filter(Boolean);
+  });
+}
+
 function sourceQaGroups(stats: BundleStats): SourceQaGroup[] {
   const diagnostics = stats.diagnostics ?? [];
   const externalResources = (stats.models ?? []).flatMap((model) => model.externalResources ?? []);
@@ -19947,10 +19941,10 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
   const genericLooseTextureDiagnostic = (stats.diagnostics ?? []).find(
     (diagnostic) => diagnostic.code === "generic-loose-texture-names"
   );
-  const textureSourceIssues = sourceQaGroups(stats)
-    .filter((group) => group.id === "resources" || group.id === "references")
-    .flatMap((group) => group.issues)
-    .slice(0, 8);
+  const textureSourceGroups = sourceQaGroups(stats).filter(
+    (group) => group.count > 0 && (group.id === "resources" || group.id === "references")
+  );
+  const textureSourceIssueLines = sourceQaIssueGroupEvidenceLines(textureSourceGroups, { issuesPerGroup: 4 });
 
   const lines = [
     `Open Space asset health repair plan - ${projectId}`,
@@ -19974,14 +19968,10 @@ function assetHealthRepairPlanText(stats: BundleStats, projectId: string): strin
     `- Lightmap bytes: ${formatBytes(stats.lightmapAssetBytes ?? 0)}`,
     "",
     "Source/resource findings:",
-    textureSourceIssues.length > 0
+    textureSourceIssueLines.length > 0
       ? ""
       : "- No exact source/resource repair issue is currently flagged.",
-    ...textureSourceIssues.flatMap((issue, index) =>
-      sourceQaIssueEvidenceLines(issue, {
-        index: index + 1
-      })
-    ),
+    ...textureSourceIssueLines,
     "",
     "Recommended order:",
     missingResources.length > 0 || missingAssets.length > 0
@@ -20038,10 +20028,10 @@ function assetHealthTextureRequestText(stats: BundleStats, projectId: string): s
       "invalid-tangent-accessor-shapes"
     ].includes(diagnostic.code)
   );
-  const textureSourceIssues = sourceQaGroups(stats)
-    .filter((group) => group.id === "resources" || group.id === "references")
-    .flatMap((group) => group.issues)
-    .slice(0, 8);
+  const textureSourceGroups = sourceQaGroups(stats).filter(
+    (group) => group.count > 0 && (group.id === "resources" || group.id === "references")
+  );
+  const textureSourceIssueLines = sourceQaIssueGroupEvidenceLines(textureSourceGroups, { issuesPerGroup: 4 });
   return [
     `Open Space texture/source request - ${projectId}`,
     "",
@@ -20062,14 +20052,10 @@ function assetHealthTextureRequestText(stats: BundleStats, projectId: string): s
     ...textureDiagnostics.slice(0, 6).map((diagnostic) => `- ${diagnostic.title}: ${diagnostic.message}`),
     "",
     "Exact source/resource findings:",
-    textureSourceIssues.length > 0
+    textureSourceIssueLines.length > 0
       ? ""
       : "- No exact source/resource repair issue is currently flagged.",
-    ...textureSourceIssues.flatMap((issue, index) =>
-      sourceQaIssueEvidenceLines(issue, {
-        index: index + 1
-      })
-    ),
+    ...textureSourceIssueLines,
     "",
     looseImages.length > 0 ? "Loose images we received:" : "",
     ...looseImages.slice(0, 10).map((image) => `- ${image.source} (${formatBytes(image.bytes)})`),
