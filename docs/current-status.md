@@ -85,6 +85,7 @@ The viewer currently supports the core walkthrough navigation loop:
 - Studio Publish now shows a visual client-share checklist for clearing blockers, creating a version, setting the live link, and testing the exact viewer a client will open.
 - Studio Publish can now copy a client-viewer test script for the exact draft or live URL, including movement, door, top-view, interaction, lighting, and mobile checks.
 - Studio Publish now adds a visual handoff board for quality gate, draft testing, version creation, live link selection, and deployment checklist before dense version details.
+- Studio Publish copied readiness reports now include grouped Source QA findings with plain-language issue evidence, so warning-state draft handoffs carry the exact source/model fixes still needed.
 - Studio Publish now adds a visual hosting handoff board for bundle validation, local static package, S3/R2 upload, CDN cache headers, and domain handoff before dense deploy commands.
 - Studio Bundle now shows a plain bundle snapshot and hides manifest/environment JSON behind technical disclosures so non-technical users are not dropped straight into raw schema text.
 - Studio Optimization now shows a visual setup board for profile budget, texture RAM, GPU compression, preview artifact, and applied viewer model before detailed profile tables.

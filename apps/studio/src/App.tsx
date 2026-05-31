@@ -3244,6 +3244,23 @@ function publishReadinessReportText({
   const blockers = stats?.publishReadiness?.blockers ?? [];
   const warnings = stats?.publishReadiness?.warnings ?? [];
   const failedChecks = publishChecks.filter((check) => !check.ready);
+  const sourceQaIssueGroups = stats ? sourceQaGroups(stats).filter((group) => group.count > 0) : [];
+  const sourceQaIssueLines = sourceQaIssueGroups.flatMap((group) => {
+    const shownIssues = group.issues.slice(0, 3);
+    const hiddenIssueCount = Math.max(0, group.issues.length - shownIssues.length);
+    return [
+      `- ${group.label}: ${group.count} issue${group.count === 1 ? "" : "s"}`,
+      ...shownIssues.flatMap((issue, index) =>
+        sourceQaIssueEvidenceLines(issue, {
+          index: index + 1,
+          indent: "  "
+        })
+      ),
+      hiddenIssueCount > 0
+        ? `  Plus ${hiddenIssueCount} more issue${hiddenIssueCount === 1 ? "" : "s"} in ${group.label}.`
+        : ""
+    ];
+  });
   const lines = [
     `Open Space pre-publish readiness - ${title}`,
     `Project: ${projectId}`,
@@ -3261,6 +3278,12 @@ function publishReadinessReportText({
     `- Blockers: ${blockers.length}`,
     `- Warnings: ${warnings.length}`,
     `- Diagnostics: ${stats?.diagnostics?.length ?? 0}`,
+    "",
+    "Source QA findings:",
+    sourceQaIssueLines.length > 0
+      ? ""
+      : "- No grouped Source QA issue is currently flagged.",
+    ...sourceQaIssueLines,
     "",
     "Scene summary:",
     `- Views: ${manifest.views.length}`,
