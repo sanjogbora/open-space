@@ -19419,8 +19419,13 @@ function ViewerQaChecklist({
     "scene-far-from-origin",
     "missing-scene-bounds",
     "missing-model-resources",
+    "case-mismatched-model-resources",
     "unsafe-gltf-resource-paths",
     "unsupported-required-extensions",
+    "embedded-texture-decode-failed",
+    "sidecar-texture-decode-failed",
+    "unsupported-image-mime-types",
+    "relocatable-texture-resources",
     "stale-object-overrides",
     "invalid-object-navigation-behavior"
   ];
