@@ -9,3 +9,11 @@ coverage/
 artifacts/
 *.log
 apps/viewer-demo/public/published/
+
+# Large binary scene files — never commit GLBs or uploaded source models
+*.glb
+*.gltf
+apps/*/public/scenes/*/source/
+# Runtime job-status files (regenerated on every conversion/bake run)
+apps/*/public/scenes/*/conversion-job.json
+apps/*/public/scenes/*/lightmap-bake-job.json
