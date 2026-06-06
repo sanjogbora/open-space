@@ -13,6 +13,7 @@ import {
   Layers3,
   MapPin,
   Palette,
+  Play,
   Plus,
   RotateCcw,
   Save,
@@ -11900,6 +11901,43 @@ function App() {
                   value={selectedView.target}
                   onChange={(next) => updateView(selectedView.id, (view) => ({ ...view, target: next }))}
                 />
+
+                <div className="panel-heading" style={{ marginTop: 18 }}>
+                  <Play size={18} aria-hidden="true" />
+                  <h2>Auto-tour</h2>
+                </div>
+                <div className="toggle-grid">
+                  <label className="toggle-row">
+                    <input
+                      type="checkbox"
+                      checked={manifest.autoTour ?? false}
+                      onChange={(e) =>
+                        updateManifest((current) => ({ ...current, autoTour: e.target.checked }))
+                      }
+                    />
+                    <span>Enabled</span>
+                  </label>
+                </div>
+                {manifest.autoTour && (
+                  <div className="field-grid" style={{ marginTop: 10 }}>
+                    <label>
+                      <span>Dwell (seconds)</span>
+                      <input
+                        type="number"
+                        min={2}
+                        max={120}
+                        step={1}
+                        value={manifest.autoTourInterval ?? 8}
+                        onChange={(e) =>
+                          updateManifest((current) => ({
+                            ...current,
+                            autoTourInterval: toNumber(e.target.value, 8)
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
             )}
           </section>

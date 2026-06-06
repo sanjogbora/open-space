@@ -190,6 +190,8 @@ export interface SceneManifest {
   environment?: EnvironmentConfig;
   rooms?: readonly RoomDefinition[];
   views: readonly SceneView[];
+  autoTour?: boolean;
+  autoTourInterval?: number;
   interactions: readonly SceneInteraction[];
   navigation: NavigationConfig;
   branding: BrandingConfig;

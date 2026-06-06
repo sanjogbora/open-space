@@ -208,6 +208,9 @@ export class WalkthroughViewer {
   private enclosureTexture: THREE.Texture | undefined;
   private pmremGenerator: THREE.PMREMGenerator | undefined;
   private debug: boolean;
+  private autoTourPaused = false;
+  private autoTourDwellTimer = 0;
+  private autoTourViewIndex = 0;
 
   constructor(options: ViewerOptions) {
     this.container = options.container;
@@ -1986,10 +1989,35 @@ export class WalkthroughViewer {
     this.updateTweens(delta);
     this.updateMovement(delta);
     this.updateMarker(elapsed);
+    this.updateAutoTour(delta);
     this.managedTextures.forEach((item) => item.update?.(elapsed));
     this.renderer.render(this.scene, this.camera);
     this.frameId = requestAnimationFrame(this.animate);
   };
+
+  private updateAutoTour(delta: number): void {
+    if (!this.manifest.autoTour || this.autoTourPaused) {
+      return;
+    }
+    const walkViews = this.manifest.views.filter((v) => v.kind === "walk");
+    if (walkViews.length < 2) {
+      return;
+    }
+    if (this.cameraTween) {
+      this.autoTourDwellTimer = 0;
+      return;
+    }
+    const interval = this.manifest.autoTourInterval ?? 8;
+    this.autoTourDwellTimer += delta;
+    if (this.autoTourDwellTimer >= interval) {
+      this.autoTourDwellTimer = 0;
+      this.autoTourViewIndex = (this.autoTourViewIndex + 1) % walkViews.length;
+      const nextView = walkViews[this.autoTourViewIndex];
+      if (nextView) {
+        this.goToView(nextView.id);
+      }
+    }
+  }
 
   private updateControls(delta: number): void {
     if (this.cameraTween) {
@@ -4114,6 +4142,8 @@ export class WalkthroughViewer {
   }
 
   private handlePointerDown = (event: PointerEvent): void => {
+    this.autoTourPaused = true;
+    this.autoTourDwellTimer = 0;
     this.renderer.domElement.focus();
     this.pointerDown = { x: event.clientX, y: event.clientY, time: performance.now() };
     this.lastPointer = { x: event.clientX, y: event.clientY };
@@ -4335,6 +4365,8 @@ export class WalkthroughViewer {
   }
 
   private handleKeyDown = (event: KeyboardEvent): void => {
+    this.autoTourPaused = true;
+    this.autoTourDwellTimer = 0;
     this.keys.add(event.code);
   };
 

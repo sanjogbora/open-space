@@ -912,9 +912,9 @@ h2 {
   gap: 10px;
   margin-bottom: 14px;
   padding: 12px;
-  border: 1px solid #d6e5ef;
-  border-radius: 8px;
-  background: #f6fbff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
 }
 
 .visual-guide-card.compact {
@@ -948,7 +948,7 @@ h2 {
 }
 
 .visual-guide-card strong {
-  color: #22313a;
+  color: var(--text-primary);
   font-size: 14px;
 }
 
@@ -959,7 +959,7 @@ h2 {
 
 .visual-guide-card p,
 .visual-guide-card li {
-  color: #52636f;
+  color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -1019,20 +1019,20 @@ h2 {
   justify-content: space-between;
   gap: 12px;
   padding: 10px;
-  border: 1px solid #dce6ec;
-  border-radius: 8px;
-  background: #f6fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
 }
 
 .model-offset-note strong {
   display: block;
-  color: #26343d;
+  color: var(--text-primary);
   font-size: 13px;
 }
 
 .model-offset-note p {
   margin: 3px 0 0;
-  color: #60717c;
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.35;
 }
@@ -1149,19 +1149,26 @@ input[type="range"]:focus {
   align-items: center;
   gap: 9px;
   padding: 0 10px;
-  border: 1px solid #e3e8eb;
-  border-radius: 7px;
-  background: #fbfcfd;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  transition: border-color 0.15s;
+}
+
+.toggle-row:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-muted);
 }
 
 .toggle-row input[type="checkbox"] {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
+  accent-color: var(--accent);
 }
 
 .toggle-row span {
-  color: #24313a;
+  color: var(--text-primary);
 }
 
 .toggle-field input[type="checkbox"] {
@@ -1180,16 +1187,17 @@ input[type="range"]:focus {
   gap: 4px;
   min-height: 62px;
   padding: 10px;
-  border: 1px solid #d8e3e9;
-  border-radius: 8px;
-  color: #26343d;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
   text-align: left;
-  background: #fbfcfd;
+  background: var(--bg-raised);
+  transition: border-color 0.15s, background 0.15s;
 }
 
 .movement-preset-button:hover {
-  border-color: #b8d8e8;
-  background: #f4faff;
+  border-color: var(--accent);
+  background: var(--accent-muted);
 }
 
 .movement-preset-button strong {
@@ -1197,7 +1205,7 @@ input[type="range"]:focus {
 }
 
 .movement-preset-button small {
-  color: #60717c;
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.35;
 }
@@ -1586,16 +1594,16 @@ input[type="range"]:focus {
   display: grid;
   gap: 10px;
   padding: 12px 14px;
-  border-bottom: 1px solid #edf1f3;
-  background: #f7fafc;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
 }
 
 .material-review-tools {
   display: grid;
   gap: 10px;
   padding: 12px 14px;
-  border-bottom: 1px solid #edf1f3;
-  background: #f7fafc;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
 }
 
 .object-search-field {
@@ -2025,10 +2033,11 @@ input[type="range"]:focus {
   gap: 4px;
   padding: 0 8px 0 14px;
   border: 0;
-  border-bottom: 1px solid #edf1f3;
-  color: #182026;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
   text-align: left;
-  background: #ffffff;
+  background: var(--bg-surface);
+  transition: background 0.12s;
 }
 
 button.list-row {
@@ -2038,8 +2047,12 @@ button.list-row {
   padding: 10px 14px;
 }
 
+button.list-row:hover {
+  background: var(--bg-raised);
+}
+
 .list-row.active {
-  background: #edf6ff;
+  background: var(--accent-muted);
 }
 
 .list-row span,
@@ -2052,7 +2065,7 @@ button.list-row {
 
 .list-row small,
 .list-row-main small {
-  color: #667681;
+  color: var(--text-muted);
 }
 
 .list-row-main {
@@ -6725,7 +6738,7 @@ button.list-row {
 
 .view-setup-card:not(:disabled):hover,
 .view-setup-card:not(:disabled):focus-visible {
-  outline: 2px solid rgba(8, 127, 231, 0.28);
+  outline: 2px solid var(--accent-ring);
   outline-offset: 1px;
 }
 
