@@ -87,6 +87,68 @@ button {
   background: var(--bg-base);
 }
 
+.preview-pane {
+  grid-column: 3;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--bg-base);
+  min-width: 0;
+}
+
+.preview-pane-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.preview-pane-header small {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.preview-pane-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.preview-pane-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.preview-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  display: block;
+}
+
+.studio-shell:has(.preview-pane) {
+  grid-template-columns: 240px 1fr 400px;
+}
+
 .sidebar {
   min-height: 100vh;
   display: flex;
@@ -340,6 +402,17 @@ h2 {
 .button.secondary:hover {
   border-color: var(--border-strong);
   background: var(--bg-raised);
+}
+
+.button.secondary.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.button.secondary.active:hover {
+  background: var(--accent-muted);
+  opacity: 0.85;
 }
 
 .button:focus-visible,

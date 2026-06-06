@@ -306,6 +306,21 @@ function App() {
   }, [manifestUrl]);
 
   useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type !== "manifest-preview") return;
+      try {
+        const parsed = parseSceneManifest(event.data.manifest as unknown);
+        const resolved = resolveManifestAssets(parsed, manifestUrl);
+        setManifest(resolved);
+      } catch {
+        // ignore malformed manifest messages
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [manifestUrl]);
+
+  useEffect(() => {
     if (!viewportRef.current || !manifest) {
       return;
     }

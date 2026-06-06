@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -21,7 +21,9 @@ import {
   Trash2,
   UploadCloud,
   Wrench,
-  Video
+  Video,
+  MonitorPlay,
+  X
 } from "lucide-react";
 import {
   navigationZoneConnectionPadding,
@@ -4133,6 +4135,8 @@ function App() {
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
   const [applyOptimizedImmediately, setApplyOptimizedImmediately] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
+  const previewIframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     if (!navigationRepairDraft) {
@@ -8287,19 +8291,25 @@ function App() {
     try {
       if (apiConnected) {
         await saveToApi();
-        return true;
+      } else {
+        localStorage.setItem(draftKey(activeProjectId, "manifest"), JSON.stringify(manifest, null, 2));
+        if (materialsDoc) {
+          localStorage.setItem(draftKey(activeProjectId, "materials"), JSON.stringify(materialsDoc, null, 2));
+        }
+        if (objectsDoc) {
+          localStorage.setItem(draftKey(activeProjectId, "objects"), JSON.stringify(objectsDoc, null, 2));
+        }
+        if (controlsDoc) {
+          localStorage.setItem(draftKey(activeProjectId, "controls"), JSON.stringify(controlsDoc, null, 2));
+        }
+        setNotice("saved");
       }
-      localStorage.setItem(draftKey(activeProjectId, "manifest"), JSON.stringify(manifest, null, 2));
-      if (materialsDoc) {
-        localStorage.setItem(draftKey(activeProjectId, "materials"), JSON.stringify(materialsDoc, null, 2));
+      if (showPreview && previewIframeRef.current?.contentWindow) {
+        previewIframeRef.current.contentWindow.postMessage(
+          { type: "manifest-preview", manifest },
+          "*"
+        );
       }
-      if (objectsDoc) {
-        localStorage.setItem(draftKey(activeProjectId, "objects"), JSON.stringify(objectsDoc, null, 2));
-      }
-      if (controlsDoc) {
-        localStorage.setItem(draftKey(activeProjectId, "controls"), JSON.stringify(controlsDoc, null, 2));
-      }
-      setNotice("saved");
       return true;
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Save failed.");
@@ -10104,6 +10114,15 @@ function App() {
               <ExternalLink size={16} aria-hidden="true" />
               Viewer
             </a>
+            <button
+              type="button"
+              className={showPreview ? "button secondary active" : "button secondary"}
+              onClick={() => setShowPreview((v) => !v)}
+              title="Toggle live preview panel"
+            >
+              <MonitorPlay size={16} aria-hidden="true" />
+              Preview
+            </button>
             <button type="button" className="button secondary" onClick={() => void saveAndOpenViewer()}>
               <Save size={16} aria-hidden="true" />
               Save & Test
@@ -17282,6 +17301,31 @@ function App() {
           </section>
         )}
       </section>
+
+      {showPreview && (
+        <aside className="preview-pane">
+          <header className="preview-pane-header">
+            <MonitorPlay size={15} aria-hidden="true" />
+            <span>Live Preview</span>
+            <small>Save to refresh</small>
+            <button
+              type="button"
+              className="preview-pane-close"
+              onClick={() => setShowPreview(false)}
+              title="Close preview"
+            >
+              <X size={15} aria-hidden="true" />
+            </button>
+          </header>
+          <iframe
+            ref={previewIframeRef}
+            className="preview-iframe"
+            src={`${viewerUrl(activeProjectId)}&embed=1`}
+            title="Live viewer preview"
+            allow="fullscreen"
+          />
+        </aside>
+      )}
 
       {notice && (
         <div className="notice" role="status">
