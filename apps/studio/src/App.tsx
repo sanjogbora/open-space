@@ -9521,6 +9521,80 @@ function App() {
     }));
   };
 
+  const importSymptomSteps = useMemo(() => {
+    const diagnostics = bundleStats?.diagnostics ?? [];
+    const sourceIssueCount = diagnostics.filter(
+      (diagnostic) => diagnostic.severity !== "info" && isSourceStructureDiagnostic(diagnostic.code)
+    ).length;
+    const framingIssueCount = diagnostics.filter(
+      (diagnostic) => diagnostic.severity !== "info" && isSceneFramingDiagnostic(diagnostic.code)
+    ).length;
+    const visualIssueCount = diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.severity !== "info" &&
+        (isGreenPlaceholderDiagnostic(diagnostic.code) ||
+          isTextureConnectionDiagnostic(diagnostic.code) ||
+          [
+            "model-has-no-texture-images",
+            "dominant-untextured-material",
+            "few-materials-use-textures",
+            "invalid-material-references",
+            "invalid-texture-references",
+            "textures-without-images",
+            "textured-primitives-missing-uvs"
+          ].includes(diagnostic.code))
+    ).length;
+    const movementIssueCount =
+      navigationIssues.filter((issue) => issue.severity !== "info").length +
+      diagnostics.filter(
+        (diagnostic) => diagnostic.severity !== "info" && importActionForDiagnostic(diagnostic.code) === "navigation"
+      ).length;
+    return [
+      {
+        id: "source",
+        label: "Blank or partial",
+        detail:
+          sourceIssueCount > 0
+            ? `${sourceIssueCount} source/export issue${sourceIssueCount === 1 ? "" : "s"} need review.`
+            : "Use when the model opens blank, partial, or broken.",
+        status: sourceIssueCount > 0 ? "warning" : "ready",
+        action: sourceIssueCount > 0 ? "Review Export" : "Source OK"
+      },
+      {
+        id: "framing",
+        label: "Wrong first view",
+        detail:
+          framingIssueCount > 0
+            ? `${framingIssueCount} framing issue${framingIssueCount === 1 ? "" : "s"} found.`
+            : "Use when the viewer opens on terrain, grass, or empty space.",
+        status: framingIssueCount > 0 ? "warning" : "ready",
+        action: "Repair Framing"
+      },
+      {
+        id: "visuals",
+        label: "Poor or green",
+        detail:
+          pendingMaterialTextureSuggestionCount > 0
+            ? `${pendingMaterialTextureSuggestionCount} safe texture match${pendingMaterialTextureSuggestionCount === 1 ? "" : "es"} ready.`
+            : visualIssueCount > 0
+              ? `${visualIssueCount} visual/material issue${visualIssueCount === 1 ? "" : "s"} found.`
+              : "Use when textures look missing, flat, or green.",
+        status: pendingMaterialTextureSuggestionCount > 0 ? "active" : visualIssueCount > 0 ? "warning" : "ready",
+        action: pendingMaterialTextureSuggestionCount > 0 ? "Apply Matches" : "Review Materials"
+      },
+      {
+        id: "movement",
+        label: "Cannot walk in",
+        detail:
+          movementIssueCount > 0
+            ? `${movementIssueCount} navigation issue${movementIssueCount === 1 ? "" : "s"} need setup.`
+            : "Use when clicks stop at doors, walls, or room entries.",
+        status: movementIssueCount > 0 ? "warning" : "ready",
+        action: "Fix Navigation"
+      }
+    ];
+  }, [bundleStats?.diagnostics, navigationIssues, pendingMaterialTextureSuggestionCount]);
+
   if (loadingError) {
     return (
       <main className="studio-shell">
@@ -9595,79 +9669,6 @@ function App() {
       action: "Enable Wheel"
     }
   ];
-  const importSymptomSteps = useMemo(() => {
-    const diagnostics = bundleStats?.diagnostics ?? [];
-    const sourceIssueCount = diagnostics.filter(
-      (diagnostic) => diagnostic.severity !== "info" && isSourceStructureDiagnostic(diagnostic.code)
-    ).length;
-    const framingIssueCount = diagnostics.filter(
-      (diagnostic) => diagnostic.severity !== "info" && isSceneFramingDiagnostic(diagnostic.code)
-    ).length;
-    const visualIssueCount = diagnostics.filter(
-      (diagnostic) =>
-        diagnostic.severity !== "info" &&
-        (isGreenPlaceholderDiagnostic(diagnostic.code) ||
-          isTextureConnectionDiagnostic(diagnostic.code) ||
-          [
-            "model-has-no-texture-images",
-            "dominant-untextured-material",
-            "few-materials-use-textures",
-            "invalid-material-references",
-            "invalid-texture-references",
-            "textures-without-images",
-            "textured-primitives-missing-uvs"
-          ].includes(diagnostic.code))
-    ).length;
-    const movementIssueCount =
-      navigationIssues.filter((issue) => issue.severity !== "info").length +
-      diagnostics.filter(
-        (diagnostic) => diagnostic.severity !== "info" && importActionForDiagnostic(diagnostic.code) === "navigation"
-      ).length;
-    return [
-      {
-        id: "source",
-        label: "Blank or partial",
-        detail:
-          sourceIssueCount > 0
-            ? `${sourceIssueCount} source/export issue${sourceIssueCount === 1 ? "" : "s"} need review.`
-            : "Use when the model opens blank, partial, or broken.",
-        status: sourceIssueCount > 0 ? "warning" : "ready",
-        action: sourceIssueCount > 0 ? "Review Export" : "Source OK"
-      },
-      {
-        id: "framing",
-        label: "Wrong first view",
-        detail:
-          framingIssueCount > 0
-            ? `${framingIssueCount} framing issue${framingIssueCount === 1 ? "" : "s"} found.`
-            : "Use when the viewer opens on terrain, grass, or empty space.",
-        status: framingIssueCount > 0 ? "warning" : "ready",
-        action: "Repair Framing"
-      },
-      {
-        id: "visuals",
-        label: "Poor or green",
-        detail:
-          pendingMaterialTextureSuggestionCount > 0
-            ? `${pendingMaterialTextureSuggestionCount} safe texture match${pendingMaterialTextureSuggestionCount === 1 ? "" : "es"} ready.`
-            : visualIssueCount > 0
-              ? `${visualIssueCount} visual/material issue${visualIssueCount === 1 ? "" : "s"} found.`
-              : "Use when textures look missing, flat, or green.",
-        status: pendingMaterialTextureSuggestionCount > 0 ? "active" : visualIssueCount > 0 ? "warning" : "ready",
-        action: pendingMaterialTextureSuggestionCount > 0 ? "Apply Matches" : "Review Materials"
-      },
-      {
-        id: "movement",
-        label: "Cannot walk in",
-        detail:
-          movementIssueCount > 0
-            ? `${movementIssueCount} navigation issue${movementIssueCount === 1 ? "" : "s"} need setup.`
-            : "Use when clicks stop at doors, walls, or room entries.",
-        status: movementIssueCount > 0 ? "warning" : "ready",
-        action: "Fix Navigation"
-      }
-    ];
-  }, [bundleStats?.diagnostics, navigationIssues, pendingMaterialTextureSuggestionCount]);
   const variantCount = materialVariantInteractions.reduce(
     (sum, interaction) => sum + interaction.variants.length,
     0
