@@ -10121,31 +10121,40 @@ function App() {
         {saveError && <p className="error-note save-error-note">{saveError}</p>}
 
         <nav className="tabs" aria-label="Studio sections">
-          {[
+          {([
             ["overview", "Overview"],
-            ["repair", "Repair Center"],
+            null,
             ["import", "Import"],
-            ["optimization", "Optimization"],
-            ["publish", "Publish"],
+            ["repair", "Repair"],
+            null,
             ["views", "Views"],
             ["rooms", "Rooms"],
-            ["interactions", "Interactions"],
-            ["materials", "Materials"],
-            ["variants", "Variants"],
             ["objects", "Objects"],
             ["controls", "Controls"],
+            null,
+            ["materials", "Materials"],
+            ["variants", "Variants"],
             ["environment", "Environment"],
+            null,
+            ["interactions", "Interactions"],
+            null,
+            ["optimization", "Optimization"],
+            ["publish", "Publish"],
             ["bundle", "Bundle"]
-          ].map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className={selectedTab === id ? "tab active" : "tab"}
-              onClick={() => setSelectedTab(id as StudioTab)}
-            >
-              {label}
-            </button>
-          ))}
+          ] as (string[] | null)[]).map((item, i) =>
+            item === null ? (
+              <span key={`sep-${i}`} className="tab-separator" aria-hidden="true" />
+            ) : (
+              <button
+                key={item[0]}
+                type="button"
+                className={selectedTab === item[0] ? "tab active" : "tab"}
+                onClick={() => setSelectedTab(item[0] as StudioTab)}
+              >
+                {item[1]}
+              </button>
+            )
+          )}
         </nav>
 
         {selectedTab === "overview" && (
@@ -17023,6 +17032,32 @@ function NumberField({
   value: number;
   onChange: (value: number) => void;
 }) {
+  const useSlider = min === 0 && max === 1;
+  if (useSlider) {
+    return (
+      <div className="slider-field">
+        <span style={{ color: "var(--text-secondary)", fontSize: "11.5px", fontWeight: 600 }}>{label}</span>
+        <div className="slider-row">
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(event) => onChange(toNumber(event.target.value, value))}
+          />
+          <input
+            type="number"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(event) => onChange(toNumber(event.target.value, value))}
+          />
+        </div>
+      </div>
+    );
+  }
   return (
     <label>
       <span>{label}</span>
