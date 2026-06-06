@@ -63,7 +63,7 @@ if (Test-Http "$apiUrl/health") {
   Start-LoggedProcess `
     -Name "API" `
     -FilePath "node.exe" `
-    -ArgumentList @($apiScript) `
+    -ArgumentList @("`"$apiScript`"") `
     -WorkingDirectory $repoRoot `
     -StdOut $apiLog `
     -StdErr $apiErr

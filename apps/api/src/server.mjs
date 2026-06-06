@@ -19,7 +19,7 @@ const sceneRoots = [
 ];
 const publishedRoot = path.join(repoRoot, "apps/viewer-demo/public/published");
 const imageExtensions = new Set([".avif", ".basis", ".jpg", ".jpeg", ".ktx2", ".png", ".webp"]);
-const convertibleModelExtensions = new Set([".dae", ".fbx", ".obj"]);
+const convertibleModelExtensions = new Set([".blend", ".dae", ".fbx", ".obj"]);
 const defaultControlsDocument = {
   schemaVersion: "0.1",
   movement: {
@@ -363,7 +363,7 @@ async function localToolStatus() {
     blender: {
       ready: blenderReady,
       command: blenderCommand,
-      purpose: "FBX/OBJ/DAE conversion and Cycles lightmap baking",
+      purpose: "BLEND/FBX/OBJ/DAE conversion and Cycles lightmap baking",
       action: blenderReady ? "Ready" : "Install Blender or set BLENDER_PATH."
     },
     toktx: {
@@ -526,7 +526,7 @@ function safeArchivePath(filename) {
 function safeSourceModelPath(filename) {
   const extension = path.extname(filename).toLowerCase();
   if (!convertibleModelExtensions.has(extension)) {
-    throw badRequest("Unsupported source model. Upload FBX, OBJ, DAE, GLB, GLTF, or ZIP.");
+    throw badRequest("Unsupported source model. Upload BLEND, FBX, OBJ, DAE, GLB, GLTF, or ZIP.");
   }
   const base = path.basename(filename, extension).replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
   return `source/${base || "model"}${extension}`;
@@ -673,6 +673,7 @@ function archiveConvertibleModelUrl(entries) {
         score:
           (baseName.toLowerCase() === "scene" ? 10 : 0) +
           (sourceHints.test(baseName) ? 4 : 0) +
+          (extension === ".blend" ? 3 : 0) +
           (extension === ".fbx" ? 2 : 0) +
           (extension === ".obj" ? 1 : 0) +
           Math.min(4, siblingAssetCount) -
@@ -688,7 +689,7 @@ async function writeProjectArchive(projectId, body) {
   const sceneUrl = archiveSceneUrl(entries);
   const sourceRelative = sceneUrl ? undefined : archiveConvertibleModelUrl(entries);
   if (!sceneUrl && !sourceRelative) {
-    throw badRequest("ZIP uploads must contain a GLB/GLTF scene file, or an FBX/OBJ/DAE source model.");
+    throw badRequest("ZIP uploads must contain a GLB/GLTF scene file, or a BLEND/FBX/OBJ/DAE source model.");
   }
   if (sceneUrl) {
     const sceneEntry = entries.find((entry) => entry.filename === sceneUrl);

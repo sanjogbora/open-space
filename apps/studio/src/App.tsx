@@ -8773,10 +8773,10 @@ function App() {
     const isZip = lowerName.endsWith(".zip");
     const isGlb = lowerName.endsWith(".glb");
     const isGltf = lowerName.endsWith(".gltf");
-    const isConvertible = /\.(dae|fbx|obj)$/i.test(lowerName);
+    const isConvertible = /\.(blend|dae|fbx|obj)$/i.test(lowerName);
     if (!isGlb && !isGltf && !isZip && !isConvertible) {
       setUploadState("error");
-      setUploadError("Upload GLB, GLTF, FBX, OBJ, DAE, or a ZIP containing GLB/GLTF/FBX/OBJ/DAE plus textures.");
+      setUploadError("Upload GLB, GLTF, BLEND, FBX, OBJ, DAE, or a ZIP containing a model plus textures.");
       return;
     }
 
@@ -10239,7 +10239,7 @@ function App() {
                 title="Import repair path"
                 detail="Start from the original model package, then let Studio rebuild the parts that make the walkthrough usable."
                 steps={[
-                  "Upload a GLB, GLTF, source model, or ZIP with its texture folder.",
+                  "Upload a GLB, GLTF, Blender file, source model, or ZIP with its texture folder.",
                   "Run Repair so textures, views, bounds, rooms, and diagnostics are refreshed.",
                   "Open Repair Center again and follow the first visible fix card."
                 ]}
@@ -10253,11 +10253,11 @@ function App() {
               <label className="file-drop">
                 <input
                   type="file"
-                  accept=".dae,.fbx,.glb,.gltf,.obj,.zip,model/gltf-binary,model/gltf+json,application/zip"
+                  accept=".blend,.dae,.fbx,.glb,.gltf,.obj,.zip,model/gltf-binary,model/gltf+json,application/zip"
                   disabled={!apiConnected || uploadState === "uploading"}
                   onChange={(event) => void uploadModel(event.target.files?.[0])}
                 />
-                <span>Upload GLB or ZIP</span>
+                <span>Upload model or ZIP</span>
                 <strong>
                   {uploadState === "uploading" && "Uploading"}
                   {uploadState === "done" && "Imported"}

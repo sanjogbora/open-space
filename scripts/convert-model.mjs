@@ -92,7 +92,12 @@ extension = os.path.splitext(source_path)[1].lower()
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete()
 
-if extension == ".fbx":
+if extension == ".blend":
+    try:
+        bpy.ops.wm.open_mainfile(filepath=source_path, load_ui=False, use_scripts=False)
+    except TypeError:
+        bpy.ops.wm.open_mainfile(filepath=source_path, load_ui=False)
+elif extension == ".fbx":
     bpy.ops.import_scene.fbx(filepath=source_path)
 elif extension == ".obj":
     if hasattr(bpy.ops.wm, "obj_import"):
