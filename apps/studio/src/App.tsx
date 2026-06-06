@@ -18,6 +18,7 @@ import {
   Save,
   Settings2,
   Trash2,
+  UploadCloud,
   Wrench,
   Video
 } from "lucide-react";
@@ -63,7 +64,7 @@ type StudioTab =
   | "environment"
   | "bundle";
 type Notice = "saved" | "copied" | "reset" | null;
-type UploadState = "idle" | "uploading" | "done" | "error";
+type UploadState = "idle" | "uploading" | "converting" | "done" | "error";
 type PublishState = "idle" | "publishing" | "done" | "error";
 type OptimizeState = "idle" | "optimizing" | "done" | "error";
 type RepairState = "idle" | "repairing" | "done" | "error";
@@ -8428,6 +8429,30 @@ function App() {
     setNotice("saved");
   };
 
+  const deleteProject = async (projectId: string) => {
+    if (!apiConnected) {
+      alert("API is not connected. Start the API server first.");
+      return;
+    }
+    if (!window.confirm(`Delete project "${projectId}"? This cannot be undone.`)) return;
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/projects/${projectId}/delete`, { method: "POST" });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({})) as { error?: string };
+        alert(`Delete failed: ${err.error ?? response.status}`);
+        return;
+      }
+    } catch (e) {
+      alert(`Delete failed: ${e instanceof Error ? e.message : "Network error"}`);
+      return;
+    }
+    setProjectSummaries((current) => current.filter((item) => item.id !== projectId));
+    if (activeProjectId === projectId) {
+      const remaining = projectSummaries.filter((item) => item.id !== projectId);
+      setActiveProjectId(remaining[0]?.id ?? "demo");
+    }
+  };
+
   const publishProject = async () => {
     if (!apiConnected) {
       setPublishState("error");
@@ -8690,7 +8715,7 @@ function App() {
     }
   };
 
-  const repairImport = async () => {
+  const repairImport = async (skipPersist = false) => {
     if (!apiConnected) {
       setRepairState("error");
       setRepairError("API is not connected.");
@@ -8701,11 +8726,13 @@ function App() {
     setRepairError("");
     setRepairSummary("");
     try {
-      const saved = await persistDraft();
-      if (!saved) {
-        setRepairState("error");
-        setRepairError("Save failed. Fix the save error before running import repair.");
-        return;
+      if (!skipPersist) {
+        const saved = await persistDraft();
+        if (!saved) {
+          setRepairState("error");
+          setRepairError("Save failed. Fix the save error before running import repair.");
+          return;
+        }
       }
       const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/repair-import`, {
         method: "POST"
@@ -8760,10 +8787,17 @@ function App() {
     }
   };
 
-  const uploadModel = async (file: File | undefined) => {
-    if (!file) {
-      return;
+  const cleanErrorMessage = (raw: string): string => {
+    for (const line of raw.split("\n")) {
+      const t = line.trim();
+      if (t.startsWith("Error:")) return t.replace(/^Error:\s*/, "");
+      if (t && !t.startsWith("at ") && !t.startsWith("file:///") && !t.includes("throw new Error")) return t;
     }
+    return (raw.split("\n")[0] ?? raw).trim();
+  };
+
+  const uploadModel = (file: File | undefined): void => {
+    if (!file) return;
     if (!apiConnected) {
       setUploadState("error");
       setUploadError("API is not connected.");
@@ -8779,63 +8813,73 @@ function App() {
       setUploadError("Upload GLB, GLTF, BLEND, FBX, OBJ, DAE, or a ZIP containing a model plus textures.");
       return;
     }
+    const contentType = isZip
+      ? "application/zip"
+      : isGltf
+        ? "model/gltf+json"
+        : isConvertible
+          ? "application/octet-stream"
+          : "model/gltf-binary";
 
     setUploadState("uploading");
     setUploadError("");
-    try {
-      const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/model`, {
-        method: "POST",
-        headers: {
-          "content-type": isZip
-            ? "application/zip"
-            : isGltf
-              ? "model/gltf+json"
-              : isConvertible
-                ? "application/octet-stream"
-                : "model/gltf-binary",
-          "x-file-name": file.name
-        },
-        body: file
-      });
-      if (!response.ok) {
-        const error = (await response.json()) as { error?: string; conversionJob?: ConversionJobDocument };
-        if (error.conversionJob) {
-          setConversionJob(error.conversionJob);
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener("load", () => {
+      if (isConvertible) setUploadState("converting");
+    });
+
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const result = JSON.parse(xhr.responseText) as {
+            manifest?: SceneManifest;
+            controls?: SceneControlsDocument;
+            stats?: BundleStats;
+            optimization?: OptimizationDocument;
+            conversionJob?: ConversionJobDocument;
+            repairedExternalResources?: number;
+          };
+          if (result.manifest) {
+            setManifest(result.manifest);
+            setSelectedViewId(result.manifest.views[0]?.id ?? "");
+            setSelectedInteractionId("");
+            setSelectedVariantInteractionId("");
+          }
+          if (result.controls) setControlsDoc(result.controls);
+          if (result.stats) setBundleStats(result.stats);
+          if (result.optimization) setOptimizationDoc(result.optimization);
+          if (result.conversionJob) setConversionJob(result.conversionJob);
+          setUploadState("done");
+          setNotice("saved");
+          if (isConvertible) void repairImport(true);
+        } catch {
+          setUploadState("error");
+          setUploadError("Invalid response from server.");
         }
-        throw new Error(error.error ?? `Upload failed with ${response.status}.`);
+      } else {
+        try {
+          const error = JSON.parse(xhr.responseText) as { error?: string; conversionJob?: ConversionJobDocument };
+          if (error.conversionJob) setConversionJob(error.conversionJob);
+          setUploadState("error");
+          setUploadError(cleanErrorMessage(error.error ?? `Upload failed with ${xhr.status}.`));
+        } catch {
+          setUploadState("error");
+          setUploadError(`Upload failed with ${xhr.status}.`);
+        }
       }
-      const result = (await response.json()) as {
-        manifest?: SceneManifest;
-        controls?: SceneControlsDocument;
-        stats?: BundleStats;
-        optimization?: OptimizationDocument;
-        conversionJob?: ConversionJobDocument;
-        repairedExternalResources?: number;
-      };
-      if (result.manifest) {
-        setManifest(result.manifest);
-        setSelectedViewId(result.manifest.views[0]?.id ?? "");
-        setSelectedInteractionId("");
-        setSelectedVariantInteractionId("");
-      }
-      if (result.controls) {
-        setControlsDoc(result.controls);
-      }
-      if (result.stats) {
-        setBundleStats(result.stats);
-      }
-      if (result.optimization) {
-        setOptimizationDoc(result.optimization);
-      }
-      if (result.conversionJob) {
-        setConversionJob(result.conversionJob);
-      }
-      setUploadState("done");
-      setNotice("saved");
-    } catch (error) {
+    });
+
+    xhr.addEventListener("error", () => {
       setUploadState("error");
-      setUploadError(error instanceof Error ? error.message : "Upload failed.");
-    }
+      setUploadError("Network error during upload.");
+    });
+
+    xhr.open("POST", `${apiBaseUrl}/api/projects/${activeProjectId}/model`);
+    xhr.setRequestHeader("content-type", contentType);
+    xhr.setRequestHeader("x-file-name", file.name);
+    xhr.send(file);
   };
 
   const uploadMaterialTexture = async (
@@ -9988,7 +10032,7 @@ function App() {
         </div>
 
         <div className="project-list">
-          {(projectSummaries.length > 0 ? projectSummaries : (() => {
+          {(projectSummaries.length > 0 ? projectSummaries : manifest ? (() => {
             const fallback: ProjectSummary = {
               id: activeProjectId,
               title: manifest.branding.title,
@@ -10000,19 +10044,33 @@ function App() {
               fallback.clientName = manifest.branding.clientName;
             }
             return [fallback];
-          })()).map((project) => (
-            <button
+          })() : []).map((project) => (
+            <div
               key={project.id}
-              type="button"
               className={project.id === activeProjectId ? "project-row active" : "project-row"}
-              onClick={() => setActiveProjectId(project.id)}
             >
-              <span>{project.clientName ?? project.title}</span>
-              <small>
-                {project.viewCount} views
-                {typeof project.publishCount === "number" ? ` / ${project.publishCount} published` : ""}
-              </small>
-            </button>
+              <button
+                type="button"
+                className="project-row-select"
+                onClick={() => setActiveProjectId(project.id)}
+              >
+                <span>{project.clientName ?? project.title}</span>
+                <small>
+                  {project.viewCount} views
+                  {typeof project.publishCount === "number" ? ` / ${project.publishCount} published` : ""}
+                </small>
+              </button>
+              {project.id !== "demo" && (
+                <button
+                  type="button"
+                  className="project-row-delete"
+                  title="Delete project"
+                  onClick={() => void deleteProject(project.id)}
+                >
+                  <Trash2 size={14} aria-hidden="true" />
+                </button>
+              )}
+            </div>
           ))}
         </div>
 
@@ -10026,7 +10084,7 @@ function App() {
         <header className="studio-header">
           <div>
             <span className="eyebrow">Project</span>
-            <h1>{manifest.branding.clientName ?? manifest.branding.title}</h1>
+            <h1>{manifest?.branding.clientName ?? manifest?.branding.title ?? ""}</h1>
           </div>
 
           <div className="header-actions">
@@ -10036,7 +10094,7 @@ function App() {
             <button
               type="button"
               className="button secondary"
-              onClick={() => void copyText(embedSnippet(activeProjectId, manifest.branding.clientName ?? manifest.branding.title))}
+              onClick={() => void copyText(embedSnippet(activeProjectId, manifest?.branding.clientName ?? manifest?.branding.title ?? ""))}
             >
               <Copy size={16} aria-hidden="true" />
               Embed
@@ -10250,23 +10308,47 @@ function App() {
                 onSecondaryAction={() => setSelectedTab("repair")}
               />
 
-              <label className="file-drop">
+              <label className={`file-drop${uploadState === "done" ? " done" : uploadState === "error" ? " error" : uploadState === "converting" ? " converting" : uploadState === "uploading" ? " uploading" : ""}`}>
                 <input
                   type="file"
                   accept=".blend,.dae,.fbx,.glb,.gltf,.obj,.zip,model/gltf-binary,model/gltf+json,application/zip"
-                  disabled={!apiConnected || uploadState === "uploading"}
-                  onChange={(event) => void uploadModel(event.target.files?.[0])}
+                  disabled={!apiConnected || uploadState === "uploading" || uploadState === "converting"}
+                  onChange={(event) => uploadModel(event.target.files?.[0])}
                 />
-                <span>Upload model or ZIP</span>
+                <UploadCloud size={22} aria-hidden="true" className={uploadState === "uploading" || uploadState === "converting" ? "spin-icon" : ""} />
                 <strong>
-                  {uploadState === "uploading" && "Uploading"}
+                  {uploadState === "uploading" && "Uploading…"}
+                  {uploadState === "converting" && "Converting with Blender…"}
                   {uploadState === "done" && "Imported"}
-                  {uploadState === "error" && "Failed"}
-                  {uploadState === "idle" && "Choose file"}
+                  {uploadState === "error" && "Try again"}
+                  {uploadState === "idle" && "Upload model or ZIP"}
                 </strong>
+                <span>GLB · GLTF · Blender · OBJ · ZIP</span>
               </label>
 
               {uploadError && <p className="error-note">{uploadError}</p>}
+              {conversionJob && conversionJob.status !== "idle" && (
+                <div className="job-step-list">
+                  <div className={`job-step-row ${conversionJob.status === "completed" ? "completed" : conversionJob.status === "running" ? "pending" : "failed"}`}>
+                    <div className="job-step-main">
+                      <span>Blender conversion</span>
+                      {conversionJob.source && <small>{conversionJob.source}</small>}
+                      {conversionJob.message && <small>{conversionJob.message}</small>}
+                      {conversionJob.outputBytes && <small>{formatBytes(conversionJob.outputBytes)}</small>}
+                    </div>
+                    <strong>{conversionJob.status}</strong>
+                  </div>
+                  {conversionJob.steps.map((step) => (
+                    <div key={step.id} className={`job-step-row ${step.status}`}>
+                      <div className="job-step-main">
+                        <span>{step.label}</span>
+                        {step.note && <small>{step.note}</small>}
+                      </div>
+                      <strong>{step.status}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
               {!apiConnected && <p className="quiet-note">Start the local API before importing models.</p>}
               <div className="publish-action-card import-repair-card">
                 <div>
@@ -10342,28 +10424,6 @@ function App() {
                   </button>
                 ))}
               </div>
-              {conversionJob && conversionJob.status !== "idle" && (
-                <div className="job-step-list">
-                  <div className={`job-step-row ${conversionJob.status === "completed" ? "completed" : conversionJob.status === "running" ? "pending" : "failed"}`}>
-                    <div className="job-step-main">
-                      <span>Source conversion</span>
-                      {conversionJob.source && <small>{conversionJob.source}</small>}
-                      {conversionJob.message && <small>{conversionJob.message}</small>}
-                      {conversionJob.outputBytes && <small>{formatBytes(conversionJob.outputBytes)}</small>}
-                    </div>
-                    <strong>{conversionJob.status}</strong>
-                  </div>
-                  {conversionJob.steps.map((step) => (
-                    <div key={step.id} className={`job-step-row ${step.status}`}>
-                      <div className="job-step-main">
-                        <span>{step.label}</span>
-                        {step.note && <small>{step.note}</small>}
-                      </div>
-                      <strong>{step.status}</strong>
-                    </div>
-                  ))}
-                </div>
-              )}
               <ImportNextSteps
                 stats={bundleStats}
                 apiConnected={apiConnected}

@@ -6,6 +6,13 @@
     "keyboard": true,
     "dragLook": true,
     "moveSpeed": 3.8,
+    "clickMoveSpeed": 1.05,
+    "wheelMoveSpeed": 1,
+    "collisionRadius": 0.28,
+    "maxStepUp": 0.38,
+    "maxStepDown": 0.72,
+    "floorBumpTolerance": 0.48,
+    "floorHeightSmoothing": 0.9,
     "lookSensitivityX": 0.004,
     "lookSensitivityY": 0.0035,
     "clickMoveThresholdPx": 8

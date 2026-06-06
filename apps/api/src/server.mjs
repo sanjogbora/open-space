@@ -68,7 +68,7 @@ const idleConversionJob = {
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET,POST,OPTIONS",
+  "access-control-allow-methods": "GET,POST,DELETE,OPTIONS",
   "access-control-allow-headers": "content-type,x-file-name"
 };
 
@@ -814,6 +814,9 @@ async function repairExternalTexturePaths(projectId) {
         return;
       }
       const scenePath = safeProjectOutputPath(target, path.join(target, sceneUrl));
+      if (!(await fileExists(scenePath))) {
+        return;
+      }
       const document = await modelDocument(scenePath);
       const imageUris = (document?.images ?? [])
         .map((image) => image?.uri)
@@ -1181,6 +1184,27 @@ async function listProjects() {
   return projects.sort((a, b) => a.clientName?.localeCompare(b.clientName ?? "") ?? a.id.localeCompare(b.id));
 }
 
+function createEmptyGlb() {
+  const jsonStr = '{"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[]}],"nodes":[]}';
+  const jsonBytes = Buffer.from(jsonStr, "utf8");
+  const padLen = (4 - (jsonBytes.length % 4)) % 4;
+  const paddedJson = padLen > 0 ? Buffer.concat([jsonBytes, Buffer.alloc(padLen, 0x20)]) : jsonBytes;
+  const totalLen = 12 + 8 + paddedJson.length;
+  const buf = Buffer.alloc(totalLen);
+  buf.writeUInt32LE(0x46546c67, 0);
+  buf.writeUInt32LE(2, 4);
+  buf.writeUInt32LE(totalLen, 8);
+  buf.writeUInt32LE(paddedJson.length, 12);
+  buf.writeUInt32LE(0x4e4f534a, 16);
+  paddedJson.copy(buf, 20);
+  return buf;
+}
+
+async function deleteProject(projectId) {
+  const dirs = targetDirs(projectId);
+  await Promise.all(dirs.map((dir) => rm(dir, { recursive: true, force: true })));
+}
+
 async function createProject(name) {
   const baseId = slug(name);
   const existing = new Set((await listProjects()).map((project) => project.id));
@@ -1191,27 +1215,71 @@ async function createProject(name) {
     index += 1;
   }
 
-  const [viewerTarget, studioTarget] = targetDirs(projectId);
-  await Promise.all([
-    mkdir(path.dirname(viewerTarget), { recursive: true }),
-    mkdir(path.dirname(studioTarget), { recursive: true })
-  ]);
-  await Promise.all([
-    cp(path.join(sceneRoots[0], "demo"), viewerTarget, { recursive: true }),
-    cp(path.join(sceneRoots[1], "demo"), studioTarget, { recursive: true })
-  ]);
+  const dirs = targetDirs(projectId);
+  await Promise.all(dirs.map((dir) => mkdir(dir, { recursive: true })));
 
-  const project = await projectPayload(projectId);
-  const manifest = {
-    ...project.manifest,
-    branding: {
-      ...project.manifest.branding,
-      clientName: name,
-      title: "Walkthrough Studio"
-    }
+  const defaultManifest = {
+    schemaVersion: "0.1",
+    sceneUrl: "scene.glb",
+    graphUrl: "scene.graph.json",
+    materialsUrl: "materials.json",
+    objectsUrl: "objects.json",
+    controlsUrl: "controls.json",
+    views: [],
+    interactions: [],
+    navigation: {
+      cameraHeight: 1.65,
+      moveSpeed: 3.8,
+      turnSpeed: 1.5,
+      floorMeshNames: ["floor", "ground", "navmesh", "walkable"],
+      collisionMeshNames: ["wall", "glass", "door", "collision"]
+    },
+    rendering: { doubleSidedMaterials: true },
+    branding: { clientName: name, title: "Walkthrough Studio", theme: "dark", accentColor: "#0787ff", showBranding: true },
+    qualityProfiles: [
+      { id: "mobile", label: "Mobile", maxPixelRatio: 1.25, shadows: false, antialias: false },
+      { id: "balanced", label: "Balanced", maxPixelRatio: 1.5, shadows: true, antialias: true },
+      { id: "desktop", label: "Desktop", maxPixelRatio: 2, shadows: true, antialias: true }
+    ]
   };
-  await writeProjectAll(projectId, "scene.manifest.json", manifest);
-  await runAnalyze(projectId);
+  const defaultControls = {
+    schemaVersion: "0.1",
+    movement: { enabled: true, clickToMove: true, keyboard: true, dragLook: true, moveSpeed: 3.8, lookSensitivityX: 0.004, lookSensitivityY: 0.0035, clickMoveThresholdPx: 8 }
+  };
+  const emptyGlb = createEmptyGlb();
+  const embedHtml = `<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>${name} Walkthrough</title>\n    <style>html,body{width:100%;height:100%;margin:0;background:#101417;}iframe{width:100%;height:100%;border:0;}</style>\n  </head>\n  <body>\n    <script src="/embed.js" data-scene="/scenes/${projectId}/scene.manifest.json" data-title="${name}" data-height="100%"></script>\n  </body>\n</html>\n`;
+
+  await Promise.all([
+    ...dirs.map((dir) => writeFile(path.join(dir, "scene.glb"), emptyGlb)),
+    ...dirs.map((dir) => writeFile(path.join(dir, "scene.manifest.json"), `${JSON.stringify(defaultManifest, null, 2)}\n`)),
+    ...dirs.map((dir) => writeFile(path.join(dir, "controls.json"), `${JSON.stringify(defaultControls, null, 2)}\n`)),
+    writeFile(path.join(dirs[0], "embed.html"), embedHtml)
+  ]);
+  const emptyProfile = (id, label) => ({ id, label, status: "pass", budgets: {}, metrics: {}, warnings: [] });
+  const emptyOptimization = {
+    schemaVersion: "0.1",
+    source: "scene.manifest.json",
+    profiles: [emptyProfile("mobile", "Mobile"), emptyProfile("balanced", "Balanced"), emptyProfile("desktop", "Desktop")],
+    recommendations: []
+  };
+  const emptyStats = {
+    schemaVersion: "0.1",
+    triangleCount: 0, meshCount: 0, primitiveCount: 0, materialCount: 0, textureCount: 0,
+    vertexCount: 0, animationCount: 0, assetSizeBytes: 0, totalBytes: 0, modelBytes: 0,
+    videoBytes: 0, viewCount: 0, interactionCount: 0, assetCount: 0, missingAssetCount: 0,
+    materialTextureSuggestionCount: 0, assets: [], warnings: []
+  };
+  const emptyObjects = { schemaVersion: "0.1", objects: [] };
+  const emptyMaterials = { schemaVersion: "0.1", materials: [] };
+  const emptyGraph = { schemaVersion: "0.1", nodes: [], edges: [] };
+  await Promise.all([
+    ...dirs.map((dir) => writeFile(path.join(dir, "stats.json"), `${JSON.stringify(emptyStats, null, 2)}\n`)),
+    ...dirs.map((dir) => writeFile(path.join(dir, "optimization.json"), `${JSON.stringify(emptyOptimization, null, 2)}\n`)),
+    ...dirs.map((dir) => writeFile(path.join(dir, "objects.json"), `${JSON.stringify(emptyObjects, null, 2)}\n`)),
+    ...dirs.map((dir) => writeFile(path.join(dir, "materials.json"), `${JSON.stringify(emptyMaterials, null, 2)}\n`)),
+    ...dirs.map((dir) => writeFile(path.join(dir, "scene.graph.json"), `${JSON.stringify(emptyGraph, null, 2)}\n`))
+  ]);
+  await resetOptimizationState(projectId);
   return projectPayload(projectId);
 }
 
@@ -3121,6 +3189,20 @@ async function handleRequest(request, response) {
       return;
     }
 
+    const deleteProjectId = projectIdFromPathname(url.pathname);
+    if (request.method === "DELETE" && deleteProjectId && deleteProjectId !== "demo") {
+      await deleteProject(deleteProjectId);
+      sendJson(response, 200, { ok: true });
+      return;
+    }
+
+    const deleteProjectIdPost = projectIdFromPathname(url.pathname, "/delete");
+    if (request.method === "POST" && deleteProjectIdPost && deleteProjectIdPost !== "demo") {
+      await deleteProject(deleteProjectIdPost);
+      sendJson(response, 200, { ok: true });
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/api/projects/demo") {
       sendJson(response, 200, await projectPayload("demo"));
       return;
@@ -3265,10 +3347,16 @@ async function handleRequest(request, response) {
 
     const repairProjectId = projectIdFromPathname(url.pathname, "/repair-import");
     if (request.method === "POST" && repairProjectId) {
+      const preRepair = await projectPayload(repairProjectId);
+      let repairSceneUrl = preRepair.manifest.sceneUrl ?? "scene.glb";
+      const firstTarget = targetDirs(repairProjectId)[0];
+      if (!(await fileExists(path.join(firstTarget, repairSceneUrl)))) {
+        repairSceneUrl = "scene.glb";
+        await setManifestSceneUrl(repairProjectId, repairSceneUrl);
+      }
       await runAnalyze(repairProjectId);
       const externalResourceRepair = await repairExternalTexturePaths(repairProjectId);
-      const current = await projectPayload(repairProjectId);
-      await resetManifestForUploadedModel(repairProjectId, current.manifest.sceneUrl ?? "scene.glb", {
+      await resetManifestForUploadedModel(repairProjectId, repairSceneUrl, {
         resetInteractions: false,
         resetControls: false
       });

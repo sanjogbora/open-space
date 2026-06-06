@@ -1,74 +1,650 @@
 {
   "schemaVersion": "0.1",
-  "generatedAt": "2026-04-29T06:00:48.824Z",
+  "generatedAt": "2026-06-06T10:51:49.334Z",
   "source": "scene.manifest.json",
   "profiles": [
     {
       "id": "mobile",
       "label": "Mobile",
-      "status": "pass",
+      "status": "warn",
       "budgets": {
         "maxTotalBytes": 83886080,
         "maxModelBytes": 37748736,
         "maxTriangles": 1500000,
+        "maxDrawPrimitives": 500,
+        "maxTextureMemoryBytes": 268435456,
         "maxMaterials": 80,
         "maxMeshes": 300
       },
       "metrics": {
-        "totalBytes": 15380,
-        "modelBytes": 15380,
-        "triangles": 240,
-        "materials": 9,
-        "meshes": 20
+        "totalBytes": 325832420,
+        "modelBytes": 325832420,
+        "triangles": 2688232,
+        "drawPrimitives": 643,
+        "textureMemoryBytes": 1876266140,
+        "materials": 192,
+        "meshes": 630
       },
-      "warnings": []
+      "warnings": [
+        {
+          "code": "total-bytes",
+          "message": "Bundle size is over the Mobile budget."
+        },
+        {
+          "code": "model-bytes",
+          "message": "Model size is over the Mobile budget."
+        },
+        {
+          "code": "triangles",
+          "message": "Triangle count is over the Mobile budget."
+        },
+        {
+          "code": "draw-primitives",
+          "message": "Draw primitive count is over the Mobile budget."
+        },
+        {
+          "code": "texture-memory",
+          "message": "Estimated decoded texture memory is over the Mobile budget."
+        },
+        {
+          "code": "materials",
+          "message": "Material count is over the Mobile budget."
+        },
+        {
+          "code": "meshes",
+          "message": "Mesh count is over the Mobile budget."
+        }
+      ]
     },
     {
       "id": "balanced",
       "label": "Balanced",
-      "status": "pass",
+      "status": "warn",
       "budgets": {
         "maxTotalBytes": 146800640,
         "maxModelBytes": 67108864,
         "maxTriangles": 4000000,
+        "maxDrawPrimitives": 900,
+        "maxTextureMemoryBytes": 536870912,
         "maxMaterials": 160,
         "maxMeshes": 700
       },
       "metrics": {
-        "totalBytes": 15380,
-        "modelBytes": 15380,
-        "triangles": 240,
-        "materials": 9,
-        "meshes": 20
+        "totalBytes": 325832420,
+        "modelBytes": 325832420,
+        "triangles": 2688232,
+        "drawPrimitives": 643,
+        "textureMemoryBytes": 1876266140,
+        "materials": 192,
+        "meshes": 630
       },
-      "warnings": []
+      "warnings": [
+        {
+          "code": "total-bytes",
+          "message": "Bundle size is over the Balanced budget."
+        },
+        {
+          "code": "model-bytes",
+          "message": "Model size is over the Balanced budget."
+        },
+        {
+          "code": "texture-memory",
+          "message": "Estimated decoded texture memory is over the Balanced budget."
+        },
+        {
+          "code": "materials",
+          "message": "Material count is over the Balanced budget."
+        }
+      ]
     },
     {
       "id": "desktop",
       "label": "Desktop",
-      "status": "pass",
+      "status": "warn",
       "budgets": {
         "maxTotalBytes": 272629760,
         "maxModelBytes": 125829120,
         "maxTriangles": 8000000,
+        "maxDrawPrimitives": 1800,
+        "maxTextureMemoryBytes": 1073741824,
         "maxMaterials": 320,
         "maxMeshes": 1400
       },
       "metrics": {
-        "totalBytes": 15380,
-        "modelBytes": 15380,
-        "triangles": 240,
-        "materials": 9,
-        "meshes": 20
+        "totalBytes": 325832420,
+        "modelBytes": 325832420,
+        "triangles": 2688232,
+        "drawPrimitives": 643,
+        "textureMemoryBytes": 1876266140,
+        "materials": 192,
+        "meshes": 630
       },
-      "warnings": []
+      "warnings": [
+        {
+          "code": "total-bytes",
+          "message": "Bundle size is over the Desktop budget."
+        },
+        {
+          "code": "model-bytes",
+          "message": "Model size is over the Desktop budget."
+        },
+        {
+          "code": "texture-memory",
+          "message": "Estimated decoded texture memory is over the Desktop budget."
+        }
+      ]
+    }
+  ],
+  "texturePlans": [
+    {
+      "profileId": "mobile",
+      "label": "Mobile",
+      "status": "needs-review",
+      "budgetBytes": 268435456,
+      "currentBytes": 1876266140,
+      "estimatedAfterBytes": 1121291420,
+      "estimatedSavingsBytes": 754974720,
+      "maxDimension": 1024,
+      "items": [
+        {
+          "source": "bufferView:173",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:174",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:4016",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:4017",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:4018",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:4019",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:4106",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:4107",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:4115",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:4116",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:4117",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        },
+        {
+          "source": "bufferView:4452",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 1024,
+          "targetHeight": 1024,
+          "targetMaxDimension": 1024,
+          "estimatedBytesAfter": 4194304,
+          "estimatedSavingsBytes": 62914560,
+          "reason": "Over Mobile 1024px edge target"
+        }
+      ]
+    },
+    {
+      "profileId": "balanced",
+      "label": "Balanced",
+      "status": "needs-review",
+      "budgetBytes": 536870912,
+      "currentBytes": 1876266140,
+      "estimatedAfterBytes": 1272286364,
+      "estimatedSavingsBytes": 603979776,
+      "maxDimension": 2048,
+      "items": [
+        {
+          "source": "bufferView:173",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:174",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:4016",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:4017",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:4018",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:4019",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:4106",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:4107",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:4115",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:4116",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:4117",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        },
+        {
+          "source": "bufferView:4452",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 2048,
+          "targetHeight": 2048,
+          "targetMaxDimension": 2048,
+          "estimatedBytesAfter": 16777216,
+          "estimatedSavingsBytes": 50331648,
+          "reason": "Over Balanced 2048px edge target"
+        }
+      ]
+    },
+    {
+      "profileId": "desktop",
+      "label": "Desktop",
+      "status": "needs-review",
+      "budgetBytes": 1073741824,
+      "currentBytes": 1876266140,
+      "estimatedAfterBytes": 1523944604,
+      "estimatedSavingsBytes": 352321536,
+      "maxDimension": 4096,
+      "items": [
+        {
+          "source": "bufferView:173",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:174",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:4016",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:4017",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:4018",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:4019",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:4106",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:4107",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:4115",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:4116",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:4117",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        },
+        {
+          "source": "bufferView:4452",
+          "width": 4096,
+          "height": 4096,
+          "currentBytes": 67108864,
+          "targetWidth": 3072,
+          "targetHeight": 3072,
+          "targetMaxDimension": 3072,
+          "estimatedBytesAfter": 37748736,
+          "estimatedSavingsBytes": 29360128,
+          "reason": "Part of decoded texture-memory reduction"
+        }
+      ]
     }
   ],
   "recommendations": [
     {
-      "priority": "low",
-      "action": "No immediate optimization action needed for this demo scene.",
-      "reason": "The scene is currently within all early budgets."
+      "priority": "high",
+      "action": "Run mesh simplification for mobile profile.",
+      "reason": "Mobile triangle budget is exceeded."
+    },
+    {
+      "priority": "high",
+      "action": "Merge static meshes that share materials.",
+      "reason": "High mesh count increases draw calls."
+    },
+    {
+      "priority": "high",
+      "action": "Join compatible primitives and merge safe static batches.",
+      "reason": "High draw primitive count can bottleneck mobile GPUs even when triangle count is acceptable."
+    },
+    {
+      "priority": "high",
+      "action": "Downscale oversized texture sets and convert delivery textures to KTX2/Basis.",
+      "reason": "Decoded texture memory is above the mobile GPU target."
+    },
+    {
+      "priority": "medium",
+      "action": "Consolidate duplicate materials and atlas small repeated textures.",
+      "reason": "Material count is a draw-call and memory pressure signal."
+    },
+    {
+      "priority": "medium",
+      "action": "Enable geometry compression before publishing.",
+      "reason": "The GLB does not advertise Meshopt or Draco compression."
+    },
+    {
+      "priority": "medium",
+      "action": "Convert large textures to WebP now, then KTX2/Basis for production delivery.",
+      "reason": "The model has texture images but does not advertise WebP transfer textures or KHR_texture_basisu GPU textures."
+    },
+    {
+      "priority": "medium",
+      "action": "Move large media into lazy-loaded assets.",
+      "reason": "Initial bundle size is above the mobile target."
     }
   ]
 }

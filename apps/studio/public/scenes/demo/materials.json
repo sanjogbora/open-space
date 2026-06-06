@@ -1,69 +1,1143 @@
 {
   "schemaVersion": "0.1",
   "generator": "Walkthrough Studio analyzer",
-  "source": "scene.optimized.glb",
+  "source": "scene.glb",
   "materials": [
     {
-      "id": "mat-0-floor",
-      "name": "Floor",
-      "baseColor": "#948269",
-      "roughness": 0.62,
+      "id": "mat-0-material-001",
+      "name": "Material.001",
       "metalness": 0
     },
     {
-      "id": "mat-1-wall",
-      "name": "Wall",
-      "baseColor": "#9e9c8f",
-      "roughness": 0.84,
-      "metalness": 0
+      "id": "mat-1-hidden-material",
+      "name": "hidden_material"
     },
     {
-      "id": "mat-2-ceiling",
-      "name": "Ceiling",
-      "baseColor": "#bdb8a8",
-      "roughness": 0.9,
-      "metalness": 0
+      "id": "mat-2-handle-material",
+      "name": "Handle_material"
     },
     {
-      "id": "mat-3-sofa",
-      "name": "Sofa",
-      "baseColor": "#051f26",
-      "roughness": 0.78,
-      "metalness": 0
+      "id": "mat-3-door-material",
+      "name": "Door_material"
     },
     {
-      "id": "mat-4-wood",
+      "id": "mat-4-pvc",
+      "name": "PVC"
+    },
+    {
+      "id": "mat-5-plastic",
+      "name": "Plastic"
+    },
+    {
+      "id": "mat-6-glass",
+      "name": "Glass"
+    },
+    {
+      "id": "mat-7-marble",
+      "name": "Marble"
+    },
+    {
+      "id": "mat-8-bed-07",
+      "name": "BED_07"
+    },
+    {
+      "id": "mat-9-wood",
       "name": "Wood",
       "baseColor": "#59402b",
       "roughness": 0.7,
       "metalness": 0
     },
     {
-      "id": "mat-5-counter",
-      "name": "Counter",
-      "baseColor": "#c2c2b3",
-      "roughness": 0.52,
+      "id": "mat-10-material-005",
+      "name": "Material.005",
+      "roughness": 0.11428606510162354,
       "metalness": 0
     },
     {
-      "id": "mat-6-tvbody",
-      "name": "TVBody",
-      "baseColor": "#030405",
-      "roughness": 0.45,
+      "id": "mat-11-material-002",
+      "name": "Material.002",
+      "roughness": 0.6000000238418579,
       "metalness": 0
     },
     {
-      "id": "mat-7-tvscreen",
-      "name": "TVScreen",
-      "baseColor": "#0580e6",
-      "roughness": 0.25,
+      "id": "mat-12-material-003",
+      "name": "Material.003",
+      "baseColor": "#c35903",
+      "roughness": 0.022857213392853737
+    },
+    {
+      "id": "mat-13-fabric-plain-001",
+      "name": "Fabric_Plain.001",
+      "roughness": 0.6000000238418579,
       "metalness": 0
     },
     {
-      "id": "mat-8-rug",
-      "name": "Rug",
-      "baseColor": "#8a241a",
-      "roughness": 0.8,
+      "id": "mat-14-fabric",
+      "name": "Fabric",
+      "baseColor": "#a0a0a0",
+      "roughness": 0.7420974969863892,
+      "metalness": 0
+    },
+    {
+      "id": "mat-15-fabric",
+      "name": "fabric",
+      "baseColor": "#848484",
+      "metalness": 0
+    },
+    {
+      "id": "mat-16-metal",
+      "name": "metal",
+      "baseColor": "#cccccc",
+      "roughness": 0.05000000074505806
+    },
+    {
+      "id": "mat-17-pillow-white",
+      "name": "pillow_white",
+      "baseColor": "#c7c7c7",
+      "metalness": 0
+    },
+    {
+      "id": "mat-18-pillow-brown",
+      "name": "pillow_brown",
+      "baseColor": "#191212",
+      "metalness": 0
+    },
+    {
+      "id": "mat-19-fabric-001",
+      "name": "fabric.001",
+      "baseColor": "#848484",
+      "metalness": 0
+    },
+    {
+      "id": "mat-20-metal-001",
+      "name": "metal.001",
+      "baseColor": "#cccccc",
+      "roughness": 0.05000000074505806
+    },
+    {
+      "id": "mat-21-img45-7",
+      "name": "img45_7",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-22-merged-materials-001",
+      "name": "Merged_materials.001",
+      "baseColor": "#0c0c0c",
+      "roughness": 0.6000000238418579,
+      "metalness": 0
+    },
+    {
+      "id": "mat-23-metal-06-1k",
+      "name": "Metal_06_1K",
+      "baseColor": "#434343",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-24-img47-17",
+      "name": "img47_17",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-25-img17-34",
+      "name": "img17_34",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-26-img26-44-1-0",
+      "name": "img26_44_1_0",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-27-img30-48-0",
+      "name": "img30_48_0",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-28-img31-49-32-2",
+      "name": "img31_49_32_2",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-29-img31-49-32-3",
+      "name": "img31_49_32_3",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-30-img31-49-32-4",
+      "name": "img31_49_32_4",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-31-img31-49-32-5",
+      "name": "img31_49_32_5",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-32-img31-49-32-6",
+      "name": "img31_49_32_6",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-33-img31-49-32-7",
+      "name": "img31_49_32_7",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-34-img31-49-32-8",
+      "name": "img31_49_32_8",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-35-img30-48-3",
+      "name": "img30_48_3",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-36-img49-51",
+      "name": "img49_51",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-37-img41-62-19-0",
+      "name": "img41_62_19_0",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-38-img41-62-19-1",
+      "name": "img41_62_19_1",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-39-img41-62-19-2",
+      "name": "img41_62_19_2",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-40-img41-62-19-3",
+      "name": "img41_62_19_3",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-41-img41-62-19-4",
+      "name": "img41_62_19_4",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-42-img41-62-19-5",
+      "name": "img41_62_19_5",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-43-img41-62-19-6",
+      "name": "img41_62_19_6",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-44-img41-62-19-7",
+      "name": "img41_62_19_7",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-45-img41-62-19-8",
+      "name": "img41_62_19_8",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-46-img41-62-19-9",
+      "name": "img41_62_19_9",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-47-img41-62-19-10",
+      "name": "img41_62_19_10",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-48-img41-62-19-11",
+      "name": "img41_62_19_11",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-49-img41-62-19-12",
+      "name": "img41_62_19_12",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-50-img41-62-19-13",
+      "name": "img41_62_19_13",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-51-img41-62-19-14",
+      "name": "img41_62_19_14",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-52-img41-62-19-15",
+      "name": "img41_62_19_15",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-53-img41-62-19-16",
+      "name": "img41_62_19_16",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-54-img41-62-19-17",
+      "name": "img41_62_19_17",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-55-img41-62-19-18",
+      "name": "img41_62_19_18",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-56-img41-62-19-19",
+      "name": "img41_62_19_19",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-57-img41-62-19-20",
+      "name": "img41_62_19_20",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-58-img41-62-19-21",
+      "name": "img41_62_19_21",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-59-img41-62-19-22",
+      "name": "img41_62_19_22",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-60-img41-62-19-23",
+      "name": "img41_62_19_23",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-61-img41-62-19-24",
+      "name": "img41_62_19_24",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-62-img41-62-19-25",
+      "name": "img41_62_19_25",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-63-img41-62-19-26",
+      "name": "img41_62_19_26",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-64-img41-62-19-27",
+      "name": "img41_62_19_27",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-65-img41-62-19-28",
+      "name": "img41_62_19_28",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-66-img41-62-19-29",
+      "name": "img41_62_19_29",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-67-img41-62-19-30",
+      "name": "img41_62_19_30",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-68-img41-62-19-31",
+      "name": "img41_62_19_31",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-69-img41-62-19-32",
+      "name": "img41_62_19_32",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-70-img18-66",
+      "name": "img18_66",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-71-merged-materials-003",
+      "name": "Merged_materials.003",
+      "baseColor": "#0c0c0c",
+      "roughness": 0.6000000238418579,
+      "metalness": 0
+    },
+    {
+      "id": "mat-72-img45-7-002",
+      "name": "img45_7.002",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-73-merged-materials-002",
+      "name": "Merged_materials.002",
+      "baseColor": "#0c0c0c",
+      "roughness": 0.6000000238418579,
+      "metalness": 0
+    },
+    {
+      "id": "mat-74-img45-7-001",
+      "name": "img45_7.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-75-img47-17-001",
+      "name": "img47_17.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-76-img31-49-32-3-001",
+      "name": "img31_49_32_3.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-77-img31-49-32-6-001",
+      "name": "img31_49_32_6.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-78-img49-51-001",
+      "name": "img49_51.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-79-img41-62-19-10-001",
+      "name": "img41_62_19_10.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-80-img41-62-19-12-001",
+      "name": "img41_62_19_12.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-81-img41-62-19-19-001",
+      "name": "img41_62_19_19.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-82-img41-62-19-26-001",
+      "name": "img41_62_19_26.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-83-img41-62-19-2-001",
+      "name": "img41_62_19_2.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-84-img18-66-001",
+      "name": "img18_66.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-85-metal-06-1k-001",
+      "name": "Metal_06_1K.001",
+      "baseColor": "#434343",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-86-img31-49-32-2-001",
+      "name": "img31_49_32_2.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-87-img31-49-32-4-001",
+      "name": "img31_49_32_4.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-88-img31-49-32-7-001",
+      "name": "img31_49_32_7.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-89-img41-62-19-18-001",
+      "name": "img41_62_19_18.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-90-img41-62-19-20-001",
+      "name": "img41_62_19_20.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-91-img41-62-19-21-001",
+      "name": "img41_62_19_21.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-92-img41-62-19-23-001",
+      "name": "img41_62_19_23.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-93-img41-62-19-3-001",
+      "name": "img41_62_19_3.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-94-img41-62-19-4-001",
+      "name": "img41_62_19_4.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-95-img41-62-19-5-001",
+      "name": "img41_62_19_5.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-96-mt-books",
+      "name": "MT_Books",
+      "metalness": 0
+    },
+    {
+      "id": "mat-97-mt-furniture",
+      "name": "MT_Furniture",
+      "metalness": 0
+    },
+    {
+      "id": "mat-98-mt-neffertiti",
+      "name": "MT_Neffertiti"
+    },
+    {
+      "id": "mat-99-mt-stand",
+      "name": "MT_Stand",
+      "metalness": 0
+    },
+    {
+      "id": "mat-100-mt-tv",
+      "name": "MT_TV",
+      "metalness": 0
+    },
+    {
+      "id": "mat-101-mt-vasesbig",
+      "name": "MT_VasesBig"
+    },
+    {
+      "id": "mat-102-mt-vasesmedium",
+      "name": "MT_VasesMedium"
+    },
+    {
+      "id": "mat-103-mt-vasessmall",
+      "name": "MT_VasesSmall"
+    },
+    {
+      "id": "mat-104-material-001",
+      "name": "material.001",
+      "baseColor": "#cccccc",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-105-m-dourado",
+      "name": "M_Dourado",
+      "baseColor": "#4d2e10",
+      "roughness": 0.9463703632354736,
+      "metalness": 0
+    },
+    {
+      "id": "mat-106-plasticopreto",
+      "name": "plasticoPreto",
+      "baseColor": "#1c1c1c",
+      "roughness": 0.985710084438324,
+      "metalness": 0
+    },
+    {
+      "id": "mat-107-amarelo",
+      "name": "amarelo",
+      "baseColor": "#8c4601",
+      "roughness": 0.9299971461296082,
+      "metalness": 0
+    },
+    {
+      "id": "mat-108-azul",
+      "name": "azul",
+      "baseColor": "#021270",
+      "roughness": 0.9815093278884888,
+      "metalness": 0
+    },
+    {
+      "id": "mat-109-azulbebe",
+      "name": "azulbebe",
+      "baseColor": "#284259",
+      "roughness": 0.9457546472549438,
+      "metalness": 0
+    },
+    {
+      "id": "mat-110-branco",
+      "name": "branco",
+      "baseColor": "#a6a6a6",
+      "roughness": 0.9406628012657166,
+      "metalness": 0
+    },
+    {
+      "id": "mat-111-laranjabebe",
+      "name": "laranjabebe",
+      "baseColor": "#913119",
+      "roughness": 0.9408446550369263,
+      "metalness": 0
+    },
+    {
+      "id": "mat-112-plasticocontrole",
+      "name": "plasticocontrole",
+      "baseColor": "#0a0a0a",
+      "roughness": 0.9897547364234924,
+      "metalness": 0
+    },
+    {
+      "id": "mat-113-verde",
+      "name": "verde",
+      "baseColor": "#034114",
+      "roughness": 0.9574759006500244,
+      "metalness": 0
+    },
+    {
+      "id": "mat-114-vermelho",
+      "name": "vermelho",
+      "baseColor": "#8c0101",
+      "roughness": 0.9805650115013123,
+      "metalness": 0
+    },
+    {
+      "id": "mat-115-vidro",
+      "name": "vidro",
+      "baseColor": "#9b9ea9",
+      "roughness": 0.8164169192314148,
+      "metalness": 0
+    },
+    {
+      "id": "mat-116-m-pedramesa",
+      "name": "M_PedraMesa",
+      "baseColor": "#84736c",
+      "roughness": 0.8714722990989685,
+      "metalness": 0
+    },
+    {
+      "id": "mat-117-stingraypbs1sg",
+      "name": "StingrayPBS1SG"
+    },
+    {
+      "id": "mat-118-win0003-textures",
+      "name": "WIN0003_Textures"
+    },
+    {
+      "id": "mat-119-balsa-wood-001",
+      "name": "Balsa_wood.001",
+      "metalness": 0
+    },
+    {
+      "id": "mat-120-balsa-wood-001-0",
+      "name": "Balsa_wood.001_0",
+      "metalness": 0
+    },
+    {
+      "id": "mat-121-verdel-2-001",
+      "name": "verdel_2.001",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-122-metall-001",
+      "name": "metall.001",
+      "baseColor": "#898989",
+      "roughness": 0.10629899799823761
+    },
+    {
+      "id": "mat-123-material-019",
+      "name": "Material.019",
+      "baseColor": "#000000",
+      "roughness": 0,
+      "metalness": 0
+    },
+    {
+      "id": "mat-124-hmgoepprod-001",
+      "name": "hmgoepprod.001",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-125-spegel",
+      "name": "spegel",
+      "baseColor": "#b5b5b5",
+      "roughness": 0
+    },
+    {
+      "id": "mat-126-spegel-baksida",
+      "name": "spegel_baksida",
+      "baseColor": "#000000",
+      "roughness": 0.7401570081710815,
+      "metalness": 0
+    },
+    {
+      "id": "mat-127-material-012",
+      "name": "Material.012",
+      "baseColor": "#cccccc",
+      "roughness": 0.0433070994913578,
+      "metalness": 0
+    },
+    {
+      "id": "mat-128-kran-001",
+      "name": "kran.001",
+      "baseColor": "#1b1b1b",
+      "roughness": 0.003937010187655687
+    },
+    {
+      "id": "mat-129-badrumsskp-001",
+      "name": "badrumsskp.001"
+    },
+    {
+      "id": "mat-130-svart-pump-002",
+      "name": "svart_pump.002",
+      "baseColor": "#191919",
+      "roughness": 0.13779500126838684
+    },
+    {
+      "id": "mat-131-svart-001",
+      "name": "svart.001",
+      "baseColor": "#030303",
+      "roughness": 0.0950964018702507,
+      "metalness": 0
+    },
+    {
+      "id": "mat-132-flaska-001",
+      "name": "flaska.001",
+      "roughness": 0.0950964018702507,
+      "metalness": 0
+    },
+    {
+      "id": "mat-133-chrome",
+      "name": "Chrome",
+      "baseColor": "#cccccc",
+      "roughness": 0
+    },
+    {
+      "id": "mat-134-matt-black",
+      "name": "Matt_Black",
+      "baseColor": "#000000",
+      "metalness": 0
+    },
+    {
+      "id": "mat-135-white-ceramic",
+      "name": "White_ceramic",
+      "baseColor": "#cccccc",
+      "roughness": 0.15000000596046448,
+      "metalness": 0
+    },
+    {
+      "id": "mat-136-new-closet",
+      "name": "new_closet"
+    },
+    {
+      "id": "mat-137-new-closet-001",
+      "name": "new_closet.001"
+    },
+    {
+      "id": "mat-138-chrome-028",
+      "name": "Chrome.028",
+      "roughness": 0
+    },
+    {
+      "id": "mat-139-chrome-029",
+      "name": "Chrome.029",
+      "roughness": 0
+    },
+    {
+      "id": "mat-140-ripple-material",
+      "name": "Ripple_Material",
+      "roughness": 0
+    },
+    {
+      "id": "mat-141-cold",
+      "name": "Cold",
+      "baseColor": "#00a0ff",
+      "roughness": 0.6000000238418579,
+      "metalness": 0
+    },
+    {
+      "id": "mat-142-material-002",
+      "name": "material.002",
+      "baseColor": "#ff0000",
+      "roughness": 0.6000000238418579,
+      "metalness": 0
+    },
+    {
+      "id": "mat-143-chrome-027",
+      "name": "Chrome.027",
+      "roughness": 0
+    },
+    {
+      "id": "mat-144-chrome-008",
+      "name": "Chrome.008",
+      "roughness": 0
+    },
+    {
+      "id": "mat-145-matt-black-016",
+      "name": "Matt_Black.016",
+      "baseColor": "#000000",
+      "metalness": 0
+    },
+    {
+      "id": "mat-146-material-004",
+      "name": "Material.004",
+      "baseColor": "#000000",
+      "metalness": 0
+    },
+    {
+      "id": "mat-147-white-plastic-004",
+      "name": "White_Plastic.004",
+      "baseColor": "#a2a2a2",
+      "roughness": 0.6000000238418579,
+      "metalness": 0
+    },
+    {
+      "id": "mat-148-balsa-wood-002",
+      "name": "Balsa_wood.002",
+      "metalness": 0
+    },
+    {
+      "id": "mat-149-balsa-wood-001-0-001",
+      "name": "Balsa_wood.001_0.001",
+      "metalness": 0
+    },
+    {
+      "id": "mat-150-verdel-2-002",
+      "name": "verdel_2.002",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-151-metall-002",
+      "name": "metall.002",
+      "baseColor": "#898989",
+      "roughness": 0.10629899799823761
+    },
+    {
+      "id": "mat-152-material-008",
+      "name": "Material.008",
+      "baseColor": "#000000",
+      "roughness": 0,
+      "metalness": 0
+    },
+    {
+      "id": "mat-153-hmgoepprod-002",
+      "name": "hmgoepprod.002",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-154-spegel-001",
+      "name": "spegel.001",
+      "baseColor": "#b5b5b5",
+      "roughness": 0
+    },
+    {
+      "id": "mat-155-spegel-baksida-001",
+      "name": "spegel_baksida.001",
+      "baseColor": "#000000",
+      "roughness": 0.7401570081710815,
+      "metalness": 0
+    },
+    {
+      "id": "mat-156-material-007",
+      "name": "Material.007",
+      "baseColor": "#cccccc",
+      "roughness": 0.0433070994913578,
+      "metalness": 0
+    },
+    {
+      "id": "mat-157-kran-002",
+      "name": "kran.002",
+      "baseColor": "#1b1b1b",
+      "roughness": 0.003937010187655687
+    },
+    {
+      "id": "mat-158-badrumsskp-002",
+      "name": "badrumsskp.002"
+    },
+    {
+      "id": "mat-159-svart-pump-001",
+      "name": "svart_pump.001",
+      "baseColor": "#191919",
+      "roughness": 0.13779500126838684
+    },
+    {
+      "id": "mat-160-svart-002",
+      "name": "svart.002",
+      "baseColor": "#030303",
+      "roughness": 0.0950964018702507,
+      "metalness": 0
+    },
+    {
+      "id": "mat-161-flaska-002",
+      "name": "flaska.002",
+      "roughness": 0.0950964018702507,
+      "metalness": 0
+    },
+    {
+      "id": "mat-162-chrome-005",
+      "name": "Chrome.005",
+      "roughness": 0
+    },
+    {
+      "id": "mat-163-chrome-004",
+      "name": "Chrome.004",
+      "roughness": 0
+    },
+    {
+      "id": "mat-164-ripple-material-001",
+      "name": "Ripple_Material.001",
+      "roughness": 0
+    },
+    {
+      "id": "mat-165-cold-001",
+      "name": "Cold.001",
+      "baseColor": "#00a0ff",
+      "roughness": 0.6000000238418579,
+      "metalness": 0
+    },
+    {
+      "id": "mat-166-material-003",
+      "name": "material.003",
+      "baseColor": "#ff0000",
+      "roughness": 0.6000000238418579,
+      "metalness": 0
+    },
+    {
+      "id": "mat-167-chrome-003",
+      "name": "Chrome.003",
+      "roughness": 0
+    },
+    {
+      "id": "mat-168-chrome-002",
+      "name": "Chrome.002",
+      "roughness": 0
+    },
+    {
+      "id": "mat-169-matt-black-002",
+      "name": "Matt_Black.002",
+      "baseColor": "#000000",
+      "metalness": 0
+    },
+    {
+      "id": "mat-170-material-006",
+      "name": "Material.006",
+      "baseColor": "#000000",
+      "metalness": 0
+    },
+    {
+      "id": "mat-171-white-plastic-001",
+      "name": "White_Plastic.001",
+      "baseColor": "#a2a2a2",
+      "roughness": 0.6000000238418579,
+      "metalness": 0
+    },
+    {
+      "id": "mat-172-chrome-001",
+      "name": "Chrome.001",
+      "baseColor": "#cccccc",
+      "roughness": 0
+    },
+    {
+      "id": "mat-173-matt-black-001",
+      "name": "Matt_Black.001",
+      "baseColor": "#000000",
+      "metalness": 0
+    },
+    {
+      "id": "mat-174-white-ceramic-001",
+      "name": "White_ceramic.001",
+      "baseColor": "#cccccc",
+      "roughness": 0.15000000596046448,
+      "metalness": 0
+    },
+    {
+      "id": "mat-175-m-dourado-001",
+      "name": "M_Dourado.001",
+      "baseColor": "#4d2e10",
+      "roughness": 0.9463703632354736,
+      "metalness": 0
+    },
+    {
+      "id": "mat-176-m-pedramesa-001",
+      "name": "M_PedraMesa.001",
+      "baseColor": "#84736c",
+      "roughness": 0.8714722990989685,
+      "metalness": 0
+    },
+    {
+      "id": "mat-177-plasticopreto-001",
+      "name": "plasticoPreto.001",
+      "baseColor": "#1c1c1c",
+      "roughness": 0.985710084438324,
+      "metalness": 0
+    },
+    {
+      "id": "mat-178-material-004",
+      "name": "material.004",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-179-material-1-001",
+      "name": "material_1.001",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-180-material-4-001",
+      "name": "material_4.001",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-181-material-2-001",
+      "name": "material_2.001",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-182-material-3-001",
+      "name": "material_3.001",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-183-washing-machine",
+      "name": "Washing_Machine",
+      "baseColor": "#151515"
+    },
+    {
+      "id": "mat-184-img31-49-32-2-002",
+      "name": "img31_49_32_2.002",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-185-img31-49-32-3-002",
+      "name": "img31_49_32_3.002",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-186-merged-materials-004",
+      "name": "Merged_materials.004",
+      "baseColor": "#0c0c0c",
+      "roughness": 0.6000000238418579,
+      "metalness": 0
+    },
+    {
+      "id": "mat-187-img31-49-32-4-002",
+      "name": "img31_49_32_4.002",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-188-img31-49-32-5-001",
+      "name": "img31_49_32_5.001",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-189-img31-49-32-6-002",
+      "name": "img31_49_32_6.002",
+      "roughness": 0.9302135109901428,
+      "metalness": 0
+    },
+    {
+      "id": "mat-190-material-010",
+      "name": "Material.010",
+      "baseColor": "#ccc3b6",
+      "roughness": 0.5,
+      "metalness": 0
+    },
+    {
+      "id": "mat-191-material-011",
+      "name": "Material.011",
+      "roughness": 0,
       "metalness": 0
     }
   ]

@@ -144,6 +144,7 @@ export type ToneMappingMode = "none" | "linear" | "reinhard" | "cineon" | "aces"
 export interface RenderingConfig {
   doubleSidedMaterials?: boolean;
   relightUnlitMaterials?: boolean;
+  ambientIntensity?: number;
   modelScale?: number;
   modelOffset?: Vec3;
   toneMapping?: ToneMappingMode;
@@ -486,6 +487,11 @@ export function isRenderingConfig(value: unknown): value is RenderingConfig {
         Number.isFinite(value["exposure"]) &&
         value["exposure"] > 0 &&
         value["exposure"] <= 4)) &&
+    (value["ambientIntensity"] === undefined ||
+      (typeof value["ambientIntensity"] === "number" &&
+        Number.isFinite(value["ambientIntensity"]) &&
+        value["ambientIntensity"] >= 0 &&
+        value["ambientIntensity"] <= 4)) &&
     (value["modelScale"] === undefined ||
       (typeof value["modelScale"] === "number" &&
         Number.isFinite(value["modelScale"]) &&

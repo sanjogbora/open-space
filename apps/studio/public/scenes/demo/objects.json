@@ -1,107 +1,5533 @@
 {
   "schemaVersion": "0.1",
   "generator": "Walkthrough Studio analyzer",
-  "source": "scene.optimized.glb",
+  "source": "scene.glb",
   "objects": [
     {
-      "id": "node-0-floor-main",
-      "name": "floor_main",
-      "visible": true
+      "id": "node-0-wall",
+      "name": "wall",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-1-ceiling",
-      "name": "ceiling",
-      "visible": true
+      "id": "node-1-ctrl-baseboard",
+      "name": "CTRL_Baseboard",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-2-wall-back",
-      "name": "wall_back",
-      "visible": true
+      "id": "node-2-ctrl-hole",
+      "name": "CTRL_Hole",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-3-wall-front-low",
-      "name": "wall_front_low",
-      "visible": true
+      "id": "node-3-handle-back",
+      "name": "Handle_Back",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-4-wall-front-low-2",
-      "name": "wall_front_low_2",
-      "visible": true
+      "id": "node-4-handle-front",
+      "name": "Handle_Front",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-5-wall-left",
-      "name": "wall_left",
-      "visible": true
+      "id": "node-5-door",
+      "name": "Door",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-6-wall-right",
-      "name": "wall_right",
-      "visible": true
+      "id": "node-6-doorframe",
+      "name": "DoorFrame",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-7-divider-wall",
-      "name": "divider_wall",
-      "visible": true
+      "id": "node-7-door-group",
+      "name": "Door_Group",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-8-sofa-base",
-      "name": "sofa_base",
-      "visible": true
+      "id": "node-8-ctrl-hole-001",
+      "name": "CTRL_Hole.001",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-9-sofa-back",
-      "name": "sofa_back",
-      "visible": true
+      "id": "node-9-window",
+      "name": "Window",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-10-sofa-left-arm",
-      "name": "sofa_left_arm",
-      "visible": true
+      "id": "node-10-window-group",
+      "name": "Window_Group",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-11-sofa-right-arm",
-      "name": "sofa_right_arm",
-      "visible": true
+      "id": "node-11-ctrl-hole-002",
+      "name": "CTRL_Hole.002",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-12-coffee-table",
-      "name": "coffee_table",
-      "visible": true
+      "id": "node-12-window-001",
+      "name": "Window.001",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-13-kitchen-island",
-      "name": "kitchen_island",
-      "visible": true
+      "id": "node-13-window-group-001",
+      "name": "Window_Group.001",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-14-dining-table",
-      "name": "dining_table",
-      "visible": true
+      "id": "node-14-ctrl-hole-003",
+      "name": "CTRL_Hole.003",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-15-bed-base",
-      "name": "bed_base",
-      "visible": true
+      "id": "node-15-window-002",
+      "name": "Window.002",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-16-bed-headboard",
-      "name": "bed_headboard",
-      "visible": true
+      "id": "node-16-window-group-002",
+      "name": "Window_Group.002",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-17-tv-body",
-      "name": "tv_body",
-      "visible": true
+      "id": "node-17-ctrl-hole-004",
+      "name": "CTRL_Hole.004",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-18-tv-screen",
-      "name": "tv_screen",
-      "visible": true
+      "id": "node-18-window-003",
+      "name": "Window.003",
+      "visible": true,
+      "hideInTopView": false
     },
     {
-      "id": "node-19-living-room-rug",
-      "name": "living_room_rug",
-      "visible": true
+      "id": "node-19-window-group-003",
+      "name": "Window_Group.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-20-ctrl-baseboard-001",
+      "name": "CTRL_Baseboard.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-21-ctrl-hole-005",
+      "name": "CTRL_Hole.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-22-handle-back-001",
+      "name": "Handle_Back.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-23-handle-front-001",
+      "name": "Handle_Front.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-24-door-001",
+      "name": "Door.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-25-doorframe-001",
+      "name": "DoorFrame.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-26-door-group-001",
+      "name": "Door_Group.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-27-ctrl-baseboard-002",
+      "name": "CTRL_Baseboard.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-28-ctrl-hole-006",
+      "name": "CTRL_Hole.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-29-handle-back-002",
+      "name": "Handle_Back.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-30-handle-front-002",
+      "name": "Handle_Front.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-31-door-002",
+      "name": "Door.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-32-doorframe-002",
+      "name": "DoorFrame.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-33-door-group-002",
+      "name": "Door_Group.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-34-ctrl-baseboard-003",
+      "name": "CTRL_Baseboard.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-35-ctrl-hole-007",
+      "name": "CTRL_Hole.007",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-36-handle-back-003",
+      "name": "Handle_Back.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-37-handle-front-003",
+      "name": "Handle_Front.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-38-door-003",
+      "name": "Door.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-39-doorframe-003",
+      "name": "DoorFrame.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-40-door-group-003",
+      "name": "Door_Group.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-41-ctrl-baseboard-004",
+      "name": "CTRL_Baseboard.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-42-ctrl-hole-008",
+      "name": "CTRL_Hole.008",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-43-handle-back-004",
+      "name": "Handle_Back.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-44-handle-front-004",
+      "name": "Handle_Front.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-45-door-004",
+      "name": "Door.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-46-doorframe-004",
+      "name": "DoorFrame.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-47-door-group-004",
+      "name": "Door_Group.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-48-ctrl-baseboard-005",
+      "name": "CTRL_Baseboard.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-49-ctrl-hole-009",
+      "name": "CTRL_Hole.009",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-50-handle-back-005",
+      "name": "Handle_Back.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-51-handle-front-005",
+      "name": "Handle_Front.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-52-door-005",
+      "name": "Door.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-53-doorframe-005",
+      "name": "DoorFrame.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-54-door-group-005",
+      "name": "Door_Group.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-55-ctrl-baseboard-006",
+      "name": "CTRL_Baseboard.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-56-ctrl-hole-010",
+      "name": "CTRL_Hole.010",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-57-handle-back-006",
+      "name": "Handle_Back.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-58-handle-front-006",
+      "name": "Handle_Front.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-59-door-006",
+      "name": "Door.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-60-doorframe-006",
+      "name": "DoorFrame.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-61-door-group-006",
+      "name": "Door_Group.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-62-defaultmaterial",
+      "name": "defaultMaterial",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-63-bed-07",
+      "name": "BED_07",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-64-plane001",
+      "name": "Plane001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-65-collada-visual-scene-group",
+      "name": "Collada visual scene group",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-66-sketchfab-model",
+      "name": "Sketchfab_model",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-67-object-2",
+      "name": "Object_2",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-68-object-3",
+      "name": "Object_3",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-69-object-4",
+      "name": "Object_4",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-70-object-5",
+      "name": "Object_5",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-71-object-6",
+      "name": "Object_6",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-72-object-7",
+      "name": "Object_7",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-73-object-8",
+      "name": "Object_8",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-74-bed-01-obj-cleaner-materialmerger-gles",
+      "name": "Bed_01.obj.cleaner.materialmerger.gles",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-75-sketchfab-model-001",
+      "name": "Sketchfab_model.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-76-object-34",
+      "name": "Object_34",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-77-object-35",
+      "name": "Object_35",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-78-back-cousion-001-13",
+      "name": "Back cousion.001_13",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-79-object-29",
+      "name": "Object_29",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-80-object-30",
+      "name": "Object_30",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-81-back-cousion-002-11",
+      "name": "Back cousion.002_11",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-82-object-37",
+      "name": "Object_37",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-83-object-38",
+      "name": "Object_38",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-84-back-cousion-14",
+      "name": "Back cousion_14",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-85-object-27",
+      "name": "Object_27",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-86-back-10",
+      "name": "back_10",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-87-object-32",
+      "name": "Object_32",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-88-bottom-12",
+      "name": "bottom_12",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-89-object-40",
+      "name": "Object_40",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-90-legs-15",
+      "name": "legs_15",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-91-object-45",
+      "name": "Object_45",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-92-object-46",
+      "name": "Object_46",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-93-pillow-001-17",
+      "name": "pillow.001_17",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-94-object-48",
+      "name": "Object_48",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-95-object-49",
+      "name": "Object_49",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-96-pillow-002-18",
+      "name": "pillow.002_18",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-97-pillow-003-16",
+      "name": "pillow.003_16",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-98-object-53",
+      "name": "Object_53",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-99-seat-cousion-001-20",
+      "name": "seat cousion.001_20",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-100-object-55",
+      "name": "Object_55",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-101-seat-cousion-002-21",
+      "name": "seat cousion.002_21",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-102-object-51",
+      "name": "Object_51",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-103-seat-cousion-19",
+      "name": "seat cousion_19",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-104-object-57",
+      "name": "Object_57",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-105-sides-22",
+      "name": "sides_22",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-106-couch-001-23",
+      "name": "Couch.001_23",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-107-gltf-scenerootnode",
+      "name": "GLTF_SceneRootNode",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-108-root",
+      "name": "root",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-109-root-001",
+      "name": "root.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-110-sketchfab-model-003",
+      "name": "Sketchfab_model.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-111-object-71",
+      "name": "Object_71",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-112-sides-002-29",
+      "name": "sides.002_29",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-113-object-69",
+      "name": "Object_69",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-114-seat-cousion-005-28",
+      "name": "seat cousion.005_28",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-115-object-67",
+      "name": "Object_67",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-116-legs-002-27",
+      "name": "legs.002_27",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-117-object-65",
+      "name": "Object_65",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-118-bottom-002-26",
+      "name": "bottom.002_26",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-119-object-63",
+      "name": "Object_63",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-120-back-002-25",
+      "name": "back.002_25",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-121-object-61",
+      "name": "Object_61",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-122-back-cousion-005-24",
+      "name": "Back cousion.005_24",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-123-id1",
+      "name": "ID1",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-124-skp-camera-last-saved-sketchup-view",
+      "name": "skp_camera_Last_Saved_SketchUp_View",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-125-sketchup",
+      "name": "SketchUp",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-126-collada-visual-scene-group-001",
+      "name": "Collada visual scene group.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-127-sketchfab-model-004",
+      "name": "Sketchfab_model.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-128-mesh10-img45-7-0",
+      "name": "Mesh10_img45_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-129-mesh10-color-13-0",
+      "name": "Mesh10_Color_13_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-130-mesh10-color-14-0",
+      "name": "Mesh10_Color_14_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-131-mesh10-metal-06-1k-0",
+      "name": "Mesh10_Metal_06_1K_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-132-mesh10-color-8-0",
+      "name": "Mesh10_Color_8_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-133-mesh10-color-11-0",
+      "name": "Mesh10_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-134-mesh11-img45-7-0",
+      "name": "Mesh11_img45_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-135-mesh11-color-8-0",
+      "name": "Mesh11_Color_8_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-136-mesh11-color-11-0",
+      "name": "Mesh11_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-137-mesh12-metal-06-1k-0",
+      "name": "Mesh12_Metal_06_1K_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-138-mesh12-img45-7-0",
+      "name": "Mesh12_img45_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-139-mesh12-color-8-0",
+      "name": "Mesh12_Color_8_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-140-mesh12-color-11-0",
+      "name": "Mesh12_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-141-mesh14-color-10-0",
+      "name": "Mesh14_Color_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-142-mesh14-img47-17-0",
+      "name": "Mesh14_img47_17_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-143-mesh14-color-18-0",
+      "name": "Mesh14_Color_18_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-144-mesh14-color-19-0",
+      "name": "Mesh14_Color_19_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-145-mesh14-color-19-0-001",
+      "name": "Mesh14_Color_19_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-146-mesh15-color-10-0",
+      "name": "Mesh15_Color_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-147-mesh15-img47-17-0",
+      "name": "Mesh15_img47_17_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-148-mesh15-color-18-0",
+      "name": "Mesh15_Color_18_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-149-mesh15-color-19-0",
+      "name": "Mesh15_Color_19_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-150-mesh16-color-10-0",
+      "name": "Mesh16_Color_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-151-mesh16-img47-17-0",
+      "name": "Mesh16_img47_17_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-152-mesh16-color-18-0",
+      "name": "Mesh16_Color_18_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-153-mesh16-color-19-0",
+      "name": "Mesh16_Color_19_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-154-mesh17-color-10-0",
+      "name": "Mesh17_Color_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-155-mesh17-img47-17-0",
+      "name": "Mesh17_img47_17_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-156-mesh17-color-18-0",
+      "name": "Mesh17_Color_18_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-157-mesh24-img47-17-0",
+      "name": "Mesh24_img47_17_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-158-mesh25-img45-7-0",
+      "name": "Mesh25_img45_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-159-mesh25-color-8-0",
+      "name": "Mesh25_Color_8_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-160-mesh26-img45-7-0",
+      "name": "Mesh26_img45_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-161-mesh26-color-18-0",
+      "name": "Mesh26_Color_18_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-162-mesh26-color-10-0",
+      "name": "Mesh26_Color_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-163-mesh26-color-11-0",
+      "name": "Mesh26_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-164-mesh27-color-11-0",
+      "name": "Mesh27_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-165-mesh28-color-10-0",
+      "name": "Mesh28_Color_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-166-mesh28-img45-7-0",
+      "name": "Mesh28_img45_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-167-mesh28-color-18-0",
+      "name": "Mesh28_Color_18_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-168-mesh28-color-13-0",
+      "name": "Mesh28_Color_13_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-169-mesh28-img17-34-0",
+      "name": "Mesh28_img17_34_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-170-mesh28-color-11-0",
+      "name": "Mesh28_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-171-mesh29-color-8-0",
+      "name": "Mesh29_Color_8_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-172-mesh29-img45-7-0",
+      "name": "Mesh29_img45_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-173-mesh29-color-36-0",
+      "name": "Mesh29_Color_36_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-174-mesh29-color-10-0",
+      "name": "Mesh29_Color_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-175-mesh30-img45-7-0",
+      "name": "Mesh30_img45_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-176-mesh30-color-8-0",
+      "name": "Mesh30_Color_8_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-177-mesh32-img26-44-1-0",
+      "name": "Mesh32_img26_44_1_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-178-mesh32-img27-45-1-0",
+      "name": "Mesh32_img27_45_1_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-179-mesh32-img31-49-2-0",
+      "name": "Mesh32_img31_49_2_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-180-mesh32-img31-49-3-0",
+      "name": "Mesh32_img31_49_3_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-181-mesh32-img31-49-4-0",
+      "name": "Mesh32_img31_49_4_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-182-mesh32-img31-49-5-0",
+      "name": "Mesh32_img31_49_5_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-183-mesh32-img31-49-6-0",
+      "name": "Mesh32_img31_49_6_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-184-mesh32-img31-49-7-0",
+      "name": "Mesh32_img31_49_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-185-mesh32-img31-49-8-0",
+      "name": "Mesh32_img31_49_8_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-186-mesh32-img31-49-9-0",
+      "name": "Mesh32_img31_49_9_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-187-mesh32-img31-49-10-0",
+      "name": "Mesh32_img31_49_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-188-mesh32-img31-49-11-0",
+      "name": "Mesh32_img31_49_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-189-mesh32-img31-49-12-0",
+      "name": "Mesh32_img31_49_12_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-190-mesh32-img31-49-13-0",
+      "name": "Mesh32_img31_49_13_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-191-mesh32-img31-49-14-0",
+      "name": "Mesh32_img31_49_14_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-192-mesh32-img31-49-15-0",
+      "name": "Mesh32_img31_49_15_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-193-mesh32-img31-49-16-0",
+      "name": "Mesh32_img31_49_16_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-194-mesh32-img31-49-17-0",
+      "name": "Mesh32_img31_49_17_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-195-mesh32-img31-49-18-0",
+      "name": "Mesh32_img31_49_18_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-196-mesh32-img31-49-19-0",
+      "name": "Mesh32_img31_49_19_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-197-mesh32-img31-49-20-0",
+      "name": "Mesh32_img31_49_20_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-198-mesh32-img31-49-21-0",
+      "name": "Mesh32_img31_49_21_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-199-mesh32-img31-49-22-0",
+      "name": "Mesh32_img31_49_22_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-200-mesh32-img31-49-23-0",
+      "name": "Mesh32_img31_49_23_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-201-mesh32-img31-49-24-0",
+      "name": "Mesh32_img31_49_24_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-202-mesh32-img31-49-25-0",
+      "name": "Mesh32_img31_49_25_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-203-mesh32-img31-49-26-0",
+      "name": "Mesh32_img31_49_26_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-204-mesh32-img31-49-27-0",
+      "name": "Mesh32_img31_49_27_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-205-mesh32-img31-49-28-0",
+      "name": "Mesh32_img31_49_28_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-206-mesh32-img31-49-29-0",
+      "name": "Mesh32_img31_49_29_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-207-mesh32-img31-49-30-0",
+      "name": "Mesh32_img31_49_30_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-208-mesh32-img31-49-31-0",
+      "name": "Mesh32_img31_49_31_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-209-mesh32-img31-49-32-0",
+      "name": "Mesh32_img31_49_32_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-210-mesh32-img31-49-33-0",
+      "name": "Mesh32_img31_49_33_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-211-mesh32-img31-49-34-0",
+      "name": "Mesh32_img31_49_34_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-212-mesh32-img31-49-35-0",
+      "name": "Mesh32_img31_49_35_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-213-mesh32-img31-49-36-0",
+      "name": "Mesh32_img31_49_36_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-214-mesh32-img31-49-37-0",
+      "name": "Mesh32_img31_49_37_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-215-mesh32-img31-49-38-0",
+      "name": "Mesh32_img31_49_38_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-216-mesh32-img31-49-39-0",
+      "name": "Mesh32_img31_49_39_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-217-mesh32-img31-49-40-0",
+      "name": "Mesh32_img31_49_40_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-218-mesh32-img31-49-41-0",
+      "name": "Mesh32_img31_49_41_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-219-mesh32-img31-49-42-0",
+      "name": "Mesh32_img31_49_42_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-220-mesh32-img31-49-43-0",
+      "name": "Mesh32_img31_49_43_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-221-mesh32-img31-49-44-0",
+      "name": "Mesh32_img31_49_44_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-222-mesh32-img31-49-45-0",
+      "name": "Mesh32_img31_49_45_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-223-mesh32-img31-49-46-0",
+      "name": "Mesh32_img31_49_46_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-224-mesh32-img31-49-47-0",
+      "name": "Mesh32_img31_49_47_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-225-mesh32-img31-49-48-0",
+      "name": "Mesh32_img31_49_48_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-226-mesh32-img31-49-49-0",
+      "name": "Mesh32_img31_49_49_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-227-mesh32-img31-49-50-0",
+      "name": "Mesh32_img31_49_50_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-228-mesh32-img31-49-51-0",
+      "name": "Mesh32_img31_49_51_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-229-mesh32-img31-49-52-0",
+      "name": "Mesh32_img31_49_52_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-230-mesh32-img31-49-53-0",
+      "name": "Mesh32_img31_49_53_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-231-mesh32-img31-49-54-0",
+      "name": "Mesh32_img31_49_54_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-232-mesh32-img31-49-55-0",
+      "name": "Mesh32_img31_49_55_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-233-mesh32-img31-49-57-0",
+      "name": "Mesh32_img31_49_57_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-234-mesh32-img31-49-58-0",
+      "name": "Mesh32_img31_49_58_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-235-mesh32-img31-49-59-0",
+      "name": "Mesh32_img31_49_59_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-236-mesh32-img31-49-60-0",
+      "name": "Mesh32_img31_49_60_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-237-mesh32-img31-49-61-0",
+      "name": "Mesh32_img31_49_61_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-238-mesh32-img31-49-62-0",
+      "name": "Mesh32_img31_49_62_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-239-mesh32-img31-49-63-0",
+      "name": "Mesh32_img31_49_63_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-240-mesh32-img31-49-64-0",
+      "name": "Mesh32_img31_49_64_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-241-mesh32-img31-49-65-0",
+      "name": "Mesh32_img31_49_65_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-242-mesh32-img31-49-66-0",
+      "name": "Mesh32_img31_49_66_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-243-mesh32-img31-49-67-0",
+      "name": "Mesh32_img31_49_67_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-244-mesh32-img31-49-68-0",
+      "name": "Mesh32_img31_49_68_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-245-mesh32-img31-49-69-0",
+      "name": "Mesh32_img31_49_69_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-246-mesh32-img31-49-70-0",
+      "name": "Mesh32_img31_49_70_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-247-mesh32-img31-49-71-0",
+      "name": "Mesh32_img31_49_71_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-248-mesh32-img31-49-72-0",
+      "name": "Mesh32_img31_49_72_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-249-mesh32-img31-49-73-0",
+      "name": "Mesh32_img31_49_73_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-250-mesh32-img31-49-74-0",
+      "name": "Mesh32_img31_49_74_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-251-mesh32-img31-49-75-0",
+      "name": "Mesh32_img31_49_75_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-252-mesh32-img31-49-76-0",
+      "name": "Mesh32_img31_49_76_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-253-mesh32-img31-49-77-0",
+      "name": "Mesh32_img31_49_77_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-254-mesh32-img31-49-78-0",
+      "name": "Mesh32_img31_49_78_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-255-mesh32-img31-49-79-0",
+      "name": "Mesh32_img31_49_79_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-256-mesh32-img31-49-80-0",
+      "name": "Mesh32_img31_49_80_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-257-mesh32-img31-49-81-0",
+      "name": "Mesh32_img31_49_81_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-258-mesh32-img31-49-82-0",
+      "name": "Mesh32_img31_49_82_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-259-mesh32-img31-49-83-0",
+      "name": "Mesh32_img31_49_83_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-260-mesh32-img31-49-84-0",
+      "name": "Mesh32_img31_49_84_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-261-mesh32-img31-49-85-0",
+      "name": "Mesh32_img31_49_85_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-262-mesh32-img31-49-86-0",
+      "name": "Mesh32_img31_49_86_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-263-mesh32-img31-49-87-0",
+      "name": "Mesh32_img31_49_87_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-264-mesh32-img31-49-88-0",
+      "name": "Mesh32_img31_49_88_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-265-mesh32-img31-49-89-0",
+      "name": "Mesh32_img31_49_89_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-266-mesh32-img31-49-90-0",
+      "name": "Mesh32_img31_49_90_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-267-mesh32-img31-49-91-0",
+      "name": "Mesh32_img31_49_91_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-268-mesh32-img32-50-1-0",
+      "name": "Mesh32_img32_50_1_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-269-mesh33-img49-51-0",
+      "name": "Mesh33_img49_51_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-270-mesh34-img41-62-1-0",
+      "name": "Mesh34_img41_62_1_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-271-mesh34-img41-62-2-0",
+      "name": "Mesh34_img41_62_2_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-272-mesh34-img41-62-3-0",
+      "name": "Mesh34_img41_62_3_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-273-mesh34-img41-62-4-0",
+      "name": "Mesh34_img41_62_4_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-274-mesh34-img41-62-5-0",
+      "name": "Mesh34_img41_62_5_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-275-mesh34-img41-62-6-0",
+      "name": "Mesh34_img41_62_6_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-276-mesh34-img41-62-7-0",
+      "name": "Mesh34_img41_62_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-277-mesh34-img41-62-8-0",
+      "name": "Mesh34_img41_62_8_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-278-mesh34-img41-62-9-0",
+      "name": "Mesh34_img41_62_9_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-279-mesh34-img41-62-10-0",
+      "name": "Mesh34_img41_62_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-280-mesh34-img41-62-11-0",
+      "name": "Mesh34_img41_62_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-281-mesh34-img41-62-12-0",
+      "name": "Mesh34_img41_62_12_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-282-mesh34-img41-62-13-0",
+      "name": "Mesh34_img41_62_13_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-283-mesh34-img41-62-14-0",
+      "name": "Mesh34_img41_62_14_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-284-mesh34-img41-62-15-0",
+      "name": "Mesh34_img41_62_15_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-285-mesh34-img41-62-16-0",
+      "name": "Mesh34_img41_62_16_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-286-mesh34-img41-62-17-0",
+      "name": "Mesh34_img41_62_17_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-287-mesh34-img41-62-18-0",
+      "name": "Mesh34_img41_62_18_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-288-mesh34-img41-62-19-0",
+      "name": "Mesh34_img41_62_19_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-289-mesh34-img41-62-20-0",
+      "name": "Mesh34_img41_62_20_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-290-mesh34-img41-62-21-0",
+      "name": "Mesh34_img41_62_21_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-291-mesh34-img41-62-22-0",
+      "name": "Mesh34_img41_62_22_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-292-mesh34-img41-62-23-0",
+      "name": "Mesh34_img41_62_23_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-293-mesh34-img41-62-24-0",
+      "name": "Mesh34_img41_62_24_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-294-mesh34-img41-62-25-0",
+      "name": "Mesh34_img41_62_25_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-295-mesh34-img41-62-26-0",
+      "name": "Mesh34_img41_62_26_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-296-mesh34-img41-62-27-0",
+      "name": "Mesh34_img41_62_27_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-297-mesh34-img41-62-28-0",
+      "name": "Mesh34_img41_62_28_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-298-mesh34-img41-62-29-0",
+      "name": "Mesh34_img41_62_29_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-299-mesh34-img41-62-30-0",
+      "name": "Mesh34_img41_62_30_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-300-mesh34-img41-62-31-0",
+      "name": "Mesh34_img41_62_31_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-301-mesh34-img41-62-32-0",
+      "name": "Mesh34_img41_62_32_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-302-mesh34-img41-62-33-0",
+      "name": "Mesh34_img41_62_33_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-303-mesh36-img49-51-0",
+      "name": "Mesh36_img49_51_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-304-mesh37-img49-51-0",
+      "name": "Mesh37_img49_51_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-305-mesh38-color-11-0",
+      "name": "Mesh38_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-306-mesh39-color-11-0",
+      "name": "Mesh39_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-307-mesh40-color-11-0",
+      "name": "Mesh40_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-308-mesh42-img18-66-0",
+      "name": "Mesh42_img18_66_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-309-mesh43-img18-66-0",
+      "name": "Mesh43_img18_66_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-310-mesh44-img50-69-1-0",
+      "name": "Mesh44_img50_69_1_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-311-mesh45-color-11-0",
+      "name": "Mesh45_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-312-mesh46-color-11-0",
+      "name": "Mesh46_Color_11_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-313-mesh40-color-11-0-001",
+      "name": "Mesh40_Color_11_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-314-mesh29-img45-7-0-001",
+      "name": "Mesh29_img45_7_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-315-mesh29-color-10-0-001",
+      "name": "Mesh29_Color_10_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-316-mesh26-img45-7-0-001",
+      "name": "Mesh26_img45_7_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-317-mesh26-color-11-0-001",
+      "name": "Mesh26_Color_11_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-318-mesh26-color-10-0-001",
+      "name": "Mesh26_Color_10_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-319-mesh11-color-10-0-002",
+      "name": "Mesh11_Color_10_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-320-mesh11-img45-7-0-002",
+      "name": "Mesh11_img45_7_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-321-mesh12-color-11-0-002",
+      "name": "Mesh12_Color_11_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-322-mesh12-color-8-0-002",
+      "name": "Mesh12_Color_8_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-323-mesh12-img45-7-0-002",
+      "name": "Mesh12_img45_7_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-324-mesh15-color-10-0-002",
+      "name": "Mesh15_Color_10_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-325-mesh15-color-19-0-002",
+      "name": "Mesh15_Color_19_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-326-mesh15-img47-17-0-002",
+      "name": "Mesh15_img47_17_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-327-mesh16-color-10-0-002",
+      "name": "Mesh16_Color_10_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-328-mesh16-img47-17-0-002",
+      "name": "Mesh16_img47_17_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-329-mesh24-img47-17-0-002",
+      "name": "Mesh24_img47_17_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-330-mesh31-img45-7-0-002",
+      "name": "Mesh31_img45_7_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-331-mesh32-img31-49-11-0-002",
+      "name": "Mesh32_img31_49_11_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-332-mesh32-img31-49-12-0-002",
+      "name": "Mesh32_img31_49_12_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-333-mesh32-img31-49-13-0-002",
+      "name": "Mesh32_img31_49_13_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-334-mesh32-img31-49-14-0-002",
+      "name": "Mesh32_img31_49_14_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-335-mesh32-img31-49-29-0-002",
+      "name": "Mesh32_img31_49_29_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-336-mesh32-img31-49-2-0-002",
+      "name": "Mesh32_img31_49_2_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-337-mesh32-img31-49-40-0-002",
+      "name": "Mesh32_img31_49_40_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-338-mesh32-img31-49-63-0-002",
+      "name": "Mesh32_img31_49_63_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-339-mesh32-img31-49-74-0-002",
+      "name": "Mesh32_img31_49_74_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-340-mesh32-img31-49-87-0-002",
+      "name": "Mesh32_img31_49_87_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-341-mesh33-img49-51-0-002",
+      "name": "Mesh33_img49_51_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-342-mesh33-img49-51-0-003",
+      "name": "Mesh33_img49_51_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-343-mesh34-img41-62-11-0-003",
+      "name": "Mesh34_img41_62_11_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-344-mesh34-img41-62-13-0-003",
+      "name": "Mesh34_img41_62_13_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-345-mesh34-img41-62-20-0-002",
+      "name": "Mesh34_img41_62_20_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-346-mesh34-img41-62-27-0-003",
+      "name": "Mesh34_img41_62_27_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-347-mesh34-img41-62-3-0-003",
+      "name": "Mesh34_img41_62_3_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-348-mesh37-img49-51-0-002",
+      "name": "Mesh37_img49_51_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-349-mesh38-color-11-0-002",
+      "name": "Mesh38_Color_11_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-350-mesh42-img18-66-0-002",
+      "name": "Mesh42_img18_66_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-351-mesh43-img18-66-0-002",
+      "name": "Mesh43_img18_66_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-352-mesh45-color-11-0-002",
+      "name": "Mesh45_Color_11_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-353-mesh46-color-11-0-002",
+      "name": "Mesh46_Color_11_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-354-empty-002",
+      "name": "Empty.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-355-mesh10-color-10-0",
+      "name": "Mesh10_Color_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-356-mesh10-color-11-0-001",
+      "name": "Mesh10_Color_11_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-357-mesh10-color-13-0-001",
+      "name": "Mesh10_Color_13_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-358-mesh10-img45-7-0-001",
+      "name": "Mesh10_img45_7_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-359-mesh11-color-10-0",
+      "name": "Mesh11_Color_10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-360-mesh11-color-11-0-001",
+      "name": "Mesh11_Color_11_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-361-mesh11-color-8-0-001",
+      "name": "Mesh11_Color_8_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-362-mesh11-img45-7-0-001",
+      "name": "Mesh11_img45_7_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-363-mesh12-color-11-0-001",
+      "name": "Mesh12_Color_11_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-364-mesh12-color-8-0-001",
+      "name": "Mesh12_Color_8_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-365-mesh12-img45-7-0-001",
+      "name": "Mesh12_img45_7_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-366-mesh12-metal-06-1k-0-001",
+      "name": "Mesh12_Metal_06_1K_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-367-mesh15-color-10-0-001",
+      "name": "Mesh15_Color_10_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-368-mesh15-color-18-0-001",
+      "name": "Mesh15_Color_18_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-369-mesh15-color-19-0-001",
+      "name": "Mesh15_Color_19_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-370-mesh15-img47-17-0-001",
+      "name": "Mesh15_img47_17_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-371-mesh16-color-10-0-001",
+      "name": "Mesh16_Color_10_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-372-mesh16-color-18-0-001",
+      "name": "Mesh16_Color_18_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-373-mesh16-color-19-0-001",
+      "name": "Mesh16_Color_19_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-374-mesh16-img47-17-0-001",
+      "name": "Mesh16_img47_17_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-375-mesh17-color-10-0-001",
+      "name": "Mesh17_Color_10_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-376-mesh17-color-18-0-001",
+      "name": "Mesh17_Color_18_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-377-mesh17-img47-17-0-001",
+      "name": "Mesh17_img47_17_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-378-mesh24-img47-17-0-001",
+      "name": "Mesh24_img47_17_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-379-mesh31-img45-7-0",
+      "name": "Mesh31_img45_7_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-380-mesh31-img45-7-0-003",
+      "name": "Mesh31_img45_7_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-381-mesh32-img31-49-10-0-001",
+      "name": "Mesh32_img31_49_10_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-382-mesh32-img31-49-11-0-001",
+      "name": "Mesh32_img31_49_11_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-383-mesh32-img31-49-12-0-001",
+      "name": "Mesh32_img31_49_12_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-384-mesh32-img31-49-13-0-001",
+      "name": "Mesh32_img31_49_13_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-385-mesh32-img31-49-14-0-001",
+      "name": "Mesh32_img31_49_14_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-386-mesh32-img31-49-15-0-001",
+      "name": "Mesh32_img31_49_15_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-387-mesh32-img31-49-16-0-001",
+      "name": "Mesh32_img31_49_16_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-388-mesh32-img31-49-17-0-001",
+      "name": "Mesh32_img31_49_17_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-389-mesh32-img31-49-18-0-001",
+      "name": "Mesh32_img31_49_18_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-390-mesh32-img31-49-19-0-001",
+      "name": "Mesh32_img31_49_19_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-391-mesh32-img31-49-20-0-001",
+      "name": "Mesh32_img31_49_20_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-392-mesh32-img31-49-21-0-001",
+      "name": "Mesh32_img31_49_21_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-393-mesh32-img31-49-22-0-001",
+      "name": "Mesh32_img31_49_22_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-394-mesh32-img31-49-23-0-001",
+      "name": "Mesh32_img31_49_23_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-395-mesh32-img31-49-24-0-001",
+      "name": "Mesh32_img31_49_24_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-396-mesh32-img31-49-25-0-001",
+      "name": "Mesh32_img31_49_25_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-397-mesh32-img31-49-26-0-001",
+      "name": "Mesh32_img31_49_26_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-398-mesh32-img31-49-27-0-001",
+      "name": "Mesh32_img31_49_27_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-399-mesh32-img31-49-28-0-001",
+      "name": "Mesh32_img31_49_28_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-400-mesh32-img31-49-29-0-001",
+      "name": "Mesh32_img31_49_29_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-401-mesh32-img31-49-2-0-001",
+      "name": "Mesh32_img31_49_2_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-402-mesh32-img31-49-30-0-001",
+      "name": "Mesh32_img31_49_30_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-403-mesh32-img31-49-33-0-001",
+      "name": "Mesh32_img31_49_33_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-404-mesh32-img31-49-34-0-001",
+      "name": "Mesh32_img31_49_34_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-405-mesh32-img31-49-35-0-001",
+      "name": "Mesh32_img31_49_35_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-406-mesh32-img31-49-36-0-001",
+      "name": "Mesh32_img31_49_36_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-407-mesh32-img31-49-3-0-001",
+      "name": "Mesh32_img31_49_3_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-408-mesh32-img31-49-40-0-001",
+      "name": "Mesh32_img31_49_40_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-409-mesh32-img31-49-41-0-001",
+      "name": "Mesh32_img31_49_41_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-410-mesh32-img31-49-42-0-001",
+      "name": "Mesh32_img31_49_42_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-411-mesh32-img31-49-43-0-001",
+      "name": "Mesh32_img31_49_43_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-412-mesh32-img31-49-44-0-001",
+      "name": "Mesh32_img31_49_44_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-413-mesh32-img31-49-48-0-001",
+      "name": "Mesh32_img31_49_48_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-414-mesh32-img31-49-49-0-001",
+      "name": "Mesh32_img31_49_49_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-415-mesh32-img31-49-4-0-001",
+      "name": "Mesh32_img31_49_4_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-416-mesh32-img31-49-50-0-001",
+      "name": "Mesh32_img31_49_50_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-417-mesh32-img31-49-51-0-001",
+      "name": "Mesh32_img31_49_51_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-418-mesh32-img31-49-52-0-001",
+      "name": "Mesh32_img31_49_52_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-419-mesh32-img31-49-53-0-001",
+      "name": "Mesh32_img31_49_53_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-420-mesh32-img31-49-54-0-001",
+      "name": "Mesh32_img31_49_54_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-421-mesh32-img31-49-55-0-001",
+      "name": "Mesh32_img31_49_55_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-422-mesh32-img31-49-56-0",
+      "name": "Mesh32_img31_49_56_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-423-mesh32-img31-49-57-0-001",
+      "name": "Mesh32_img31_49_57_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-424-mesh32-img31-49-5-0-001",
+      "name": "Mesh32_img31_49_5_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-425-mesh32-img31-49-61-0-001",
+      "name": "Mesh32_img31_49_61_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-426-mesh32-img31-49-62-0-001",
+      "name": "Mesh32_img31_49_62_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-427-mesh32-img31-49-63-0-001",
+      "name": "Mesh32_img31_49_63_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-428-mesh32-img31-49-64-0-001",
+      "name": "Mesh32_img31_49_64_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-429-mesh32-img31-49-67-0-001",
+      "name": "Mesh32_img31_49_67_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-430-mesh32-img31-49-69-0-001",
+      "name": "Mesh32_img31_49_69_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-431-mesh32-img31-49-6-0-001",
+      "name": "Mesh32_img31_49_6_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-432-mesh32-img31-49-70-0-001",
+      "name": "Mesh32_img31_49_70_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-433-mesh32-img31-49-72-0-001",
+      "name": "Mesh32_img31_49_72_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-434-mesh32-img31-49-73-0-001",
+      "name": "Mesh32_img31_49_73_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-435-mesh32-img31-49-74-0-001",
+      "name": "Mesh32_img31_49_74_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-436-mesh32-img31-49-75-0-001",
+      "name": "Mesh32_img31_49_75_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-437-mesh32-img31-49-76-0-001",
+      "name": "Mesh32_img31_49_76_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-438-mesh32-img31-49-77-0-001",
+      "name": "Mesh32_img31_49_77_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-439-mesh32-img31-49-78-0-001",
+      "name": "Mesh32_img31_49_78_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-440-mesh32-img31-49-7-0-001",
+      "name": "Mesh32_img31_49_7_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-441-mesh32-img31-49-82-0-001",
+      "name": "Mesh32_img31_49_82_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-442-mesh32-img31-49-84-0-001",
+      "name": "Mesh32_img31_49_84_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-443-mesh32-img31-49-85-0-001",
+      "name": "Mesh32_img31_49_85_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-444-mesh32-img31-49-86-0-001",
+      "name": "Mesh32_img31_49_86_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-445-mesh32-img31-49-87-0-001",
+      "name": "Mesh32_img31_49_87_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-446-mesh32-img31-49-89-0-001",
+      "name": "Mesh32_img31_49_89_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-447-mesh32-img31-49-8-0-001",
+      "name": "Mesh32_img31_49_8_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-448-mesh32-img31-49-91-0-001",
+      "name": "Mesh32_img31_49_91_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-449-mesh32-img31-49-9-0-001",
+      "name": "Mesh32_img31_49_9_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-450-mesh33-img49-51-0-001",
+      "name": "Mesh33_img49_51_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-451-mesh34-img41-62-11-0-001",
+      "name": "Mesh34_img41_62_11_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-452-mesh34-img41-62-19-0-001",
+      "name": "Mesh34_img41_62_19_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-453-mesh34-img41-62-20-0-001",
+      "name": "Mesh34_img41_62_20_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-454-mesh34-img41-62-21-0-001",
+      "name": "Mesh34_img41_62_21_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-455-mesh34-img41-62-22-0-001",
+      "name": "Mesh34_img41_62_22_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-456-mesh34-img41-62-24-0-001",
+      "name": "Mesh34_img41_62_24_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-457-mesh34-img41-62-27-0-001",
+      "name": "Mesh34_img41_62_27_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-458-mesh34-img41-62-4-0-001",
+      "name": "Mesh34_img41_62_4_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-459-mesh34-img41-62-5-0-001",
+      "name": "Mesh34_img41_62_5_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-460-mesh34-img41-62-6-0-001",
+      "name": "Mesh34_img41_62_6_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-461-mesh35-img49-51-0",
+      "name": "Mesh35_img49_51_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-462-mesh36-img49-51-0-001",
+      "name": "Mesh36_img49_51_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-463-mesh37-img49-51-0-001",
+      "name": "Mesh37_img49_51_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-464-mesh38-color-11-0-001",
+      "name": "Mesh38_Color_11_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-465-mesh42-img18-66-0-001",
+      "name": "Mesh42_img18_66_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-466-mesh43-img18-66-0-001",
+      "name": "Mesh43_img18_66_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-467-mesh43-img18-66-0-003",
+      "name": "Mesh43_img18_66_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-468-mesh45-color-11-0-001",
+      "name": "Mesh45_Color_11_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-469-mesh46-color-11-0-001",
+      "name": "Mesh46_Color_11_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-470-empty-001",
+      "name": "Empty.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-471-a0e5073609f64b75a0b92d12910f390f-fbx",
+      "name": "a0e5073609f64b75a0b92d12910f390f.fbx",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-472-books",
+      "name": "Books",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-473-books-mt-books-0",
+      "name": "Books_MT_Books_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-474-floorwalls",
+      "name": "FloorWalls",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-475-furniture",
+      "name": "Furniture",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-476-furniture-mt-furniture-0",
+      "name": "Furniture_MT_Furniture_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-477-neffertiti",
+      "name": "Neffertiti",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-478-neffertiti-mt-neffertiti-0",
+      "name": "Neffertiti_MT_Neffertiti_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-479-rootnode-001",
+      "name": "RootNode.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-480-sketchfab-model-002",
+      "name": "Sketchfab_model.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-481-stand",
+      "name": "Stand",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-482-stand-mt-stand-0",
+      "name": "Stand_MT_Stand_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-483-tray",
+      "name": "Tray",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-484-tv",
+      "name": "TV",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-485-tv-mt-tv-0",
+      "name": "TV_MT_TV_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-486-vasesbig",
+      "name": "VasesBig",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-487-vasesbig-mt-vasesbig-0",
+      "name": "VasesBig_MT_VasesBig_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-488-vasesmedium",
+      "name": "VasesMedium",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-489-vasesmedium-mt-vasesmedium-0",
+      "name": "VasesMedium_MT_VasesMedium_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-490-vasesssmall",
+      "name": "VasesSsmall",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-491-vasesssmall-mt-vasessmall-0",
+      "name": "VasesSsmall_MT_VasesSmall_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-492-empty-004",
+      "name": "Empty.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-493-abajur",
+      "name": "abajur",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-494-abajur-luz-0",
+      "name": "abajur_LUZ_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-495-abajur-m-dourado-0",
+      "name": "abajur_M_Dourado_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-496-abajur-plasticopreto-0",
+      "name": "abajur_plasticoPreto_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-497-controleremoto",
+      "name": "controleRemoto",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-498-controleremoto-amarelo-0",
+      "name": "controleRemoto_amarelo_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-499-controleremoto-azul-0",
+      "name": "controleRemoto_azul_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-500-controleremoto-azulbebe-0",
+      "name": "controleRemoto_azulbebe_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-501-controleremoto-branco-0",
+      "name": "controleRemoto_branco_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-502-controleremoto-laranjabebe-0",
+      "name": "controleRemoto_laranjabebe_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-503-controleremoto-plasticocontrole-0",
+      "name": "controleRemoto_plasticocontrole_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-504-controleremoto-plasticopreto-0",
+      "name": "controleRemoto_plasticoPreto_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-505-controleremoto-verde-0",
+      "name": "controleRemoto_verde_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-506-controleremoto-vermelho-0",
+      "name": "controleRemoto_vermelho_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-507-controleremoto-vidro-0",
+      "name": "controleRemoto_vidro_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-508-mesa-centro-p-002",
+      "name": "Mesa_Centro_P.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-509-mesa-centro-p-002-m-dourado-0",
+      "name": "Mesa_Centro_P.002_M_Dourado_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-510-mesa-centro-p-002-m-pedramesa-0",
+      "name": "Mesa_Centro_P.002_M_PedraMesa_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-511-empty-005",
+      "name": "Empty.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-512-object-17-001",
+      "name": "Object_17.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-513-object-17-002",
+      "name": "Object_17.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-514-object-17-006",
+      "name": "Object_17.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-515-stairs-and-railings-obj-cleaner-materialmerger-gles",
+      "name": "STAIRS AND RAILINGS.obj.cleaner.materialmerger.gles",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-516-sketchfab-model-005",
+      "name": "Sketchfab_model.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-517-object-17-003",
+      "name": "Object_17.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-518-stairs-and-railings-obj-cleaner-materialmerger-gles-001",
+      "name": "STAIRS AND RAILINGS.obj.cleaner.materialmerger.gles.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-519-sketchfab-model-006",
+      "name": "Sketchfab_model.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-520-object-6-002",
+      "name": "Object_6.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-521-mod-697080732-2",
+      "name": "mod_697080732_2",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-522-g-mod-697080732-1",
+      "name": "g mod_697080732_1",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-523-697080732-obj-0",
+      "name": "697080732.obj_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-524-gltf-scenerootnode-001",
+      "name": "GLTF_SceneRootNode.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-525-root-002",
+      "name": "root.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-526-sketchfab-model-007",
+      "name": "Sketchfab_model.007",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-527-win0003-frame",
+      "name": "#WIN0003_Frame",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-528-win0003-frame-win0003-textures-0",
+      "name": "#WIN0003_Frame_#WIN0003_Textures_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-529-win0003-handle",
+      "name": "#WIN0003_Handle",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-530-win0003-handle-win0003-textures-0",
+      "name": "#WIN0003_Handle_#WIN0003_Textures_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-531-win0003-residential-plastic-white-142x62x104-fbx",
+      "name": "#WIN0003_Residential_Plastic_White_142x62x104.fbx",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-532-win0003-window",
+      "name": "#WIN0003_Window",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-533-win0003-window-win0003-textures-0",
+      "name": "#WIN0003_Window_#WIN0003_Textures_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-534-rootnode-005",
+      "name": "RootNode.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-535-sketchfab-model-008",
+      "name": "Sketchfab_model.008",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-536-empty-008",
+      "name": "Empty.008",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-537-mesh45",
+      "name": "Mesh45",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-538-a2",
+      "name": "a2",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-539-mesh46",
+      "name": "Mesh46",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-540-a3",
+      "name": "a3",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-541-mesh1",
+      "name": "Mesh1",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-542-g-0-extern-wall",
+      "name": "G_0_extern_wall",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-543-mesh2",
+      "name": "Mesh2",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-544-g-1-extern-wall",
+      "name": "G_1_extern_wall",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-545-mesh3",
+      "name": "Mesh3",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-546-g-2-extern-wall",
+      "name": "G_2_extern_wall",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-547-mesh8",
+      "name": "Mesh8",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-548-g-38",
+      "name": "G_38",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-549-mesh9",
+      "name": "Mesh9",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-550-g-39",
+      "name": "G_39",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-551-mesh4",
+      "name": "Mesh4",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-552-g-3-extern-wall",
+      "name": "G_3_extern_wall",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-553-mesh10",
+      "name": "Mesh10",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-554-g-40",
+      "name": "G_40",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-555-mesh11",
+      "name": "Mesh11",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-556-g-41",
+      "name": "G_41",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-557-mesh12",
+      "name": "Mesh12",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-558-g-42",
+      "name": "G_42",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-559-mesh13",
+      "name": "Mesh13",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-560-g-43",
+      "name": "G_43",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-561-mesh14",
+      "name": "Mesh14",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-562-g-45",
+      "name": "G_45",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-563-mesh15",
+      "name": "Mesh15",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-564-g-46",
+      "name": "G_46",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-565-mesh16",
+      "name": "Mesh16",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-566-g-47",
+      "name": "G_47",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-567-mesh17",
+      "name": "Mesh17",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-568-g-48",
+      "name": "G_48",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-569-mesh18",
+      "name": "Mesh18",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-570-ra1",
+      "name": "_ra1",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-571-mesh19",
+      "name": "Mesh19",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-572-ra2",
+      "name": "_ra2",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-573-mesh20",
+      "name": "Mesh20",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-574-ra3",
+      "name": "_ra3",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-575-mesh21",
+      "name": "Mesh21",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-576-ra4",
+      "name": "_ra4",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-577-mesh22",
+      "name": "Mesh22",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-578-ra5",
+      "name": "_ra5",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-579-mesh23",
+      "name": "Mesh23",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-580-g-49",
+      "name": "G_49",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-581-mesh5",
+      "name": "Mesh5",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-582-g-4-extern-wall",
+      "name": "G_4_extern_wall",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-583-mesh24",
+      "name": "Mesh24",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-584-g-51",
+      "name": "G_51",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-585-mesh25",
+      "name": "Mesh25",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-586-g-52",
+      "name": "G_52",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-587-mesh26",
+      "name": "Mesh26",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-588-g-53",
+      "name": "G_53",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-589-mesh27",
+      "name": "Mesh27",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-590-g-54",
+      "name": "G_54",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-591-mesh28",
+      "name": "Mesh28",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-592-g-55",
+      "name": "G_55",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-593-mesh29",
+      "name": "Mesh29",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-594-g-56",
+      "name": "G_56",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-595-mesh30",
+      "name": "Mesh30",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-596-g-57",
+      "name": "G_57",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-597-mesh31",
+      "name": "Mesh31",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-598-g-58",
+      "name": "G_58",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-599-mesh32",
+      "name": "Mesh32",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-600-ra1-1",
+      "name": "_ra1_1",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-601-mesh33",
+      "name": "Mesh33",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-602-g-59",
+      "name": "G_59",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-603-mesh6",
+      "name": "Mesh6",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-604-g-5-extern-wall",
+      "name": "G_5_extern_wall",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-605-mesh34",
+      "name": "Mesh34",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-606-ra1-2",
+      "name": "_ra1_2",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-607-mesh35",
+      "name": "Mesh35",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-608-g-60",
+      "name": "G_60",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-609-mesh36",
+      "name": "Mesh36",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-610-g-61",
+      "name": "G_61",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-611-mesh37",
+      "name": "Mesh37",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-612-g-62",
+      "name": "G_62",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-613-mesh38",
+      "name": "Mesh38",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-614-g-63",
+      "name": "G_63",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-615-mesh39",
+      "name": "Mesh39",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-616-g-64",
+      "name": "G_64",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-617-mesh40",
+      "name": "Mesh40",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-618-g-65",
+      "name": "G_65",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-619-mesh41",
+      "name": "Mesh41",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-620-g-66",
+      "name": "G_66",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-621-mesh42",
+      "name": "Mesh42",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-622-g-67",
+      "name": "G_67",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-623-mesh43",
+      "name": "Mesh43",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-624-g-68",
+      "name": "G_68",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-625-mesh44",
+      "name": "Mesh44",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-626-g-89",
+      "name": "G_89",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-627-mesh7",
+      "name": "Mesh7",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-628-interiors",
+      "name": "interiors",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-629-model",
+      "name": "Model",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-630-rootnode",
+      "name": "RootNode",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-631-cucina-vers1bfbx-fbx",
+      "name": "cucina vers1bFBX.fbx",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-632-sketchfab-model-009",
+      "name": "Sketchfab_model.009",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-633-badrumssk-p-002-19",
+      "name": "Badrumssk��p.002_19",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-634-badrumssk-p-003-20",
+      "name": "Badrumssk��p.003_20",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-635-badrumssk-p-004-21",
+      "name": "Badrumssk��p.004_21",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-636-cylinder-010-10",
+      "name": "Cylinder.010_10",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-637-cylinder-011-11",
+      "name": "Cylinder.011_11",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-638-cylinder-012-12",
+      "name": "Cylinder.012_12",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-639-cylinder-013-13",
+      "name": "Cylinder.013_13",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-640-cylinder-014-14",
+      "name": "Cylinder.014_14",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-641-cylinder-015-15",
+      "name": "Cylinder.015_15",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-642-cylinder-032-16",
+      "name": "Cylinder.032_16",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-643-doftpinnar-18",
+      "name": "doftpinnar_18",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-644-hmgoepprod-001-17",
+      "name": "hmgoepprod.001_17",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-645-object-28-002",
+      "name": "Object_28.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-646-object-30-002",
+      "name": "Object_30.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-647-object-32-002",
+      "name": "Object_32.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-648-object-34-002",
+      "name": "Object_34.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-649-object-36-002",
+      "name": "Object_36.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-650-object-38-002",
+      "name": "Object_38.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-651-object-39-002",
+      "name": "Object_39.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-652-object-40-002",
+      "name": "Object_40.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-653-object-42-002",
+      "name": "Object_42.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-654-object-44-001",
+      "name": "Object_44.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-655-badrumssk-p-22",
+      "name": "Badrumssk��p_22",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-656-matta-9",
+      "name": "Matta_9",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-657-object-22-002",
+      "name": "Object_22.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-658-object-23-002",
+      "name": "Object_23.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-659-object-47-001",
+      "name": "Object_47.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-660-object-49-001",
+      "name": "Object_49.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-661-object-51-001",
+      "name": "Object_51.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-662-cylinder-024-4",
+      "name": "Cylinder.024_4",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-663-cylinder-025-5",
+      "name": "Cylinder.025_5",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-664-cylinder-028-6",
+      "name": "Cylinder.028_6",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-665-object-14-002",
+      "name": "Object_14.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-666-object-15-002",
+      "name": "Object_15.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-667-object-16-002",
+      "name": "Object_16.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-668-object-18-002",
+      "name": "Object_18.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-669-object-20-002",
+      "name": "Object_20.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-670-tv-l-aesop-svart-001-7",
+      "name": "Tv��l_Aesop_svart.001_7",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-671-empty-009",
+      "name": "Empty.009",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-672-58c26ec3a4fe4f4ba13a510fb2ccdd89-fbx",
+      "name": "58c26ec3a4fe4f4ba13a510fb2ccdd89.fbx",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-673-rootnode-003",
+      "name": "RootNode.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-674-sketchfab-model-010",
+      "name": "Sketchfab_model.010",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-675-vaal-vaa-772662wh",
+      "name": "Vaal VAA-772662WH",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-676-vaal-vaa-772662wh-chrome-0",
+      "name": "Vaal VAA-772662WH_Chrome_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-677-vaal-vaa-772662wh-matt-black-0",
+      "name": "Vaal VAA-772662WH_Matt_Black_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-678-vaal-vaa-772662wh-white-ceramic-0",
+      "name": "Vaal VAA-772662WH_White ceramic_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-679-empty-006",
+      "name": "Empty.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-680-win0003-frame-001",
+      "name": "#WIN0003_Frame.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-681-win0003-frame-win0003-textures-0-001",
+      "name": "#WIN0003_Frame_#WIN0003_Textures_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-682-win0003-handle-001",
+      "name": "#WIN0003_Handle.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-683-win0003-handle-win0003-textures-0-001",
+      "name": "#WIN0003_Handle_#WIN0003_Textures_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-684-win0003-residential-plastic-white-142x62x104-fbx-001",
+      "name": "#WIN0003_Residential_Plastic_White_142x62x104.fbx.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-685-win0003-window-win0003-textures-0-001",
+      "name": "#WIN0003_Window_#WIN0003_Textures_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-686-rootnode-002",
+      "name": "RootNode.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-687-sketchfab-model-011",
+      "name": "Sketchfab_model.011",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-688-empty-010",
+      "name": "Empty.010",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-689-object-122-001",
+      "name": "Object_122.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-690-object-124-001",
+      "name": "Object_124.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-691-object-126-001",
+      "name": "Object_126.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-692-object-128-001",
+      "name": "Object_128.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-693-object-130-001",
+      "name": "Object_130.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-694-object-132-001",
+      "name": "Object_132.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-695-001-55-001",
+      "name": "����������_������������.001_55.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-696-015-48-001",
+      "name": "����������_��������������_��������.015_48.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-697-016-49-001",
+      "name": "����������_��������������_��������.016_49.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-698-017-50-001",
+      "name": "����������_��������������_��������.017_50.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-699-018-51-001",
+      "name": "����������_��������������_��������.018_51.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-700-005-56-001",
+      "name": "��������������_��������.005_56.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-701-empty-011",
+      "name": "Empty.011",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-702-empty-007",
+      "name": "Empty.007",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-703-object-122-002",
+      "name": "Object_122.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-704-object-124-002",
+      "name": "Object_124.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-705-object-126-002",
+      "name": "Object_126.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-706-object-128-002",
+      "name": "Object_128.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-707-object-130-002",
+      "name": "Object_130.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-708-001-55-002",
+      "name": "����������_������������.001_55.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-709-015-48-002",
+      "name": "����������_��������������_��������.015_48.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-710-016-49-002",
+      "name": "����������_��������������_��������.016_49.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-711-017-50-002",
+      "name": "����������_��������������_��������.017_50.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-712-018-51-002",
+      "name": "����������_��������������_��������.018_51.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-713-005-56-002",
+      "name": "��������������_��������.005_56.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-714-empty-012",
+      "name": "Empty.012",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-715-object-10-002",
+      "name": "Object_10.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-716-object-11-003",
+      "name": "Object_11.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-717-object-12-002",
+      "name": "Object_12.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-718-object-2-002",
+      "name": "Object_2.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-719-object-3-002",
+      "name": "Object_3.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-720-object-4-002",
+      "name": "Object_4.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-721-object-5-003",
+      "name": "Object_5.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-722-object-6-003",
+      "name": "Object_6.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-723-object-7-003",
+      "name": "Object_7.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-724-object-8-002",
+      "name": "Object_8.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-725-object-9-003",
+      "name": "Object_9.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-726-empty-013",
+      "name": "Empty.013",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-727-58c26ec3a4fe4f4ba13a510fb2ccdd89-fbx-002",
+      "name": "58c26ec3a4fe4f4ba13a510fb2ccdd89.fbx.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-728-badrumssk-p-002-19-001",
+      "name": "Badrumssk��p.002_19.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-729-badrumssk-p-003-20-001",
+      "name": "Badrumssk��p.003_20.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-730-badrumssk-p-004-21-001",
+      "name": "Badrumssk��p.004_21.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-731-cylinder-010-10-001",
+      "name": "Cylinder.010_10.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-732-cylinder-011-11-001",
+      "name": "Cylinder.011_11.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-733-cylinder-012-12-001",
+      "name": "Cylinder.012_12.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-734-cylinder-013-13-001",
+      "name": "Cylinder.013_13.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-735-cylinder-014-14-001",
+      "name": "Cylinder.014_14.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-736-cylinder-015-15-001",
+      "name": "Cylinder.015_15.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-737-cylinder-032-16-001",
+      "name": "Cylinder.032_16.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-738-doftpinnar-18-001",
+      "name": "doftpinnar_18.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-739-hmgoepprod-001-17-001",
+      "name": "hmgoepprod.001_17.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-740-object-28-003",
+      "name": "Object_28.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-741-object-30-003",
+      "name": "Object_30.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-742-object-32-003",
+      "name": "Object_32.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-743-object-34-003",
+      "name": "Object_34.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-744-object-36-003",
+      "name": "Object_36.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-745-object-38-003",
+      "name": "Object_38.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-746-object-39-004",
+      "name": "Object_39.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-747-object-40-003",
+      "name": "Object_40.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-748-object-42-003",
+      "name": "Object_42.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-749-object-44-002",
+      "name": "Object_44.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-750-badrumssk-p-22-001",
+      "name": "Badrumssk��p_22.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-751-matta-9-001",
+      "name": "Matta_9.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-752-object-22-003",
+      "name": "Object_22.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-753-object-23-004",
+      "name": "Object_23.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-754-object-47-003",
+      "name": "Object_47.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-755-object-49-003",
+      "name": "Object_49.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-756-object-51-003",
+      "name": "Object_51.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-757-cylinder-024-4-001",
+      "name": "Cylinder.024_4.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-758-cylinder-025-5-001",
+      "name": "Cylinder.025_5.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-759-cylinder-028-6-001",
+      "name": "Cylinder.028_6.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-760-object-14-003",
+      "name": "Object_14.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-761-object-15-004",
+      "name": "Object_15.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-762-object-16-003",
+      "name": "Object_16.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-763-object-18-003",
+      "name": "Object_18.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-764-object-20-003",
+      "name": "Object_20.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-765-tv-l-aesop-svart-001-7-001",
+      "name": "Tv��l_Aesop_svart.001_7.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-766-empty-015",
+      "name": "Empty.015",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-767-object-10-003",
+      "name": "Object_10.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-768-object-11-004",
+      "name": "Object_11.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-769-object-12-003",
+      "name": "Object_12.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-770-object-2-003",
+      "name": "Object_2.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-771-object-3-003",
+      "name": "Object_3.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-772-object-4-003",
+      "name": "Object_4.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-773-object-5-004",
+      "name": "Object_5.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-774-object-6-004",
+      "name": "Object_6.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-775-object-7-004",
+      "name": "Object_7.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-776-object-8-003",
+      "name": "Object_8.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-777-object-9-004",
+      "name": "Object_9.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-778-empty-016",
+      "name": "Empty.016",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-779-rootnode-006",
+      "name": "RootNode.006",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-780-sketchfab-model-012",
+      "name": "Sketchfab_model.012",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-781-vaal-vaa-772662wh-002",
+      "name": "Vaal VAA-772662WH.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-782-vaal-vaa-772662wh-chrome-0-002",
+      "name": "Vaal VAA-772662WH_Chrome_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-783-vaal-vaa-772662wh-matt-black-0-002",
+      "name": "Vaal VAA-772662WH_Matt_Black_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-784-vaal-vaa-772662wh-white-ceramic-0-002",
+      "name": "Vaal VAA-772662WH_White ceramic_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-785-empty-014",
+      "name": "Empty.014",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-786-empty-003",
+      "name": "Empty.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-787-empty",
+      "name": "Empty",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-788-icosfera-m-dourado-0",
+      "name": "icosfera_M_Dourado_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-789-mesa-centro-g-m-dourado-0",
+      "name": "Mesa_Centro_G_M_Dourado_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-790-mesa-centro-g-m-pedramesa-0",
+      "name": "Mesa_Centro_G_M_PedraMesa_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-791-vaso-001-plasticopreto-0",
+      "name": "vaso.001_plasticoPreto_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-792-vaso-plasticopreto-0",
+      "name": "vaso_plasticoPreto_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-793-empty-017",
+      "name": "Empty.017",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-794-object-4-004",
+      "name": "Object_4.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-795-tv",
+      "name": "tv",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-796-rootnode-007",
+      "name": "RootNode.007",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-797-83fc05b31445441398542f8d9cb2ec9c-fbx",
+      "name": "83fc05b31445441398542f8d9cb2ec9c.fbx",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-798-sketchfab-model-013",
+      "name": "Sketchfab_model.013",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-799-object-5-005",
+      "name": "Object_5.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-800-object-6-005",
+      "name": "Object_6.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-801-g-aul10-0",
+      "name": "G-AUL10_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-802-object-10-004",
+      "name": "Object_10.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-803-object-8-004",
+      "name": "Object_8.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-804-object-9-005",
+      "name": "Object_9.005",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-805-g-aul11-1",
+      "name": "G-AUL11_1",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-806-empty-003-2",
+      "name": "Empty.003_2",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-807-gltf-scenerootnode-003",
+      "name": "GLTF_SceneRootNode.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-808-root-003",
+      "name": "root.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-809-sketchfab-model-014",
+      "name": "Sketchfab_model.014",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-810-object-5-001",
+      "name": "Object_5.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-811-object-6-001",
+      "name": "Object_6.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-812-g-aul10-0-001",
+      "name": "G-AUL10_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-813-object-10-001",
+      "name": "Object_10.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-814-object-8-001",
+      "name": "Object_8.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-815-object-9-001",
+      "name": "Object_9.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-816-g-aul11-1-001",
+      "name": "G-AUL11_1.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-817-empty-003-2-001",
+      "name": "Empty.003_2.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-818-gltf-scenerootnode-002",
+      "name": "GLTF_SceneRootNode.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-819-root-004",
+      "name": "root.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-820-sketchfab-model-015",
+      "name": "Sketchfab_model.015",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-821-washing-machine-blockage",
+      "name": "Washing-Machine_Blockage",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-822-washing-machine-blockage-washing-machine-0",
+      "name": "Washing-Machine_Blockage_Washing_Machine_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-823-washing-machine-door",
+      "name": "Washing-Machine_Door",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-824-washing-machine-door-washing-machine-0",
+      "name": "Washing-Machine_Door_Washing_Machine_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-825-washing-machine-glass",
+      "name": "Washing-Machine_Glass",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-826-washing-machine-glass-washing-machine-0",
+      "name": "Washing-Machine_Glass_Washing_Machine_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-827-washing-machine-main",
+      "name": "Washing-Machine_Main",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-828-washing-machine-main-washing-machine-0",
+      "name": "Washing-Machine_Main_Washing_Machine_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-829-washing-machine-powder",
+      "name": "Washing-Machine_Powder",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-830-washing-machine-powder-washing-machine-0",
+      "name": "Washing-Machine_Powder_Washing_Machine_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-831-washing-machine-drum",
+      "name": "Washing_Machine_Drum",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-832-washing-machine-drum-washing-machine-0",
+      "name": "Washing_Machine_Drum_Washing_Machine_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-833-empty-018",
+      "name": "Empty.018",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-834-mesh32-img31-49-10-0-002",
+      "name": "Mesh32_img31_49_10_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-835-mesh32-img31-49-14-0-003",
+      "name": "Mesh32_img31_49_14_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-836-mesh32-img31-49-15-0-002",
+      "name": "Mesh32_img31_49_15_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-837-mesh32-img31-49-16-0-002",
+      "name": "Mesh32_img31_49_16_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-838-mesh32-img31-49-17-0-002",
+      "name": "Mesh32_img31_49_17_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-839-mesh32-img31-49-18-0-002",
+      "name": "Mesh32_img31_49_18_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-840-mesh32-img31-49-19-0-002",
+      "name": "Mesh32_img31_49_19_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-841-mesh32-img31-49-21-0-002",
+      "name": "Mesh32_img31_49_21_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-842-mesh32-img31-49-23-0-002",
+      "name": "Mesh32_img31_49_23_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-843-mesh32-img31-49-24-0-002",
+      "name": "Mesh32_img31_49_24_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-844-mesh32-img31-49-25-0-002",
+      "name": "Mesh32_img31_49_25_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-845-mesh32-img31-49-26-0-002",
+      "name": "Mesh32_img31_49_26_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-846-mesh32-img31-49-27-0-002",
+      "name": "Mesh32_img31_49_27_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-847-mesh32-img31-49-28-0-002",
+      "name": "Mesh32_img31_49_28_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-848-mesh32-img31-49-29-0-003",
+      "name": "Mesh32_img31_49_29_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-849-mesh32-img31-49-2-0-003",
+      "name": "Mesh32_img31_49_2_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-850-mesh32-img31-49-30-0-002",
+      "name": "Mesh32_img31_49_30_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-851-mesh32-img31-49-31-0-001",
+      "name": "Mesh32_img31_49_31_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-852-mesh32-img31-49-32-0-001",
+      "name": "Mesh32_img31_49_32_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-853-mesh32-img31-49-33-0-002",
+      "name": "Mesh32_img31_49_33_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-854-mesh32-img31-49-34-0-002",
+      "name": "Mesh32_img31_49_34_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-855-mesh32-img31-49-35-0-002",
+      "name": "Mesh32_img31_49_35_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-856-mesh32-img31-49-36-0-002",
+      "name": "Mesh32_img31_49_36_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-857-mesh32-img31-49-3-0-002",
+      "name": "Mesh32_img31_49_3_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-858-mesh32-img31-49-40-0-003",
+      "name": "Mesh32_img31_49_40_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-859-mesh32-img31-49-41-0-002",
+      "name": "Mesh32_img31_49_41_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-860-mesh32-img31-49-42-0-002",
+      "name": "Mesh32_img31_49_42_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-861-mesh32-img31-49-43-0-002",
+      "name": "Mesh32_img31_49_43_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-862-mesh32-img31-49-44-0-002",
+      "name": "Mesh32_img31_49_44_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-863-mesh32-img31-49-47-0-001",
+      "name": "Mesh32_img31_49_47_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-864-mesh32-img31-49-48-0-002",
+      "name": "Mesh32_img31_49_48_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-865-mesh32-img31-49-49-0-002",
+      "name": "Mesh32_img31_49_49_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-866-mesh32-img31-49-4-0-002",
+      "name": "Mesh32_img31_49_4_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-867-mesh32-img31-49-50-0-002",
+      "name": "Mesh32_img31_49_50_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-868-mesh32-img31-49-51-0-002",
+      "name": "Mesh32_img31_49_51_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-869-mesh32-img31-49-52-0-002",
+      "name": "Mesh32_img31_49_52_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-870-mesh32-img31-49-53-0-002",
+      "name": "Mesh32_img31_49_53_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-871-mesh32-img31-49-55-0-002",
+      "name": "Mesh32_img31_49_55_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-872-mesh32-img31-49-56-0-001",
+      "name": "Mesh32_img31_49_56_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-873-mesh32-img31-49-57-0-002",
+      "name": "Mesh32_img31_49_57_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-874-mesh32-img31-49-58-0-001",
+      "name": "Mesh32_img31_49_58_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-875-mesh32-img31-49-59-0-001",
+      "name": "Mesh32_img31_49_59_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-876-mesh32-img31-49-5-0-002",
+      "name": "Mesh32_img31_49_5_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-877-mesh32-img31-49-60-0-001",
+      "name": "Mesh32_img31_49_60_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-878-mesh32-img31-49-61-0-002",
+      "name": "Mesh32_img31_49_61_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-879-mesh32-img31-49-62-0-002",
+      "name": "Mesh32_img31_49_62_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-880-mesh32-img31-49-63-0-003",
+      "name": "Mesh32_img31_49_63_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-881-mesh32-img31-49-65-0-001",
+      "name": "Mesh32_img31_49_65_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-882-mesh32-img31-49-67-0-002",
+      "name": "Mesh32_img31_49_67_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-883-mesh32-img31-49-69-0-002",
+      "name": "Mesh32_img31_49_69_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-884-mesh32-img31-49-6-0-002",
+      "name": "Mesh32_img31_49_6_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-885-mesh32-img31-49-70-0-002",
+      "name": "Mesh32_img31_49_70_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-886-mesh32-img31-49-72-0-002",
+      "name": "Mesh32_img31_49_72_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-887-mesh32-img31-49-73-0-002",
+      "name": "Mesh32_img31_49_73_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-888-mesh32-img31-49-75-0-002",
+      "name": "Mesh32_img31_49_75_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-889-mesh32-img31-49-76-0-002",
+      "name": "Mesh32_img31_49_76_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-890-mesh32-img31-49-77-0-002",
+      "name": "Mesh32_img31_49_77_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-891-mesh32-img31-49-78-0-002",
+      "name": "Mesh32_img31_49_78_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-892-mesh32-img31-49-79-0-001",
+      "name": "Mesh32_img31_49_79_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-893-mesh32-img31-49-7-0-002",
+      "name": "Mesh32_img31_49_7_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-894-mesh32-img31-49-82-0-002",
+      "name": "Mesh32_img31_49_82_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-895-mesh32-img31-49-84-0-002",
+      "name": "Mesh32_img31_49_84_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-896-mesh32-img31-49-85-0-002",
+      "name": "Mesh32_img31_49_85_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-897-mesh32-img31-49-86-0-002",
+      "name": "Mesh32_img31_49_86_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-898-mesh32-img31-49-87-0-003",
+      "name": "Mesh32_img31_49_87_0.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-899-mesh32-img31-49-8-0-002",
+      "name": "Mesh32_img31_49_8_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-900-mesh32-img31-49-91-0-002",
+      "name": "Mesh32_img31_49_91_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-901-mesh32-img31-49-9-0-002",
+      "name": "Mesh32_img31_49_9_0.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-902-empty-019",
+      "name": "Empty.019",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-903-tv-mt-tv-0-001",
+      "name": "TV_MT_TV_0.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-904-floor",
+      "name": "Floor",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-905-cube-003",
+      "name": "Cube.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-906-cube-002",
+      "name": "Cube.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-907-image-material-0",
+      "name": "Image_Material_0",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-908-image",
+      "name": "Image",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-909-rootnode-004",
+      "name": "RootNode.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-910-0dba65abc1104f9f8d5e20e18b74d4b5-fbx",
+      "name": "0dba65abc1104f9f8d5e20e18b74d4b5.fbx",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-911-sketchfab-model-016",
+      "name": "Sketchfab_model.016",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-912-lamp-01",
+      "name": "lamp_01",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-913-collada-visual-scene-group-002",
+      "name": "Collada visual scene group.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-914-sketchfab-model-017",
+      "name": "Sketchfab_model.017",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-915-lamp-01-001",
+      "name": "lamp_01.001",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-916-collada-visual-scene-group-003",
+      "name": "Collada visual scene group.003",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-917-sketchfab-model-018",
+      "name": "Sketchfab_model.018",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-918-lamp-01-002",
+      "name": "lamp_01.002",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-919-collada-visual-scene-group-004",
+      "name": "Collada visual scene group.004",
+      "visible": true,
+      "hideInTopView": false
+    },
+    {
+      "id": "node-920-sketchfab-model-019",
+      "name": "Sketchfab_model.019",
+      "visible": true,
+      "hideInTopView": false
     }
   ]
 }

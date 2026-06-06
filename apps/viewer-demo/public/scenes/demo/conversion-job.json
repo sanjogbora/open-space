@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "0.1",
+  "id": "convert-20260606-105102349z",
+  "status": "completed",
+  "engine": "blender",
+  "startedAt": "2026-06-06T10:51:02.349Z",
+  "source": "source/bake.blend",
+  "outputSceneUrl": "scene.glb",
+  "steps": [
+    {
+      "id": "detect-blender",
+      "label": "Detect Blender converter",
+      "status": "completed",
+      "note": "Using C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe"
+    },
+    {
+      "id": "validate-source",
+      "label": "Validate source model",
+      "status": "completed"
+    },
+    {
+      "id": "import-source",
+      "label": "Import source model",
+      "status": "completed"
+    },
+    {
+      "id": "export-glb",
+      "label": "Export glTF binary scene",
+      "status": "completed",
+      "note": "325832420 bytes"
+    }
+  ],
+  "completedAt": "2026-06-06T10:51:23.602Z",
+  "outputBytes": 325832420,
+  "message": "Converted source/bake.blend to scene.glb."
+}

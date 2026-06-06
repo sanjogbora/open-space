@@ -1,178 +1,93 @@
 {
   "schemaVersion": "0.1",
-  "sceneUrl": "scene.optimized.glb",
+  "sceneUrl": "scene.glb",
   "graphUrl": "scene.graph.json",
   "materialsUrl": "materials.json",
   "objectsUrl": "objects.json",
   "controlsUrl": "controls.json",
   "views": [
     {
-      "id": "living",
-      "label": "Living",
+      "id": "entry",
+      "label": "Entry",
       "kind": "walk",
       "position": [
-        -3.65,
+        -1.6268718349679254,
         1.65,
-        2.35
+        2.0398702431812423
       ],
       "target": [
-        -2.35,
-        1.28,
-        -0.55
+        -1.6268718349679254,
+        1.3499999999999999,
+        -0.8119399047461107
       ],
       "fov": 62
     },
     {
-      "id": "kitchen",
-      "label": "Kitchen",
+      "id": "center",
+      "label": "Center",
       "kind": "walk",
       "position": [
-        0.75,
+        -1.6268718349679254,
         1.65,
-        3.45
+        -0.8119399047461107
       ],
       "target": [
-        2.6,
-        1.3,
-        1.3
+        -1.6268718349679254,
+        1.3499999999999999,
+        -3.6637500526734637
       ],
       "fov": 62
     },
     {
-      "id": "dining",
-      "label": "Dining",
+      "id": "left",
+      "label": "Left",
       "kind": "walk",
       "position": [
-        0.4,
+        -11.670950458057776,
         1.65,
-        -0.55
+        -0.8119399047461107
       ],
       "target": [
-        3.05,
-        1.2,
-        -1.65
+        -1.6268718349679254,
+        1.3499999999999999,
+        -0.8119399047461107
       ],
-      "fov": 60
+      "fov": 62
     },
     {
-      "id": "bedroom",
-      "label": "Bedroom",
+      "id": "right",
+      "label": "Right",
       "kind": "walk",
       "position": [
-        1.7,
+        8.417206788121925,
         1.65,
-        3.2
+        -0.8119399047461107
       ],
       "target": [
-        4.1,
-        1.15,
-        3.2
+        -1.6268718349679254,
+        1.3499999999999999,
+        -0.8119399047461107
       ],
-      "fov": 64
+      "fov": 62
     },
     {
       "id": "top",
       "label": "Top",
       "kind": "top",
       "position": [
-        0,
-        11,
-        0.01
+        -1.6268718349679254,
+        56.295924302881524,
+        -0.8019399047461107
       ],
       "target": [
-        0,
-        0,
-        0
+        -1.6268718349679254,
+        1.2441270985944304,
+        -0.8119399047461107
       ],
       "fov": 48
     }
   ],
-  "interactions": [
-    {
-      "id": "living-hotspot",
-      "kind": "hotspot",
-      "label": "Living details",
-      "position": [
-        -2.35,
-        1.25,
-        0.2
-      ],
-      "title": "Living Room",
-      "body": "Open seating, media wall, and central floor path are configured as editable scene metadata.",
-      "icon": "info"
-    },
-    {
-      "id": "kitchen-hotspot",
-      "kind": "hotspot",
-      "label": "Kitchen finish",
-      "position": [
-        2.85,
-        1.35,
-        1.2
-      ],
-      "title": "Kitchen",
-      "body": "Cabinet, island, and counter surfaces are ready for material variant controls in the editor phase.",
-      "icon": "info"
-    },
-    {
-      "id": "project-link",
-      "kind": "link",
-      "label": "Project Website",
-      "position": [
-        2.6,
-        1.55,
-        -1.6
-      ],
-      "url": "https://example.com",
-      "openInNewTab": true
-    },
-    {
-      "id": "ceiling-toggle",
-      "kind": "object-toggle",
-      "label": "Toggle Ceiling",
-      "position": [
-        -1.2,
-        1.55,
-        1.65
-      ],
-      "targetObjectId": "node-1-ceiling",
-      "targetObjectName": "ceiling",
-      "initiallyVisible": true
-    },
-    {
-      "id": "tv-video",
-      "kind": "video-texture",
-      "label": "TV",
-      "source": "generated://showreel",
-      "targetMeshName": "tv_screen",
-      "autoplay": true,
-      "muted": true,
-      "loop": true
-    },
-    {
-      "id": "sofa-finish",
-      "kind": "material-variant",
-      "label": "Sofa Finish",
-      "targetMaterialName": "Sofa",
-      "variants": [
-        {
-          "id": "deep-teal",
-          "label": "Deep Teal",
-          "color": "#07333d"
-        },
-        {
-          "id": "warm-stone",
-          "label": "Warm Stone",
-          "color": "#8d8376"
-        },
-        {
-          "id": "clay",
-          "label": "Clay",
-          "color": "#8f3b2f"
-        }
-      ]
-    }
-  ],
+  "interactions": [],
   "navigation": {
     "cameraHeight": 1.65,
     "moveSpeed": 3.8,
@@ -181,26 +96,515 @@
       "floor",
       "ground",
       "navmesh",
-      "walkable"
+      "walkable",
+      "slab",
+      "carpet",
+      "rug",
+      "tile"
     ],
     "collisionMeshNames": [
       "wall",
       "glass",
-      "door",
-      "collision"
+      "collision",
+      "collider",
+      "blocker",
+      "window",
+      "partition",
+      "rail",
+      "railing",
+      "column",
+      "pillar"
     ],
     "bounds": {
       "min": [
-        -5.55,
-        0.2,
-        -4.05
+        -20.312726519056945,
+        -0.10010605342560648,
+        -6.6544580260449555
       ],
       "max": [
-        5.55,
-        2.4,
-        4.05
+        17.058982849121094,
+        2.988360250614467,
+        5.030578216552734
       ]
-    }
+    },
+    "ignoredCollisionMeshNames": [],
+    "zones": [
+      {
+        "id": "walk-main",
+        "label": "Main walk zone",
+        "kind": "walk",
+        "center": [
+          -1.6268718349679254,
+          0.029893946574393527,
+          -0.8119399047461107
+        ],
+        "size": [
+          35.87170936817804,
+          0.08,
+          10.18503624259769
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "bounds-fallback"
+      },
+      {
+        "id": "pass-node-6-doorframe",
+        "label": "DoorFrame",
+        "kind": "pass",
+        "center": [
+          -0.00612255476515409,
+          0.9075,
+          0.002163692714575265
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-25-doorframe-001",
+        "label": "DoorFrame.001",
+        "kind": "pass",
+        "center": [
+          0.004029908643175329,
+          0.9075,
+          -0.001666922567483451
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-32-doorframe-002",
+        "label": "DoorFrame.002",
+        "kind": "pass",
+        "center": [
+          0.0017047428945791386,
+          0.9075,
+          -0.0016672418099608678
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-39-doorframe-003",
+        "label": "DoorFrame.003",
+        "kind": "pass",
+        "center": [
+          -0.00010682279616594314,
+          0.9075,
+          -0.005533577931113541
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-46-doorframe-004",
+        "label": "DoorFrame.004",
+        "kind": "pass",
+        "center": [
+          -0.00011026791366600138,
+          0.9075,
+          -0.003133747565560043
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-53-doorframe-005",
+        "label": "DoorFrame.005",
+        "kind": "pass",
+        "center": [
+          -0.0023626456249024783,
+          0.9075,
+          -0.0021105325100943444
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-60-doorframe-006",
+        "label": "DoorFrame.006",
+        "kind": "pass",
+        "center": [
+          0.00034491564233187237,
+          0.9075,
+          -0.0026298124772277135
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-5-door",
+        "label": "Door",
+        "kind": "pass",
+        "center": [
+          -0.005937845127058418,
+          0.9075,
+          0.002231245186255702
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-24-door-001",
+        "label": "Door.001",
+        "kind": "pass",
+        "center": [
+          0.004048342038631227,
+          0.9075,
+          -0.0016669225471003684
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-31-door-002",
+        "label": "Door.002",
+        "kind": "pass",
+        "center": [
+          0.0017231762900350202,
+          0.9075,
+          -0.0016672419042953056
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-38-door-003",
+        "label": "Door.003",
+        "kind": "pass",
+        "center": [
+          -0.00010682279616594314,
+          0.9075,
+          -0.005515144625678659
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-45-door-004",
+        "label": "Door.004",
+        "kind": "pass",
+        "center": [
+          -0.00011026793782241951,
+          0.9075,
+          -0.003152180908247827
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-52-door-005",
+        "label": "Door.005",
+        "kind": "pass",
+        "center": [
+          -0.002419799884732436,
+          0.9075,
+          -0.0019255568603714138
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-59-door-006",
+        "label": "Door.006",
+        "kind": "pass",
+        "center": [
+          0.0005050584424113064,
+          0.9075,
+          -0.0025838776293173444
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-824-washing-machine-door-washing-machine-0",
+        "label": "Washing-Machine_Door_Washing_Machine_0",
+        "kind": "pass",
+        "center": [
+          -0.0013795813515242745,
+          0.9075,
+          -0.0060656612275509884
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "pass-node-528-win0003-frame-win0003-textures-0",
+        "label": "#WIN0003_Frame_#WIN0003_Textures_0",
+        "kind": "pass",
+        "center": [
+          0.005123185026621012,
+          0.9075,
+          -0.0014454288322395517
+        ],
+        "size": [
+          0.85,
+          2.3,
+          0.95
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "door-detection"
+      },
+      {
+        "id": "walk-auto-view-entry",
+        "label": "Entry walk patch",
+        "kind": "walk",
+        "center": [
+          -1.6268718349679254,
+          0.029893946574393527,
+          2.0398702431812423
+        ],
+        "size": [
+          2.2,
+          0.08,
+          1.833306523667584
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "walk-view-patch"
+      },
+      {
+        "id": "walk-auto-view-center",
+        "label": "Center walk patch",
+        "kind": "walk",
+        "center": [
+          -1.6268718349679254,
+          0.029893946574393527,
+          -0.8119399047461107
+        ],
+        "size": [
+          2.2,
+          0.08,
+          1.833306523667584
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "walk-view-patch"
+      },
+      {
+        "id": "walk-auto-view-left",
+        "label": "Left walk patch",
+        "kind": "walk",
+        "center": [
+          -11.670950458057776,
+          0.029893946574393527,
+          -0.8119399047461107
+        ],
+        "size": [
+          2.2,
+          0.08,
+          1.833306523667584
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "walk-view-patch"
+      },
+      {
+        "id": "walk-auto-view-right",
+        "label": "Right walk patch",
+        "kind": "walk",
+        "center": [
+          8.417206788121925,
+          0.029893946574393527,
+          -0.8119399047461107
+        ],
+        "size": [
+          2.2,
+          0.08,
+          1.833306523667584
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "walk-view-patch"
+      },
+      {
+        "id": "boundary-block-north",
+        "label": "Boundary North",
+        "kind": "block",
+        "center": [
+          -1.6268718349679254,
+          1.2441270985944302,
+          4.458816350798194
+        ],
+        "size": [
+          36.58466190515988,
+          2.4884663040400734,
+          0.3564762684909192
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "navigation-bounds"
+      },
+      {
+        "id": "boundary-block-south",
+        "label": "Boundary South",
+        "kind": "block",
+        "center": [
+          -1.6268718349679254,
+          1.2441270985944302,
+          -6.082696160290415
+        ],
+        "size": [
+          36.58466190515988,
+          2.4884663040400734,
+          0.3564762684909192
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "navigation-bounds"
+      },
+      {
+        "id": "boundary-block-east",
+        "label": "Boundary East",
+        "kind": "block",
+        "center": [
+          16.487220983366555,
+          1.2441270985944302,
+          -0.8119399047461107
+        ],
+        "size": [
+          0.3564762684909192,
+          2.4884663040400734,
+          10.897988779579528
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "navigation-bounds"
+      },
+      {
+        "id": "boundary-block-west",
+        "label": "Boundary West",
+        "kind": "block",
+        "center": [
+          -19.740964653302406,
+          1.2441270985944302,
+          -0.8119399047461107
+        ],
+        "size": [
+          0.3564762684909192,
+          2.4884663040400734,
+          10.897988779579528
+        ],
+        "rotationY": 0,
+        "enabled": true,
+        "source": "generated",
+        "generatedBy": "navigation-bounds"
+      }
+    ]
   },
   "branding": {
     "title": "Walkthrough Studio",
@@ -230,6 +634,143 @@
       "maxPixelRatio": 2,
       "shadows": true,
       "antialias": true
+    }
+  ],
+  "originalSceneUrl": "scene.glb",
+  "rendering": {
+    "doubleSidedMaterials": true,
+    "relightUnlitMaterials": true,
+    "modelScale": 0.001
+  },
+  "environment": {
+    "backgroundColor": "#d8dde2",
+    "skyBackdropEnabled": true,
+    "skyTopColor": "#d8e7f5",
+    "skyHorizonColor": "#f3f6f8",
+    "groundEnabled": true,
+    "groundColor": "#6f8f5a",
+    "groundSize": 64.56907686272046,
+    "groundY": -0.040106053425606476,
+    "enclosureEnabled": true,
+    "enclosureColor": "#5f7f4b",
+    "enclosureHeight": 14,
+    "enclosureRadius": 30.993156894105823
+  },
+  "rooms": [
+    {
+      "id": "auto-room-zone-walk-main",
+      "label": "Utility 1",
+      "viewId": "entry",
+      "center": [
+        -1.6268718349679254,
+        1.6798939465743934,
+        -0.8119399047461107
+      ],
+      "dimensions": "35.9x10.2m",
+      "bounds": {
+        "min": [
+          -19.562726519056945,
+          0.029893946574393527,
+          -5.9044580260449555
+        ],
+        "max": [
+          16.308982849121094,
+          0.10989394657439353,
+          4.280578216552734
+        ]
+      }
+    },
+    {
+      "id": "auto-room-zone-walk-auto-view-entry",
+      "label": "Area 2",
+      "viewId": "center",
+      "center": [
+        -1.6268718349679254,
+        1.6798939465743934,
+        2.0398702431812423
+      ],
+      "dimensions": "2.2x1.8m",
+      "bounds": {
+        "min": [
+          -2.7268718349679255,
+          0.029893946574393527,
+          1.1232169813474502
+        ],
+        "max": [
+          -0.5268718349679253,
+          0.10989394657439353,
+          2.9565235050150345
+        ]
+      }
+    },
+    {
+      "id": "auto-room-zone-walk-auto-view-center",
+      "label": "Utility 2",
+      "viewId": "left",
+      "center": [
+        -1.6268718349679254,
+        1.6798939465743934,
+        -0.8119399047461107
+      ],
+      "dimensions": "2.2x1.8m",
+      "bounds": {
+        "min": [
+          -2.7268718349679255,
+          0.029893946574393527,
+          -1.7285931665799028
+        ],
+        "max": [
+          -0.5268718349679253,
+          0.10989394657439353,
+          0.10471335708768137
+        ]
+      }
+    },
+    {
+      "id": "auto-room-zone-walk-auto-view-left",
+      "label": "Area 4",
+      "viewId": "right",
+      "center": [
+        -11.670950458057776,
+        1.6798939465743934,
+        -0.8119399047461107
+      ],
+      "dimensions": "2.2x1.8m",
+      "bounds": {
+        "min": [
+          -12.770950458057776,
+          0.029893946574393527,
+          -1.7285931665799028
+        ],
+        "max": [
+          -10.570950458057776,
+          0.10989394657439353,
+          0.10471335708768137
+        ]
+      }
+    },
+    {
+      "id": "auto-room-zone-walk-auto-view-right",
+      "label": "Area 5",
+      "viewId": "right",
+      "center": [
+        8.417206788121925,
+        1.6798939465743934,
+        -0.8119399047461107
+      ],
+      "dimensions": "2.2x1.8m",
+      "bounds": {
+        "min": [
+          7.317206788121926,
+          0.029893946574393527,
+          -1.7285931665799028
+        ],
+        "max": [
+          9.517206788121925,
+          0.10989394657439353,
+          0.10471335708768137
+        ]
+      }
     }
   ]
 }

@@ -1919,10 +1919,12 @@ export class WalkthroughViewer {
       return;
     }
 
-    const hemisphere = new THREE.HemisphereLight("#f7fbff", "#716550", 0.9);
+    const ambientIntensity = this.manifest.rendering?.ambientIntensity ?? 1.0;
+
+    const hemisphere = new THREE.HemisphereLight("#f7fbff", "#716550", 0.9 * ambientIntensity);
     this.lightRig.add(hemisphere);
 
-    const sun = new THREE.DirectionalLight("#fff6e8", 2.2);
+    const sun = new THREE.DirectionalLight("#fff6e8", 2.2 * ambientIntensity);
     sun.position.set(-3.5, 6.5, 3.2);
     sun.castShadow = true;
     sun.shadow.bias = -0.00005;

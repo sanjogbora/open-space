@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "0.1",
+  "id": "",
+  "status": "idle",
+  "engine": "blender-cycles",
+  "message": "No lightmap bake job has run for this project.",
+  "steps": []
+}

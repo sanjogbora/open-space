@@ -1,45 +1,1739 @@
 {
-  "generatedAt": "2026-04-29T06:00:48.824Z",
+  "generatedAt": "2026-06-06T10:51:49.334Z",
   "manifestPath": "C:\\Users\\sanjo\\Documents\\New project\\apps\\studio\\public\\scenes\\demo\\scene.manifest.json",
   "bundleDir": "C:\\Users\\sanjo\\Documents\\New project\\apps\\studio\\public\\scenes\\demo",
   "viewCount": 5,
-  "interactionCount": 6,
+  "interactionCount": 0,
   "assetCount": 1,
   "missingAssetCount": 0,
-  "totalBytes": 15380,
-  "modelBytes": 15380,
+  "totalBytes": 325832420,
+  "modelBytes": 325832420,
   "videoBytes": 0,
-  "triangleCount": 240,
-  "meshCount": 20,
-  "materialCount": 9,
-  "warnings": [],
+  "triangleCount": 2688232,
+  "meshCount": 630,
+  "primitiveCount": 643,
+  "materialCount": 192,
+  "texturedMaterialCount": 122,
+  "textureCount": 178,
+  "imageCount": 120,
+  "materialTextureImageCount": 120,
+  "unusedTextureImageCount": 0,
+  "lightmapMaterialCount": 0,
+  "secondaryUvLightmapMaterialCount": 0,
+  "lightmapAssetCount": 0,
+  "missingLightmapAssetCount": 0,
+  "tinyLightmapAssetCount": 0,
+  "lightmapAssetBytes": 0,
+  "lightmapAssets": [],
+  "objectOverrideCount": 921,
+  "staleObjectOverrideCount": 0,
+  "invalidObjectNavigationBehaviorCount": 0,
+  "maxTextureDimension": 4096,
+  "oversizedTextureCount": 0,
+  "extremeAspectTextureCount": 14,
+  "estimatedTexturePixels": 469066535,
+  "estimatedTextureMemoryBytes": 1876266140,
+  "textureMemoryImages": [
+    {
+      "source": "bufferView:173",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 19358964
+    },
+    {
+      "source": "bufferView:174",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 4515907
+    },
+    {
+      "source": "bufferView:4016",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 7331
+    },
+    {
+      "source": "bufferView:4017",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 294478
+    },
+    {
+      "source": "bufferView:4018",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 21069
+    },
+    {
+      "source": "bufferView:4019",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 17509
+    },
+    {
+      "source": "bufferView:4106",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 7090120
+    },
+    {
+      "source": "bufferView:4107",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 6764
+    },
+    {
+      "source": "bufferView:4115",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 9271222
+    },
+    {
+      "source": "bufferView:4116",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 11478542
+    },
+    {
+      "source": "bufferView:4117",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 3810709
+    },
+    {
+      "source": "bufferView:4452",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 75507
+    },
+    {
+      "source": "bufferView:4453",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 493226
+    },
+    {
+      "source": "bufferView:4454",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 1539641
+    },
+    {
+      "source": "bufferView:4455",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 4385693
+    },
+    {
+      "source": "bufferView:4456",
+      "width": 4096,
+      "height": 4096,
+      "estimatedBytes": 67108864,
+      "bytes": 9294224
+    },
+    {
+      "source": "bufferView:145",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 49436
+    },
+    {
+      "source": "bufferView:146",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 3698024
+    },
+    {
+      "source": "bufferView:147",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 1355931
+    },
+    {
+      "source": "bufferView:148",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 784448
+    },
+    {
+      "source": "bufferView:153",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 4103313
+    },
+    {
+      "source": "bufferView:154",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 2780854
+    },
+    {
+      "source": "bufferView:155",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 2367219
+    },
+    {
+      "source": "bufferView:160",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 5205845
+    },
+    {
+      "source": "bufferView:190",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 6219807
+    },
+    {
+      "source": "bufferView:191",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 1975889
+    },
+    {
+      "source": "bufferView:192",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 2573474
+    },
+    {
+      "source": "bufferView:3878",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 1783692
+    },
+    {
+      "source": "bufferView:3879",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 1518285
+    },
+    {
+      "source": "bufferView:3880",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 696631
+    },
+    {
+      "source": "bufferView:3885",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 1504370
+    },
+    {
+      "source": "bufferView:3886",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 4401592
+    },
+    {
+      "source": "bufferView:3887",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 1267135
+    },
+    {
+      "source": "bufferView:3892",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 6334575
+    },
+    {
+      "source": "bufferView:3893",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 5308599
+    },
+    {
+      "source": "bufferView:3894",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 3429360
+    },
+    {
+      "source": "bufferView:3899",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 4212161
+    },
+    {
+      "source": "bufferView:3900",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 2805585
+    },
+    {
+      "source": "bufferView:3901",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 605
+    },
+    {
+      "source": "bufferView:3906",
+      "width": 2048,
+      "height": 2048,
+      "estimatedBytes": 16777216,
+      "bytes": 457166
+    }
+  ],
+  "embeddedImageCount": 120,
+  "looseImageCount": 0,
+  "looseImages": [],
+  "relocatedTextureCandidateCount": 0,
+  "ambiguousRelocatedTextureCandidateCount": 0,
+  "relocatedTextureCandidates": [],
+  "sceneBounds": {
+    "min": [
+      -19562.726519056945,
+      -0.10605342560647202,
+      -5904.458026044956
+    ],
+    "max": [
+      16308.982849121094,
+      2488.360250614467,
+      4280.578216552734
+    ]
+  },
+  "sceneBoundsSize": [
+    35871.70936817804,
+    2488.4663040400737,
+    10185.03624259769
+  ],
+  "sceneLargestDimension": 35871.70936817804,
+  "sceneFootprintCenter": [
+    -1626.8718349679257,
+    -811.9399047461106
+  ],
+  "sceneFootprintCenterDistance": 1818.2294619577117,
+  "focusedModelBounds": {
+    "min": [
+      -19562.726519056945,
+      -0.10605342560647202,
+      -5904.458026044956
+    ],
+    "max": [
+      16308.982849121094,
+      2488.360250614467,
+      4280.578216552734
+    ]
+  },
+  "focusedBoundsSize": [
+    35871.70936817804,
+    2488.4663040400737,
+    10185.03624259769
+  ],
+  "focusedLargestDimension": 35871.70936817804,
+  "focusedFootprintCenter": [
+    -1626.8718349679257,
+    -811.9399047461106
+  ],
+  "focusedFootprintCenterDistance": 1818.2294619577117,
+  "compression": {
+    "meshopt": false,
+    "draco": false,
+    "basisu": false,
+    "webp": false
+  },
+  "warnings": [
+    {
+      "code": "total-size-budget",
+      "message": "Bundle size exceeds 160 MB."
+    },
+    {
+      "code": "model-size-budget",
+      "message": "Model assets exceed 70 MB."
+    },
+    {
+      "code": "mobile-draw-primitive-budget",
+      "message": "Draw primitive count exceeds mobile target of 500."
+    },
+    {
+      "code": "mobile-texture-memory-budget",
+      "message": "Estimated decoded texture memory exceeds mobile target of 256 MB."
+    },
+    {
+      "code": "mobile-material-budget",
+      "message": "Material count exceeds mobile target of 180."
+    }
+  ],
   "assets": [
     {
       "kind": "model",
-      "source": "scene.optimized.glb",
+      "source": "scene.glb",
       "label": "Scene model",
-      "path": "C:\\Users\\sanjo\\Documents\\New project\\apps\\studio\\public\\scenes\\demo\\scene.optimized.glb",
+      "path": "C:\\Users\\sanjo\\Documents\\New project\\apps\\studio\\public\\scenes\\demo\\scene.glb",
       "exists": true,
-      "bytes": 15380
+      "bytes": 325832420
     }
   ],
   "models": [
     {
       "format": "glb",
       "version": "2.0",
-      "generator": "glTF-Transform v4.3.0",
-      "nodeCount": 20,
-      "meshCount": 20,
-      "primitiveCount": 20,
-      "materialCount": 9,
-      "textureCount": 0,
-      "imageCount": 0,
-      "bufferCount": 2,
-      "bufferBytes": 5416,
-      "vertexCount": 480,
-      "triangleCount": 240,
-      "extensionCount": 2,
-      "requiredExtensionCount": 2
+      "generator": "Khronos glTF Blender I/O v5.1.20",
+      "sceneCount": 1,
+      "defaultSceneIndex": 0,
+      "invalidDefaultScene": false,
+      "invalidRootNodeReferenceCount": 0,
+      "invalidNodeChildReferenceCount": 0,
+      "invalidNodeMeshReferenceCount": 0,
+      "invalidLocalTransformCount": 0,
+      "zeroScaleNodeCount": 0,
+      "negativeScaleNodeCount": 5,
+      "extremeScaleNodeCount": 78,
+      "nonUniformScaleNodeCount": 9,
+      "defaultSceneRootNodeCount": 247,
+      "defaultSceneReachableNodeCount": 921,
+      "renderableNodeCount": 630,
+      "defaultSceneRenderableNodeCount": 630,
+      "unusedMeshCount": 0,
+      "unreferencedDefaultSceneMeshCount": 0,
+      "nodeCount": 921,
+      "meshCount": 630,
+      "primitiveCount": 643,
+      "materialCount": 192,
+      "texturedMaterialCount": 122,
+      "textureCount": 178,
+      "imageCount": 120,
+      "materialTextureImageCount": 120,
+      "unusedTextureImageCount": 0,
+      "bufferCount": 1,
+      "bufferBytes": 324743356,
+      "vertexCount": 2046860,
+      "triangleCount": 2688232,
+      "extensionCount": 6,
+      "requiredExtensionCount": 1,
+      "unsupportedRequiredExtensions": [],
+      "missingPositionPrimitiveCount": 0,
+      "missingNormalPrimitiveCount": 0,
+      "missingTangentNormalMapPrimitiveCount": 64,
+      "missingUvPrimitiveCount": 67,
+      "uv1PrimitiveCount": 458,
+      "texturedMissingUvPrimitiveCount": 0,
+      "missingPositionBoundsPrimitiveCount": 0,
+      "invalidPositionBoundsPrimitiveCount": 0,
+      "collapsedPositionBoundsPrimitiveCount": 8,
+      "invalidPositionAccessorShapeCount": 0,
+      "invalidNormalAccessorShapeCount": 0,
+      "invalidTangentAccessorShapeCount": 0,
+      "invalidUvAccessorShapeCount": 0,
+      "invalidIndexAccessorShapeCount": 0,
+      "invalidAccessorReferenceCount": 0,
+      "invalidBufferViewReferenceCount": 0,
+      "invalidBufferViewRangeCount": 0,
+      "invalidAccessorBufferViewCount": 0,
+      "invalidAccessorByteRangeCount": 0,
+      "invalidMaterialReferenceCount": 0,
+      "unassignedMaterialPrimitiveCount": 2,
+      "invalidTextureReferenceCount": 0,
+      "undersizedBufferCount": 0,
+      "texturesMissingImageCount": 0,
+      "invalidImageReferenceCount": 0,
+      "embeddedImageDecodeFailureCount": 0,
+      "unsupportedImageMimeCount": 0,
+      "unsafeLocalResourceCount": 0,
+      "unsafeLocalResources": [],
+      "embeddedImageCount": 120,
+      "nonTrianglePrimitiveCount": 0,
+      "vertexColorPrimitiveCount": 0,
+      "dominantMaterial": {
+        "index": 15,
+        "name": "fabric",
+        "triangleCount": 525696,
+        "triangleShare": 0.19555455035130898,
+        "textured": true,
+        "baseColor": "#848484"
+      },
+      "dominantTransparentMaterial": {
+        "index": 183,
+        "name": "Washing_Machine",
+        "triangleCount": 11298,
+        "triangleShare": 0.004202762261590517,
+        "baseColor": "#151515"
+      },
+      "transparentMaterialCount": 4,
+      "transparentTriangleCount": 30378,
+      "transparentTriangleShare": 0.01130036395668231,
+      "doubleSidedMaterialCount": 183,
+      "unlitMaterialCount": 0,
+      "transmissionMaterialCount": 3,
+      "compression": {
+        "meshopt": false,
+        "draco": false,
+        "basisu": false,
+        "webp": false
+      },
+      "externalResourceCount": 0,
+      "missingExternalResourceCount": 0,
+      "externalResources": [],
+      "embeddedImages": [
+        {
+          "source": "bufferView:4",
+          "label": "beige_wall_001_nor_gl_2k",
+          "bytes": 18361171,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:5",
+          "label": "beige_wall_001_diff_2k",
+          "bytes": 235868,
+          "mimeType": "image/jpeg",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:6",
+          "label": "beige_wall_001_rough_2k",
+          "bytes": 3619318,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:145",
+          "label": "Image_5",
+          "bytes": 49436,
+          "mimeType": "image/jpeg",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:146",
+          "label": "Image_6",
+          "bytes": 3698024,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:147",
+          "label": "Image_4",
+          "bytes": 1355931,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:148",
+          "label": "Image_3",
+          "bytes": 784448,
+          "mimeType": "image/jpeg",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:153",
+          "label": "Image_5",
+          "bytes": 4103313,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:154",
+          "label": "Image_3",
+          "bytes": 2780854,
+          "mimeType": "image/jpeg",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:155",
+          "label": "Image_4",
+          "bytes": 2367219,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:160",
+          "label": "Image_2",
+          "bytes": 5205845,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:173",
+          "label": "Image_1",
+          "bytes": 19358964,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:174",
+          "label": "Image_0",
+          "bytes": 4515907,
+          "mimeType": "image/jpeg",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:190",
+          "label": "Image_2",
+          "bytes": 6219807,
+          "mimeType": "image/jpeg",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:191",
+          "label": "Image_0",
+          "bytes": 1975889,
+          "mimeType": "image/jpeg",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:192",
+          "label": "Image_1",
+          "bytes": 2573474,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:350",
+          "label": "Image_7",
+          "bytes": 25601,
+          "mimeType": "image/jpeg",
+          "width": 256,
+          "height": 256
+        },
+        {
+          "source": "bufferView:384",
+          "label": "Image_8",
+          "bytes": 680138,
+          "mimeType": "image/png",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "source": "bufferView:502",
+          "label": "Image_9",
+          "bytes": 1056,
+          "mimeType": "image/jpeg",
+          "width": 256,
+          "height": 256
+        },
+        {
+          "source": "bufferView:794",
+          "label": "Image_23",
+          "bytes": 20922,
+          "mimeType": "image/jpeg",
+          "width": 256,
+          "height": 256
+        },
+        {
+          "source": "bufferView:882",
+          "label": "Image_33",
+          "bytes": 294,
+          "mimeType": "image/jpeg",
+          "width": 32,
+          "height": 16
+        },
+        {
+          "source": "bufferView:893",
+          "label": "Image_35",
+          "bytes": 291,
+          "mimeType": "image/jpeg",
+          "width": 2,
+          "height": 16
+        },
+        {
+          "source": "bufferView:985",
+          "label": "Image_41",
+          "bytes": 283,
+          "mimeType": "image/jpeg",
+          "width": 1,
+          "height": 1
+        },
+        {
+          "source": "bufferView:1026",
+          "label": "Image_42",
+          "bytes": 283,
+          "mimeType": "image/jpeg",
+          "width": 1,
+          "height": 1
+        },
+        {
+          "source": "bufferView:1597",
+          "label": "Image_43",
+          "bytes": 283,
+          "mimeType": "image/jpeg",
+          "width": 1,
+          "height": 1
+        },
+        {
+          "source": "bufferView:1668",
+          "label": "Image_44",
+          "bytes": 283,
+          "mimeType": "image/jpeg",
+          "width": 1,
+          "height": 1
+        },
+        {
+          "source": "bufferView:1749",
+          "label": "Image_45",
+          "bytes": 283,
+          "mimeType": "image/jpeg",
+          "width": 1,
+          "height": 1
+        },
+        {
+          "source": "bufferView:1770",
+          "label": "Image_46",
+          "bytes": 283,
+          "mimeType": "image/jpeg",
+          "width": 1,
+          "height": 1
+        },
+        {
+          "source": "bufferView:1781",
+          "label": "Image_47",
+          "bytes": 283,
+          "mimeType": "image/jpeg",
+          "width": 1,
+          "height": 1
+        },
+        {
+          "source": "bufferView:1803",
+          "label": "Image_49",
+          "bytes": 304,
+          "mimeType": "image/jpeg",
+          "width": 16,
+          "height": 16
+        },
+        {
+          "source": "bufferView:1815",
+          "label": "Image_50",
+          "bytes": 58842,
+          "mimeType": "image/jpeg",
+          "width": 512,
+          "height": 256
+        },
+        {
+          "source": "bufferView:1826",
+          "label": "Image_61",
+          "bytes": 664,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:1838",
+          "label": "Image_62",
+          "bytes": 340467,
+          "mimeType": "image/jpeg",
+          "width": 1024,
+          "height": 512
+        },
+        {
+          "source": "bufferView:1849",
+          "label": "Image_63",
+          "bytes": 1765,
+          "mimeType": "image/jpeg",
+          "width": 32,
+          "height": 128
+        },
+        {
+          "source": "bufferView:1860",
+          "label": "Image_64",
+          "bytes": 1256,
+          "mimeType": "image/jpeg",
+          "width": 32,
+          "height": 128
+        },
+        {
+          "source": "bufferView:1871",
+          "label": "Image_65",
+          "bytes": 2092,
+          "mimeType": "image/jpeg",
+          "width": 64,
+          "height": 64
+        },
+        {
+          "source": "bufferView:1882",
+          "label": "Image_66",
+          "bytes": 3223,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 64
+        },
+        {
+          "source": "bufferView:1893",
+          "label": "Image_67",
+          "bytes": 1088,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:1904",
+          "label": "Image_68",
+          "bytes": 915,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:1915",
+          "label": "Image_69",
+          "bytes": 936,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:1926",
+          "label": "Image_70",
+          "bytes": 3528,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 64
+        },
+        {
+          "source": "bufferView:1937",
+          "label": "Image_71",
+          "bytes": 1840,
+          "mimeType": "image/jpeg",
+          "width": 32,
+          "height": 128
+        },
+        {
+          "source": "bufferView:1948",
+          "label": "Image_72",
+          "bytes": 1125,
+          "mimeType": "image/jpeg",
+          "width": 32,
+          "height": 128
+        },
+        {
+          "source": "bufferView:1959",
+          "label": "Image_73",
+          "bytes": 2969,
+          "mimeType": "image/jpeg",
+          "width": 64,
+          "height": 128
+        },
+        {
+          "source": "bufferView:1970",
+          "label": "Image_74",
+          "bytes": 3116,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 64
+        },
+        {
+          "source": "bufferView:1981",
+          "label": "Image_75",
+          "bytes": 2846,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 64
+        },
+        {
+          "source": "bufferView:1992",
+          "label": "Image_76",
+          "bytes": 866,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:2003",
+          "label": "Image_77",
+          "bytes": 619,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:2014",
+          "label": "Image_78",
+          "bytes": 993,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:2025",
+          "label": "Image_79",
+          "bytes": 2037,
+          "mimeType": "image/jpeg",
+          "width": 32,
+          "height": 128
+        },
+        {
+          "source": "bufferView:2036",
+          "label": "Image_80",
+          "bytes": 2120,
+          "mimeType": "image/jpeg",
+          "width": 32,
+          "height": 128
+        },
+        {
+          "source": "bufferView:2047",
+          "label": "Image_81",
+          "bytes": 2653,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 64
+        },
+        {
+          "source": "bufferView:2058",
+          "label": "Image_82",
+          "bytes": 2599,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 64
+        },
+        {
+          "source": "bufferView:2069",
+          "label": "Image_83",
+          "bytes": 1219,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:2080",
+          "label": "Image_84",
+          "bytes": 1265,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:2091",
+          "label": "Image_85",
+          "bytes": 1225,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:2102",
+          "label": "Image_86",
+          "bytes": 2523,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 64
+        },
+        {
+          "source": "bufferView:2113",
+          "label": "Image_87",
+          "bytes": 2075,
+          "mimeType": "image/jpeg",
+          "width": 32,
+          "height": 128
+        },
+        {
+          "source": "bufferView:2124",
+          "label": "Image_88",
+          "bytes": 1586,
+          "mimeType": "image/jpeg",
+          "width": 32,
+          "height": 128
+        },
+        {
+          "source": "bufferView:2135",
+          "label": "Image_89",
+          "bytes": 2188,
+          "mimeType": "image/jpeg",
+          "width": 64,
+          "height": 128
+        },
+        {
+          "source": "bufferView:2146",
+          "label": "Image_90",
+          "bytes": 2656,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 64
+        },
+        {
+          "source": "bufferView:2157",
+          "label": "Image_91",
+          "bytes": 3035,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 64
+        },
+        {
+          "source": "bufferView:2168",
+          "label": "Image_92",
+          "bytes": 1022,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:2179",
+          "label": "Image_93",
+          "bytes": 984,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 16
+        },
+        {
+          "source": "bufferView:2242",
+          "label": "Image_97",
+          "bytes": 2396,
+          "mimeType": "image/jpeg",
+          "width": 64,
+          "height": 64
+        },
+        {
+          "source": "bufferView:3878",
+          "label": "Image_2",
+          "bytes": 1783692,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3879",
+          "label": "Image_0",
+          "bytes": 1518285,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3880",
+          "label": "Image_1",
+          "bytes": 696631,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3885",
+          "label": "Image_5",
+          "bytes": 1504370,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3886",
+          "label": "Image_3",
+          "bytes": 4401592,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3887",
+          "label": "Image_4",
+          "bytes": 1267135,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3892",
+          "label": "Image_8",
+          "bytes": 6334575,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3893",
+          "label": "Image_6",
+          "bytes": 5308599,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3894",
+          "label": "Image_7",
+          "bytes": 3429360,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3899",
+          "label": "Image_11",
+          "bytes": 4212161,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3900",
+          "label": "Image_9",
+          "bytes": 2805585,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3901",
+          "label": "Image_10",
+          "bytes": 605,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3906",
+          "label": "Image_17",
+          "bytes": 457166,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3907",
+          "label": "Image_15",
+          "bytes": 590,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3908",
+          "label": "Image_16",
+          "bytes": 298033,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3913",
+          "label": "Image_20",
+          "bytes": 1680255,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3914",
+          "label": "Image_18",
+          "bytes": 3932771,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3915",
+          "label": "Image_19",
+          "bytes": 11992,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3920",
+          "label": "Image_23",
+          "bytes": 1340323,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3921",
+          "label": "Image_21",
+          "bytes": 2315880,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3922",
+          "label": "Image_22",
+          "bytes": 2535500,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3927",
+          "label": "Image_26",
+          "bytes": 4700251,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3928",
+          "label": "Image_24",
+          "bytes": 1258405,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:3929",
+          "label": "Image_25",
+          "bytes": 969478,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:4009",
+          "label": "Image_2",
+          "bytes": 2910245,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:4010",
+          "label": "Image_1",
+          "bytes": 3689833,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:4011",
+          "label": "Image_0",
+          "bytes": 4828942,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:4016",
+          "label": "Image_3",
+          "bytes": 7331,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4017",
+          "label": "Image_2",
+          "bytes": 294478,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4018",
+          "label": "Image_0",
+          "bytes": 21069,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4019",
+          "label": "Image_1",
+          "bytes": 17509,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4035",
+          "label": "Image_4",
+          "bytes": 2745397,
+          "mimeType": "image/jpeg",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:4036",
+          "label": "Image_2",
+          "bytes": 6576024,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:4037",
+          "label": "Image_3",
+          "bytes": 2984611,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:4071",
+          "label": "Image_5",
+          "bytes": 86141,
+          "mimeType": "image/png",
+          "width": 512,
+          "height": 1024
+        },
+        {
+          "source": "bufferView:4106",
+          "label": "Image_7",
+          "bytes": 7090120,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4107",
+          "label": "Image_6",
+          "bytes": 6764,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4115",
+          "label": "Image_10",
+          "bytes": 9271222,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4116",
+          "label": "Image_8",
+          "bytes": 11478542,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4117",
+          "label": "Image_9",
+          "bytes": 3810709,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4138",
+          "label": "Image_0",
+          "bytes": 77308,
+          "mimeType": "image/png",
+          "width": 256,
+          "height": 512
+        },
+        {
+          "source": "bufferView:4166",
+          "label": "Image_58",
+          "bytes": 22636,
+          "mimeType": "image/png",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "source": "bufferView:4167",
+          "label": "Image_59",
+          "bytes": 39437,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:4237",
+          "label": "Image_0",
+          "bytes": 3453,
+          "mimeType": "image/png",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:4412",
+          "label": "Image_0",
+          "bytes": 196070,
+          "mimeType": "image/jpeg",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "bufferView:4417",
+          "label": "Image_1",
+          "bytes": 259920,
+          "mimeType": "image/jpeg",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "bufferView:4422",
+          "label": "Image_4",
+          "bytes": 91716,
+          "mimeType": "image/jpeg",
+          "width": 128,
+          "height": 2048
+        },
+        {
+          "source": "bufferView:4427",
+          "label": "Image_2",
+          "bytes": 421036,
+          "mimeType": "image/jpeg",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "source": "bufferView:4432",
+          "label": "Image_3",
+          "bytes": 500982,
+          "mimeType": "image/jpeg",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "source": "bufferView:4452",
+          "label": "Image_2",
+          "bytes": 75507,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4453",
+          "label": "Image_4",
+          "bytes": 493226,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4454",
+          "label": "Image_3",
+          "bytes": 1539641,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4455",
+          "label": "Image_0",
+          "bytes": 4385693,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:4456",
+          "label": "Image_1",
+          "bytes": 9294224,
+          "mimeType": "image/png",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "source": "bufferView:5177",
+          "label": "Image_0",
+          "bytes": 77020,
+          "mimeType": "image/png",
+          "width": 1024,
+          "height": 1024
+        }
+      ]
     }
-  ]
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "negative-scale-nodes",
+      "title": "Mirrored node scales detected",
+      "message": "5 node(s) use negative scale, which can flip normals, lighting, culling, or navigation surface orientation.",
+      "action": "Apply transforms and recalculate normals in the source model before exporting the client walkthrough."
+    },
+    {
+      "severity": "warning",
+      "code": "suspicious-node-scales",
+      "title": "Suspicious node scales detected",
+      "message": "78 node(s) have very large/tiny scale and 9 node(s) have strongly non-uniform scale.",
+      "action": "Apply object transforms in Blender/CAD before export so camera framing, click targets, lighting, and bounds use stable geometry."
+    },
+    {
+      "severity": "warning",
+      "code": "unassigned-primitive-materials",
+      "title": "Some mesh primitives have no material",
+      "message": "2 primitive(s) have no material assignment even though the model defines materials.",
+      "action": "Assign materials to those meshes in the source model or use Studio Materials only after confirming the plain fallback surfaces are intentional."
+    },
+    {
+      "severity": "warning",
+      "code": "high-draw-primitive-count",
+      "title": "High draw primitive count",
+      "message": "643 draw primitive(s) exceed the mobile target of 500.",
+      "action": "Run Optimization with the Mobile or Balanced profile and inspect the draw-call join result before client/mobile delivery."
+    },
+    {
+      "severity": "warning",
+      "code": "collapsed-position-bounds",
+      "title": "Collapsed mesh bounds detected",
+      "message": "8 primitive(s) have near-zero POSITION bounds despite containing several vertices.",
+      "action": "Check whether those meshes are helper geometry or an export issue; collapsed bounds can hide objects from generated views and floor detection."
+    },
+    {
+      "severity": "warning",
+      "code": "normal-maps-missing-tangents",
+      "title": "Normal-mapped surfaces are missing tangents",
+      "message": "64 primitive(s) use materials with normal maps but do not include TANGENT attributes.",
+      "action": "Export tangents with the model or regenerate tangents before publishing; affected walls, floors, fabrics, or tiles can look flat, inverted, or seam-heavy in WebGL."
+    },
+    {
+      "severity": "warning",
+      "code": "missing-uv-attributes",
+      "title": "Texture UVs missing",
+      "message": "67 primitive(s) do not include TEXCOORD_0 attributes even though the model uses images.",
+      "action": "Unwrap UVs or bake textures into a GLB with valid TEXCOORD_0 attributes."
+    },
+    {
+      "severity": "warning",
+      "code": "unbaked-materials",
+      "title": "Baked lighting is not linked",
+      "message": "192 material(s) are present, but none have linked lightmap textures.",
+      "action": "Use Bake to generate and review lightmaps before treating the scene as a Shapespark-style client walkthrough."
+    },
+    {
+      "severity": "info",
+      "code": "transmission-materials",
+      "title": "Physical glass/transmission materials detected",
+      "message": "3 material(s) use transmission or volume extensions.",
+      "action": "Compare glass in the viewer after optimization; browser viewers may need simpler glass settings for stable performance."
+    },
+    {
+      "severity": "warning",
+      "code": "high-texture-memory-estimate",
+      "title": "High estimated texture memory",
+      "message": "1789 MB estimated decoded RGBA texture memory exceeds the mobile target of 256 MB.",
+      "action": "Downscale less visible textures, remove unused texture images, or run KTX2/Basis compression before mobile delivery."
+    },
+    {
+      "severity": "info",
+      "code": "model-scale-normalized",
+      "title": "Model scale normalized",
+      "message": "The viewer applies a 0.001 scale factor so navigation uses meter-like units.",
+      "action": "Keep this value unless the model appears too small or too large."
+    },
+    {
+      "severity": "warning",
+      "code": "no-named-ceiling-meshes",
+      "title": "No named ceiling or roof meshes found",
+      "message": "The model may be open at the top, or ceiling geometry may use generic object names.",
+      "action": "Check the model in top and interior views before client delivery. If ceilings exist but are invisible, enable double-sided materials or rename ceiling/roof objects before import."
+    },
+    {
+      "severity": "warning",
+      "code": "walk-zones-overlap-block-zones",
+      "title": "Walk zones overlap blockers",
+      "message": "1 walk zone(s) overlap a wall, boundary, or custom blocker, so users may see valid floor areas that still refuse movement.",
+      "action": "Shrink or split the block zones around the room floor, or trim the walk zone so the allowed walking area does not sit inside blockers."
+    },
+    {
+      "severity": "warning",
+      "code": "walk-views-outside-walk-zones",
+      "title": "Walk views are outside walkable zones",
+      "message": "4 walk view(s) can load there, but click routing may not continue from that position.",
+      "action": "Add a walk patch around each view or move the view into an existing walk zone."
+    },
+    {
+      "severity": "warning",
+      "code": "missing-geometry-compression",
+      "title": "Geometry compression missing",
+      "message": "The scene model is large and does not advertise Meshopt or Draco compression.",
+      "action": "Run optimization before publishing, then keep the optimized model active for web delivery."
+    },
+    {
+      "severity": "warning",
+      "code": "missing-texture-compression",
+      "title": "Texture transfer compression missing",
+      "message": "The model uses texture images but does not advertise WebP transfer textures or KHR_texture_basisu/KTX2 GPU textures.",
+      "action": "Run optimization to create WebP transfer textures, then enable KTX2/Basis for production GPU-memory savings."
+    }
+  ],
+  "materialTextureSuggestionCount": 0,
+  "materialTextureSuggestions": [],
+  "publishReadiness": {
+    "status": "blocked",
+    "blockers": [
+      {
+        "code": "large-uncompressed-model",
+        "title": "Large model is not geometry-compressed",
+        "message": "The active scene model is over 10 MB and does not advertise Meshopt or Draco compression.",
+        "action": "Run the optimizer and keep scene.optimized.glb active before publishing."
+      }
+    ],
+    "warnings": [
+      {
+        "code": "mobile-triangle-budget",
+        "title": "Over mobile triangle budget",
+        "message": "Triangle count exceeds 15,00,000 triangles.",
+        "action": "Simplify meshes or split heavy content before mobile delivery."
+      },
+      {
+        "code": "mobile-draw-primitive-budget",
+        "title": "High draw primitive count",
+        "message": "Draw primitive count exceeds 500 draw primitives.",
+        "action": "Run draw-call optimization or merge compatible static primitives before mobile delivery."
+      },
+      {
+        "code": "mobile-texture-memory-budget",
+        "title": "High decoded texture memory",
+        "message": "Estimated decoded texture memory is 1789 MB, above the 256 MB mobile target.",
+        "action": "Downscale large texture sets and run KTX2/Basis texture compression before mobile delivery."
+      },
+      {
+        "code": "mobile-mesh-budget",
+        "title": "High mesh count",
+        "message": "The model is over the mobile mesh-count budget, which can increase draw calls.",
+        "action": "Merge static meshes that share materials."
+      },
+      {
+        "code": "mobile-total-size-budget",
+        "title": "Large initial bundle",
+        "message": "The bundle is over the mobile transfer-size target.",
+        "action": "Optimize model/textures and lazy-load large media."
+      },
+      {
+        "code": "missing-gpu-texture-compression",
+        "title": "No KTX2/Basis texture compression",
+        "message": "Texture images are present but the model does not advertise GPU texture compression.",
+        "action": "Install KTX-Software/toktx and run the production texture-compression pass."
+      },
+      {
+        "code": "diagnostic-negative-scale-nodes",
+        "title": "Mirrored node scales detected",
+        "message": "5 node(s) use negative scale, which can flip normals, lighting, culling, or navigation surface orientation.",
+        "action": "Apply transforms and recalculate normals in the source model before exporting the client walkthrough."
+      },
+      {
+        "code": "diagnostic-suspicious-node-scales",
+        "title": "Suspicious node scales detected",
+        "message": "78 node(s) have very large/tiny scale and 9 node(s) have strongly non-uniform scale.",
+        "action": "Apply object transforms in Blender/CAD before export so camera framing, click targets, lighting, and bounds use stable geometry."
+      },
+      {
+        "code": "diagnostic-unassigned-primitive-materials",
+        "title": "Some mesh primitives have no material",
+        "message": "2 primitive(s) have no material assignment even though the model defines materials.",
+        "action": "Assign materials to those meshes in the source model or use Studio Materials only after confirming the plain fallback surfaces are intentional."
+      },
+      {
+        "code": "diagnostic-high-draw-primitive-count",
+        "title": "High draw primitive count",
+        "message": "643 draw primitive(s) exceed the mobile target of 500.",
+        "action": "Run Optimization with the Mobile or Balanced profile and inspect the draw-call join result before client/mobile delivery."
+      },
+      {
+        "code": "diagnostic-unbaked-materials",
+        "title": "Baked lighting is not linked",
+        "message": "192 material(s) are present, but none have linked lightmap textures.",
+        "action": "Use Bake to generate and review lightmaps before treating the scene as a Shapespark-style client walkthrough."
+      },
+      {
+        "code": "diagnostic-high-texture-memory-estimate",
+        "title": "High estimated texture memory",
+        "message": "1789 MB estimated decoded RGBA texture memory exceeds the mobile target of 256 MB.",
+        "action": "Downscale less visible textures, remove unused texture images, or run KTX2/Basis compression before mobile delivery."
+      },
+      {
+        "code": "diagnostic-no-named-ceiling-meshes",
+        "title": "No named ceiling or roof meshes found",
+        "message": "The model may be open at the top, or ceiling geometry may use generic object names.",
+        "action": "Check the model in top and interior views before client delivery. If ceilings exist but are invisible, enable double-sided materials or rename ceiling/roof objects before import."
+      },
+      {
+        "code": "diagnostic-walk-zones-overlap-block-zones",
+        "title": "Walk zones overlap blockers",
+        "message": "1 walk zone(s) overlap a wall, boundary, or custom blocker, so users may see valid floor areas that still refuse movement.",
+        "action": "Shrink or split the block zones around the room floor, or trim the walk zone so the allowed walking area does not sit inside blockers."
+      },
+      {
+        "code": "diagnostic-walk-views-outside-walk-zones",
+        "title": "Walk views are outside walkable zones",
+        "message": "4 walk view(s) can load there, but click routing may not continue from that position.",
+        "action": "Add a walk patch around each view or move the view into an existing walk zone."
+      },
+      {
+        "code": "diagnostic-missing-texture-compression",
+        "title": "Texture transfer compression missing",
+        "message": "The model uses texture images but does not advertise WebP transfer textures or KHR_texture_basisu/KTX2 GPU textures.",
+        "action": "Run optimization to create WebP transfer textures, then enable KTX2/Basis for production GPU-memory savings."
+      },
+      {
+        "code": "mobile-total-bytes",
+        "title": "Mobile profile warning",
+        "message": "Bundle size is over the Mobile budget.",
+        "action": "Run the optimizer or reduce the source scene before publishing for mobile."
+      },
+      {
+        "code": "mobile-model-bytes",
+        "title": "Mobile profile warning",
+        "message": "Model size is over the Mobile budget.",
+        "action": "Run the optimizer or reduce the source scene before publishing for mobile."
+      },
+      {
+        "code": "mobile-triangles",
+        "title": "Mobile profile warning",
+        "message": "Triangle count is over the Mobile budget.",
+        "action": "Run the optimizer or reduce the source scene before publishing for mobile."
+      },
+      {
+        "code": "mobile-draw-primitives",
+        "title": "Mobile profile warning",
+        "message": "Draw primitive count is over the Mobile budget.",
+        "action": "Run the optimizer or reduce the source scene before publishing for mobile."
+      },
+      {
+        "code": "mobile-texture-memory",
+        "title": "Mobile profile warning",
+        "message": "Estimated decoded texture memory is over the Mobile budget.",
+        "action": "Run the optimizer or reduce the source scene before publishing for mobile."
+      },
+      {
+        "code": "mobile-materials",
+        "title": "Mobile profile warning",
+        "message": "Material count is over the Mobile budget.",
+        "action": "Run the optimizer or reduce the source scene before publishing for mobile."
+      },
+      {
+        "code": "mobile-meshes",
+        "title": "Mobile profile warning",
+        "message": "Mesh count is over the Mobile budget.",
+        "action": "Run the optimizer or reduce the source scene before publishing for mobile."
+      }
+    ]
+  }
 }

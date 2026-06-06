@@ -1,61 +1,8 @@
 {
   "schemaVersion": "0.1",
-  "id": "opt-20260429-060048729z",
-  "status": "completed",
-  "profile": "mobile",
-  "applied": true,
-  "startedAt": "2026-04-29T06:00:48.729Z",
-  "completedAt": "2026-04-29T06:00:48.729Z",
-  "sourceSceneUrl": "scene.glb",
-  "optimizedSceneUrl": "scene.optimized.glb",
-  "before": {
-    "modelBytes": 34876
-  },
-  "after": {
-    "modelBytes": 15380,
-    "savedBytes": 19496,
-    "savedPercent": 55.9
-  },
-  "steps": [
-    {
-      "id": "validate-glb",
-      "label": "Validate GLB v2 container",
-      "status": "completed"
-    },
-    {
-      "id": "compact-json",
-      "label": "Compact GLB JSON chunk",
-      "status": "completed"
-    },
-    {
-      "id": "dedup-prune",
-      "label": "Deduplicate and prune unused resources",
-      "status": "completed"
-    },
-    {
-      "id": "weld-resample",
-      "label": "Weld vertices and resample animation data",
-      "status": "completed"
-    },
-    {
-      "id": "mesh-reorder",
-      "label": "Reorder mesh data for transmission size",
-      "status": "completed"
-    },
-    {
-      "id": "mesh-compression",
-      "label": "Apply EXT_meshopt_compression",
-      "status": "completed"
-    },
-    {
-      "id": "emit-artifact",
-      "label": "Write optimized scene artifact",
-      "status": "completed"
-    },
-    {
-      "id": "texture-compression",
-      "label": "KTX2/Basis texture compression",
-      "status": "pending"
-    }
-  ]
+  "id": "",
+  "status": "idle",
+  "profile": "balanced",
+  "applied": false,
+  "steps": []
 }

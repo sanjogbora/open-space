@@ -6,14 +6,18 @@
   "packageManager": "pnpm@10.15.0",
   "scripts": {
     "dev": "pnpm --filter @walkthrough/viewer-demo dev",
+    "dev:all": "concurrently -n api,studio,viewer -c cyan,magenta,green \"pnpm dev:api\" \"pnpm dev:studio\" \"pnpm dev\"",
     "dev:studio": "pnpm --filter @walkthrough/studio dev",
+    "dev:aligner": "pnpm --filter @walkthrough/video-aligner dev",
+    "dev:aligner:export": "pnpm --filter @walkthrough/video-aligner export-server",
     "dev:api": "pnpm --filter @walkthrough/api dev",
-    "build": "pnpm --filter @walkthrough/scene-schema build && pnpm --filter @walkthrough/pipeline build && pnpm --filter @walkthrough/viewer build && pnpm --filter @walkthrough/viewer-demo build && pnpm --filter @walkthrough/studio build && pnpm --filter @walkthrough/api build",
-    "typecheck": "pnpm --filter @walkthrough/scene-schema typecheck && pnpm --filter @walkthrough/pipeline typecheck && pnpm --filter @walkthrough/viewer typecheck && pnpm --filter @walkthrough/viewer-demo typecheck && pnpm --filter @walkthrough/studio typecheck && pnpm --filter @walkthrough/api typecheck",
+    "build": "pnpm --filter @walkthrough/scene-schema build && pnpm --filter @walkthrough/pipeline build && pnpm --filter @walkthrough/viewer build && pnpm --filter @walkthrough/viewer-demo build && pnpm --filter @walkthrough/studio build && pnpm --filter @walkthrough/video-aligner build && pnpm --filter @walkthrough/api build",
+    "typecheck": "pnpm --filter @walkthrough/scene-schema typecheck && pnpm --filter @walkthrough/pipeline typecheck && pnpm --filter @walkthrough/viewer typecheck && pnpm --filter @walkthrough/viewer-demo typecheck && pnpm --filter @walkthrough/studio typecheck && pnpm --filter @walkthrough/video-aligner typecheck && pnpm --filter @walkthrough/api typecheck",
     "analyze:demo": "node scripts/analyze-scene-bundle.mjs apps/viewer-demo/public/scenes/demo --write && node scripts/analyze-scene-bundle.mjs apps/studio/public/scenes/demo --write",
     "lint": "pnpm typecheck"
   },
   "devDependencies": {
+    "concurrently": "^10.0.3",
     "typescript": "^5.9.2"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const args = process.argv.slice(2);
@@ -11,7 +11,22 @@ const sourceRelative = sourceArg?.split("=").slice(1).join("=") ?? "";
 const outputSceneUrl = outputArg?.split("=").slice(1).join("=") || "scene.glb";
 const sourcePath = path.resolve(bundleDir, sourceRelative);
 const outputPath = path.resolve(bundleDir, outputSceneUrl);
-const blenderCommand = process.env.BLENDER_PATH || "blender";
+
+async function resolveBlenderCommand() {
+  if (process.env.BLENDER_PATH) return process.env.BLENDER_PATH;
+  const blenderRoot = "C:\\Program Files\\Blender Foundation";
+  try {
+    const entries = await readdir(blenderRoot);
+    const sorted = entries.filter((e) => e.toLowerCase().startsWith("blender")).sort().reverse();
+    for (const dir of sorted) {
+      const candidate = path.join(blenderRoot, dir, "blender.exe");
+      try { await access(candidate); return candidate; } catch {}
+    }
+  } catch {}
+  return "blender";
+}
+
+const blenderCommand = await resolveBlenderCommand();
 
 function step(id, label, status = "pending", note) {
   return {
@@ -113,13 +128,27 @@ mesh_count = len([item for item in bpy.context.scene.objects if item.type == "ME
 if mesh_count == 0:
     raise RuntimeError("Converted scene has no mesh objects.")
 
+# Apply scale and rotation transforms for imported files so the glTF exporter
+# sees clean unit transforms. FBX importers often leave a 100x scale or 90-deg
+# rotation on root objects from the DCC app's coordinate convention.
+if extension != ".blend":
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+
+# Make all materials double-sided so interior walls/ceilings are visible from inside.
+# Architectural models in Blender have outward-facing normals; glTF culls back-faces
+# by default, making walls invisible from the interior without this flag.
+for material in bpy.data.materials:
+    material.use_backface_culling = False
+
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 bpy.ops.export_scene.gltf(
     filepath=output_path,
     export_format="GLB",
     export_apply=True,
     export_yup=True,
-    export_materials="EXPORT"
+    export_materials="EXPORT",
+    export_image_format="AUTO"
 )
 `;
 
