@@ -10182,10 +10182,17 @@ function App() {
                 </label>
                 <label>
                   <span>Accent</span>
-                  <input
-                    value={manifest.branding.accentColor}
-                    onChange={(event) => updateBranding("accentColor", event.target.value)}
-                  />
+                  <div className="color-control">
+                    <input
+                      type="color"
+                      value={manifest.branding.accentColor.length === 7 ? manifest.branding.accentColor : "#0787ff"}
+                      onChange={(event) => updateBranding("accentColor", event.target.value)}
+                    />
+                    <input
+                      value={manifest.branding.accentColor}
+                      onChange={(event) => updateBranding("accentColor", event.target.value)}
+                    />
+                  </div>
                 </label>
               </div>
               <DiagnosticList
@@ -16737,7 +16744,7 @@ function App() {
                 ))}
               </div>
               <div className="toggle-grid">
-                <label>
+                <label className="toggle-row">
                   <input
                     type="checkbox"
                     checked={manifest.environment?.skyBackdropEnabled ?? true}
@@ -16750,7 +16757,7 @@ function App() {
                   />
                   <span>Sky backdrop</span>
                 </label>
-                <label>
+                <label className="toggle-row">
                   <input
                     type="checkbox"
                     checked={manifest.environment?.groundEnabled ?? true}
@@ -16763,7 +16770,7 @@ function App() {
                   />
                   <span>Ground enclosure</span>
                 </label>
-                <label>
+                <label className="toggle-row">
                   <input
                     type="checkbox"
                     checked={manifest.environment?.enclosureEnabled ?? true}
@@ -16778,66 +16785,43 @@ function App() {
                 </label>
               </div>
               <div className="field-grid">
-                <label>
-                  <span>Background</span>
-                  <input
-                    value={manifest.environment?.backgroundColor ?? "#d8dde2"}
-                    onChange={(event) =>
-                      updateEnvironment((environment) => ({
-                        ...environment,
-                        backgroundColor: event.target.value
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Sky top</span>
-                  <input
-                    value={manifest.environment?.skyTopColor ?? "#d8e7f5"}
-                    onChange={(event) =>
-                      updateEnvironment((environment) => ({
-                        ...environment,
-                        skyTopColor: event.target.value
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Sky horizon</span>
-                  <input
-                    value={manifest.environment?.skyHorizonColor ?? "#f3f6f8"}
-                    onChange={(event) =>
-                      updateEnvironment((environment) => ({
-                        ...environment,
-                        skyHorizonColor: event.target.value
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Ground color</span>
-                  <input
-                    value={manifest.environment?.groundColor ?? "#6f8f5a"}
-                    onChange={(event) =>
-                      updateEnvironment((environment) => ({
-                        ...environment,
-                        groundColor: event.target.value
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Enclosure color</span>
-                  <input
-                    value={manifest.environment?.enclosureColor ?? "#5f7f4b"}
-                    onChange={(event) =>
-                      updateEnvironment((environment) => ({
-                        ...environment,
-                        enclosureColor: event.target.value
-                      }))
-                    }
-                  />
-                </label>
+                {(
+                  [
+                    ["Background", "backgroundColor", "#d8dde2"],
+                    ["Sky top", "skyTopColor", "#d8e7f5"],
+                    ["Sky horizon", "skyHorizonColor", "#f3f6f8"],
+                    ["Ground color", "groundColor", "#6f8f5a"],
+                    ["Enclosure color", "enclosureColor", "#5f7f4b"],
+                  ] as [string, keyof NonNullable<typeof manifest.environment>, string][]
+                ).map(([label, key, defaultValue]) => {
+                  const currentValue = (manifest.environment?.[key] as string | undefined) ?? defaultValue;
+                  return (
+                    <label key={key}>
+                      <span>{label}</span>
+                      <div className="color-control">
+                        <input
+                          type="color"
+                          value={currentValue.length === 7 ? currentValue : defaultValue}
+                          onChange={(event) =>
+                            updateEnvironment((environment) => ({
+                              ...environment,
+                              [key]: event.target.value
+                            }))
+                          }
+                        />
+                        <input
+                          value={currentValue}
+                          onChange={(event) =>
+                            updateEnvironment((environment) => ({
+                              ...environment,
+                              [key]: event.target.value
+                            }))
+                          }
+                        />
+                      </div>
+                    </label>
+                  );
+                })}
                 <NumberField
                   label="Ground size"
                   min={10}
