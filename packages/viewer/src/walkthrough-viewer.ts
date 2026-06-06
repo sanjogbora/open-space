@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
@@ -719,16 +718,43 @@ export class WalkthroughViewer {
     });
   }
 
+  private createSkyEquirectTexture(): THREE.Texture {
+    const environment = this.manifest.environment;
+    const topColor = environment?.skyTopColor ?? "#d8e7f5";
+    const horizonColor = environment?.skyHorizonColor ?? "#f3f6f8";
+    const groundColor = environment?.backgroundColor ?? "#d8dde2";
+    const width = 1024;
+    const height = 512;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, topColor);
+      gradient.addColorStop(0.45, horizonColor);
+      gradient.addColorStop(0.52, horizonColor);
+      gradient.addColorStop(0.55, groundColor);
+      gradient.addColorStop(1, groundColor);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    return texture;
+  }
+
   private applyEnvironment(): void {
     const environment = this.manifest.environment;
     const backgroundColor = environment?.backgroundColor ?? "#d8dde2";
     this.renderer.setClearColor(backgroundColor, 1);
     this.scene.background = new THREE.Color(backgroundColor);
-    const roomEnvironment = new RoomEnvironment();
+    const skyEquirect = this.createSkyEquirectTexture();
     this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
-    this.environmentTexture = this.pmremGenerator.fromScene(roomEnvironment, 0.04).texture;
+    this.pmremGenerator.compileEquirectangularShader();
+    this.environmentTexture = this.pmremGenerator.fromEquirectangular(skyEquirect).texture;
+    skyEquirect.dispose();
     this.scene.environment = this.environmentTexture;
-    roomEnvironment.dispose();
 
     if (environment?.skyBackdropEnabled !== false) {
       this.addSkyBackdrop();
