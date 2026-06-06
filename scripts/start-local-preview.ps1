@@ -6,15 +6,20 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $apiUrl = "http://127.0.0.1:5175"
+$viewerUrl = "http://127.0.0.1:5173"
 $studioUrl = "http://127.0.0.1:5174"
 $logDir = Join-Path $repoRoot ".dev-logs"
 $apiLog = Join-Path $logDir "api.log"
 $apiErr = Join-Path $logDir "api.err.log"
+$viewerLog = Join-Path $logDir "viewer.log"
+$viewerErr = Join-Path $logDir "viewer.err.log"
 $studioLog = Join-Path $logDir "studio.log"
 $studioErr = Join-Path $logDir "studio.err.log"
+$viewerDir = Join-Path $repoRoot "apps/viewer-demo"
 $studioDir = Join-Path $repoRoot "apps/studio"
 $apiScript = Join-Path $repoRoot "apps/api/src/server.mjs"
-$viteCmd = Join-Path $studioDir "node_modules/.bin/vite.CMD"
+$viewerViteCmd = Join-Path $viewerDir "node_modules/.bin/vite.CMD"
+$studioViteCmd = Join-Path $studioDir "node_modules/.bin/vite.CMD"
 
 function Test-Http($Url) {
   try {
@@ -42,8 +47,12 @@ if (-not (Test-Path $apiScript)) {
   throw "API server file not found: $apiScript"
 }
 
-if (-not (Test-Path $viteCmd)) {
-  throw "Studio Vite launcher not found: $viteCmd. Run pnpm install first."
+if (-not (Test-Path $viewerViteCmd)) {
+  throw "Viewer Vite launcher not found: $viewerViteCmd. Run pnpm install first."
+}
+
+if (-not (Test-Path $studioViteCmd)) {
+  throw "Studio Vite launcher not found: $studioViteCmd. Run pnpm install first."
 }
 
 if (Test-Http "$apiUrl/health") {
@@ -60,6 +69,20 @@ if (Test-Http "$apiUrl/health") {
     -StdErr $apiErr
 }
 
+if (Test-Http "$viewerUrl/") {
+  Write-Host "Viewer already running at $viewerUrl"
+} else {
+  Clear-Content $viewerLog -ErrorAction SilentlyContinue
+  Clear-Content $viewerErr -ErrorAction SilentlyContinue
+  Start-LoggedProcess `
+    -Name "Viewer" `
+    -FilePath $viewerViteCmd `
+    -ArgumentList @("--host", "127.0.0.1", "--port", "5173") `
+    -WorkingDirectory $viewerDir `
+    -StdOut $viewerLog `
+    -StdErr $viewerErr
+}
+
 if (Test-Http "$studioUrl/") {
   Write-Host "Studio already running at $studioUrl"
 } else {
@@ -67,7 +90,7 @@ if (Test-Http "$studioUrl/") {
   Clear-Content $studioErr -ErrorAction SilentlyContinue
   Start-LoggedProcess `
     -Name "Studio" `
-    -FilePath $viteCmd `
+    -FilePath $studioViteCmd `
     -ArgumentList @("--host", "127.0.0.1", "--port", "5174") `
     -WorkingDirectory $studioDir `
     -StdOut $studioLog `
@@ -77,21 +100,25 @@ if (Test-Http "$studioUrl/") {
 Start-Sleep -Seconds 4
 
 $apiReady = Test-Http "$apiUrl/health"
+$viewerReady = Test-Http "$viewerUrl/"
 $studioReady = Test-Http "$studioUrl/"
 
 Write-Host ""
 Write-Host "Local preview status"
 Write-Host "API:    $(if ($apiReady) { "ready" } else { "not responding" }) $apiUrl"
+Write-Host "Viewer: $(if ($viewerReady) { "ready" } else { "not responding" }) $viewerUrl"
 Write-Host "Studio: $(if ($studioReady) { "ready" } else { "not responding" }) $studioUrl"
 Write-Host ""
 Write-Host "Logs:"
 Write-Host "API stdout:    $apiLog"
 Write-Host "API stderr:    $apiErr"
+Write-Host "Viewer stdout: $viewerLog"
+Write-Host "Viewer stderr: $viewerErr"
 Write-Host "Studio stdout: $studioLog"
 Write-Host "Studio stderr: $studioErr"
 Write-Host ""
 
-if (-not $apiReady -or -not $studioReady) {
+if (-not $apiReady -or -not $viewerReady -or -not $studioReady) {
   Write-Host "If something is not responding, open the matching stderr log above first."
   exit 1
 }
