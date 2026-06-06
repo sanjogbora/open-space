@@ -1271,7 +1271,7 @@ async function createProject(name) {
   };
   const emptyObjects = { schemaVersion: "0.1", objects: [] };
   const emptyMaterials = { schemaVersion: "0.1", materials: [] };
-  const emptyGraph = { schemaVersion: "0.1", nodes: [], edges: [] };
+  const emptyGraph = { schemaVersion: "0.1", generator: "", source: "", nodes: [], materials: [] };
   await Promise.all([
     ...dirs.map((dir) => writeFile(path.join(dir, "stats.json"), `${JSON.stringify(emptyStats, null, 2)}\n`)),
     ...dirs.map((dir) => writeFile(path.join(dir, "optimization.json"), `${JSON.stringify(emptyOptimization, null, 2)}\n`)),
