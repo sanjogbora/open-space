@@ -627,6 +627,24 @@ function App() {
                 <span className="sr-only">Close</span>
               </button>
             </div>
+            {activeHotspot.interaction.imageUrl && (
+              <img
+                className="hotspot-image"
+                src={activeHotspot.interaction.imageUrl}
+                alt={activeHotspot.interaction.title}
+                loading="lazy"
+              />
+            )}
+            {activeHotspot.interaction.videoUrl && (
+              <div className="hotspot-video">
+                <iframe
+                  src={activeHotspot.interaction.videoUrl}
+                  title={activeHotspot.interaction.title}
+                  allow="autoplay; fullscreen"
+                  allowFullScreen
+                />
+              </div>
+            )}
             {activeHotspot.interaction.body && <p>{activeHotspot.interaction.body}</p>}
           </aside>
         )}

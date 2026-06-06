@@ -43,6 +43,8 @@ export interface HotspotInteraction extends BaseInteraction {
   position: Vec3;
   title: string;
   body?: string;
+  imageUrl?: string;
+  videoUrl?: string;
   icon?: "info" | "media" | "link";
 }
 

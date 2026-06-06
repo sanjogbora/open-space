@@ -12605,6 +12605,37 @@ function App() {
                   />
                 </label>
 
+                <div className="field-grid">
+                  <label>
+                    <span>Image URL</span>
+                    <input
+                      value={selectedHotspot.imageUrl ?? ""}
+                      placeholder="https://example.com/photo.jpg"
+                      onChange={(event) => {
+                        const val = event.target.value.trim();
+                        updateHotspot(selectedHotspot.id, (interaction) => {
+                          const { imageUrl: _removed, ...rest } = interaction;
+                          return val ? { ...rest, imageUrl: val } : rest;
+                        });
+                      }}
+                    />
+                  </label>
+                  <label>
+                    <span>Video URL</span>
+                    <input
+                      value={selectedHotspot.videoUrl ?? ""}
+                      placeholder="https://youtube.com/embed/..."
+                      onChange={(event) => {
+                        const val = event.target.value.trim();
+                        updateHotspot(selectedHotspot.id, (interaction) => {
+                          const { videoUrl: _removed, ...rest } = interaction;
+                          return val ? { ...rest, videoUrl: val } : rest;
+                        });
+                      }}
+                    />
+                  </label>
+                </div>
+
                 <VectorEditor
                   label="Position"
                   value={selectedHotspot.position}
