@@ -17744,6 +17744,7 @@ function importActionForDiagnostic(code: string): ImportNextStepAction | undefin
       "vertex-colors-detected",
       "many-transparent-materials",
       "dominant-transparent-surface",
+      "transmission-materials",
       "dominant-untextured-material",
       "extreme-texture-aspect-ratios",
       "tiny-texture-dimensions"
@@ -18271,10 +18272,14 @@ function diagnosticVisualSymptom(code: string): string | null {
       "many-unused-texture-images",
       "many-transparent-materials",
       "dominant-transparent-surface",
+      "transmission-materials",
       "dominant-untextured-material",
       "dominant-green-placeholder-material"
     ].includes(code)
   ) {
+    if (code === "transmission-materials") {
+      return "windows or glass may look different from the source tool or cost more GPU time on mobile after optimization.";
+    }
     if (code === "many-transparent-materials" || code === "dominant-transparent-surface") {
       return "walls, ceilings, floors, or windows may look see-through, hollow, or sorted in the wrong order.";
     }
@@ -19361,6 +19366,7 @@ function ViewerQaChecklist({
     "dominant-untextured-material",
     "many-transparent-materials",
     "dominant-transparent-surface",
+    "transmission-materials",
     "tiny-texture-dimensions",
     "extreme-texture-aspect-ratios",
     "material-variants-missing-target",
