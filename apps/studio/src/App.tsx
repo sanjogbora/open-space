@@ -16783,7 +16783,115 @@ function App() {
                   />
                   <span>Landscape enclosure</span>
                 </label>
+                <label className="toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={manifest.environment?.fog?.enabled ?? false}
+                    onChange={(event) =>
+                      updateEnvironment((environment) => ({
+                        ...environment,
+                        fog: {
+                          type: environment.fog?.type ?? "linear",
+                          ...environment.fog,
+                          enabled: event.target.checked
+                        }
+                      }))
+                    }
+                  />
+                  <span>Distance fog</span>
+                </label>
               </div>
+              {manifest.environment?.fog?.enabled && (
+                <div className="field-grid" style={{ marginTop: 10 }}>
+                  <label>
+                    <span>Fog type</span>
+                    <select
+                      value={manifest.environment.fog.type ?? "linear"}
+                      onChange={(event) =>
+                        updateEnvironment((environment) => ({
+                          ...environment,
+                          fog: { ...environment.fog!, type: event.target.value as "linear" | "exponential" }
+                        }))
+                      }
+                    >
+                      <option value="linear">Linear (near/far)</option>
+                      <option value="exponential">Exponential (density)</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Fog color</span>
+                    <div className="color-control">
+                      <input
+                        type="color"
+                        value={
+                          (manifest.environment.fog.color ?? manifest.environment.skyHorizonColor ?? "#f3f6f8").length === 7
+                            ? (manifest.environment.fog.color ?? manifest.environment.skyHorizonColor ?? "#f3f6f8")
+                            : "#f3f6f8"
+                        }
+                        onChange={(event) =>
+                          updateEnvironment((environment) => ({
+                            ...environment,
+                            fog: { ...environment.fog!, color: event.target.value }
+                          }))
+                        }
+                      />
+                      <input
+                        value={manifest.environment.fog.color ?? manifest.environment.skyHorizonColor ?? "#f3f6f8"}
+                        onChange={(event) =>
+                          updateEnvironment((environment) => ({
+                            ...environment,
+                            fog: { ...environment.fog!, color: event.target.value }
+                          }))
+                        }
+                      />
+                    </div>
+                  </label>
+                  {manifest.environment.fog.type !== "exponential" ? (
+                    <>
+                      <NumberField
+                        label="Near (m)"
+                        min={0}
+                        max={200}
+                        step={1}
+                        value={manifest.environment.fog.near ?? 10}
+                        onChange={(value) =>
+                          updateEnvironment((environment) => ({
+                            ...environment,
+                            fog: { ...environment.fog!, near: value }
+                          }))
+                        }
+                      />
+                      <NumberField
+                        label="Far (m)"
+                        min={1}
+                        max={500}
+                        step={1}
+                        value={manifest.environment.fog.far ?? 60}
+                        onChange={(value) =>
+                          updateEnvironment((environment) => ({
+                            ...environment,
+                            fog: { ...environment.fog!, far: value }
+                          }))
+                        }
+                      />
+                    </>
+                  ) : (
+                    <NumberField
+                      label="Density"
+                      min={0.001}
+                      max={0.2}
+                      step={0.002}
+                      value={manifest.environment.fog.density ?? 0.02}
+                      onChange={(value) =>
+                        updateEnvironment((environment) => ({
+                          ...environment,
+                          fog: { ...environment.fog!, density: value }
+                        }))
+                      }
+                    />
+                  )}
+                </div>
+              )}
               <div className="field-grid">
                 {(
                   [

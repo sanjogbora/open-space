@@ -5,6 +5,7 @@ import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import type {
   CameraVolume,
+  FogConfig,
   HotspotInteraction,
   LinkInteraction,
   MaterialVariantInteraction,
@@ -785,6 +786,23 @@ export class WalkthroughViewer {
 
     if (environment?.enclosureEnabled !== false) {
       this.addLandscapeEnclosure();
+    }
+
+    this.applyFog(environment?.fog);
+  }
+
+  private applyFog(fog: FogConfig | undefined): void {
+    if (!fog?.enabled) {
+      this.scene.fog = null;
+      return;
+    }
+    const color = fog.color ?? (this.manifest.environment?.skyHorizonColor ?? "#f3f6f8");
+    if (fog.type === "exponential") {
+      this.scene.fog = new THREE.FogExp2(color, fog.density ?? 0.02);
+    } else {
+      const near = (fog.near ?? 10) * this.manifestScale;
+      const far = (fog.far ?? 60) * this.manifestScale;
+      this.scene.fog = new THREE.Fog(color, near, far);
     }
   }
 

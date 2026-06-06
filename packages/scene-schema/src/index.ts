@@ -151,6 +151,15 @@ export interface RenderingConfig {
   exposure?: number;
 }
 
+export interface FogConfig {
+  enabled: boolean;
+  type: "linear" | "exponential";
+  color?: string;
+  near?: number;
+  far?: number;
+  density?: number;
+}
+
 export interface EnvironmentConfig {
   backgroundColor?: string;
   skyBackdropEnabled?: boolean;
@@ -164,6 +173,7 @@ export interface EnvironmentConfig {
   enclosureColor?: string;
   enclosureHeight?: number;
   enclosureRadius?: number;
+  fog?: FogConfig;
 }
 
 export interface CameraVolume {
