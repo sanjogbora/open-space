@@ -166,6 +166,14 @@ export interface EnvironmentConfig {
   enclosureRadius?: number;
 }
 
+export interface CameraVolume {
+  id: string;
+  label?: string;
+  min: Vec3;
+  max: Vec3;
+  exposure?: number;
+}
+
 export interface RoomDefinition {
   id: string;
   label: string;
@@ -192,6 +200,7 @@ export interface SceneManifest {
   views: readonly SceneView[];
   autoTour?: boolean;
   autoTourInterval?: number;
+  cameraVolumes?: readonly CameraVolume[];
   interactions: readonly SceneInteraction[];
   navigation: NavigationConfig;
   branding: BrandingConfig;

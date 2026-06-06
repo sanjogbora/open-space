@@ -5,6 +5,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import type {
+  CameraVolume,
   HotspotInteraction,
   LinkInteraction,
   MaterialVariantInteraction,
@@ -211,6 +212,7 @@ export class WalkthroughViewer {
   private autoTourPaused = false;
   private autoTourDwellTimer = 0;
   private autoTourViewIndex = 0;
+  private activeVolumeExposure: number | undefined;
 
   constructor(options: ViewerOptions) {
     this.container = options.container;
@@ -1990,6 +1992,7 @@ export class WalkthroughViewer {
     this.updateMovement(delta);
     this.updateMarker(elapsed);
     this.updateAutoTour(delta);
+    this.updateCameraVolumes(delta);
     this.managedTextures.forEach((item) => item.update?.(elapsed));
     this.renderer.render(this.scene, this.camera);
     this.frameId = requestAnimationFrame(this.animate);
@@ -2017,6 +2020,39 @@ export class WalkthroughViewer {
         this.goToView(nextView.id);
       }
     }
+  }
+
+  private updateCameraVolumes(delta: number): void {
+    const volumes = this.manifest.cameraVolumes;
+    if (!volumes || volumes.length === 0) {
+      return;
+    }
+    const cam = this.camera.position;
+    const scale = this.manifestScale;
+    let matchedVolume: CameraVolume | undefined;
+    for (const vol of volumes) {
+      const minX = vol.min[0] * scale;
+      const minY = vol.min[1] * scale;
+      const minZ = vol.min[2] * scale;
+      const maxX = vol.max[0] * scale;
+      const maxY = vol.max[1] * scale;
+      const maxZ = vol.max[2] * scale;
+      if (
+        cam.x >= minX && cam.x <= maxX &&
+        cam.y >= minY && cam.y <= maxY &&
+        cam.z >= minZ && cam.z <= maxZ
+      ) {
+        matchedVolume = vol;
+        break;
+      }
+    }
+    const targetExposure = matchedVolume?.exposure ?? this.rendererExposure();
+    if (this.activeVolumeExposure === undefined) {
+      this.activeVolumeExposure = targetExposure;
+    } else {
+      this.activeVolumeExposure += (targetExposure - this.activeVolumeExposure) * Math.min(1, delta * 3);
+    }
+    this.renderer.toneMappingExposure = this.activeVolumeExposure;
   }
 
   private updateControls(delta: number): void {

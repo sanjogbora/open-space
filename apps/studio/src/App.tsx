@@ -16878,6 +16878,123 @@ function App() {
             </div>
             <div className="panel">
               <div className="panel-heading">
+                <Box size={18} aria-hidden="true" />
+                <h2>Camera Volumes</h2>
+                <button
+                  type="button"
+                  className="icon-action"
+                  title="Add camera volume"
+                  onClick={() => {
+                    const bounds = manifest.navigation.bounds;
+                    const cx = bounds ? (bounds.min[0] + bounds.max[0]) / 2 : 0;
+                    const cy = bounds ? (bounds.min[1] + bounds.max[1]) / 2 : 0;
+                    const cz = bounds ? (bounds.min[2] + bounds.max[2]) / 2 : 0;
+                    const sx = bounds ? (bounds.max[0] - bounds.min[0]) / 4 : 5;
+                    const sy = bounds ? (bounds.max[1] - bounds.min[1]) : 4;
+                    const sz = bounds ? (bounds.max[2] - bounds.min[2]) / 4 : 5;
+                    updateManifest((current) => ({
+                      ...current,
+                      cameraVolumes: [
+                        ...(current.cameraVolumes ?? []),
+                        {
+                          id: `vol-${Date.now()}`,
+                          label: `Volume ${(current.cameraVolumes?.length ?? 0) + 1}`,
+                          min: [cx - sx / 2, cy, cz - sz / 2],
+                          max: [cx + sx / 2, cy + sy, cz + sz / 2],
+                          exposure: manifest.rendering?.exposure ?? 1.05
+                        }
+                      ]
+                    }));
+                  }}
+                >
+                  <Plus size={17} aria-hidden="true" />
+                </button>
+              </div>
+              <p className="quiet-note" style={{ marginBottom: 12 }}>
+                Place invisible AABB zones to smoothly adjust exposure as the camera enters different areas (e.g., brighter near windows, dimmer in corridors).
+              </p>
+              {(manifest.cameraVolumes ?? []).map((vol, i) => (
+                <div key={vol.id} className="panel" style={{ marginBottom: 10 }}>
+                  <div className="panel-heading" style={{ marginBottom: 10 }}>
+                    <Box size={16} aria-hidden="true" />
+                    <h2>{vol.label || `Volume ${i + 1}`}</h2>
+                    <button
+                      type="button"
+                      className="icon-action danger"
+                      title="Delete volume"
+                      onClick={() =>
+                        updateManifest((current) => ({
+                          ...current,
+                          cameraVolumes: (current.cameraVolumes ?? []).filter((v) => v.id !== vol.id)
+                        }))
+                      }
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
+                  </div>
+                  <div className="field-grid">
+                    <label>
+                      <span>Label</span>
+                      <input
+                        value={vol.label ?? ""}
+                        onChange={(e) =>
+                          updateManifest((current) => ({
+                            ...current,
+                            cameraVolumes: (current.cameraVolumes ?? []).map((v) =>
+                              v.id === vol.id ? { ...v, label: e.target.value } : v
+                            )
+                          }))
+                        }
+                      />
+                    </label>
+                    <NumberField
+                      label="Exposure"
+                      min={0.1}
+                      max={4}
+                      step={0.05}
+                      value={vol.exposure ?? 1.05}
+                      onChange={(value) =>
+                        updateManifest((current) => ({
+                          ...current,
+                          cameraVolumes: (current.cameraVolumes ?? []).map((v) =>
+                            v.id === vol.id ? { ...v, exposure: value } : v
+                          )
+                        }))
+                      }
+                    />
+                  </div>
+                  <VectorEditor
+                    label="Min"
+                    value={vol.min}
+                    onChange={(next) =>
+                      updateManifest((current) => ({
+                        ...current,
+                        cameraVolumes: (current.cameraVolumes ?? []).map((v) =>
+                          v.id === vol.id ? { ...v, min: next } : v
+                        )
+                      }))
+                    }
+                  />
+                  <VectorEditor
+                    label="Max"
+                    value={vol.max}
+                    onChange={(next) =>
+                      updateManifest((current) => ({
+                        ...current,
+                        cameraVolumes: (current.cameraVolumes ?? []).map((v) =>
+                          v.id === vol.id ? { ...v, max: next } : v
+                        )
+                      }))
+                    }
+                  />
+                </div>
+              ))}
+              {(manifest.cameraVolumes ?? []).length === 0 && (
+                <p className="empty-list">No camera volumes. Add one to adjust exposure per room or area.</p>
+              )}
+            </div>
+            <div className="panel">
+              <div className="panel-heading">
                 <FileJson size={18} aria-hidden="true" />
                 <h2>environment</h2>
               </div>
