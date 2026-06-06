@@ -1419,19 +1419,19 @@ input[type="range"]:focus {
   align-content: center;
   gap: 6px;
   padding: 18px;
-  border: 1px dashed #c2cdd4;
-  border-radius: 8px;
-  color: #52636f;
-  background: #fafbfc;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: var(--bg-raised);
   text-align: center;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
 
 .file-drop:hover {
-  border-color: #087fe7;
-  background: #f4f9ff;
-  color: #087fe7;
+  border-color: var(--accent);
+  background: var(--accent-muted);
+  color: var(--accent);
 }
 
 .file-drop.uploading {
