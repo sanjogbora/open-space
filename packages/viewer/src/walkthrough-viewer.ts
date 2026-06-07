@@ -2703,15 +2703,7 @@ export class WalkthroughViewer {
       }
       return segmentIntersectsInflatedBox2D(origin, target, blocker.box, this.collisionBodyRadius());
     });
-    if (boxBlocker) return boxBlocker;
-    // Fallback: horizontal raycast against scene geometry for walls missed by bounding-box analysis
-    // (merged or complex wall meshes whose AABB spans the entire floor plan)
-    if (!options.authoredOnly && !options.ignoreNonAuthoredBlockers && !options.ignoreInferredBlockers) {
-      if (this.wallRaycastBlocksSegment(origin, target)) {
-        return { box: new THREE.Box3(), name: "geometry-wall", kind: "inferred" };
-      }
-    }
-    return undefined;
+    return boxBlocker;
   }
 
   private collisionBlockersAtPosition(position: THREE.Vector3): CollisionBlocker[] {
@@ -4113,8 +4105,39 @@ export class WalkthroughViewer {
       );
       return true;
     }
+    // Final guard: the box/floor checks passed, but a merged wall mesh (no box blocker)
+    // could still cross the straight line. One raycast here is cheap; if it hits a wall,
+    // route around it via A* instead of walking through.
+    if (this.wallRaycastBlocksSegment(this.camera.position, nextTarget)) {
+      const navigationRoute = this.findNavigationRoute(nextTarget, this.camera.position);
+      if (navigationRoute && !this.routeCrossesWall(this.camera.position, navigationRoute)) {
+        this.startClickRoute(navigationRoute, floorHit.point);
+        return true;
+      }
+      this.emitNavigationFailure(
+        "blocked-collision",
+        event,
+        nextTarget,
+        sourceObjectName,
+        "geometry-wall",
+        "inferred",
+        nextTarget
+      );
+      return true;
+    }
     this.startClickMove(nextTarget, floorHit.point);
     return true;
+  }
+
+  private routeCrossesWall(origin: THREE.Vector3, route: readonly THREE.Vector3[]): boolean {
+    let previous = origin;
+    for (const waypoint of route) {
+      if (this.wallRaycastBlocksSegment(previous, waypoint)) {
+        return true;
+      }
+      previous = waypoint;
+    }
+    return false;
   }
 
   private startClickMove(target: THREE.Vector3, markerPoint: THREE.Vector3): void {
