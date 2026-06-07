@@ -183,6 +183,7 @@ export class WalkthroughViewer {
   // Persistent nav-cell cache — survives multiple pathfind calls in same scene session
   private navCellPersistentCache = new Map<string, GridRouteCell | undefined>();
   private navCellBaseStep = 0;
+  private wallSegmentCache = new Map<string, boolean>();
   private sceneRoot: THREE.Object3D | undefined;
   private frameId = 0;
   private destroyed = false;
@@ -588,6 +589,7 @@ export class WalkthroughViewer {
       this.walkableMeshes = this.collectWalkableMeshes(root);
     }
     this.collisionBlockers = [...this.collectCollisionBlockers(root), ...zones.blockers];
+    this.wallSegmentCache.clear();
     this.rebuildCollisionDebugHelpers();
   }
 
@@ -2635,6 +2637,36 @@ export class WalkthroughViewer {
       : undefined;
   }
 
+  private wallRaycastBlocksSegment(origin: THREE.Vector3, target: THREE.Vector3): boolean {
+    const dx = target.x - origin.x;
+    const dz = target.z - origin.z;
+    const flatDist = Math.sqrt(dx * dx + dz * dz);
+    if (flatDist < 0.01) return false;
+    // Cache by quantized coords (0.1m precision) — each unique edge is raycasted only once
+    const q = 10;
+    const key = `${Math.round(origin.x * q)}:${Math.round(origin.z * q)}-${Math.round(target.x * q)}:${Math.round(target.z * q)}`;
+    if (this.wallSegmentCache.has(key)) {
+      return this.wallSegmentCache.get(key)!;
+    }
+    const dir = new THREE.Vector3(dx / flatDist, 0, dz / flatDist);
+    const bodyRadius = this.collisionBodyRadius();
+    // Ray at body-center height, skip near-origin hits (avoid self-surface)
+    const from = new THREE.Vector3(origin.x, origin.y - this.cameraHeight * 0.4, origin.z);
+    const rc = new THREE.Raycaster(from, dir, bodyRadius * 0.3, flatDist + bodyRadius);
+    const hits = rc.intersectObjects(this.walkableMeshes, true);
+    const normalMatrix = new THREE.Matrix3();
+    const blocked = hits.some((hit) => {
+      if (!hit.face) return false;
+      const n = hit.face.normal.clone()
+        .applyMatrix3(normalMatrix.getNormalMatrix(hit.object.matrixWorld))
+        .normalize();
+      if (Math.abs(n.y) >= 0.5) return false; // floor/ceiling face — skip
+      return n.dot(dir) < -0.05; // wall faces us (front-face hit)
+    });
+    this.wallSegmentCache.set(key, blocked);
+    return blocked;
+  }
+
   private navigationSegmentBlocker(
     origin: THREE.Vector3,
     target: THREE.Vector3,
@@ -2653,7 +2685,7 @@ export class WalkthroughViewer {
     const targetVertical = this.bodyVerticalRangeAt(target);
     const minY = Math.min(originVertical.min, targetVertical.min);
     const maxY = Math.max(originVertical.max, targetVertical.max);
-    return this.collisionBlockers.find((blocker) => {
+    const boxBlocker = this.collisionBlockers.find((blocker) => {
       if (ignored.has(blocker)) {
         return false;
       }
@@ -2671,6 +2703,15 @@ export class WalkthroughViewer {
       }
       return segmentIntersectsInflatedBox2D(origin, target, blocker.box, this.collisionBodyRadius());
     });
+    if (boxBlocker) return boxBlocker;
+    // Fallback: horizontal raycast against scene geometry for walls missed by bounding-box analysis
+    // (merged or complex wall meshes whose AABB spans the entire floor plan)
+    if (!options.authoredOnly && !options.ignoreNonAuthoredBlockers && !options.ignoreInferredBlockers) {
+      if (this.wallRaycastBlocksSegment(origin, target)) {
+        return { box: new THREE.Box3(), name: "geometry-wall", kind: "inferred" };
+      }
+    }
+    return undefined;
   }
 
   private collisionBlockersAtPosition(position: THREE.Vector3): CollisionBlocker[] {
@@ -3292,6 +3333,7 @@ export class WalkthroughViewer {
     const maxStepDown = this.controls.maxStepDown ?? this.maxStepDown;
     const floorSampleMaxDelta = Math.max(maxStepDown, maxStepUp, this.cameraHeight * 0.5);
     const keyFor = (x: number, z: number) => `${x}:${z}`;
+    const pointFor = (x: number, z: number) => new THREE.Vector3(minX + x * step, target.y, minZ + z * step);
 
     // Persistent world-coordinate cell cache: each position is raycasted only once per scene load
     const baseStep = Math.max(0.24, this.collisionBodyRadius() * 0.9);

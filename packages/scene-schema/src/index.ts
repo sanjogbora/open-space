@@ -176,6 +176,7 @@ export interface EnvironmentConfig {
   enclosureHeight?: number;
   enclosureRadius?: number;
   fog?: FogConfig;
+  iblIntensity?: number;
 }
 
 export interface CameraVolume {
@@ -540,7 +541,8 @@ export function isEnvironmentConfig(value: unknown): value is EnvironmentConfig 
     (value["enclosureEnabled"] === undefined || typeof value["enclosureEnabled"] === "boolean") &&
     (value["enclosureColor"] === undefined || typeof value["enclosureColor"] === "string") &&
     (value["enclosureHeight"] === undefined || typeof value["enclosureHeight"] === "number") &&
-    (value["enclosureRadius"] === undefined || typeof value["enclosureRadius"] === "number")
+    (value["enclosureRadius"] === undefined || typeof value["enclosureRadius"] === "number") &&
+    (value["iblIntensity"] === undefined || typeof value["iblIntensity"] === "number")
   );
 }
 
