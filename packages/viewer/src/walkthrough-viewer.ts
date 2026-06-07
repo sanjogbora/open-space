@@ -28,7 +28,7 @@ import {
 } from "@walkthrough/scene-schema";
 import { createDemoScene } from "./demo-scene";
 import { createHotspotSprite } from "./hotspot-sprite";
-import { clampToBounds, damp, dampAngle, easeOutCubic, toVector3 } from "./math";
+import { clampToBounds, damp, dampAngle, easeInOutCubic, easeOutCubic, toVector3 } from "./math";
 import { createMoveMarker } from "./marker";
 import type {
   LoadingProgress,
@@ -47,6 +47,7 @@ interface CameraTween {
   toTarget: THREE.Vector3;
   elapsed: number;
   duration: number;
+  easeIn: boolean;
   view?: SceneView;
 }
 
@@ -198,6 +199,8 @@ export class WalkthroughViewer {
   private wheelVelocity = 0;
   private draggingLook = false;
   private lastPointer: { x: number; y: number } | undefined;
+  private lookVelocityX = 0;
+  private lookVelocityY = 0;
   private quality: ViewerQuality;
   private minBounds: THREE.Vector3 | undefined;
   private maxBounds: THREE.Vector3 | undefined;
@@ -213,6 +216,10 @@ export class WalkthroughViewer {
   private autoTourDwellTimer = 0;
   private autoTourViewIndex = 0;
   private activeVolumeExposure: number | undefined;
+  private fpsAccum = 0;
+  private fpsFrames = 0;
+  private fpsCheckTimer = 0;
+  private currentPixelRatio = 1;
 
   constructor(options: ViewerOptions) {
     this.container = options.container;
@@ -336,13 +343,20 @@ export class WalkthroughViewer {
     this.cancelClickMove();
     this.stableFloorY = undefined;
     this.resetPendingFloorTransition();
+    const toPosition = this.toSceneVector(view.position, { preserveMeterY: true });
+    const travelDistance = this.camera.position.distanceTo(toPosition);
+    const duration = view.kind === "top"
+      ? 1.1
+      : THREE.MathUtils.clamp(travelDistance / 9, 0.38, 1.6);
+    const easeIn = travelDistance > 4;
     this.cameraTween = {
       fromPosition: this.camera.position.clone(),
-      toPosition: this.toSceneVector(view.position, { preserveMeterY: true }),
+      toPosition,
       fromTarget: this.cameraTarget.clone(),
       toTarget: this.toSceneVector(view.target, { preserveMeterY: true }),
       elapsed: 0,
-      duration: view.kind === "top" ? 1.1 : 0.85,
+      duration,
+      easeIn,
       view
     };
   }
@@ -350,8 +364,8 @@ export class WalkthroughViewer {
   setQuality(quality: ViewerQuality): void {
     this.quality = quality;
     const selectedQuality = this.manifest.qualityProfiles.find((item) => item.id === quality);
-    const pixelRatio = Math.min(window.devicePixelRatio, selectedQuality?.maxPixelRatio ?? 1.5);
-    this.renderer.setPixelRatio(pixelRatio);
+    this.currentPixelRatio = Math.min(window.devicePixelRatio, selectedQuality?.maxPixelRatio ?? 1.5);
+    this.renderer.setPixelRatio(this.currentPixelRatio);
     this.renderer.shadowMap.enabled = selectedQuality?.shadows ?? true;
     this.resize();
   }
@@ -721,23 +735,46 @@ export class WalkthroughViewer {
 
   private createSkyEquirectTexture(): THREE.Texture {
     const environment = this.manifest.environment;
-    const topColor = environment?.skyTopColor ?? "#d8e7f5";
-    const horizonColor = environment?.skyHorizonColor ?? "#f3f6f8";
-    const groundColor = environment?.backgroundColor ?? "#d8dde2";
-    const width = 1024;
-    const height = 512;
+    const topColor = environment?.skyTopColor ?? "#c8dcf0";
+    const horizonColor = environment?.skyHorizonColor ?? "#e8eff5";
+    const groundColor = environment?.backgroundColor ?? "#cfd5da";
+    const width = 2048;
+    const height = 1024;
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d");
     if (ctx) {
+      // Base sky-to-ground gradient
       const gradient = ctx.createLinearGradient(0, 0, 0, height);
       gradient.addColorStop(0, topColor);
-      gradient.addColorStop(0.45, horizonColor);
-      gradient.addColorStop(0.52, horizonColor);
-      gradient.addColorStop(0.55, groundColor);
+      gradient.addColorStop(0.44, horizonColor);
+      gradient.addColorStop(0.5, horizonColor);
+      gradient.addColorStop(0.53, groundColor);
       gradient.addColorStop(1, groundColor);
       ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Sun disc at ~50° elevation, 120° azimuth — gives warm directional specular on PBR surfaces
+      // In equirectangular: x = (azimuth / (2π) + 0.5) * width, y = (0.5 - elevation/π) * height
+      const sunElevation = Math.PI / 3.6; // ~50°
+      const sunAzimuth = (2 * Math.PI) / 3;  // 120°
+      const sunX = ((sunAzimuth / (2 * Math.PI)) + 0.5) * width;
+      const sunY = (0.5 - sunElevation / Math.PI) * height;
+      // Soft glow halo
+      const halo = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, width * 0.12);
+      halo.addColorStop(0, "rgba(255,250,235,0.55)");
+      halo.addColorStop(0.15, "rgba(255,248,225,0.22)");
+      halo.addColorStop(0.5, "rgba(255,245,210,0.07)");
+      halo.addColorStop(1, "rgba(255,245,210,0)");
+      ctx.fillStyle = halo;
+      ctx.fillRect(0, 0, width, height);
+      // Bright core
+      const core = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, width * 0.022);
+      core.addColorStop(0, "rgba(255,255,255,0.92)");
+      core.addColorStop(0.6, "rgba(255,252,240,0.55)");
+      core.addColorStop(1, "rgba(255,252,240,0)");
+      ctx.fillStyle = core;
       ctx.fillRect(0, 0, width, height);
     }
     const texture = new THREE.CanvasTexture(canvas);
@@ -1009,6 +1046,8 @@ export class WalkthroughViewer {
     if (!relightUnlit || !(material instanceof THREE.MeshBasicMaterial)) {
       return material;
     }
+    const name = material.name.toLowerCase();
+    const isGlossy = /glass|mirror|chrome|metal|steel|copper|brass|alumin/.test(name);
     const nextMaterial = new THREE.MeshStandardMaterial({
       name: material.name,
       color: material.color.clone(),
@@ -1019,8 +1058,9 @@ export class WalkthroughViewer {
       alphaTest: material.alphaTest,
       side: material.side,
       vertexColors: material.vertexColors,
-      roughness: 0.78,
-      metalness: 0
+      roughness: isGlossy ? 0.1 : 0.88,
+      metalness: isGlossy ? 0.8 : 0,
+      envMapIntensity: isGlossy ? 1.4 : 0.6
     });
     nextMaterial.userData = { ...material.userData, relitFromUnlit: true };
     if (material.map) {
@@ -1158,7 +1198,7 @@ export class WalkthroughViewer {
       lightMap.name = `${material.name || override.name}-lightmap`;
       lightMap.colorSpace = THREE.SRGBColorSpace;
       lightMap.flipY = false;
-      if ("channel" in lightMap && typeof override.lightMapUvSet === "number") {
+      if (typeof override.lightMapUvSet === "number") {
         lightMap.channel = Math.max(0, Math.floor(override.lightMapUvSet));
       }
       lightMappedMaterial.lightMap = lightMap;
@@ -2032,15 +2072,41 @@ export class WalkthroughViewer {
     const delta = Math.min(0.05, this.clock.getDelta());
     const elapsed = this.clock.elapsedTime;
     this.updateControls(delta);
+    this.updateLookInertia(delta);
     this.updateTweens(delta);
     this.updateMovement(delta);
     this.updateMarker(elapsed);
     this.updateAutoTour(delta);
     this.updateCameraVolumes(delta);
+    this.updateDynamicPixelRatio(delta);
     this.managedTextures.forEach((item) => item.update?.(elapsed));
     this.renderer.render(this.scene, this.camera);
     this.frameId = requestAnimationFrame(this.animate);
   };
+
+  private updateDynamicPixelRatio(delta: number): void {
+    if (delta <= 0) return;
+    this.fpsAccum += 1 / delta;
+    this.fpsFrames += 1;
+    this.fpsCheckTimer += delta;
+    if (this.fpsCheckTimer < 1.5) return;
+    const avgFps = this.fpsAccum / this.fpsFrames;
+    this.fpsAccum = 0;
+    this.fpsFrames = 0;
+    this.fpsCheckTimer = 0;
+    const selectedQuality = this.manifest.qualityProfiles.find((item) => item.id === this.quality);
+    const maxDpr = Math.min(window.devicePixelRatio, selectedQuality?.maxPixelRatio ?? 1.5);
+    let nextDpr = this.currentPixelRatio;
+    if (avgFps < 28 && this.currentPixelRatio > 1) {
+      nextDpr = Math.max(1, this.currentPixelRatio - 0.25);
+    } else if (avgFps > 50 && this.currentPixelRatio < maxDpr) {
+      nextDpr = Math.min(maxDpr, this.currentPixelRatio + 0.25);
+    }
+    if (nextDpr !== this.currentPixelRatio) {
+      this.currentPixelRatio = nextDpr;
+      this.renderer.setPixelRatio(nextDpr);
+    }
+  }
 
   private updateAutoTour(delta: number): void {
     if (!this.manifest.autoTour || this.autoTourPaused) {
@@ -2139,6 +2205,24 @@ export class WalkthroughViewer {
     this.applyYawPitch();
   }
 
+  private updateLookInertia(delta: number): void {
+    if (this.draggingLook || this.cameraTween) {
+      return;
+    }
+    const threshold = 0.00005;
+    if (Math.abs(this.lookVelocityX) < threshold && Math.abs(this.lookVelocityY) < threshold) {
+      this.lookVelocityX = 0;
+      this.lookVelocityY = 0;
+      return;
+    }
+    this.yaw -= this.lookVelocityX;
+    this.pitch -= this.lookVelocityY;
+    this.pitch = THREE.MathUtils.clamp(this.pitch, -1.15, 1.15);
+    const decay = Math.exp(-14 * delta);
+    this.lookVelocityX *= decay;
+    this.lookVelocityY *= decay;
+  }
+
   private updateWheelMovement(delta: number): void {
     if (!this.controls.enabled || Math.abs(this.wheelVelocity) < 0.01) {
       this.wheelVelocity = 0;
@@ -2163,7 +2247,7 @@ export class WalkthroughViewer {
     }
     this.cameraTween.elapsed += delta;
     const t = Math.min(1, this.cameraTween.elapsed / this.cameraTween.duration);
-    const eased = easeOutCubic(t);
+    const eased = this.cameraTween.easeIn ? easeInOutCubic(t) : easeOutCubic(t);
     this.camera.position.lerpVectors(this.cameraTween.fromPosition, this.cameraTween.toPosition, eased);
     this.cameraTarget.lerpVectors(this.cameraTween.fromTarget, this.cameraTween.toTarget, eased);
     this.camera.lookAt(this.cameraTarget);
@@ -2222,7 +2306,8 @@ export class WalkthroughViewer {
       const nextWaypoint = this.movePath.shift();
       if (nextWaypoint) {
         this.moveTarget = nextWaypoint;
-        this.clickMoveVelocity = Math.max(0.16, this.clickMoveVelocity * 0.72);
+        // Keep most velocity so the transition between waypoints is seamless
+        this.clickMoveVelocity = Math.max(0.16, this.clickMoveVelocity * 0.94);
       } else {
         this.clickMoveVelocity = 0;
         this.moveTarget = undefined;
@@ -3433,12 +3518,12 @@ export class WalkthroughViewer {
   }
 
   private canStandOnGeometryFloor(position: THREE.Vector3): boolean {
-    const floorY = this.sampleGeometryFloorY(position, { maxDelta: Math.max(0.75, this.cameraHeight * 0.45) });
+    const floorY = this.sampleGeometryFloorY(position, { maxDelta: Math.max(0.45, this.cameraHeight * 0.28) });
     if (typeof floorY !== "number") {
       return false;
     }
     const expectedFloorY = position.y - this.cameraHeight;
-    return Math.abs(floorY - expectedFloorY) <= Math.max(0.45, this.cameraHeight * 0.35);
+    return Math.abs(floorY - expectedFloorY) <= Math.max(0.28, this.cameraHeight * 0.22);
   }
 
   private canStandOnExplicitWalkMesh(position: THREE.Vector3): boolean {
@@ -3508,8 +3593,9 @@ export class WalkthroughViewer {
     if (delta <= 0 || Math.abs(targetY - currentY) < 0.0001) {
       return targetY;
     }
-    const maxRise = Math.max(0.22, this.cameraHeight * 0.22) * delta;
-    const maxDrop = Math.max(0.34, this.cameraHeight * 0.32) * delta;
+    // Generous limits to avoid oscillation fighting against the damping
+    const maxRise = Math.max(0.45, this.cameraHeight * 0.4) * delta;
+    const maxDrop = Math.max(0.6, this.cameraHeight * 0.55) * delta;
     return THREE.MathUtils.clamp(targetY, currentY - maxDrop, currentY + maxRise);
   }
 
@@ -4256,15 +4342,21 @@ export class WalkthroughViewer {
     const dx = event.clientX - this.lastPointer.x;
     const dy = event.clientY - this.lastPointer.y;
     this.lastPointer = { x: event.clientX, y: event.clientY };
-    this.yaw -= dx * this.controls.lookSensitivityX;
-    this.pitch -= dy * this.controls.lookSensitivityY;
+    const dyaw = dx * this.controls.lookSensitivityX;
+    const dpitch = dy * this.controls.lookSensitivityY;
+    this.yaw -= dyaw;
+    this.pitch -= dpitch;
     this.pitch = THREE.MathUtils.clamp(this.pitch, -1.15, 1.15);
+    this.lookVelocityX = dyaw;
+    this.lookVelocityY = dpitch;
   };
 
   private beginDragLook(): void {
     this.draggingLook = true;
     this.cameraTween = undefined;
     this.cancelClickMove();
+    this.lookVelocityX = 0;
+    this.lookVelocityY = 0;
   }
 
   private handlePointerUp = (event: PointerEvent): void => {
@@ -4477,7 +4569,11 @@ export class WalkthroughViewer {
     const width = Math.max(1, this.container.clientWidth);
     const height = Math.max(1, this.container.clientHeight);
     const selectedQuality = this.manifest.qualityProfiles.find((item) => item.id === this.quality);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, selectedQuality?.maxPixelRatio ?? 1.5));
+    // On resize, clamp to the new max but don't exceed the current DPR-scaled value
+    const maxDpr = Math.min(window.devicePixelRatio, selectedQuality?.maxPixelRatio ?? 1.5);
+    this.currentPixelRatio = Math.min(this.currentPixelRatio, maxDpr);
+    if (this.currentPixelRatio < 1) this.currentPixelRatio = maxDpr;
+    this.renderer.setPixelRatio(this.currentPixelRatio);
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();

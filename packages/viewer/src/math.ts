@@ -20,6 +20,10 @@ export function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
 
+export function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 export function damp(current: number, target: number, smoothing: number, delta: number): number {
   return THREE.MathUtils.lerp(current, target, 1 - Math.exp(-smoothing * delta));
 }
