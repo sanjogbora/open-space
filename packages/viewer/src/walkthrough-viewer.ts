@@ -186,6 +186,7 @@ export class WalkthroughViewer {
   private cameraTarget = new THREE.Vector3(0, 1.55, 0);
   private moveTarget: THREE.Vector3 | undefined;
   private movePath: THREE.Vector3[] = [];
+  private moveDestYaw: number | undefined;
   private clickMoveVelocity = 0;
   private cameraTween: CameraTween | undefined;
   private stableFloorY: number | undefined;
@@ -2316,6 +2317,7 @@ export class WalkthroughViewer {
       } else {
         this.clickMoveVelocity = 0;
         this.moveTarget = undefined;
+        this.moveDestYaw = undefined;
         this.moveMarker.visible = false;
       }
       return;
@@ -2327,7 +2329,9 @@ export class WalkthroughViewer {
     const clickMoveSpeed = this.controls.clickMoveSpeed ?? 1.05;
     if (flatDistance > 0.001) {
       if (!this.draggingLook && flatDistance > 0.15) {
-        this.yaw = dampAngle(this.yaw, Math.atan2(flatDelta.x, -flatDelta.z), 2.7, delta);
+        // Rotate toward final destination yaw (not current waypoint) to avoid inter-waypoint spinning
+        const yawTarget = this.moveDestYaw ?? Math.atan2(flatDelta.x, -flatDelta.z);
+        this.yaw = dampAngle(this.yaw, yawTarget, 1.5, delta);
         this.pitch = damp(this.pitch, THREE.MathUtils.clamp(this.pitch, -0.18, 0.12), 1.4, delta);
       }
       const minimumSpeed = hasIntermediateWaypoint ? 0.18 : 0.045;
@@ -2356,6 +2360,7 @@ export class WalkthroughViewer {
   private cancelClickMove(): void {
     this.moveTarget = undefined;
     this.movePath = [];
+    this.moveDestYaw = undefined;
     this.clickMoveVelocity = 0;
     this.moveMarker.visible = false;
   }
@@ -3166,11 +3171,11 @@ export class WalkthroughViewer {
     let step = Math.max(0.24, this.collisionBodyRadius() * 0.9);
     let columns = Math.max(2, Math.ceil((maxX - minX) / step) + 1);
     let rows = Math.max(2, Math.ceil((maxZ - minZ) / step) + 1);
-    const maxCells = 14000;
+    const maxCells = 4000;
 
     if (columns * rows > maxCells) {
       step = Math.sqrt(((maxX - minX) * (maxZ - minZ)) / maxCells);
-      step = THREE.MathUtils.clamp(step, 0.28, 0.85);
+      step = THREE.MathUtils.clamp(step, 0.32, 0.85);
       columns = Math.max(2, Math.ceil((maxX - minX) / step) + 1);
       rows = Math.max(2, Math.ceil((maxZ - minZ) / step) + 1);
     }
@@ -3246,7 +3251,40 @@ export class WalkthroughViewer {
     const nodes = new Map<string, GridRouteNode>([
       [startKey, { x: start.x, z: start.z, cost: 0, estimate: heuristic(start.x, start.z), closed: false }]
     ]);
-    const open = [startKey];
+
+    // Min-heap open set: [estimate, key] — O(log n) pop instead of O(n) linear scan
+    const heap: Array<[number, string]> = [[heuristic(start.x, start.z), startKey]];
+    const heapPush = (est: number, key: string) => {
+      heap.push([est, key]);
+      let i = heap.length - 1;
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (heap[p]![0] <= heap[i]![0]) break;
+        [heap[p], heap[i]] = [heap[i]!, heap[p]!];
+        i = p;
+      }
+    };
+    const heapPop = (): string | undefined => {
+      if (heap.length === 0) return undefined;
+      const top = heap[0]![1];
+      const last = heap.pop()!;
+      if (heap.length > 0) {
+        heap[0] = last;
+        let i = 0;
+        for (;;) {
+          const l = 2 * i + 1;
+          const r = 2 * i + 2;
+          let s = i;
+          if (l < heap.length && heap[l]![0] < heap[s]![0]) s = l;
+          if (r < heap.length && heap[r]![0] < heap[s]![0]) s = r;
+          if (s === i) break;
+          [heap[i], heap[s]] = [heap[s]!, heap[i]!];
+          i = s;
+        }
+      }
+      return top;
+    };
+
     const offsets = [
       [-1, 0, 1],
       [1, 0, 1],
@@ -3260,22 +3298,9 @@ export class WalkthroughViewer {
     let goalKey: string | undefined;
     let iterations = 0;
 
-    while (open.length > 0 && iterations < maxCells) {
+    while (heap.length > 0 && iterations < maxCells) {
       iterations += 1;
-      let bestOpenIndex = 0;
-      let bestEstimate = Number.POSITIVE_INFINITY;
-      for (let index = 0; index < open.length; index += 1) {
-        const openKey = open[index];
-        if (!openKey) {
-          continue;
-        }
-        const node = nodes.get(openKey);
-        if (node && node.estimate < bestEstimate) {
-          bestEstimate = node.estimate;
-          bestOpenIndex = index;
-        }
-      }
-      const currentKey = open.splice(bestOpenIndex, 1)[0];
+      const currentKey = heapPop();
       if (!currentKey) {
         continue;
       }
@@ -3323,15 +3348,16 @@ export class WalkthroughViewer {
         if (existing && (existing.closed || existing.cost <= nextCost)) {
           continue;
         }
+        const nextEst = nextCost + heuristic(nextX, nextZ);
         nodes.set(nextKey, {
           x: nextX,
           z: nextZ,
           previous: currentKey,
           cost: nextCost,
-          estimate: nextCost + heuristic(nextX, nextZ),
+          estimate: nextEst,
           closed: false
         });
-        open.push(nextKey);
+        heapPush(nextEst, nextKey);
       }
     }
 
@@ -3959,6 +3985,9 @@ export class WalkthroughViewer {
     this.movePath = [];
     this.clickMoveVelocity = 0;
     this.cameraTween = undefined;
+    const dx = target.x - this.camera.position.x;
+    const dz = target.z - this.camera.position.z;
+    this.moveDestYaw = Math.hypot(dx, dz) > 0.1 ? Math.atan2(dx, -dz) : undefined;
     this.moveMarker.visible = true;
     this.moveMarker.position.copy(markerPoint);
     this.moveMarker.position.y += 0.035;
@@ -3973,6 +4002,11 @@ export class WalkthroughViewer {
     this.movePath = remainingWaypoints;
     this.clickMoveVelocity = 0;
     this.cameraTween = undefined;
+    // Lock yaw toward the final destination so intermediate waypoints don't spin the camera
+    const finalDest = remainingWaypoints[remainingWaypoints.length - 1] ?? firstWaypoint;
+    const dx = finalDest.x - this.camera.position.x;
+    const dz = finalDest.z - this.camera.position.z;
+    this.moveDestYaw = Math.hypot(dx, dz) > 0.1 ? Math.atan2(dx, -dz) : undefined;
     this.moveMarker.visible = true;
     this.moveMarker.position.copy(markerPoint);
     this.moveMarker.position.y += 0.035;
