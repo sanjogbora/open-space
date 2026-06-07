@@ -291,7 +291,7 @@ export class WalkthroughViewer {
     const exposure = this.manifest.rendering?.exposure;
     return typeof exposure === "number" && Number.isFinite(exposure)
       ? THREE.MathUtils.clamp(exposure, 0.1, 4)
-      : 1.05;
+      : 0.82;
   }
 
   async start(): Promise<void> {
@@ -301,6 +301,7 @@ export class WalkthroughViewer {
     this.configureInteractions();
     this.options.onReady?.();
     this.animate();
+    this.preWarmNavGrid();
   }
 
   destroy(): void {
@@ -799,6 +800,13 @@ export class WalkthroughViewer {
     this.environmentTexture = this.pmremGenerator.fromEquirectangular(skyEquirect).texture;
     skyEquirect.dispose();
     this.scene.environment = this.environmentTexture;
+    // Reduce IBL contribution — full-intensity sky IBL washes out interior textures
+    this.scene.environmentIntensity = environment?.iblIntensity ?? 0.45;
+
+    // Hemisphere light gives warm-from-above / cool-from-below depth without full GI
+    const hemiLight = new THREE.HemisphereLight(0xfff3e0, 0x7a6a58, 0.85);
+    hemiLight.name = "environment_hemi";
+    this.scene.add(hemiLight);
 
     if (environment?.skyBackdropEnabled !== false) {
       this.addSkyBackdrop();
@@ -1273,8 +1281,9 @@ export class WalkthroughViewer {
       materialName.includes("transparent");
     const looksLikeWindow = meshName.includes("window") || materialName.includes("window");
 
-    if ("envMapIntensity" in material && typeof material.envMapIntensity === "number") {
-      material.envMapIntensity = material.envMapIntensity || 1.15;
+    if ("envMapIntensity" in material && typeof material.envMapIntensity === "number" && material.envMapIntensity === 0) {
+      // Only restore if explicitly zeroed — don't override GLB's intended IBL contribution
+      material.envMapIntensity = 0.5;
     }
 
     if ("roughness" in material && typeof material.roughness === "number") {
@@ -1289,25 +1298,21 @@ export class WalkthroughViewer {
       material.transparent && "opacity" in material && typeof material.opacity === "number" && material.opacity < 0.99;
 
     if (looksLikeGlass) {
-      // Apply glass look: semi-transparent with controlled reflectivity
-      material.transparent = true;
-      material.depthWrite = false;
+      // Always apply glassy roughness (smooth, reflective surface)
       if ("roughness" in material && typeof (material as THREE.MeshStandardMaterial).roughness === "number") {
         (material as THREE.MeshStandardMaterial).roughness = Math.min(
           (material as THREE.MeshStandardMaterial).roughness,
-          0.08
+          0.06
         );
       }
-      if ("opacity" in material && typeof material.opacity === "number") {
-        if (isAlreadyTransparent) {
-          material.opacity = THREE.MathUtils.clamp(material.opacity, 0.1, 0.45);
-        } else {
-          // Opaque glass from GLB — make it look like architectural glass (30% opacity, smooth)
-          material.opacity = 0.28;
-        }
-      }
-      if ("envMapIntensity" in material) {
-        (material as THREE.MeshStandardMaterial).envMapIntensity = 0.7;
+      if (isAlreadyTransparent) {
+        // Glass the artist explicitly made transparent — respect it, clamp to visible range
+        material.opacity = THREE.MathUtils.clamp(material.opacity, 0.1, 0.45);
+        material.depthWrite = false;
+      } else {
+        // Opaque glass from GLB — keep it opaque but make it reflective (avoids depth-sort artifacts)
+        material.transparent = false;
+        material.opacity = 1;
       }
     } else if (
       looksLikeWindow &&
@@ -3183,6 +3188,75 @@ export class WalkthroughViewer {
     };
   }
 
+  private computeNavCellAt(wx: number, wz: number, probeY: number, floorSampleMaxDelta: number): GridRouteCell | undefined {
+    const point = this.navigationProbePosition(new THREE.Vector3(wx, probeY, wz));
+    const floorY = this.sampleGeometryFloorY(point, { maxDelta: floorSampleMaxDelta });
+    if (typeof floorY === "number") {
+      point.y = floorY + this.cameraHeight;
+    }
+    const hasExplicitWalkZones = this.walkZoneMeshes.length > 0;
+    const onDetectedFloor = !hasExplicitWalkZones && typeof floorY === "number";
+    return (hasExplicitWalkZones || onDetectedFloor) && !this.navigationFailureDetail(point)
+      ? {
+          point,
+          clearance: this.navigationClearanceAtPosition(point),
+          onPassZone: this.isInsidePassZone(point),
+          ...(typeof floorY === "number" ? { floorY } : {})
+        }
+      : undefined;
+  }
+
+  private preWarmNavGrid(): void {
+    if (!this.minBounds || !this.maxBounds) return;
+    const baseStep = Math.max(0.24, this.collisionBodyRadius() * 0.9);
+    if (this.navCellBaseStep !== baseStep) {
+      this.navCellPersistentCache.clear();
+      this.navCellBaseStep = baseStep;
+    }
+    const maxStepUp = this.controls.maxStepUp ?? this.maxStepUp;
+    const maxStepDown = this.controls.maxStepDown ?? this.maxStepDown;
+    const floorDelta = Math.max(maxStepDown, maxStepUp, this.cameraHeight * 0.5);
+    const probeY = this.camera.position.y;
+    const minX = this.minBounds.x;
+    const maxX = this.maxBounds.x;
+    const minZ = this.minBounds.z;
+    const maxZ = this.maxBounds.z;
+
+    const positions: [number, number][] = [];
+    for (let wx = minX; wx <= maxX + 0.001; wx += baseStep) {
+      for (let wz = minZ; wz <= maxZ + 0.001; wz += baseStep) {
+        const wKey = `${Math.round(wx / baseStep)}:${Math.round(wz / baseStep)}`;
+        if (!this.navCellPersistentCache.has(wKey)) {
+          positions.push([wx, wz]);
+        }
+      }
+    }
+    if (positions.length === 0) return;
+
+    let index = 0;
+    const batchSize = 50;
+    const processBatch = () => {
+      if (this.destroyed) return;
+      const end = Math.min(index + batchSize, positions.length);
+      for (; index < end; index++) {
+        const entry = positions[index];
+        if (!entry) continue;
+        const [wx, wz] = entry;
+        const wKey = `${Math.round(wx / baseStep)}:${Math.round(wz / baseStep)}`;
+        if (!this.navCellPersistentCache.has(wKey)) {
+          this.navCellPersistentCache.set(wKey, this.computeNavCellAt(wx, wz, probeY, floorDelta));
+        }
+      }
+      if (index < positions.length) {
+        window.requestAnimationFrame(processBatch);
+      }
+    };
+
+    window.setTimeout(() => {
+      if (!this.destroyed) window.requestAnimationFrame(processBatch);
+    }, 800);
+  }
+
   private findGridNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
     const flatDistance = Math.hypot(target.x - origin.x, target.z - origin.z);
     const hasRouteSurface = this.walkZoneMeshes.length > 0 || this.geometryFloorMeshes.length > 0;
@@ -3228,24 +3302,6 @@ export class WalkthroughViewer {
     const worldKeyFor = (wx: number, wz: number) =>
       `${Math.round(wx / baseStep)}:${Math.round(wz / baseStep)}`;
 
-    const computeCell = (wx: number, wz: number, probeY: number): GridRouteCell | undefined => {
-      const point = this.navigationProbePosition(new THREE.Vector3(wx, probeY, wz));
-      const floorY = this.sampleGeometryFloorY(point, { maxDelta: floorSampleMaxDelta });
-      if (typeof floorY === "number") {
-        point.y = floorY + this.cameraHeight;
-      }
-      const hasExplicitWalkZones = this.walkZoneMeshes.length > 0;
-      const onDetectedFloor = !hasExplicitWalkZones && typeof floorY === "number";
-      return (hasExplicitWalkZones || onDetectedFloor) && !this.navigationFailureDetail(point)
-        ? {
-            point,
-            clearance: this.navigationClearanceAtPosition(point),
-            onPassZone: this.isInsidePassZone(point),
-            ...(typeof floorY === "number" ? { floorY } : {})
-          }
-        : undefined;
-    };
-
     const cellFor = (x: number, z: number): GridRouteCell | undefined => {
       if (x < 0 || z < 0 || x >= columns || z >= rows) {
         return undefined;
@@ -3256,7 +3312,7 @@ export class WalkthroughViewer {
       if (this.navCellPersistentCache.has(wKey)) {
         return this.navCellPersistentCache.get(wKey);
       }
-      const cell = computeCell(wx, wz, target.y);
+      const cell = this.computeNavCellAt(wx, wz, target.y, floorSampleMaxDelta);
       this.navCellPersistentCache.set(wKey, cell);
       return cell;
     };
