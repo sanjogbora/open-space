@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
+  Aperture,
   Box,
   Check,
   Copy,
@@ -4137,6 +4138,7 @@ function App() {
   const [applyOptimizedImmediately, setApplyOptimizedImmediately] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
+  const [pendingCaptureViewId, setPendingCaptureViewId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!navigationRepairDraft) {
@@ -7016,6 +7018,27 @@ function App() {
       views: current.views.map((view) => (view.id === viewId ? updater(view) : view))
     }));
   };
+
+  useEffect(() => {
+    if (!pendingCaptureViewId) return;
+    const captureId = pendingCaptureViewId;
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type !== "camera-pose") return;
+      const pos = event.data.position as unknown;
+      const tgt = event.data.target as unknown;
+      if (Array.isArray(pos) && pos.length === 3 && Array.isArray(tgt) && tgt.length === 3) {
+        updateView(captureId, (view) => ({
+          ...view,
+          position: pos as [number, number, number],
+          target: tgt as [number, number, number]
+        }));
+      }
+      setPendingCaptureViewId(null);
+    };
+    window.addEventListener("message", handleMessage);
+    previewIframeRef.current?.contentWindow?.postMessage({ type: "get-camera" }, "*");
+    return () => window.removeEventListener("message", handleMessage);
+  }, [pendingCaptureViewId]);
 
   const updateRoom = (roomId: string, updater: (room: RoomDefinition) => RoomDefinition) => {
     updateManifest((current) => ({
@@ -11805,6 +11828,16 @@ function App() {
                 <div className="panel-heading">
                   <MapPin size={18} aria-hidden="true" />
                   <h2>{selectedView.label}</h2>
+                  {showPreview && (
+                    <button
+                      type="button"
+                      className={pendingCaptureViewId === selectedView.id ? "icon-action active" : "icon-action"}
+                      title="Capture camera from preview"
+                      onClick={() => setPendingCaptureViewId(selectedView.id)}
+                    >
+                      <Aperture size={15} aria-hidden="true" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={manifest.defaultViewId === selectedView.id ? "icon-action active" : "icon-action"}

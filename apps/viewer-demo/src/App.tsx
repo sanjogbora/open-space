@@ -307,13 +307,19 @@ function App() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type !== "manifest-preview") return;
-      try {
-        const parsed = parseSceneManifest(event.data.manifest as unknown);
-        const resolved = resolveManifestAssets(parsed, manifestUrl);
-        setManifest(resolved);
-      } catch {
-        // ignore malformed manifest messages
+      if (event.data?.type === "manifest-preview") {
+        try {
+          const parsed = parseSceneManifest(event.data.manifest as unknown);
+          const resolved = resolveManifestAssets(parsed, manifestUrl);
+          setManifest(resolved);
+        } catch {
+          // ignore malformed manifest messages
+        }
+      } else if (event.data?.type === "get-camera") {
+        const pose = viewerRef.current?.getCameraPose();
+        if (pose && event.source) {
+          (event.source as Window).postMessage({ type: "camera-pose", ...pose }, "*");
+        }
       }
     };
     window.addEventListener("message", handleMessage);
