@@ -1280,19 +1280,37 @@ export class WalkthroughViewer {
       material.metalness = THREE.MathUtils.clamp(material.metalness, 0, 1);
     }
 
+    const isAlreadyTransparent =
+      material.transparent && "opacity" in material && typeof material.opacity === "number" && material.opacity < 0.99;
+
     if (looksLikeGlass && "opacity" in material && typeof material.opacity === "number") {
-      material.transparent = true;
-      material.opacity = Math.min(material.opacity, 0.48);
+      if (isAlreadyTransparent) {
+        // Respect GLB transparency but keep glass visible and physically plausible
+        material.opacity = THREE.MathUtils.clamp(material.opacity, 0.1, 0.45);
+        material.depthWrite = false;
+      } else {
+        // Opaque glass from GLB — leave it opaque; just boost reflectivity
+        material.transparent = false;
+        material.opacity = 1;
+        if ("envMapIntensity" in material) {
+          (material as THREE.MeshStandardMaterial).envMapIntensity = 1.8;
+        }
+      }
     } else if (
       looksLikeWindow &&
       material.transparent &&
       "opacity" in material &&
-      typeof material.opacity === "number"
+      typeof material.opacity === "number" &&
+      material.opacity < 0.99
     ) {
-      material.opacity = Math.min(material.opacity, 0.68);
-    }
-
-    if (material.transparent || ("opacity" in material && typeof material.opacity === "number" && material.opacity < 1)) {
+      material.opacity = THREE.MathUtils.clamp(material.opacity, 0.1, 0.68);
+      material.depthWrite = false;
+    } else if (
+      material.transparent &&
+      "opacity" in material &&
+      typeof material.opacity === "number" &&
+      material.opacity < 1
+    ) {
       material.depthWrite = false;
     }
   }
