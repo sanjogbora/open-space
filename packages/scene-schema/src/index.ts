@@ -210,6 +210,7 @@ export interface SceneManifest {
   environment?: EnvironmentConfig;
   rooms?: readonly RoomDefinition[];
   views: readonly SceneView[];
+  defaultViewId?: string;
   autoTour?: boolean;
   autoTourInterval?: number;
   cameraVolumes?: readonly CameraVolume[];

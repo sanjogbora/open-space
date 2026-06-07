@@ -257,6 +257,7 @@ button {
   display: grid;
   gap: 4px;
   flex: 1;
+  align-content: start;
 }
 
 .project-row span {
@@ -2079,6 +2080,16 @@ input[type="range"]:focus {
   border-color: #f5a9a9;
 }
 
+.icon-action.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
+}
+
+.icon-action.active:hover {
+  background: color-mix(in srgb, var(--accent) 22%, var(--bg-surface));
+}
+
 .list-row {
   width: 100%;
   min-height: 54px;
@@ -3048,6 +3059,7 @@ button.list-row:hover {
   max-width: 220px;
   text-align: right;
   line-height: 1.35;
+  word-break: break-word;
 }
 
 .optimization-action-controls {

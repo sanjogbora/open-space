@@ -1795,7 +1795,12 @@ export class WalkthroughViewer {
   }
 
   private applyInitialCamera(): void {
-    const firstView = this.manifest.views[0];
+    const defaultId = this.manifest.defaultViewId;
+    const walkViews = this.manifest.views.filter((v) => v.kind === "walk" || !v.kind);
+    const firstView =
+      (defaultId ? this.manifest.views.find((v) => v.id === defaultId) : undefined) ??
+      walkViews[0] ??
+      this.manifest.views[0];
     if (firstView) {
       this.activeView = firstView;
       this.camera.position.copy(this.toSceneVector(firstView.position, { preserveMeterY: true }));

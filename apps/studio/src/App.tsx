@@ -11807,6 +11807,21 @@ function App() {
                   <h2>{selectedView.label}</h2>
                   <button
                     type="button"
+                    className={manifest.defaultViewId === selectedView.id ? "icon-action active" : "icon-action"}
+                    title={manifest.defaultViewId === selectedView.id ? "Default spawn (click to unset)" : "Set as default spawn view"}
+                    onClick={() => {
+                      const nextId = manifest.defaultViewId === selectedView.id ? undefined : selectedView.id;
+                      updateManifest((m) => {
+                        if (nextId) return { ...m, defaultViewId: nextId };
+                        const { defaultViewId: _removed, ...rest } = m;
+                        return rest as SceneManifest;
+                      });
+                    }}
+                  >
+                    <Play size={15} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
                     className="icon-action danger"
                     title="Delete view"
                     onClick={() => removeView(selectedView.id)}
