@@ -183,7 +183,6 @@ export class WalkthroughViewer {
   // Persistent nav-cell cache — survives multiple pathfind calls in same scene session
   private navCellPersistentCache = new Map<string, GridRouteCell | undefined>();
   private navCellBaseStep = 0;
-  private wallSegmentCache = new Map<string, boolean>();
   private sceneRoot: THREE.Object3D | undefined;
   private frameId = 0;
   private destroyed = false;
@@ -589,7 +588,6 @@ export class WalkthroughViewer {
       this.walkableMeshes = this.collectWalkableMeshes(root);
     }
     this.collisionBlockers = [...this.collectCollisionBlockers(root), ...zones.blockers];
-    this.wallSegmentCache.clear();
     this.rebuildCollisionDebugHelpers();
   }
 
@@ -2637,36 +2635,6 @@ export class WalkthroughViewer {
       : undefined;
   }
 
-  private wallRaycastBlocksSegment(origin: THREE.Vector3, target: THREE.Vector3): boolean {
-    const dx = target.x - origin.x;
-    const dz = target.z - origin.z;
-    const flatDist = Math.sqrt(dx * dx + dz * dz);
-    if (flatDist < 0.01) return false;
-    // Cache by quantized coords (0.1m precision) — each unique edge is raycasted only once
-    const q = 10;
-    const key = `${Math.round(origin.x * q)}:${Math.round(origin.z * q)}-${Math.round(target.x * q)}:${Math.round(target.z * q)}`;
-    if (this.wallSegmentCache.has(key)) {
-      return this.wallSegmentCache.get(key)!;
-    }
-    const dir = new THREE.Vector3(dx / flatDist, 0, dz / flatDist);
-    const bodyRadius = this.collisionBodyRadius();
-    // Ray at body-center height, skip near-origin hits (avoid self-surface)
-    const from = new THREE.Vector3(origin.x, origin.y - this.cameraHeight * 0.4, origin.z);
-    const rc = new THREE.Raycaster(from, dir, bodyRadius * 0.3, flatDist + bodyRadius);
-    const hits = rc.intersectObjects(this.walkableMeshes, true);
-    const normalMatrix = new THREE.Matrix3();
-    const blocked = hits.some((hit) => {
-      if (!hit.face) return false;
-      const n = hit.face.normal.clone()
-        .applyMatrix3(normalMatrix.getNormalMatrix(hit.object.matrixWorld))
-        .normalize();
-      if (Math.abs(n.y) >= 0.5) return false; // floor/ceiling face — skip
-      return n.dot(dir) < -0.05; // wall faces us (front-face hit)
-    });
-    this.wallSegmentCache.set(key, blocked);
-    return blocked;
-  }
-
   private navigationSegmentBlocker(
     origin: THREE.Vector3,
     target: THREE.Vector3,
@@ -2809,13 +2777,23 @@ export class WalkthroughViewer {
     }
   }
 
-  private findNavigationRoute(target: THREE.Vector3, origin: THREE.Vector3): THREE.Vector3[] | undefined {
+  private findNavigationRoute(
+    target: THREE.Vector3,
+    origin: THREE.Vector3,
+    options: { gridOnly?: boolean } = {}
+  ): THREE.Vector3[] | undefined {
     this.routeSearchFailureDetail = undefined;
-    const zoneRoute = this.findZoneNavigationRoute(target, origin);
-    const route =
-      (zoneRoute && this.navigationRouteSegmentsPass(zoneRoute, origin) ? zoneRoute : undefined) ??
-      this.findVisibilityNavigationRoute(target, origin) ??
-      this.findGridNavigationRoute(target, origin);
+    // Grid A* (cached cells, box-only edges) is the primary router: ~0.2ms and reliable.
+    // The old visibility-graph route was an O(N²) floor-sweep that spiked to 6+ SECONDS on
+    // some targets (many route-mesh nodes), so it is no longer used. The authored-zone
+    // route is kept as a cheap fallback. Recovery passes gridOnly to skip even that.
+    let route = this.findGridNavigationRoute(target, origin);
+    if (!route && !options.gridOnly) {
+      const zoneRoute = this.findZoneNavigationRoute(target, origin);
+      if (zoneRoute && this.navigationRouteSegmentsPass(zoneRoute, origin)) {
+        route = zoneRoute;
+      }
+    }
     return route ? this.smoothNavigationRoute(route, origin) ?? route : undefined;
   }
 
@@ -3459,11 +3437,19 @@ export class WalkthroughViewer {
         if (floorDelta > maxStepUp || floorDelta < -maxStepDown) {
           continue;
         }
-        // Use single-step check — adjacent cells already have correct floor Y from cache;
-        // re-raycasting the floor at intermediate points is redundant and very expensive.
-        const failure = this.navigationFailureDetail(nextCell.point, currentCell.point);
-        if (failure) {
-          this.rememberRouteFailureDetail(failure);
+        // Both cells are already fully validated by computeNavCellAt (walk-zone / floor /
+        // blocker checks, cached). The edge only needs a cheap box-only segment test to
+        // confirm no collision blocker sits between them. Calling navigationFailureDetail
+        // here re-ran per-endpoint geometry RAYCASTS (canStandOnGeometryFloor etc.) for
+        // every edge — a failing search did ~100k raycasts and froze for 7+ seconds.
+        const sweptBlocker = this.navigationSegmentBlocker(currentCell.point, nextCell.point);
+        if (sweptBlocker) {
+          this.rememberRouteFailureDetail({
+            reason: "blocked-collision",
+            blockerName: sweptBlocker.name,
+            blockerKind: sweptBlocker.kind,
+            point: nextCell.point.clone()
+          });
           continue;
         }
         const nextKey = keyFor(nextX, nextZ);
@@ -4105,39 +4091,8 @@ export class WalkthroughViewer {
       );
       return true;
     }
-    // Final guard: the box/floor checks passed, but a merged wall mesh (no box blocker)
-    // could still cross the straight line. One raycast here is cheap; if it hits a wall,
-    // route around it via A* instead of walking through.
-    if (this.wallRaycastBlocksSegment(this.camera.position, nextTarget)) {
-      const navigationRoute = this.findNavigationRoute(nextTarget, this.camera.position);
-      if (navigationRoute && !this.routeCrossesWall(this.camera.position, navigationRoute)) {
-        this.startClickRoute(navigationRoute, floorHit.point);
-        return true;
-      }
-      this.emitNavigationFailure(
-        "blocked-collision",
-        event,
-        nextTarget,
-        sourceObjectName,
-        "geometry-wall",
-        "inferred",
-        nextTarget
-      );
-      return true;
-    }
     this.startClickMove(nextTarget, floorHit.point);
     return true;
-  }
-
-  private routeCrossesWall(origin: THREE.Vector3, route: readonly THREE.Vector3[]): boolean {
-    let previous = origin;
-    for (const waypoint of route) {
-      if (this.wallRaycastBlocksSegment(previous, waypoint)) {
-        return true;
-      }
-      previous = waypoint;
-    }
-    return false;
   }
 
   private startClickMove(target: THREE.Vector3, markerPoint: THREE.Vector3): void {
@@ -4246,10 +4201,31 @@ export class WalkthroughViewer {
     origin: THREE.Vector3
   ): RecoveredNavigationTarget | undefined {
     const candidates = this.nearbyNavigationCandidates(target);
+    // Candidates are sorted by distance to the clicked point. Running a full A* search
+    // for every candidate (~129 of them) is what caused multi-second click freezes, so
+    // cap the expensive deep evaluation (floor sweep + A*) to the closest few. The cheap
+    // box-only direct check runs for all of them to skip obviously-invalid candidates.
+    let deepBudget = 6;
     for (const candidate of candidates) {
-      const reachable = this.reachableNavigationTargetForCandidate(candidate, origin);
-      if (reachable) {
-        return reachable;
+      const directFailure = this.navigationFailureDetail(candidate, origin);
+      if (directFailure && directFailure.reason !== "blocked-collision" && directFailure.reason !== "blocked-step") {
+        // Outside bounds / outside walk zone — routing around it won't help, skip cheaply.
+        continue;
+      }
+      if (deepBudget <= 0) {
+        // Already deep-checked the closest candidates; the rest are farther — stop.
+        break;
+      }
+      deepBudget -= 1;
+      if (!directFailure) {
+        // Box/bounds/zone all clear on the straight line — confirm with one floor sweep.
+        if (!this.navigationRouteFailureDetail(candidate, origin)) {
+          return { target: candidate };
+        }
+      }
+      const route = this.findNavigationRoute(candidate, origin, { gridOnly: true });
+      if (route) {
+        return { target: candidate, route };
       }
     }
     return undefined;
@@ -4266,7 +4242,7 @@ export class WalkthroughViewer {
       return undefined;
     }
 
-    for (const fraction of [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42, 0.34, 0.26, 0.18]) {
+    for (const fraction of [0.82, 0.62, 0.42, 0.22]) {
       const candidate = origin.clone().add(flatDelta.clone().multiplyScalar(fraction));
       candidate.y = target.y;
       const floorY = this.sampleGeometryFloorY(candidate, {
@@ -4294,7 +4270,7 @@ export class WalkthroughViewer {
     const directFailure = this.navigationFailureDetail(candidate, origin);
     if (directFailure) {
       if (directFailure.reason === "blocked-collision" || directFailure.reason === "blocked-step") {
-        const route = this.findNavigationRoute(candidate, origin);
+        const route = this.findNavigationRoute(candidate, origin, { gridOnly: true });
         if (route) {
           return { target: candidate, route };
         }
@@ -4304,7 +4280,7 @@ export class WalkthroughViewer {
     if (!this.navigationRouteFailureDetail(candidate, origin)) {
       return { target: candidate };
     }
-    const route = this.findNavigationRoute(candidate, origin);
+    const route = this.findNavigationRoute(candidate, origin, { gridOnly: true });
     return route ? { target: candidate, route } : undefined;
   }
 
