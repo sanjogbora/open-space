@@ -180,6 +180,9 @@ export class WalkthroughViewer {
   private walkZoneMeshes: THREE.Mesh[] = [];
   private passZoneMeshes: THREE.Mesh[] = [];
   private generatedWalkZonesOnly = false;
+  // Persistent nav-cell cache — survives multiple pathfind calls in same scene session
+  private navCellPersistentCache = new Map<string, GridRouteCell | undefined>();
+  private navCellBaseStep = 0;
   private sceneRoot: THREE.Object3D | undefined;
   private frameId = 0;
   private destroyed = false;
@@ -565,6 +568,8 @@ export class WalkthroughViewer {
     root: THREE.Object3D,
     fallbackFloors: THREE.Object3D[] = []
   ): void {
+    this.navCellPersistentCache.clear();
+    this.navCellBaseStep = 0;
     const zones = this.createNavigationZones();
     this.walkZoneMeshes = zones.walkMeshes;
     this.passZoneMeshes = zones.passMeshes;
@@ -1283,18 +1288,26 @@ export class WalkthroughViewer {
     const isAlreadyTransparent =
       material.transparent && "opacity" in material && typeof material.opacity === "number" && material.opacity < 0.99;
 
-    if (looksLikeGlass && "opacity" in material && typeof material.opacity === "number") {
-      if (isAlreadyTransparent) {
-        // Respect GLB transparency but keep glass visible and physically plausible
-        material.opacity = THREE.MathUtils.clamp(material.opacity, 0.1, 0.45);
-        material.depthWrite = false;
-      } else {
-        // Opaque glass from GLB — leave it opaque; just boost reflectivity
-        material.transparent = false;
-        material.opacity = 1;
-        if ("envMapIntensity" in material) {
-          (material as THREE.MeshStandardMaterial).envMapIntensity = 1.8;
+    if (looksLikeGlass) {
+      // Apply glass look: semi-transparent with controlled reflectivity
+      material.transparent = true;
+      material.depthWrite = false;
+      if ("roughness" in material && typeof (material as THREE.MeshStandardMaterial).roughness === "number") {
+        (material as THREE.MeshStandardMaterial).roughness = Math.min(
+          (material as THREE.MeshStandardMaterial).roughness,
+          0.08
+        );
+      }
+      if ("opacity" in material && typeof material.opacity === "number") {
+        if (isAlreadyTransparent) {
+          material.opacity = THREE.MathUtils.clamp(material.opacity, 0.1, 0.45);
+        } else {
+          // Opaque glass from GLB — make it look like architectural glass (30% opacity, smooth)
+          material.opacity = 0.28;
         }
+      }
+      if ("envMapIntensity" in material) {
+        (material as THREE.MeshStandardMaterial).envMapIntensity = 0.7;
       }
     } else if (
       looksLikeWindow &&
@@ -3205,25 +3218,25 @@ export class WalkthroughViewer {
     const maxStepDown = this.controls.maxStepDown ?? this.maxStepDown;
     const floorSampleMaxDelta = Math.max(maxStepDown, maxStepUp, this.cameraHeight * 0.5);
     const keyFor = (x: number, z: number) => `${x}:${z}`;
-    const pointFor = (x: number, z: number) =>
-      this.navigationProbePosition(new THREE.Vector3(minX + x * step, target.y, minZ + z * step));
-    const cellCache = new Map<string, GridRouteCell | undefined>();
-    const cellFor = (x: number, z: number): GridRouteCell | undefined => {
-      if (x < 0 || z < 0 || x >= columns || z >= rows) {
-        return undefined;
-      }
-      const key = keyFor(x, z);
-      if (cellCache.has(key)) {
-        return cellCache.get(key);
-      }
-      const point = pointFor(x, z);
+
+    // Persistent world-coordinate cell cache: each position is raycasted only once per scene load
+    const baseStep = Math.max(0.24, this.collisionBodyRadius() * 0.9);
+    if (this.navCellBaseStep !== baseStep) {
+      this.navCellPersistentCache.clear();
+      this.navCellBaseStep = baseStep;
+    }
+    const worldKeyFor = (wx: number, wz: number) =>
+      `${Math.round(wx / baseStep)}:${Math.round(wz / baseStep)}`;
+
+    const computeCell = (wx: number, wz: number, probeY: number): GridRouteCell | undefined => {
+      const point = this.navigationProbePosition(new THREE.Vector3(wx, probeY, wz));
       const floorY = this.sampleGeometryFloorY(point, { maxDelta: floorSampleMaxDelta });
       if (typeof floorY === "number") {
         point.y = floorY + this.cameraHeight;
       }
       const hasExplicitWalkZones = this.walkZoneMeshes.length > 0;
       const onDetectedFloor = !hasExplicitWalkZones && typeof floorY === "number";
-      const cell: GridRouteCell | undefined = (hasExplicitWalkZones || onDetectedFloor) && !this.navigationFailureDetail(point)
+      return (hasExplicitWalkZones || onDetectedFloor) && !this.navigationFailureDetail(point)
         ? {
             point,
             clearance: this.navigationClearanceAtPosition(point),
@@ -3231,7 +3244,20 @@ export class WalkthroughViewer {
             ...(typeof floorY === "number" ? { floorY } : {})
           }
         : undefined;
-      cellCache.set(key, cell);
+    };
+
+    const cellFor = (x: number, z: number): GridRouteCell | undefined => {
+      if (x < 0 || z < 0 || x >= columns || z >= rows) {
+        return undefined;
+      }
+      const wx = minX + x * step;
+      const wz = minZ + z * step;
+      const wKey = worldKeyFor(wx, wz);
+      if (this.navCellPersistentCache.has(wKey)) {
+        return this.navCellPersistentCache.get(wKey);
+      }
+      const cell = computeCell(wx, wz, target.y);
+      this.navCellPersistentCache.set(wKey, cell);
       return cell;
     };
     const isPassable = (x: number, z: number): boolean => {
