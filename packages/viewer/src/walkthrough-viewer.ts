@@ -3314,17 +3314,11 @@ export class WalkthroughViewer {
     let maxX = Math.min(globalMaxX, Math.max(origin.x, target.x) + margin);
     let minZ = Math.max(globalMinZ, Math.min(origin.z, target.z) - margin);
     let maxZ = Math.min(globalMaxZ, Math.max(origin.z, target.z) + margin);
-    let step = Math.max(0.24, this.collisionBodyRadius() * 0.9);
-    let columns = Math.max(2, Math.ceil((maxX - minX) / step) + 1);
-    let rows = Math.max(2, Math.ceil((maxZ - minZ) / step) + 1);
-    const maxCells = 4000;
-
-    if (columns * rows > maxCells) {
-      step = Math.sqrt(((maxX - minX) * (maxZ - minZ)) / maxCells);
-      step = THREE.MathUtils.clamp(step, 0.32, 0.85);
-      columns = Math.max(2, Math.ceil((maxX - minX) / step) + 1);
-      rows = Math.max(2, Math.ceil((maxZ - minZ) / step) + 1);
-    }
+    // Fixed step = baseStep so pathfinding grid aligns with preWarmNavGrid cache keys
+    const step = Math.max(0.24, this.collisionBodyRadius() * 0.9);
+    const columns = Math.max(2, Math.ceil((maxX - minX) / step) + 1);
+    const rows = Math.max(2, Math.ceil((maxZ - minZ) / step) + 1);
+    const maxAStarIterations = 6000;
 
     maxX = minX + (columns - 1) * step;
     maxZ = minZ + (rows - 1) * step;
@@ -3335,14 +3329,13 @@ export class WalkthroughViewer {
     const keyFor = (x: number, z: number) => `${x}:${z}`;
     const pointFor = (x: number, z: number) => new THREE.Vector3(minX + x * step, target.y, minZ + z * step);
 
-    // Persistent world-coordinate cell cache: each position is raycasted only once per scene load
-    const baseStep = Math.max(0.24, this.collisionBodyRadius() * 0.9);
-    if (this.navCellBaseStep !== baseStep) {
+    // Persistent world-coordinate cell cache
+    if (this.navCellBaseStep !== step) {
       this.navCellPersistentCache.clear();
-      this.navCellBaseStep = baseStep;
+      this.navCellBaseStep = step;
     }
     const worldKeyFor = (wx: number, wz: number) =>
-      `${Math.round(wx / baseStep)}:${Math.round(wz / baseStep)}`;
+      `${Math.round(wx / step)}:${Math.round(wz / step)}`;
 
     const cellFor = (x: number, z: number): GridRouteCell | undefined => {
       if (x < 0 || z < 0 || x >= columns || z >= rows) {
@@ -3440,7 +3433,7 @@ export class WalkthroughViewer {
     let goalKey: string | undefined;
     let iterations = 0;
 
-    while (heap.length > 0 && iterations < maxCells) {
+    while (heap.length > 0 && iterations < maxAStarIterations) {
       iterations += 1;
       const currentKey = heapPop();
       if (!currentKey) {
@@ -3474,7 +3467,9 @@ export class WalkthroughViewer {
         if (floorDelta > maxStepUp || floorDelta < -maxStepDown) {
           continue;
         }
-        const failure = this.navigationRouteFailureDetail(nextCell.point, currentCell.point);
+        // Use single-step check — adjacent cells already have correct floor Y from cache;
+        // re-raycasting the floor at intermediate points is redundant and very expensive.
+        const failure = this.navigationFailureDetail(nextCell.point, currentCell.point);
         if (failure) {
           this.rememberRouteFailureDetail(failure);
           continue;
@@ -3533,7 +3528,7 @@ export class WalkthroughViewer {
       for (let candidateIndex = points.length - 1; candidateIndex > anchorIndex; candidateIndex -= 1) {
         const candidate = points[candidateIndex];
         const anchor = points[anchorIndex];
-        if (candidate && anchor && !this.navigationRouteFailureDetail(candidate, anchor)) {
+        if (candidate && anchor && !this.navigationFailureDetail(candidate, anchor)) {
           nextIndex = candidateIndex;
           break;
         }
