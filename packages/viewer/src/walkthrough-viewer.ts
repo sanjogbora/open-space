@@ -235,6 +235,10 @@ export class WalkthroughViewer {
   private placementPickCallback: ((pick: PlacementPick | undefined) => void) | undefined;
   private composer: EffectComposer | undefined;
   private gtaoPass: GTAOPass | undefined;
+  private autoExposureTimer = 0;
+  private autoExposureRT: THREE.WebGLRenderTarget | undefined;
+  private autoExposureBuffer: Float32Array | undefined;
+  private autoExposureCurrent: number | undefined;
   private environmentTexture: THREE.Texture | undefined;
   private skyTexture: THREE.Texture | undefined;
   private groundTexture: THREE.Texture | undefined;
@@ -322,7 +326,7 @@ export class WalkthroughViewer {
     const exposure = this.manifest.rendering?.exposure;
     return typeof exposure === "number" && Number.isFinite(exposure)
       ? THREE.MathUtils.clamp(exposure, 0.1, 4)
-      : 1.0;
+      : 1.15;
   }
 
   async start(): Promise<void> {
@@ -427,6 +431,8 @@ export class WalkthroughViewer {
     this.composer?.dispose();
     this.composer = undefined;
     this.gtaoPass = undefined;
+    this.autoExposureRT?.dispose();
+    this.autoExposureRT = undefined;
     this.managedTextures.forEach((item) => item.destroy?.());
     this.materialLightMaps.forEach((texture) => texture.dispose());
     this.materialTextures.forEach((texture) => texture.dispose());
@@ -928,10 +934,9 @@ export class WalkthroughViewer {
     // Reduce IBL contribution — full-intensity sky IBL washes out interior textures
     this.scene.environmentIntensity = environment?.iblIntensity ?? 0.45;
 
-    // Hemisphere light gives warm-from-above / cool-from-below depth without full GI
-    const hemiLight = new THREE.HemisphereLight(0xfff3e0, 0x7a6a58, 0.85);
-    hemiLight.name = "environment_hemi";
-    this.scene.add(hemiLight);
+    // Ambient comes exclusively from the light rig hemisphere (buildLightRig).
+    // A second hemisphere here used to double the ambient with a dark brown
+    // underside that tinted white furniture gray-brown.
 
     if (environment?.skyBackdropEnabled !== false) {
       this.addSkyBackdrop();
@@ -2296,12 +2301,13 @@ export class WalkthroughViewer {
     const rendering = this.manifest.rendering;
     const ambientIntensity = rendering?.ambientIntensity ?? 1.0;
 
-    // 0.72 (was 0.9): a slightly weaker ambient fill lets the sun create visible
-    // direction and contrast instead of the flat, washed-out look.
+    // Strong warm ambient stands in for bounced GI in unbaked interiors — rooms the
+    // sun cannot reach would otherwise render white furniture as mid-gray. GTAO
+    // restores the contact shading that a flat ambient removes.
     const hemisphere = new THREE.HemisphereLight(
       rendering?.ambientSkyColor ?? defaultAmbientSkyColor,
       rendering?.ambientGroundColor ?? defaultAmbientGroundColor,
-      0.72 * ambientIntensity
+      1.6 * ambientIntensity
     );
     this.lightRig.add(hemisphere);
 
@@ -2473,6 +2479,16 @@ export class WalkthroughViewer {
     this.updateCameraVolumes(delta);
     this.updateDynamicPixelRatio(delta);
     this.managedTextures.forEach((item) => item.update?.(elapsed));
+    this.autoExposureTimer -= delta;
+    if (this.autoExposureTimer <= 0) {
+      this.autoExposureTimer = 0.5;
+      this.measureAutoExposure();
+    }
+    if (this.autoExposureCurrent !== undefined) {
+      // Smooth per-frame adaptation toward the last measured target.
+      this.renderer.toneMappingExposure +=
+        (this.autoExposureCurrent - this.renderer.toneMappingExposure) * Math.min(1, delta * 2.2);
+    }
     if (this.composer) {
       this.composer.render();
     } else {
@@ -2480,6 +2496,74 @@ export class WalkthroughViewer {
     }
     this.frameId = requestAnimationFrame(this.animate);
   };
+
+  /**
+   * Auto-exposure: renders the scene to a tiny linear HDR target, measures
+   * center-weighted average luminance, and adapts exposure toward a mid-gray
+   * target. This is how Shapespark keeps unbaked interiors readable — dark
+   * rooms brighten, window-facing views pull back. Disabled when the scene
+   * sets an explicit exposure or uses camera volumes.
+   */
+  private measureAutoExposure(): void {
+    if (this.manifest.rendering?.exposure !== undefined) {
+      return;
+    }
+    if (this.manifest.cameraVolumes && this.manifest.cameraVolumes.length > 0) {
+      return;
+    }
+    if (!this.sceneRoot || this.destroyed) {
+      return;
+    }
+    const width = 48;
+    const height = 27;
+    if (!this.autoExposureRT) {
+      this.autoExposureRT = new THREE.WebGLRenderTarget(width, height, {
+        type: THREE.FloatType,
+        colorSpace: THREE.LinearSRGBColorSpace,
+        depthBuffer: true
+      });
+      this.autoExposureBuffer = new Float32Array(width * height * 4);
+    }
+    const buffer = this.autoExposureBuffer;
+    if (!buffer) {
+      return;
+    }
+    try {
+      const previousTarget = this.renderer.getRenderTarget();
+      const previousShadowAutoUpdate = this.renderer.shadowMap.autoUpdate;
+      this.renderer.shadowMap.autoUpdate = false; // reuse this frame's shadow maps
+      this.renderer.setRenderTarget(this.autoExposureRT);
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.readRenderTargetPixels(this.autoExposureRT, 0, 0, width, height, buffer);
+      this.renderer.setRenderTarget(previousTarget);
+      this.renderer.shadowMap.autoUpdate = previousShadowAutoUpdate;
+      let sum = 0;
+      let weightSum = 0;
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const index = (y * width + x) * 4;
+          const luminance =
+            0.2126 * (buffer[index] ?? 0) + 0.7152 * (buffer[index + 1] ?? 0) + 0.0722 * (buffer[index + 2] ?? 0);
+          const weightX = 1 - Math.abs(x / (width - 1) - 0.5) * 1.2;
+          const weightY = 1 - Math.abs(y / (height - 1) - 0.5) * 1.2;
+          const weight = Math.max(0.15, weightX * weightY);
+          sum += Math.min(luminance, 4) * weight;
+          weightSum += weight;
+        }
+      }
+      const mean = sum / Math.max(1, weightSum);
+      const desired = THREE.MathUtils.clamp(0.5 / Math.max(0.02, mean), 0.6, 2.8);
+      this.autoExposureCurrent =
+        this.autoExposureCurrent === undefined
+          ? desired
+          : this.autoExposureCurrent + (desired - this.autoExposureCurrent) * 0.4;
+    } catch {
+      // Float readback unsupported on this device — keep the static exposure.
+      this.autoExposureCurrent = undefined;
+      this.autoExposureRT?.dispose();
+      this.autoExposureRT = undefined;
+    }
+  }
 
   /**
    * GTAO ambient occlusion grounds furniture and darkens corners — the single
@@ -2502,6 +2586,8 @@ export class WalkthroughViewer {
       composer.addPass(new RenderPass(this.scene, this.camera));
       const gtao = new GTAOPass(this.scene, this.camera, size.x, size.y);
       gtao.output = GTAOPass.OUTPUT.Default;
+      // Contact shading only — full-strength GTAO grays out midtones across the room.
+      gtao.blendIntensity = 0.65;
       composer.addPass(gtao);
       composer.addPass(new OutputPass());
       this.composer = composer;

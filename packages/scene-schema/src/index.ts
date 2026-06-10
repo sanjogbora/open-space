@@ -394,7 +394,8 @@ export const defaultSunLight: SceneLight = {
   elevation: 55
 };
 
-export const defaultAmbientSkyColor = "#f7fbff";
+/** Warm neutral: a blue-tinted ambient turned white furniture gray-blue indoors. */
+export const defaultAmbientSkyColor = "#fff8ef";
 /** Light warm gray: a dark ground bounce muddied whites (sofas, ceilings) in interiors. */
 export const defaultAmbientGroundColor = "#9b9082";
 
