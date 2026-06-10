@@ -148,6 +148,9 @@ importers:
       three:
         specifier: ^0.179.1
         version: 0.179.1
+      three-mesh-bvh:
+        specifier: ^0.9.10
+        version: 0.9.10(three@0.179.1)
     devDependencies:
       '@types/three':
         specifier: ^0.179.0
@@ -967,6 +970,11 @@ packages:
     resolution: {integrity: sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g==}
     engines: {node: '>=18'}
 
+  three-mesh-bvh@0.9.10:
+    resolution: {integrity: sha512-UOlTgPIeqUURcwaG8knxvBaruwZlC4X3/WSHEFO7rYvMVv/YNUrkfFEszvfj36pXV88dCHoHNnIp0PifkirnTQ==}
+    peerDependencies:
+      three: '>= 0.159.0'
+
   three@0.179.1:
     resolution: {integrity: sha512-5y/elSIQbrvKOISxpwXCR4sQqHtGiOI+MKLc3SsBdDXA2hz3Mdp3X59aUp8DyybMa34aeBwbFTpdoLJaUDEWSw==}
 
@@ -1782,6 +1790,10 @@ snapshots:
       ansi-regex: 6.2.2
 
   supports-color@10.2.2: {}
+
+  three-mesh-bvh@0.9.10(three@0.179.1):
+    dependencies:
+      three: 0.179.1
 
   three@0.179.1: {}
 

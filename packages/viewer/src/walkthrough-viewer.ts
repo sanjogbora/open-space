@@ -3,6 +3,13 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
+
+// BVH-accelerated raycasting: sub-millisecond raycasts on multi-million-triangle scenes.
+// Trees are built per-geometry in prepareFirstFrame() while the loading overlay is visible.
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
 import type {
   CameraVolume,
   FogConfig,
@@ -308,9 +315,94 @@ export class WalkthroughViewer {
     await Promise.all([this.loadMaterialOverrides(), this.loadObjectOverrides(), this.loadControls()]);
     await this.loadScene();
     this.configureInteractions();
+    await this.prepareFirstFrame();
     this.options.onReady?.();
     this.animate();
     this.preWarmNavGrid();
+  }
+
+  /**
+   * Moves the expensive one-time GPU and CPU work (BVH build, shader compile, texture upload)
+   * into the loading phase so the first seconds of walking are smooth instead of janky.
+   */
+  private async prepareFirstFrame(): Promise<void> {
+    if (!this.sceneRoot) {
+      return;
+    }
+    this.emitProgress({ loaded: 93, total: 100, ratio: 0.93, label: "Indexing geometry" });
+    const meshes: THREE.Mesh[] = [];
+    this.sceneRoot.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.isMesh && mesh.geometry instanceof THREE.BufferGeometry) {
+        meshes.push(mesh);
+      }
+    });
+    let sinceYield = 0;
+    for (const mesh of meshes) {
+      const geometry = mesh.geometry as THREE.BufferGeometry;
+      if (!geometry.boundsTree && geometry.attributes["position"]) {
+        try {
+          geometry.computeBoundsTree();
+        } catch {
+          // Some primitives (points/lines/degenerate) cannot be indexed; raycasts fall back to brute force.
+        }
+      }
+      sinceYield += 1;
+      if (sinceYield >= 32) {
+        sinceYield = 0;
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        if (this.destroyed) {
+          return;
+        }
+      }
+    }
+
+    this.emitProgress({ loaded: 96, total: 100, ratio: 0.96, label: "Compiling materials" });
+    try {
+      await this.renderer.compileAsync(this.scene, this.camera);
+    } catch {
+      try {
+        this.renderer.compile(this.scene, this.camera);
+      } catch {
+        // Compilation happens lazily on first render instead.
+      }
+    }
+
+    this.emitProgress({ loaded: 98, total: 100, ratio: 0.98, label: "Uploading textures" });
+    const textures = new Set<THREE.Texture>();
+    this.scene.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (!mesh.isMesh) {
+        return;
+      }
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const material of materials) {
+        if (!material) {
+          continue;
+        }
+        for (const value of Object.values(material)) {
+          if (value instanceof THREE.Texture) {
+            textures.add(value);
+          }
+        }
+      }
+    });
+    let uploaded = 0;
+    for (const texture of textures) {
+      try {
+        this.renderer.initTexture(texture);
+      } catch {
+        // Texture uploads lazily on first use instead.
+      }
+      uploaded += 1;
+      if (uploaded % 24 === 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        if (this.destroyed) {
+          return;
+        }
+      }
+    }
+    this.emitProgress({ loaded: 100, total: 100, ratio: 1, label: "Scene ready" });
   }
 
   destroy(): void {
@@ -2626,10 +2718,57 @@ export class WalkthroughViewer {
     if (!resolved || !this.canOccupyPosition(resolved, origin)) {
       return false;
     }
+    // Geometry wall check for the per-frame step only (one BVH raycast — cheap). This catches
+    // merged wall meshes whose AABB spans the whole floor plan, which box blockers cannot
+    // represent, without ever running inside the A* search like the old implementation did.
+    if (this.directMoveBlockedByWall(origin, resolved)) {
+      return false;
+    }
     this.camera.position.copy(resolved);
     this.snapCameraToFloor(delta);
     this.clampCamera();
     return true;
+  }
+
+  private readonly wallProbeRaycaster = new THREE.Raycaster();
+  private readonly wallProbeDirection = new THREE.Vector3();
+  private readonly wallProbeOrigin = new THREE.Vector3();
+  private readonly wallProbeNormal = new THREE.Vector3();
+  private readonly wallProbeNormalMatrix = new THREE.Matrix3();
+
+  private directMoveBlockedByWall(origin: THREE.Vector3, target: THREE.Vector3): boolean {
+    if (this.walkableMeshes.length === 0) {
+      return false;
+    }
+    const dx = target.x - origin.x;
+    const dz = target.z - origin.z;
+    const flatDistance = Math.hypot(dx, dz);
+    if (flatDistance < 0.0001) {
+      return false;
+    }
+    const direction = this.wallProbeDirection.set(dx / flatDistance, 0, dz / flatDistance);
+    // Probe from body-center height so baseboards and floor trims do not block movement.
+    const from = this.wallProbeOrigin.set(origin.x, origin.y - this.cameraHeight * 0.45, origin.z);
+    this.wallProbeRaycaster.set(from, direction);
+    this.wallProbeRaycaster.near = 0;
+    this.wallProbeRaycaster.far = flatDistance + this.collisionBodyRadius() * 0.85;
+    const hits = this.wallProbeRaycaster.intersectObjects(this.walkableMeshes, true);
+    for (const hit of hits) {
+      if (!hit.face) {
+        continue;
+      }
+      const normal = this.wallProbeNormal
+        .copy(hit.face.normal)
+        .applyMatrix3(this.wallProbeNormalMatrix.getNormalMatrix(hit.object.matrixWorld))
+        .normalize();
+      if (Math.abs(normal.y) >= 0.5) {
+        continue; // floor or ceiling face
+      }
+      if (normal.dot(direction) < -0.05) {
+        return true; // wall facing the camera within this step
+      }
+    }
+    return false;
   }
 
   private resolveSteppedMovementPosition(
@@ -3412,12 +3551,15 @@ export class WalkthroughViewer {
     if (positions.length === 0) return;
 
     let index = 0;
-    const batchSize = 50;
+    // Time-budgeted batches: never spend more than ~5ms per frame so prewarm cannot
+    // cause visible hitching during the first seconds of walking.
+    const frameBudgetMs = 5;
     const processBatch = () => {
       if (this.destroyed) return;
-      const end = Math.min(index + batchSize, positions.length);
-      for (; index < end; index++) {
+      const startedAt = performance.now();
+      while (index < positions.length && performance.now() - startedAt < frameBudgetMs) {
         const entry = positions[index];
+        index += 1;
         if (!entry) continue;
         const [wx, wz] = entry;
         const wKey = `${Math.round(wx / baseStep)}:${Math.round(wz / baseStep)}`;
