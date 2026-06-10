@@ -320,6 +320,8 @@ function App() {
         if (pose && event.source) {
           (event.source as Window).postMessage({ type: "camera-pose", ...pose }, "*");
         }
+      } else if (event.data?.type === "set-lightmaps") {
+        viewerRef.current?.setLightmapsEnabled(event.data.enabled !== false);
       }
     };
     window.addEventListener("message", handleMessage);

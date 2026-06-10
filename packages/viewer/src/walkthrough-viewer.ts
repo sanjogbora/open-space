@@ -218,6 +218,7 @@ export class WalkthroughViewer {
     azimuth: number | undefined;
     elevation: number | undefined;
   }> = [];
+  private lightmapsEnabled = true;
   private environmentTexture: THREE.Texture | undefined;
   private skyTexture: THREE.Texture | undefined;
   private groundTexture: THREE.Texture | undefined;
@@ -2058,6 +2059,41 @@ export class WalkthroughViewer {
       return;
     }
     this.buildLightRig();
+  }
+
+  /** Toggles baked lightmaps on all scene materials for before/after comparison in the editor. */
+  setLightmapsEnabled(enabled: boolean): void {
+    if (this.lightmapsEnabled === enabled) {
+      return;
+    }
+    this.lightmapsEnabled = enabled;
+    if (!this.sceneRoot) {
+      return;
+    }
+    this.sceneRoot.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (!mesh.isMesh) {
+        return;
+      }
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const material of materials) {
+        if (!(material instanceof THREE.MeshStandardMaterial)) {
+          continue;
+        }
+        if (enabled) {
+          const stashed = material.userData["lightMapDisabled"] as THREE.Texture | undefined;
+          if (stashed) {
+            material.lightMap = stashed;
+            delete material.userData["lightMapDisabled"];
+            material.needsUpdate = true;
+          }
+        } else if (material.lightMap) {
+          material.userData["lightMapDisabled"] = material.lightMap;
+          material.lightMap = null;
+          material.needsUpdate = true;
+        }
+      }
+    });
   }
 
   /** Rebuilds the light rig from the current manifest and refits it to the loaded scene. */

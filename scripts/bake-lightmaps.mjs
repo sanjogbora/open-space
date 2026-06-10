@@ -133,6 +133,20 @@ margin = int(config["margin"])
 bake_mode = config.get("bakeMode", "lighting")
 max_materials = int(config.get("maxMaterials", 160))
 denoise = bool(config.get("denoise", True))
+authored_lights = config.get("lights")
+
+def hex_to_linear(value):
+    value = (value or "#ffffff").lstrip("#")
+    if len(value) != 6:
+        value = "ffffff"
+    def channel(part):
+        c = int(part, 16) / 255.0
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    return (channel(value[0:2]), channel(value[2:4]), channel(value[4:6]))
+
+def gltf_to_blender(vec):
+    # glTF/three.js are Y-up; Blender is Z-up. Matches the glTF importer's conversion.
+    return mathutils.Vector((float(vec[0]), -float(vec[2]), float(vec[1])))
 
 def clean_name(value):
     value = re.sub(r"[^A-Za-z0-9_.-]+", "-", value or "material").strip("-")
@@ -207,7 +221,65 @@ for obj in meshes:
     bpy.ops.object.mode_set(mode="OBJECT")
 
 write_stage("setup-bake")
-if not any(obj.type == "LIGHT" for obj in bpy.context.scene.objects):
+if authored_lights is not None:
+    # Recreate the lights authored in the studio so the bake matches the runtime preview.
+    # Energy scale factors map three.js intensities to plausible Cycles watt values.
+    for index, spec in enumerate(authored_lights):
+        kind = spec.get("kind")
+        name = spec.get("label") or f"Walkthrough Light {index + 1}"
+        color = hex_to_linear(spec.get("color"))
+        if kind == "sun":
+            data = bpy.data.lights.new(name, type="SUN")
+            data.energy = float(spec.get("intensity", 2.2)) * 1.6
+            data.color = color
+            data.angle = math.radians(0.53)
+            obj = bpy.data.objects.new(name, data)
+            bpy.context.collection.objects.link(obj)
+            azimuth = math.radians(float(spec.get("azimuth", 320)))
+            elevation = math.radians(max(1.0, min(90.0, float(spec.get("elevation", 55)))))
+            horizontal = math.cos(elevation)
+            toward_sun = mathutils.Vector((
+                math.sin(azimuth) * horizontal,
+                math.sin(elevation),
+                math.cos(azimuth) * horizontal
+            ))
+            beam = -gltf_to_blender(toward_sun)
+            obj.location = -beam * 50.0
+            obj.rotation_euler = beam.to_track_quat("-Z", "Y").to_euler()
+        elif kind == "point":
+            data = bpy.data.lights.new(name, type="POINT")
+            data.energy = float(spec.get("intensity", 20)) * 3.0
+            data.color = color
+            data.shadow_soft_size = 0.1
+            distance = float(spec.get("distance") or 0)
+            if distance > 0:
+                data.use_custom_distance = True
+                data.cutoff_distance = distance
+            obj = bpy.data.objects.new(name, data)
+            bpy.context.collection.objects.link(obj)
+            obj.location = gltf_to_blender(spec.get("position") or [0, 2, 0])
+        elif kind == "spot":
+            data = bpy.data.lights.new(name, type="SPOT")
+            data.energy = float(spec.get("intensity", 40)) * 3.0
+            data.color = color
+            data.spot_size = math.radians(max(1.0, min(180.0, float(spec.get("angle", 60)))))
+            data.spot_blend = max(0.0, min(1.0, float(spec.get("penumbra", 0.25))))
+            data.shadow_soft_size = 0.05
+            distance = float(spec.get("distance") or 0)
+            if distance > 0:
+                data.use_custom_distance = True
+                data.cutoff_distance = distance
+            obj = bpy.data.objects.new(name, data)
+            bpy.context.collection.objects.link(obj)
+            pos_g = spec.get("position") or [0, 2.5, 0]
+            tgt_g = spec.get("target") or [pos_g[0], pos_g[1] - 1.0, pos_g[2]]
+            position = gltf_to_blender(pos_g)
+            aim = gltf_to_blender(tgt_g) - position
+            if aim.length < 1e-6:
+                aim = mathutils.Vector((0.0, 0.0, -1.0))
+            obj.location = position
+            obj.rotation_euler = aim.to_track_quat("-Z", "Y").to_euler()
+elif not any(obj.type == "LIGHT" for obj in bpy.context.scene.objects):
     light_data = bpy.data.lights.new("Walkthrough Bake Area", type="AREA")
     light_data.energy = 450
     light_data.size = 5
@@ -328,6 +400,11 @@ if (!(await fileExists(sourcePath))) {
   throw new Error(`Scene source not found: ${sceneUrl}`);
 }
 
+// Authored studio lights drive the bake; null keeps the legacy auto area-light fallback.
+const authoredLights = Array.isArray(manifest.lights)
+  ? manifest.lights.filter((light) => light && light.enabled !== false)
+  : null;
+
 const startedJob = {
   schemaVersion: "0.1",
   id,
@@ -371,7 +448,8 @@ await writeFile(
       margin,
       bakeMode,
       denoise,
-      maxMaterials
+      maxMaterials,
+      lights: authoredLights
     },
     null,
     2
@@ -489,10 +567,11 @@ try {
     bakeMode,
     denoise,
     preset,
+    authoredLightCount: authoredLights?.length ?? null,
     steps: [
       step("detect-blender", "Detect Blender renderer", "completed", `Using ${blenderCommand}`),
       step("unwrap-uv2", "Create secondary lightmap UVs", "completed", "Generated Lightmap UVs with Blender smart projection."),
-      step("bake-cycles", "Bake indirect lighting and shadows", "completed", `${samples} Cycles samples with automatic 256-${resolution}px ${bakeMode} lightmaps; ${denoise ? "denoise on" : "denoise off"}; max ${maxMaterials} materials.`),
+      step("bake-cycles", "Bake indirect lighting and shadows", "completed", `${samples} Cycles samples with automatic 256-${resolution}px ${bakeMode} lightmaps; ${denoise ? "denoise on" : "denoise off"}; max ${maxMaterials} materials; ${authoredLights ? `${authoredLights.length} authored light(s)` : "auto fallback lighting"}.`),
       step("assign-lightmaps", "Assign generated lightmaps to materials", "completed", "Updated materials.json and scene manifest.")
     ]
   };

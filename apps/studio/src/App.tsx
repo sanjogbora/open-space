@@ -4145,6 +4145,7 @@ function App() {
     useState<OptimizationJobDocument["profile"]>("balanced");
   const [applyOptimizedImmediately, setApplyOptimizedImmediately] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [lightmapPreview, setLightmapPreview] = useState(true);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
   const [pendingCaptureViewId, setPendingCaptureViewId] = useState<string | null>(null);
 
@@ -16931,6 +16932,22 @@ function App() {
                 Up to 4 point/spot lights can cast real-time shadows; extra shadow casters are drawn without shadows.
                 For many lamps, keep shadows off here and bake lightmaps instead.
               </p>
+              <div className="toggle-grid" style={{ marginBottom: 12 }}>
+                <label className="toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={lightmapPreview}
+                    onChange={(event) => {
+                      setLightmapPreview(event.target.checked);
+                      previewIframeRef.current?.contentWindow?.postMessage(
+                        { type: "set-lightmaps", enabled: event.target.checked },
+                        "*"
+                      );
+                    }}
+                  />
+                  <span>Show baked lightmaps in live preview</span>
+                </label>
+              </div>
               {(manifest.lights ?? [defaultSunLight]).map((light) => (
                 <div key={light.id} className="panel" style={{ marginBottom: 10 }}>
                   <div className="panel-heading" style={{ marginBottom: 10 }}>
