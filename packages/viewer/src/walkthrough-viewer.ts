@@ -377,6 +377,9 @@ export class WalkthroughViewer {
       }
     }
 
+    this.emitProgress({ loaded: 95, total: 100, ratio: 0.95, label: "Capturing reflections" });
+    this.captureInteriorProbe();
+
     this.emitProgress({ loaded: 96, total: 100, ratio: 0.96, label: "Compiling materials" });
     try {
       await this.renderer.compileAsync(this.scene, this.camera);
@@ -1436,8 +1439,9 @@ export class WalkthroughViewer {
         );
       }
       if (isAlreadyTransparent) {
-        // Glass the artist explicitly made transparent — respect it, clamp to visible range
-        material.opacity = THREE.MathUtils.clamp(material.opacity, 0.1, 0.45);
+        // Glass the artist explicitly made transparent — keep it close to clear.
+        // A higher floor/ceiling put a milky veil over picture frames and windows.
+        material.opacity = THREE.MathUtils.clamp(material.opacity, 0.04, 0.28);
         material.depthWrite = false;
       } else {
         // Opaque glass from GLB — keep it opaque but make it reflective (avoids depth-sort artifacts)
@@ -1451,7 +1455,7 @@ export class WalkthroughViewer {
       typeof material.opacity === "number" &&
       material.opacity < 0.99
     ) {
-      material.opacity = THREE.MathUtils.clamp(material.opacity, 0.1, 0.68);
+      material.opacity = THREE.MathUtils.clamp(material.opacity, 0.04, 0.5);
       material.depthWrite = false;
     } else if (
       material.transparent &&
@@ -2256,6 +2260,48 @@ export class WalkthroughViewer {
     this.buildLightRig();
     if (this.sceneRoot) {
       this.fitLightingToScene(this.sceneRoot);
+      this.captureInteriorProbe();
+    }
+  }
+
+  /**
+   * Replaces the procedural-sky environment map with a cubemap captured from
+   * inside the loaded scene (a Shapespark-style reflection probe). Without it,
+   * every surface reflects a bright blue-white sky — dark picture frames turn
+   * gray and a Fresnel haze washes over walls and art at grazing angles.
+   */
+  private captureInteriorProbe(): void {
+    if (!this.sceneRoot || this.destroyed) {
+      return;
+    }
+    try {
+      // Anchor inside the walkable interior — view positions can sit outside the
+      // building, which would capture lawn/sky instead of the rooms.
+      const navBounds = this.manifest.navigation.bounds;
+      const position = navBounds
+        ? new THREE.Vector3(
+            ((navBounds.min[0] + navBounds.max[0]) / 2) * this.manifestScale,
+            navBounds.min[1] * this.manifestScale + this.cameraHeight,
+            ((navBounds.min[2] + navBounds.max[2]) / 2) * this.manifestScale
+          )
+        : new THREE.Box3().setFromObject(this.sceneRoot).getCenter(new THREE.Vector3());
+      const probeTarget = new THREE.WebGLCubeRenderTarget(128, { type: THREE.HalfFloatType });
+      const cubeCamera = new THREE.CubeCamera(0.1, 500, probeTarget);
+      cubeCamera.position.copy(position);
+      this.scene.add(cubeCamera);
+      const previousShadowAutoUpdate = this.renderer.shadowMap.autoUpdate;
+      this.renderer.shadowMap.autoUpdate = false;
+      cubeCamera.update(this.renderer, this.scene);
+      this.renderer.shadowMap.autoUpdate = previousShadowAutoUpdate;
+      this.scene.remove(cubeCamera);
+      this.pmremGenerator = this.pmremGenerator ?? new THREE.PMREMGenerator(this.renderer);
+      const probeEnvironment = this.pmremGenerator.fromCubemap(probeTarget.texture).texture;
+      this.environmentTexture?.dispose();
+      this.environmentTexture = probeEnvironment;
+      this.scene.environment = probeEnvironment;
+      probeTarget.dispose();
+    } catch {
+      // Keep the sky environment if the probe capture fails.
     }
   }
 
@@ -2552,7 +2598,7 @@ export class WalkthroughViewer {
         }
       }
       const mean = sum / Math.max(1, weightSum);
-      const desired = THREE.MathUtils.clamp(0.5 / Math.max(0.02, mean), 0.6, 2.8);
+      const desired = THREE.MathUtils.clamp(0.4 / Math.max(0.02, mean), 0.6, 2.2);
       this.autoExposureCurrent =
         this.autoExposureCurrent === undefined
           ? desired

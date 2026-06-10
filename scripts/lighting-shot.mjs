@@ -33,6 +33,28 @@ try {
     await viewButton.click().catch(() => {});
     await page.waitForTimeout(7000);
   }
+  const dragX = Number(process.env.SHOT_DRAG_X ?? 0);
+  const walkMs = Number(process.env.SHOT_WALK_MS ?? 0);
+  const walkKey = process.env.SHOT_WALK_KEY ?? "KeyS";
+  if (dragX !== 0) {
+    const canvas = page.locator("canvas").first();
+    const box = await canvas.boundingBox();
+    if (box) {
+      const cx = box.x + box.width / 2;
+      const cy = box.y + box.height / 2;
+      await page.mouse.move(cx, cy);
+      await page.mouse.down();
+      await page.mouse.move(cx + dragX, cy, { steps: 20 });
+      await page.mouse.up();
+      await page.waitForTimeout(700);
+    }
+  }
+  if (walkMs > 0) {
+    await page.keyboard.down(walkKey);
+    await page.waitForTimeout(walkMs);
+    await page.keyboard.up(walkKey);
+    await page.waitForTimeout(900);
+  }
   await mkdir(outputDir, { recursive: true });
   const file = path.join(outputDir, `${outName}.png`);
   await writeFile(file, await page.screenshot({ fullPage: false }));
