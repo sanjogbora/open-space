@@ -19,6 +19,8 @@ import {
   RotateCcw,
   Save,
   Settings2,
+  Sun,
+  Lightbulb,
   Trash2,
   UploadCloud,
   Wrench,
@@ -32,6 +34,10 @@ import {
   pointToPolygonDistance2D,
   polygonDistance2D,
   parseSceneManifest,
+  defaultSunLight,
+  defaultAmbientSkyColor,
+  defaultAmbientGroundColor,
+  type SceneLight,
   type HotspotInteraction,
   type LinkInteraction,
   type MaterialOverride,
@@ -65,6 +71,7 @@ type StudioTab =
   | "variants"
   | "objects"
   | "controls"
+  | "lighting"
   | "environment"
   | "bundle";
 type Notice = "saved" | "copied" | "reset" | null;
@@ -835,6 +842,7 @@ const studioTabIds: readonly StudioTab[] = [
   "variants",
   "objects",
   "controls",
+  "lighting",
   "environment",
   "bundle"
 ];
@@ -7313,6 +7321,65 @@ function App() {
     }));
   };
 
+  // Scenes without authored lights run the viewer's built-in sun; materialize it on first edit
+  // so the lighting panel starts from what the user already sees.
+  const updateLights = (updater: (lights: readonly SceneLight[]) => readonly SceneLight[]) => {
+    updateManifest((current) => ({
+      ...current,
+      lights: updater(current.lights ?? [{ ...defaultSunLight }])
+    }));
+  };
+
+  const updateLight = (lightId: string, updater: (light: SceneLight) => SceneLight) => {
+    updateLights((lights) => lights.map((light) => (light.id === lightId ? updater(light) : light)));
+  };
+
+  const addLight = (kind: SceneLight["kind"]) => {
+    const bounds = manifest?.navigation.bounds;
+    const cx = bounds ? (bounds.min[0] + bounds.max[0]) / 2 : 0;
+    const cz = bounds ? (bounds.min[2] + bounds.max[2]) / 2 : 0;
+    const floorY = bounds ? bounds.min[1] : 0;
+    updateLights((lights) => {
+      const count = lights.filter((light) => light.kind === kind).length + 1;
+      if (kind === "sun") {
+        return [...lights, { ...defaultSunLight, id: `light-${Date.now()}`, label: count > 1 ? `Sun ${count}` : "Sun" }];
+      }
+      if (kind === "point") {
+        return [
+          ...lights,
+          {
+            id: `light-${Date.now()}`,
+            label: `Point light ${count}`,
+            kind: "point" as const,
+            color: "#fff4e0",
+            intensity: 20,
+            position: [cx, floorY + 2.2, cz] as Vec3,
+            distance: 0,
+            decay: 2,
+            castShadow: false
+          }
+        ];
+      }
+      return [
+        ...lights,
+        {
+          id: `light-${Date.now()}`,
+          label: `Spot light ${count}`,
+          kind: "spot" as const,
+          color: "#fff4e0",
+          intensity: 40,
+          position: [cx, floorY + 2.5, cz] as Vec3,
+          target: [cx, floorY, cz] as Vec3,
+          angle: 60,
+          penumbra: 0.25,
+          distance: 0,
+          decay: 2,
+          castShadow: false
+        }
+      ];
+    });
+  };
+
   const navigationBoundsFromGraph = (): SceneManifest["navigation"]["bounds"] | undefined => {
     if (!sceneGraph) {
       return undefined;
@@ -10177,6 +10244,7 @@ function App() {
             null,
             ["materials", "Materials"],
             ["variants", "Variants"],
+            ["lighting", "Lighting"],
             ["environment", "Environment"],
             null,
             ["interactions", "Interactions"],
@@ -16753,6 +16821,283 @@ function App() {
               <details className="json-details">
                 <summary>Show raw controls JSON</summary>
                 <pre className="json-preview">{JSON.stringify(controlsDoc, null, 2)}</pre>
+              </details>
+            </div>
+          </section>
+        )}
+
+        {selectedTab === "lighting" && (
+          <section className="content-grid">
+            <div className="panel">
+              <div className="panel-heading">
+                <Sun size={18} aria-hidden="true" />
+                <h2>Ambient & Global</h2>
+              </div>
+              <VisualGuideCard
+                title="Scene lighting"
+                detail="Ambient fills the whole scene; the sun and added lights create direction and shadows. Bake lightmaps afterwards for realistic indirect light."
+                steps={[
+                  "Set ambient intensity first so the darkest areas are readable.",
+                  "Aim the sun with azimuth and elevation until window light falls where you want it.",
+                  "Add point or spot lights for lamps and accents, then bake lightmaps from the Optimization tab."
+                ]}
+              />
+              <div className="field-grid">
+                <NumberField
+                  label="Ambient intensity"
+                  min={0}
+                  max={4}
+                  step={0.05}
+                  value={manifest.rendering?.ambientIntensity ?? 1}
+                  onChange={(value) =>
+                    updateRendering((rendering) => ({
+                      ...rendering,
+                      ambientIntensity: value
+                    }))
+                  }
+                />
+                <NumberField
+                  label="Reflection (IBL) intensity"
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  value={manifest.environment?.iblIntensity ?? 0.45}
+                  onChange={(value) =>
+                    updateEnvironment((environment) => ({
+                      ...environment,
+                      iblIntensity: value
+                    }))
+                  }
+                />
+                {(
+                  [
+                    ["Ambient sky color", "ambientSkyColor", defaultAmbientSkyColor],
+                    ["Ambient ground color", "ambientGroundColor", defaultAmbientGroundColor]
+                  ] as ["Ambient sky color" | "Ambient ground color", "ambientSkyColor" | "ambientGroundColor", string][]
+                ).map(([label, key, defaultValue]) => {
+                  const currentValue = manifest.rendering?.[key] ?? defaultValue;
+                  return (
+                    <label key={key}>
+                      <span>{label}</span>
+                      <div className="color-control">
+                        <input
+                          type="color"
+                          value={currentValue.length === 7 ? currentValue : defaultValue}
+                          onChange={(event) =>
+                            updateRendering((rendering) => ({
+                              ...rendering,
+                              [key]: event.target.value
+                            }))
+                          }
+                        />
+                        <input
+                          value={currentValue}
+                          onChange={(event) =>
+                            updateRendering((rendering) => ({
+                              ...rendering,
+                              [key]: event.target.value
+                            }))
+                          }
+                        />
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="quiet-note" style={{ marginTop: 10 }}>
+                Tone mapping and exposure live in the Controls tab. Per-area exposure zones are in Environment → Camera Volumes.
+              </p>
+            </div>
+            <div className="panel">
+              <div className="panel-heading">
+                <Lightbulb size={18} aria-hidden="true" />
+                <h2>Lights</h2>
+                <div className="visual-guide-actions">
+                  <button type="button" className="button secondary compact-button" onClick={() => addLight("sun")}>
+                    <Sun size={14} aria-hidden="true" />
+                    Add sun
+                  </button>
+                  <button type="button" className="button secondary compact-button" onClick={() => addLight("point")}>
+                    <Plus size={14} aria-hidden="true" />
+                    Point
+                  </button>
+                  <button type="button" className="button secondary compact-button" onClick={() => addLight("spot")}>
+                    <Plus size={14} aria-hidden="true" />
+                    Spot
+                  </button>
+                </div>
+              </div>
+              <p className="quiet-note" style={{ marginBottom: 12 }}>
+                Up to 4 point/spot lights can cast real-time shadows; extra shadow casters are drawn without shadows.
+                For many lamps, keep shadows off here and bake lightmaps instead.
+              </p>
+              {(manifest.lights ?? [defaultSunLight]).map((light) => (
+                <div key={light.id} className="panel" style={{ marginBottom: 10 }}>
+                  <div className="panel-heading" style={{ marginBottom: 10 }}>
+                    {light.kind === "sun" ? (
+                      <Sun size={16} aria-hidden="true" />
+                    ) : (
+                      <Lightbulb size={16} aria-hidden="true" />
+                    )}
+                    <h2>{light.label || light.id}</h2>
+                    <button
+                      type="button"
+                      className="icon-action danger"
+                      title="Delete light"
+                      onClick={() => updateLights((lights) => lights.filter((item) => item.id !== light.id))}
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
+                  </div>
+                  <div className="toggle-grid">
+                    <label className="toggle-row">
+                      <input
+                        type="checkbox"
+                        checked={light.enabled ?? true}
+                        onChange={(event) =>
+                          updateLight(light.id, (current) => ({ ...current, enabled: event.target.checked }))
+                        }
+                      />
+                      <span>Enabled</span>
+                    </label>
+                    <label className="toggle-row">
+                      <input
+                        type="checkbox"
+                        checked={light.castShadow ?? light.kind === "sun"}
+                        onChange={(event) =>
+                          updateLight(light.id, (current) => ({ ...current, castShadow: event.target.checked }))
+                        }
+                      />
+                      <span>Cast shadows</span>
+                    </label>
+                  </div>
+                  <div className="field-grid">
+                    <label>
+                      <span>Label</span>
+                      <input
+                        value={light.label ?? ""}
+                        onChange={(event) =>
+                          updateLight(light.id, (current) => ({ ...current, label: event.target.value }))
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Color</span>
+                      <div className="color-control">
+                        <input
+                          type="color"
+                          value={(light.color ?? "#ffffff").length === 7 ? light.color ?? "#ffffff" : "#ffffff"}
+                          onChange={(event) =>
+                            updateLight(light.id, (current) => ({ ...current, color: event.target.value }))
+                          }
+                        />
+                        <input
+                          value={light.color ?? "#ffffff"}
+                          onChange={(event) =>
+                            updateLight(light.id, (current) => ({ ...current, color: event.target.value }))
+                          }
+                        />
+                      </div>
+                    </label>
+                    <NumberField
+                      label="Intensity"
+                      min={0}
+                      max={light.kind === "sun" ? 8 : 200}
+                      step={light.kind === "sun" ? 0.05 : 1}
+                      value={light.intensity ?? (light.kind === "sun" ? 2.2 : light.kind === "point" ? 20 : 40)}
+                      onChange={(value) => updateLight(light.id, (current) => ({ ...current, intensity: value }))}
+                    />
+                    {light.kind === "sun" && (
+                      <>
+                        <NumberField
+                          label="Azimuth (deg)"
+                          min={0}
+                          max={360}
+                          step={1}
+                          value={light.azimuth ?? 320}
+                          onChange={(value) => updateLight(light.id, (current) => ({ ...current, azimuth: value }))}
+                        />
+                        <NumberField
+                          label="Elevation (deg)"
+                          min={1}
+                          max={90}
+                          step={1}
+                          value={light.elevation ?? 55}
+                          onChange={(value) => updateLight(light.id, (current) => ({ ...current, elevation: value }))}
+                        />
+                      </>
+                    )}
+                    {light.kind !== "sun" && (
+                      <>
+                        <NumberField
+                          label="Range (m, 0 = unlimited)"
+                          min={0}
+                          max={100}
+                          step={0.5}
+                          value={light.distance ?? 0}
+                          onChange={(value) => updateLight(light.id, (current) => ({ ...current, distance: value }))}
+                        />
+                        <NumberField
+                          label="Decay"
+                          min={0}
+                          max={4}
+                          step={0.1}
+                          value={light.decay ?? 2}
+                          onChange={(value) => updateLight(light.id, (current) => ({ ...current, decay: value }))}
+                        />
+                      </>
+                    )}
+                    {light.kind === "spot" && (
+                      <>
+                        <NumberField
+                          label="Cone angle (deg)"
+                          min={1}
+                          max={180}
+                          step={1}
+                          value={light.angle ?? 60}
+                          onChange={(value) => updateLight(light.id, (current) => ({ ...current, angle: value }))}
+                        />
+                        <NumberField
+                          label="Penumbra"
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={light.penumbra ?? 0.25}
+                          onChange={(value) => updateLight(light.id, (current) => ({ ...current, penumbra: value }))}
+                        />
+                      </>
+                    )}
+                  </div>
+                  {light.kind !== "sun" && (
+                    <VectorEditor
+                      label="Position"
+                      value={light.position ?? [0, 2, 0]}
+                      onChange={(next) => updateLight(light.id, (current) => ({ ...current, position: next }))}
+                    />
+                  )}
+                  {light.kind === "spot" && (
+                    <VectorEditor
+                      label="Aim at"
+                      value={light.target ?? [0, 0, 0]}
+                      onChange={(next) => updateLight(light.id, (current) => ({ ...current, target: next }))}
+                    />
+                  )}
+                </div>
+              ))}
+              {(manifest.lights ?? [defaultSunLight]).length === 0 && (
+                <p className="empty-list">No lights. The scene is lit by ambient light only — add a sun to restore direct light.</p>
+              )}
+            </div>
+            <div className="panel">
+              <div className="panel-heading">
+                <FileJson size={18} aria-hidden="true" />
+                <h2>lighting</h2>
+              </div>
+              <details className="json-details">
+                <summary>Show technical lighting JSON</summary>
+                <pre className="json-preview">
+                  {JSON.stringify({ lights: manifest.lights ?? null, rendering: manifest.rendering ?? {} }, null, 2)}
+                </pre>
               </details>
             </div>
           </section>
