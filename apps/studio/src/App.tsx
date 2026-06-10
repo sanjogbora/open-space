@@ -4144,7 +4144,9 @@ function App() {
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
   const [applyOptimizedImmediately, setApplyOptimizedImmediately] = useState(true);
-  const [showPreview, setShowPreview] = useState(false);
+  // Open by default: the live 3D view beside the controls is the core editing
+  // experience (Shapespark-style), not an optional extra.
+  const [showPreview, setShowPreview] = useState(true);
   const [lightmapPreview, setLightmapPreview] = useState(true);
   const [placingLight, setPlacingLight] = useState<{ lightId: string; field: "position" | "target" } | null>(null);
   const [roomDrawMode, setRoomDrawMode] = useState(false);
@@ -16200,16 +16202,20 @@ function App() {
                         <label>
                           <span>Tone Mapping</span>
                           <select
-                            value={manifest.rendering?.toneMapping ?? "aces"}
+                            value={manifest.rendering?.toneMapping ?? "neutral"}
                             onChange={(event) => {
-                              const toneMapping = event.target.value as "none" | "linear" | "reinhard" | "cineon" | "aces";
+                              const toneMapping = event.target.value as NonNullable<
+                                NonNullable<SceneManifest["rendering"]>["toneMapping"]
+                              >;
                               updateRendering((rendering) => ({
                                 ...rendering,
                                 toneMapping
                               }));
                             }}
                           >
+                            <option value="neutral">Neutral (true colors)</option>
                             <option value="aces">ACES cinematic</option>
+                            <option value="agx">AgX filmic</option>
                             <option value="linear">Linear match</option>
                             <option value="reinhard">Reinhard soft</option>
                             <option value="cineon">Cineon filmic</option>
@@ -20594,7 +20600,7 @@ function ViewerQaChecklist({
   const hiddenTopViewObjectCount = objects?.objects.filter((object) => object.hideInTopView).length ?? 0;
   const navigationRoleObjectCount =
     objects?.objects.filter((object) => object.navigationBehavior && object.navigationBehavior !== "default").length ?? 0;
-  const toneMappingLabel = manifest.rendering?.toneMapping ?? "aces";
+  const toneMappingLabel = manifest.rendering?.toneMapping ?? "neutral";
   const exposureLabel = (manifest.rendering?.exposure ?? 1.05).toFixed(2);
   const videoTextureCount = manifest.interactions.filter((interaction) => interaction.kind === "video-texture").length;
   const hotspotCount = manifest.interactions.filter((interaction) => interaction.kind === "hotspot").length;

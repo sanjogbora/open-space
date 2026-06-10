@@ -141,7 +141,7 @@ export interface QualityProfile {
   antialias: boolean;
 }
 
-export type ToneMappingMode = "none" | "linear" | "reinhard" | "cineon" | "aces";
+export type ToneMappingMode = "none" | "linear" | "reinhard" | "cineon" | "aces" | "neutral" | "agx";
 
 export interface RenderingConfig {
   doubleSidedMaterials?: boolean;
@@ -153,6 +153,8 @@ export interface RenderingConfig {
   modelOffset?: Vec3;
   toneMapping?: ToneMappingMode;
   exposure?: number;
+  /** Screen-space ambient occlusion (GTAO). Defaults to on for non-mobile quality profiles. */
+  ssao?: boolean;
 }
 
 export type SceneLightKind = "sun" | "point" | "spot";
@@ -602,7 +604,10 @@ export function isRenderingConfig(value: unknown): value is RenderingConfig {
       value["toneMapping"] === "linear" ||
       value["toneMapping"] === "reinhard" ||
       value["toneMapping"] === "cineon" ||
-      value["toneMapping"] === "aces") &&
+      value["toneMapping"] === "aces" ||
+      value["toneMapping"] === "neutral" ||
+      value["toneMapping"] === "agx") &&
+    (value["ssao"] === undefined || typeof value["ssao"] === "boolean") &&
     (value["exposure"] === undefined ||
       (typeof value["exposure"] === "number" &&
         Number.isFinite(value["exposure"]) &&

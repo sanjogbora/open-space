@@ -3,6 +3,10 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 
 // BVH-accelerated raycasting: sub-millisecond raycasts on multi-million-triangle scenes.
@@ -229,6 +233,8 @@ export class WalkthroughViewer {
   private lightmapsEnabled = true;
   private lightMarkersVisible = false;
   private placementPickCallback: ((pick: PlacementPick | undefined) => void) | undefined;
+  private composer: EffectComposer | undefined;
+  private gtaoPass: GTAOPass | undefined;
   private environmentTexture: THREE.Texture | undefined;
   private skyTexture: THREE.Texture | undefined;
   private groundTexture: THREE.Texture | undefined;
@@ -301,8 +307,14 @@ export class WalkthroughViewer {
       case "cineon":
         return THREE.CineonToneMapping;
       case "aces":
-      default:
         return THREE.ACESFilmicToneMapping;
+      case "agx":
+        return THREE.AgXToneMapping;
+      case "neutral":
+      default:
+        // Khronos PBR Neutral: keeps texture colors true instead of the
+        // desaturated, washed-out pastel look ACES gives bright interiors.
+        return THREE.NeutralToneMapping;
     }
   }
 
@@ -319,6 +331,7 @@ export class WalkthroughViewer {
     await this.loadScene();
     this.configureInteractions();
     await this.prepareFirstFrame();
+    this.setupPostProcessing();
     this.options.onReady?.();
     this.animate();
     this.preWarmNavGrid();
@@ -411,6 +424,9 @@ export class WalkthroughViewer {
   destroy(): void {
     this.destroyed = true;
     cancelAnimationFrame(this.frameId);
+    this.composer?.dispose();
+    this.composer = undefined;
+    this.gtaoPass = undefined;
     this.managedTextures.forEach((item) => item.destroy?.());
     this.materialLightMaps.forEach((texture) => texture.dispose());
     this.materialTextures.forEach((texture) => texture.dispose());
@@ -477,6 +493,7 @@ export class WalkthroughViewer {
     this.renderer.setPixelRatio(this.currentPixelRatio);
     this.renderer.shadowMap.enabled = selectedQuality?.shadows ?? true;
     this.resize();
+    this.setupPostProcessing();
   }
 
   setDebug(debug: boolean): void {
@@ -485,7 +502,11 @@ export class WalkthroughViewer {
   }
 
   captureScreenshot(type = "image/png", quality = 0.92): string {
-    this.renderer.render(this.scene, this.camera);
+    if (this.composer) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
     return this.renderer.domElement.toDataURL(type, quality);
   }
 
@@ -1003,7 +1024,7 @@ export class WalkthroughViewer {
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+    texture.anisotropy = Math.min(16, this.renderer.capabilities.getMaxAnisotropy());
     texture.needsUpdate = true;
     return texture;
   }
@@ -2452,9 +2473,45 @@ export class WalkthroughViewer {
     this.updateCameraVolumes(delta);
     this.updateDynamicPixelRatio(delta);
     this.managedTextures.forEach((item) => item.update?.(elapsed));
-    this.renderer.render(this.scene, this.camera);
+    if (this.composer) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
     this.frameId = requestAnimationFrame(this.animate);
   };
+
+  /**
+   * GTAO ambient occlusion grounds furniture and darkens corners — the single
+   * biggest pre-bake visual gap vs reference walkthrough tools. Mobile renders
+   * directly; any composer failure falls back to the plain render path.
+   */
+  private setupPostProcessing(): void {
+    this.composer?.dispose();
+    this.composer = undefined;
+    this.gtaoPass = undefined;
+    const ssaoEnabled = this.manifest.rendering?.ssao ?? this.quality !== "mobile";
+    if (!ssaoEnabled || !this.sceneRoot) {
+      return;
+    }
+    try {
+      const size = this.renderer.getSize(new THREE.Vector2());
+      const composer = new EffectComposer(this.renderer);
+      composer.setPixelRatio(this.currentPixelRatio);
+      composer.setSize(size.x, size.y);
+      composer.addPass(new RenderPass(this.scene, this.camera));
+      const gtao = new GTAOPass(this.scene, this.camera, size.x, size.y);
+      gtao.output = GTAOPass.OUTPUT.Default;
+      composer.addPass(gtao);
+      composer.addPass(new OutputPass());
+      this.composer = composer;
+      this.gtaoPass = gtao;
+    } catch {
+      this.composer?.dispose();
+      this.composer = undefined;
+      this.gtaoPass = undefined;
+    }
+  }
 
   private updateDynamicPixelRatio(delta: number): void {
     if (delta <= 0) return;
@@ -2477,6 +2534,7 @@ export class WalkthroughViewer {
     if (nextDpr !== this.currentPixelRatio) {
       this.currentPixelRatio = nextDpr;
       this.renderer.setPixelRatio(nextDpr);
+      this.composer?.setPixelRatio(nextDpr);
     }
   }
 
@@ -5151,6 +5209,8 @@ export class WalkthroughViewer {
     if (this.currentPixelRatio < 1) this.currentPixelRatio = maxDpr;
     this.renderer.setPixelRatio(this.currentPixelRatio);
     this.renderer.setSize(width, height, false);
+    this.composer?.setPixelRatio(this.currentPixelRatio);
+    this.composer?.setSize(width, height);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   };
