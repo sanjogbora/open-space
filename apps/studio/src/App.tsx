@@ -17982,12 +17982,24 @@ function DiagnosticList({
   diagnostics: NonNullable<BundleStats["diagnostics"]>;
   onAction?: (action: ImportNextStepAction) => void;
 }) {
+  const [showAllDiagnostics, setShowAllDiagnostics] = useState(false);
   if (diagnostics.length === 0) {
     return null;
   }
   const errorCount = diagnostics.filter((diagnostic) => diagnostic.severity === "error").length;
   const warningCount = diagnostics.filter((diagnostic) => diagnostic.severity === "warning").length;
   const infoCount = diagnostics.filter((diagnostic) => diagnostic.severity === "info").length;
+  // Show what needs action; everything else collapses behind one button so the
+  // overview reads as a short to-do list instead of a wall of cards.
+  const severityRank = { error: 0, warning: 1, info: 2 } as const;
+  const orderedDiagnostics = [...diagnostics].sort(
+    (a, b) => (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3)
+  );
+  const defaultVisibleCount = Math.max(errorCount, Math.min(errorCount + warningCount, 5));
+  const visibleDiagnostics = showAllDiagnostics
+    ? orderedDiagnostics
+    : orderedDiagnostics.slice(0, defaultVisibleCount);
+  const hiddenCount = orderedDiagnostics.length - visibleDiagnostics.length;
   const diagnosticActionGroups = [
     ...diagnostics
       .filter((diagnostic) => diagnostic.severity !== "info")
@@ -18041,7 +18053,7 @@ function DiagnosticList({
           })}
         </div>
       )}
-      {diagnostics.map((diagnostic) => {
+      {visibleDiagnostics.map((diagnostic) => {
         const action = importActionForDiagnostic(diagnostic.code);
         const actionCopy = action ? nextStepCopy(action) : undefined;
         const symptom = diagnosticVisualSymptom(diagnostic.code);
@@ -18084,6 +18096,16 @@ function DiagnosticList({
           </div>
         );
       })}
+      {hiddenCount > 0 && (
+        <button type="button" className="button secondary" onClick={() => setShowAllDiagnostics(true)}>
+          Show {hiddenCount} more check{hiddenCount === 1 ? "" : "s"}
+        </button>
+      )}
+      {showAllDiagnostics && orderedDiagnostics.length > defaultVisibleCount && (
+        <button type="button" className="button secondary" onClick={() => setShowAllDiagnostics(false)}>
+          Show fewer checks
+        </button>
+      )}
     </div>
   );
 }

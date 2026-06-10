@@ -3456,7 +3456,8 @@ function createDiagnostics(manifest, report, graphs, controls) {
 
   if (collapsedPositionBoundsPrimitiveCount > 0) {
     diagnostics.push({
-      severity: "warning",
+      // Source-export observation the user cannot act on inside Studio - keep out of the warning count.
+      severity: "info",
       code: "collapsed-position-bounds",
       title: "Collapsed mesh bounds detected",
       message: `${collapsedPositionBoundsPrimitiveCount} primitive(s) have near-zero POSITION bounds despite containing several vertices.`,
@@ -3476,7 +3477,9 @@ function createDiagnostics(manifest, report, graphs, controls) {
 
   if (missingTangentNormalMapPrimitiveCount > 0) {
     diagnostics.push({
-      severity: "warning",
+      // three.js shades normal maps without TANGENT attributes via screen-space derivatives;
+      // visually this is almost always fine, so it is informational rather than a warning.
+      severity: "info",
       code: "normal-maps-missing-tangents",
       title: "Normal-mapped surfaces are missing tangents",
       message: `${missingTangentNormalMapPrimitiveCount} primitive(s) use materials with normal maps but do not include TANGENT attributes.`,
@@ -3979,9 +3982,9 @@ function createDiagnostics(manifest, report, graphs, controls) {
   }
 
   if (ceilingMatches === 0) {
-    const likelyArchitecturalScene = floorMatches > 0 || collisionMatches > 0 || hasWalkZones || rooms.length > 0;
     diagnostics.push({
-      severity: likelyArchitecturalScene ? "warning" : "info",
+      // Naming heuristic only affects auto-hiding ceilings in top view - informational.
+      severity: "info",
       code: "no-named-ceiling-meshes",
       title: "No named ceiling or roof meshes found",
       message: "The model may be open at the top, or ceiling geometry may use generic object names.",
