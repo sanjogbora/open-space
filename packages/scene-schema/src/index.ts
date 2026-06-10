@@ -147,10 +147,37 @@ export interface RenderingConfig {
   doubleSidedMaterials?: boolean;
   relightUnlitMaterials?: boolean;
   ambientIntensity?: number;
+  ambientSkyColor?: string;
+  ambientGroundColor?: string;
   modelScale?: number;
   modelOffset?: Vec3;
   toneMapping?: ToneMappingMode;
   exposure?: number;
+}
+
+export type SceneLightKind = "sun" | "point" | "spot";
+
+export interface SceneLight {
+  id: string;
+  label?: string;
+  kind: SceneLightKind;
+  enabled?: boolean;
+  color?: string;
+  intensity?: number;
+  castShadow?: boolean;
+  /** Sun direction in degrees: azimuth 0-360 (0 = +Z, clockwise from above), elevation 0-90 above horizon. */
+  azimuth?: number;
+  elevation?: number;
+  /** Point and spot lights. */
+  position?: Vec3;
+  /** Maximum range in meters; 0 or undefined means unlimited. */
+  distance?: number;
+  decay?: number;
+  /** Spot lights only. */
+  target?: Vec3;
+  /** Cone angle in degrees (full angle). */
+  angle?: number;
+  penumbra?: number;
 }
 
 export interface FogConfig {
@@ -209,6 +236,7 @@ export interface SceneManifest {
   controlsUrl?: string;
   rendering?: RenderingConfig;
   environment?: EnvironmentConfig;
+  lights?: readonly SceneLight[];
   rooms?: readonly RoomDefinition[];
   views: readonly SceneView[];
   defaultViewId?: string;
@@ -352,6 +380,21 @@ export const defaultNavigationConfig: NavigationConfig = {
   zones: []
 };
 
+/** Matches the viewer's legacy hardcoded sun so scenes without authored lights look identical. */
+export const defaultSunLight: SceneLight = {
+  id: "sun",
+  label: "Sun",
+  kind: "sun",
+  color: "#fff6e8",
+  intensity: 2.2,
+  castShadow: true,
+  azimuth: 320,
+  elevation: 55
+};
+
+export const defaultAmbientSkyColor = "#f7fbff";
+export const defaultAmbientGroundColor = "#716550";
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -494,6 +537,56 @@ export function isQualityProfile(value: unknown): value is QualityProfile {
   );
 }
 
+export function isSceneLight(value: unknown): value is SceneLight {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const kind = value["kind"];
+  if (kind !== "sun" && kind !== "point" && kind !== "spot") {
+    return false;
+  }
+  const common =
+    typeof value["id"] === "string" &&
+    (value["label"] === undefined || typeof value["label"] === "string") &&
+    (value["enabled"] === undefined || typeof value["enabled"] === "boolean") &&
+    (value["color"] === undefined || typeof value["color"] === "string") &&
+    (value["intensity"] === undefined ||
+      (typeof value["intensity"] === "number" &&
+        Number.isFinite(value["intensity"]) &&
+        value["intensity"] >= 0)) &&
+    (value["castShadow"] === undefined || typeof value["castShadow"] === "boolean");
+  if (!common) {
+    return false;
+  }
+  if (kind === "sun") {
+    return (
+      (value["azimuth"] === undefined ||
+        (typeof value["azimuth"] === "number" && Number.isFinite(value["azimuth"]))) &&
+      (value["elevation"] === undefined ||
+        (typeof value["elevation"] === "number" && Number.isFinite(value["elevation"])))
+    );
+  }
+  const positional =
+    isVec3(value["position"]) &&
+    (value["distance"] === undefined ||
+      (typeof value["distance"] === "number" && Number.isFinite(value["distance"]) && value["distance"] >= 0)) &&
+    (value["decay"] === undefined ||
+      (typeof value["decay"] === "number" && Number.isFinite(value["decay"]) && value["decay"] >= 0));
+  if (!positional) {
+    return false;
+  }
+  if (kind === "point") {
+    return true;
+  }
+  return (
+    (value["target"] === undefined || isVec3(value["target"])) &&
+    (value["angle"] === undefined ||
+      (typeof value["angle"] === "number" && value["angle"] > 0 && value["angle"] <= 180)) &&
+    (value["penumbra"] === undefined ||
+      (typeof value["penumbra"] === "number" && value["penumbra"] >= 0 && value["penumbra"] <= 1))
+  );
+}
+
 export function isRenderingConfig(value: unknown): value is RenderingConfig {
   if (!isRecord(value)) {
     return false;
@@ -501,6 +594,8 @@ export function isRenderingConfig(value: unknown): value is RenderingConfig {
   return (
     (value["doubleSidedMaterials"] === undefined || typeof value["doubleSidedMaterials"] === "boolean") &&
     (value["relightUnlitMaterials"] === undefined || typeof value["relightUnlitMaterials"] === "boolean") &&
+    (value["ambientSkyColor"] === undefined || typeof value["ambientSkyColor"] === "string") &&
+    (value["ambientGroundColor"] === undefined || typeof value["ambientGroundColor"] === "string") &&
     (value["toneMapping"] === undefined ||
       value["toneMapping"] === "none" ||
       value["toneMapping"] === "linear" ||
@@ -576,6 +671,8 @@ export function isSceneManifest(value: unknown): value is SceneManifest {
     (value["controlsUrl"] === undefined || typeof value["controlsUrl"] === "string") &&
     (value["rendering"] === undefined || isRenderingConfig(value["rendering"])) &&
     (value["environment"] === undefined || isEnvironmentConfig(value["environment"])) &&
+    (value["lights"] === undefined ||
+      (Array.isArray(value["lights"]) && value["lights"].every(isSceneLight))) &&
     (value["rooms"] === undefined || (Array.isArray(value["rooms"]) && value["rooms"].every(isRoomDefinition))) &&
     Array.isArray(value["views"]) &&
     value["views"].every(isSceneView) &&

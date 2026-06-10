@@ -14,6 +14,16 @@ apps/viewer-demo/public/published/
 *.glb
 *.gltf
 apps/*/public/scenes/*/source/
-# Runtime job-status files (regenerated on every conversion/bake run)
+# Runtime job-status files (regenerated on every conversion/bake/optimize run)
 apps/*/public/scenes/*/conversion-job.json
 apps/*/public/scenes/*/lightmap-bake-job.json
+apps/*/public/scenes/*/optimization-job.json
+apps/*/public/scenes/*/optimization-history.json
+apps/*/public/scenes/*/.convert-model.py
+apps/*/public/scenes/*/.convert-model-config.json
+
+# Local tooling caches and agent logs
+.pnpm-store/
+.codex-logs/
+.codex-dev-logs/
+.dev-logs/
