@@ -393,7 +393,8 @@ export const defaultSunLight: SceneLight = {
 };
 
 export const defaultAmbientSkyColor = "#f7fbff";
-export const defaultAmbientGroundColor = "#716550";
+/** Light warm gray: a dark ground bounce muddied whites (sofas, ceilings) in interiors. */
+export const defaultAmbientGroundColor = "#9b9082";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

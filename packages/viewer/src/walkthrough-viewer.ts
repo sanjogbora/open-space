@@ -310,7 +310,7 @@ export class WalkthroughViewer {
     const exposure = this.manifest.rendering?.exposure;
     return typeof exposure === "number" && Number.isFinite(exposure)
       ? THREE.MathUtils.clamp(exposure, 0.1, 4)
-      : 0.82;
+      : 1.0;
   }
 
   async start(): Promise<void> {
@@ -2275,10 +2275,12 @@ export class WalkthroughViewer {
     const rendering = this.manifest.rendering;
     const ambientIntensity = rendering?.ambientIntensity ?? 1.0;
 
+    // 0.72 (was 0.9): a slightly weaker ambient fill lets the sun create visible
+    // direction and contrast instead of the flat, washed-out look.
     const hemisphere = new THREE.HemisphereLight(
       rendering?.ambientSkyColor ?? defaultAmbientSkyColor,
       rendering?.ambientGroundColor ?? defaultAmbientGroundColor,
-      0.9 * ambientIntensity
+      0.72 * ambientIntensity
     );
     this.lightRig.add(hemisphere);
 
