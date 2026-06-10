@@ -4144,9 +4144,10 @@ function App() {
   const [optimizationProfile, setOptimizationProfile] =
     useState<OptimizationJobDocument["profile"]>("balanced");
   const [applyOptimizedImmediately, setApplyOptimizedImmediately] = useState(true);
-  // Open by default: the live 3D view beside the controls is the core editing
-  // experience (Shapespark-style), not an optional extra.
-  const [showPreview, setShowPreview] = useState(true);
+  // Closed by default: the preview iframe loads the full scene, which is too
+  // heavy to pay for on every dashboard visit. Lighting/placement flows open
+  // it on demand.
+  const [showPreview, setShowPreview] = useState(false);
   const [lightmapPreview, setLightmapPreview] = useState(true);
   const [placingLight, setPlacingLight] = useState<{ lightId: string; field: "position" | "target" } | null>(null);
   const [roomDrawMode, setRoomDrawMode] = useState(false);
