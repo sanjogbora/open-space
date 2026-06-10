@@ -6667,6 +6667,42 @@ button.list-row:hover {
   touch-action: none;
 }
 
+/* Room map: drawing overlay + start-point marker */
+.room-map-draw-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.room-map-draw-rect {
+  position: absolute;
+  border: 2px dashed var(--accent);
+  border-radius: 4px;
+  background: rgba(10, 132, 255, 0.12);
+  pointer-events: none;
+}
+
+.room-map-start {
+  position: absolute;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 5px;
+  border: 1px solid #1d8a55;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #1d8a55;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(29, 138, 85, 0.4);
+}
+
 /* ============================================================================
    Calm UI pass — fixes and overrides (kept last so they win the cascade)
    1. Checkboxes: the global `input { width: 100%; height: 36px }` rule was

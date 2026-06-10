@@ -4147,6 +4147,9 @@ function App() {
   const [showPreview, setShowPreview] = useState(false);
   const [lightmapPreview, setLightmapPreview] = useState(true);
   const [placingLight, setPlacingLight] = useState<{ lightId: string; field: "position" | "target" } | null>(null);
+  const [roomDrawMode, setRoomDrawMode] = useState(false);
+  const [roomDrawWalkZone, setRoomDrawWalkZone] = useState(true);
+  const [roomDrawRect, setRoomDrawRect] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
   const [pendingCaptureViewId, setPendingCaptureViewId] = useState<string | null>(null);
 
@@ -8399,6 +8402,70 @@ function App() {
     setNotice("saved");
   };
 
+  // Drag-to-draw a room area rectangle on the 2D room map. Ratios are 0-1 across the map surface.
+  const beginRoomDraw = (roomId: string, surface: HTMLElement, event: React.PointerEvent) => {
+    const bounds = manifest?.navigation.bounds;
+    if (!bounds) {
+      return;
+    }
+    const rect = surface.getBoundingClientRect();
+    const ratioOf = (clientX: number, clientY: number) => ({
+      x: clampNumber((clientX - rect.left) / Math.max(1, rect.width), 0, 1),
+      y: clampNumber((clientY - rect.top) / Math.max(1, rect.height), 0, 1)
+    });
+    const start = ratioOf(event.clientX, event.clientY);
+    setRoomDrawRect({ x1: start.x, y1: start.y, x2: start.x, y2: start.y });
+    const handleMove = (moveEvent: PointerEvent) => {
+      const point = ratioOf(moveEvent.clientX, moveEvent.clientY);
+      setRoomDrawRect({ x1: start.x, y1: start.y, x2: point.x, y2: point.y });
+    };
+    const handleUp = (upEvent: PointerEvent) => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      setRoomDrawRect(null);
+      setRoomDrawMode(false);
+      const end = ratioOf(upEvent.clientX, upEvent.clientY);
+      if (Math.abs(end.x - start.x) < 0.02 || Math.abs(end.y - start.y) < 0.02) {
+        return; // too small to be intentional
+      }
+      const width = bounds.max[0] - bounds.min[0];
+      const depth = bounds.max[2] - bounds.min[2];
+      const worldX1 = bounds.min[0] + Math.min(start.x, end.x) * width;
+      const worldX2 = bounds.min[0] + Math.max(start.x, end.x) * width;
+      const worldZ1 = bounds.max[2] - Math.max(start.y, end.y) * depth;
+      const worldZ2 = bounds.max[2] - Math.min(start.y, end.y) * depth;
+      const room = (manifest?.rooms ?? []).find((item) => item.id === roomId);
+      const yMin = room?.bounds?.min[1] ?? bounds.min[1];
+      const yMax = room?.bounds?.max[1] ?? Math.min(bounds.max[1], yMin + 3);
+      const centerX = (worldX1 + worldX2) / 2;
+      const centerZ = (worldZ1 + worldZ2) / 2;
+      updateRoom(roomId, (current) => ({
+        ...current,
+        bounds: { min: [worldX1, yMin, worldZ1] as Vec3, max: [worldX2, yMax, worldZ2] as Vec3 },
+        center: [centerX, yMin, centerZ] as Vec3
+      }));
+      if (roomDrawWalkZone) {
+        const label = room?.label ?? "Room";
+        updateNavigation((navigation) => ({
+          ...navigation,
+          zones: [
+            ...(navigation.zones ?? []),
+            {
+              id: `zone-room-${Date.now()}`,
+              label: `${label} walk area`,
+              kind: "walk" as const,
+              center: [centerX, yMin, centerZ] as Vec3,
+              size: [worldX2 - worldX1, 2.6, worldZ2 - worldZ1] as Vec3,
+              source: "authored" as const
+            }
+          ]
+        }));
+      }
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+  };
+
   const moveRoomOnMap = (
     roomId: string,
     mapElement: HTMLElement,
@@ -12341,7 +12408,29 @@ function App() {
                   <div className="room-map">
                     <div className="room-map-heading">
                       <strong>Room map</strong>
-                      <small>Drag a room marker to set its center</small>
+                      <small>
+                        {roomDrawMode
+                          ? `Drag a rectangle to set the area for "${selectedRoom.label}"`
+                          : "Drag a room marker to set its center"}
+                      </small>
+                      <button
+                        type="button"
+                        className={roomDrawMode ? "button primary compact-button" : "button secondary compact-button"}
+                        onClick={() => setRoomDrawMode((value) => !value)}
+                      >
+                        <Box size={14} aria-hidden="true" />
+                        {roomDrawMode ? "Cancel drawing" : "Draw room area"}
+                      </button>
+                      {roomDrawMode && (
+                        <label className="toggle-row" style={{ minHeight: 30, padding: "0 8px" }}>
+                          <input
+                            type="checkbox"
+                            checked={roomDrawWalkZone}
+                            onChange={(event) => setRoomDrawWalkZone(event.target.checked)}
+                          />
+                          <span>Also add walk area</span>
+                        </label>
+                      )}
                     </div>
                     <div className="room-map-surface">
                       {rooms
@@ -12387,6 +12476,9 @@ function App() {
                           title={room.label}
                           onClick={() => setSelectedRoomId(room.id)}
                           onPointerDown={(event) => {
+                            if (roomDrawMode) {
+                              return;
+                            }
                             event.preventDefault();
                             setSelectedRoomId(room.id);
                             const mapElement = event.currentTarget.closest(".room-map-surface");
@@ -12398,6 +12490,42 @@ function App() {
                           <span>{room.label}</span>
                         </button>
                       ))}
+                      {(() => {
+                        const startView =
+                          manifest.views.find((view) => view.id === manifest.defaultViewId) ??
+                          manifest.views.find((view) => view.kind === "walk");
+                        return startView ? (
+                          <div
+                            className="room-map-start"
+                            style={pointMapStyle(startView.position, roomMapBounds)}
+                            title={`Visitors start here: ${startView.label} (change via the star button in Views)`}
+                          >
+                            <Play size={10} aria-hidden="true" />
+                            <span>Start</span>
+                          </div>
+                        ) : null;
+                      })()}
+                      {roomDrawMode && (
+                        <div
+                          className="room-map-draw-overlay"
+                          onPointerDown={(event) => {
+                            event.preventDefault();
+                            beginRoomDraw(selectedRoom.id, event.currentTarget, event);
+                          }}
+                        >
+                          {roomDrawRect && (
+                            <div
+                              className="room-map-draw-rect"
+                              style={{
+                                left: `${Math.min(roomDrawRect.x1, roomDrawRect.x2) * 100}%`,
+                                top: `${Math.min(roomDrawRect.y1, roomDrawRect.y2) * 100}%`,
+                                width: `${Math.abs(roomDrawRect.x2 - roomDrawRect.x1) * 100}%`,
+                                height: `${Math.abs(roomDrawRect.y2 - roomDrawRect.y1) * 100}%`
+                              }}
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   ))(manifest.navigation.bounds)
