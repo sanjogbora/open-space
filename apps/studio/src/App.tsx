@@ -4153,7 +4153,37 @@ function App() {
   const [roomDrawMode, setRoomDrawMode] = useState(false);
   const [roomDrawWalkZone, setRoomDrawWalkZone] = useState(true);
   const [roomDrawRect, setRoomDrawRect] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [webShare, setWebShare] = useState<{
+    slug: string;
+    shareUrl: string;
+    manifestUrl: string;
+    uploadedCount?: number;
+    uploadedBytes?: number;
+  } | null>(null);
+  const [webShareState, setWebShareState] = useState<"idle" | "sharing" | "done" | "error">("idle");
+  const [webShareError, setWebShareError] = useState("");
+  const [webShareConfigured, setWebShareConfigured] = useState<boolean | null>(null);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (selectedTab !== "publish" || !activeProjectId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/publish-web`);
+        if (!response.ok) return;
+        const payload = (await response.json()) as { configured?: boolean; share?: typeof webShare };
+        if (cancelled) return;
+        setWebShareConfigured(payload.configured ?? null);
+        if (payload.share) setWebShare(payload.share);
+      } catch {
+        // API offline — the publish tab already surfaces that.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTab, activeProjectId]);
   const [pendingCaptureViewId, setPendingCaptureViewId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -8687,6 +8717,29 @@ function App() {
     }
   };
 
+  const publishToWeb = async () => {
+    setWebShareState("sharing");
+    setWebShareError("");
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/projects/${activeProjectId}/publish-web`, {
+        method: "POST"
+      });
+      const result = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        share?: { slug: string; shareUrl: string; manifestUrl: string; uploadedCount: number; uploadedBytes: number };
+      };
+      if (!response.ok || !result.share) {
+        throw new Error(result.error ?? `Share failed with ${response.status}.`);
+      }
+      setWebShare(result.share);
+      setWebShareState("done");
+    } catch (error) {
+      setWebShareState("error");
+      setWebShareError(error instanceof Error ? error.message : "Share failed.");
+    }
+  };
+
   const publishProject = async () => {
     if (!apiConnected) {
       setPublishState("error");
@@ -11566,6 +11619,49 @@ function App() {
 
               {publishError && <p className="error-note">{publishError}</p>}
               {publishSuccess && <p className="success-note">{publishSuccess}</p>}
+
+              <div className="publish-action-card">
+                <div>
+                  <strong>Share to the web</strong>
+                  <p className="quiet-note">
+                    {webShareConfigured === false
+                      ? "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local (see docs/deployment.md), then restart the API."
+                      : "Uploads the latest published version to Supabase Storage and gives you a public link anyone can open."}
+                  </p>
+                  {webShare && (
+                    <div className="field-grid" style={{ marginTop: 8 }}>
+                      <label style={{ gridColumn: "1 / -1" }}>
+                        <span>Public link</span>
+                        <div className="color-control" style={{ gridTemplateColumns: "minmax(0, 1fr) auto" }}>
+                          <input readOnly value={webShare.shareUrl} onFocus={(event) => event.target.select()} />
+                          <button
+                            type="button"
+                            className="button secondary compact-button"
+                            onClick={() => void copyText(webShare.shareUrl)}
+                          >
+                            <Copy size={14} aria-hidden="true" />
+                            Copy
+                          </button>
+                        </div>
+                      </label>
+                    </div>
+                  )}
+                  {webShareError && <p className="error-note">{webShareError}</p>}
+                </div>
+                <button
+                  type="button"
+                  className="button secondary"
+                  disabled={webShareState === "sharing" || (publishHistory?.versions.length ?? 0) === 0}
+                  onClick={() => void publishToWeb()}
+                >
+                  <ExternalLink size={16} aria-hidden="true" />
+                  {webShareState === "sharing"
+                    ? "Uploading…"
+                    : webShare
+                      ? "Update web version"
+                      : "Share to web"}
+                </button>
+              </div>
 
               <div className="publish-readiness-list" aria-label="Publish readiness">
                 {publishChecks.map((check) => (

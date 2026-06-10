@@ -1,0 +1,8 @@
+# Never upload local scene data or build output to Vercel — the viewer is a
+# static shell; published bundles live in Supabase Storage.
+apps/*/public/scenes
+apps/*/public/published
+artifacts
+node_modules
+.pnpm-store
+*.log

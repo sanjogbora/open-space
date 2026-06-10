@@ -5,9 +5,11 @@ import { access, cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateRawSync } from "node:zlib";
+import { cloudConfig, generateShareSlug, loadEnvFiles, publishBundleToCloud } from "./cloud-publish.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../..");
+await loadEnvFiles(repoRoot);
 const port = Number(process.env.PORT ?? 5175);
 const bundleTargets = [
   path.join(repoRoot, "apps/viewer-demo/public/scenes/demo"),
@@ -3452,6 +3454,42 @@ async function handleRequest(request, response) {
     if (request.method === "POST" && publishProjectId) {
       const body = await readBody(request);
       sendJson(response, 200, await publishProject(publishProjectId, { allowDraftLive: body.allowDraftLive === true }));
+      return;
+    }
+
+    const publishWebProjectId = projectIdFromPathname(url.pathname, "/publish-web");
+    if (request.method === "GET" && publishWebProjectId) {
+      const share = await readJsonDefault(path.join(targetDirs(publishWebProjectId)[0], "share.json"), null);
+      sendJson(response, 200, { configured: Boolean(cloudConfig()), share });
+      return;
+    }
+    if (request.method === "POST" && publishWebProjectId) {
+      const body = await readBody(request);
+      const history = await publishHistory(publishWebProjectId);
+      const version =
+        typeof body.version === "string" && body.version.trim()
+          ? body.version.trim()
+          : history.versions[0]?.version;
+      if (!version) {
+        throw badRequest("Publish a version first, then share it to the web.");
+      }
+      const bundleDir = path.join(publishedRoot, publishWebProjectId, version);
+      const manifest = await readJson(path.join(bundleDir, "scene.manifest.json"));
+      const existingShare = await readJsonDefault(
+        path.join(targetDirs(publishWebProjectId)[0], "share.json"),
+        null
+      );
+      const slug = typeof existingShare?.slug === "string" && existingShare.slug ? existingShare.slug : generateShareSlug();
+      const result = await publishBundleToCloud({ bundleDir, slug, manifest });
+      const share = {
+        schemaVersion: "0.1",
+        projectId: publishWebProjectId,
+        version,
+        sharedAt: new Date().toISOString(),
+        ...result
+      };
+      await writeProjectAll(publishWebProjectId, "share.json", share);
+      sendJson(response, 200, { ok: true, share });
       return;
     }
 

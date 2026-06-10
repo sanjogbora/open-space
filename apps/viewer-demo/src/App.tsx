@@ -39,7 +39,20 @@ const qualityOptions: readonly { id: ViewerQuality; label: string }[] = [
 
 function getInitialManifestUrl(): string {
   const params = new URLSearchParams(window.location.search);
-  return params.get("scene") ?? defaultManifestUrl;
+  const sceneParam = params.get("scene");
+  if (sceneParam) {
+    return sceneParam;
+  }
+  // Share links: /v/<slug> resolves to the published bundle in Supabase Storage
+  // by convention (<bucket>/<slug>/live/scene.manifest.json) — no API needed.
+  const shareSlug =
+    window.location.pathname.match(/^\/v\/([a-z0-9-]{4,64})\/?$/i)?.[1] ?? params.get("v") ?? undefined;
+  const supabaseUrl = ((import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "").replace(/\/+$/, "");
+  if (shareSlug && supabaseUrl) {
+    const bucket = (import.meta.env.VITE_SUPABASE_BUCKET as string | undefined) ?? "scenes";
+    return `${supabaseUrl}/storage/v1/object/public/${bucket}/${shareSlug}/live/scene.manifest.json`;
+  }
+  return defaultManifestUrl;
 }
 
 function cleanBaseUrl(value: string): string {
