@@ -27,3 +27,7 @@ apps/*/public/scenes/*/.convert-model-config.json
 .codex-logs/
 .codex-dev-logs/
 .dev-logs/
+
+# Installed agent skills (regenerate with: npx skills add supabase/agent-skills)
+.agents/
+.claude/skills/
