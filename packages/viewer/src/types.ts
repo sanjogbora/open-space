@@ -64,6 +64,11 @@ export interface NavigationFailure {
   };
 }
 
+export interface PlacementPick {
+  point: { x: number; y: number; z: number };
+  normal?: { x: number; y: number; z: number } | undefined;
+}
+
 export interface ViewerCameraPose {
   position: [number, number, number];
   target: [number, number, number];

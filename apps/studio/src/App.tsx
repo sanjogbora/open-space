@@ -4146,6 +4146,7 @@ function App() {
   const [applyOptimizedImmediately, setApplyOptimizedImmediately] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
   const [lightmapPreview, setLightmapPreview] = useState(true);
+  const [placingLight, setPlacingLight] = useState<{ lightId: string; field: "position" | "target" } | null>(null);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
   const [pendingCaptureViewId, setPendingCaptureViewId] = useState<string | null>(null);
 
@@ -7334,6 +7335,67 @@ function App() {
   const updateLight = (lightId: string, updater: (light: SceneLight) => SceneLight) => {
     updateLights((lights) => lights.map((light) => (light.id === lightId ? updater(light) : light)));
   };
+
+  const beginLightPlacement = (lightId: string, field: "position" | "target") => {
+    const target = previewIframeRef.current?.contentWindow;
+    if (!target) {
+      setShowPreview(true);
+      return;
+    }
+    setPlacingLight({ lightId, field });
+    target.postMessage({ type: "enter-light-placement", requestId: lightId }, "*");
+  };
+
+  // Receive the clicked point (and surface normal) back from the preview.
+  useEffect(() => {
+    if (!placingLight) return;
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type !== "light-placement-pick") return;
+      const position = event.data.position as unknown;
+      const normal = event.data.normal as unknown;
+      setPlacingLight(null);
+      if (!Array.isArray(position) || position.length !== 3) return;
+      const [x, y, z] = position as [number, number, number];
+      const n = Array.isArray(normal) && normal.length === 3 ? (normal as [number, number, number]) : null;
+      const offset = 0.25;
+      updateLight(placingLight.lightId, (light) => {
+        if (placingLight.field === "target") {
+          return { ...light, target: [x, y, z] as Vec3 };
+        }
+        // Nudge off the clicked surface along its normal so the light is not buried in geometry.
+        return {
+          ...light,
+          position: [
+            x + (n ? n[0] * offset : 0),
+            y + (n ? n[1] * offset : offset),
+            z + (n ? n[2] * offset : 0)
+          ] as Vec3
+        };
+      });
+    };
+    window.addEventListener("message", handler);
+    return () => {
+      window.removeEventListener("message", handler);
+      previewIframeRef.current?.contentWindow?.postMessage({ type: "cancel-light-placement" }, "*");
+    };
+  }, [placingLight]);
+
+  // Light markers in the preview while the lighting tab is active.
+  useEffect(() => {
+    previewIframeRef.current?.contentWindow?.postMessage(
+      { type: "set-light-markers", enabled: selectedTab === "lighting" && showPreview },
+      "*"
+    );
+  }, [selectedTab, showPreview]);
+
+  // Live lighting sync: edits apply instantly in the preview without a scene reload.
+  useEffect(() => {
+    if (selectedTab !== "lighting" || !showPreview || !manifest) return;
+    previewIframeRef.current?.contentWindow?.postMessage(
+      { type: "update-lighting", lights: manifest.lights, rendering: manifest.rendering },
+      "*"
+    );
+  }, [manifest?.lights, manifest?.rendering, selectedTab, showPreview]);
 
   const addLight = (kind: SceneLight["kind"]) => {
     const bounds = manifest?.navigation.bounds;
@@ -16947,6 +17009,12 @@ function App() {
                   />
                   <span>Show baked lightmaps in live preview</span>
                 </label>
+                {!showPreview && (
+                  <button type="button" className="button secondary" onClick={() => setShowPreview(true)}>
+                    <MonitorPlay size={15} aria-hidden="true" />
+                    Open live preview to place lights
+                  </button>
+                )}
               </div>
               {(manifest.lights ?? [defaultSunLight]).map((light) => (
                 <div key={light.id} className="panel" style={{ marginBottom: 10 }}>
@@ -17086,11 +17154,47 @@ function App() {
                     )}
                   </div>
                   {light.kind !== "sun" && (
-                    <VectorEditor
-                      label="Position"
-                      value={light.position ?? [0, 2, 0]}
-                      onChange={(next) => updateLight(light.id, (current) => ({ ...current, position: next }))}
-                    />
+                    <>
+                      <div className="visual-guide-actions" style={{ margin: "10px 0 6px" }}>
+                        <button
+                          type="button"
+                          className={
+                            placingLight?.lightId === light.id && placingLight.field === "position"
+                              ? "button primary compact-button"
+                              : "button secondary compact-button"
+                          }
+                          onClick={() => beginLightPlacement(light.id, "position")}
+                        >
+                          <MapPin size={14} aria-hidden="true" />
+                          {placingLight?.lightId === light.id && placingLight.field === "position"
+                            ? "Click a spot in the preview…"
+                            : showPreview
+                              ? "Place in preview"
+                              : "Open preview to place"}
+                        </button>
+                        {light.kind === "spot" && (
+                          <button
+                            type="button"
+                            className={
+                              placingLight?.lightId === light.id && placingLight.field === "target"
+                                ? "button primary compact-button"
+                                : "button secondary compact-button"
+                            }
+                            onClick={() => beginLightPlacement(light.id, "target")}
+                          >
+                            <MapPin size={14} aria-hidden="true" />
+                            {placingLight?.lightId === light.id && placingLight.field === "target"
+                              ? "Click what to light…"
+                              : "Aim in preview"}
+                          </button>
+                        )}
+                      </div>
+                      <VectorEditor
+                        label="Position"
+                        value={light.position ?? [0, 2, 0]}
+                        onChange={(next) => updateLight(light.id, (current) => ({ ...current, position: next }))}
+                      />
+                    </>
                   )}
                   {light.kind === "spot" && (
                     <VectorEditor

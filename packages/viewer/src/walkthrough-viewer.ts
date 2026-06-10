@@ -45,6 +45,7 @@ import type {
   LoadingProgress,
   NavigationFailureReason,
   NavigationRepairAction,
+  PlacementPick,
   ViewerCameraPose,
   ViewerOptions,
   ViewerQuality
@@ -131,7 +132,7 @@ interface RecoveredNavigationTarget {
 
 export class WalkthroughViewer {
   private readonly container: HTMLElement;
-  private readonly manifest: SceneManifest;
+  private manifest: SceneManifest;
   private readonly options: ViewerOptions;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(62, 1, 0.05, 250);
@@ -226,6 +227,8 @@ export class WalkthroughViewer {
     elevation: number | undefined;
   }> = [];
   private lightmapsEnabled = true;
+  private lightMarkersVisible = false;
+  private placementPickCallback: ((pick: PlacementPick | undefined) => void) | undefined;
   private environmentTexture: THREE.Texture | undefined;
   private skyTexture: THREE.Texture | undefined;
   private groundTexture: THREE.Texture | undefined;
@@ -2153,6 +2156,39 @@ export class WalkthroughViewer {
     this.buildLightRig();
   }
 
+  /**
+   * Replaces the manifest lighting config and rebuilds the rig in place — no scene reload.
+   * Used by the editor for real-time lighting preview.
+   */
+  updateLighting(lights: readonly SceneLight[] | undefined, rendering?: SceneManifest["rendering"]): void {
+    this.manifest = {
+      ...this.manifest,
+      ...(rendering ? { rendering } : {}),
+      ...(lights !== undefined ? { lights } : {})
+    };
+    this.refreshLighting();
+  }
+
+  /** One-shot scene pick: the next click returns the hit point (and surface normal) instead of moving the camera. */
+  requestPlacementPick(callback: (pick: PlacementPick | undefined) => void): void {
+    this.placementPickCallback = callback;
+    this.renderer.domElement.style.cursor = "crosshair";
+  }
+
+  cancelPlacementPick(): void {
+    this.placementPickCallback = undefined;
+    this.renderer.domElement.style.cursor = "";
+  }
+
+  /** Shows editor markers at point/spot light positions so lights are visible while editing. */
+  setLightMarkersVisible(visible: boolean): void {
+    if (this.lightMarkersVisible === visible) {
+      return;
+    }
+    this.lightMarkersVisible = visible;
+    this.refreshLighting();
+  }
+
   /** Toggles baked lightmaps on all scene materials for before/after comparison in the editor. */
   setLightmapsEnabled(enabled: boolean): void {
     if (this.lightmapsEnabled === enabled) {
@@ -2203,9 +2239,36 @@ export class WalkthroughViewer {
       if (child instanceof THREE.Light) {
         child.shadow?.map?.dispose();
         child.dispose();
+      } else if (child instanceof THREE.Mesh || child instanceof THREE.Line) {
+        (child.geometry as THREE.BufferGeometry | undefined)?.dispose();
+        const material = child.material as THREE.Material | THREE.Material[] | undefined;
+        if (Array.isArray(material)) {
+          material.forEach((item) => item.dispose());
+        } else {
+          material?.dispose();
+        }
       }
     }
     this.sunRigs = [];
+  }
+
+  private addLightMarker(position: THREE.Vector3, color: string, target?: THREE.Vector3): void {
+    const marker = new THREE.Mesh(
+      new THREE.SphereGeometry(0.09, 16, 12),
+      new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95 })
+    );
+    marker.position.copy(position);
+    marker.renderOrder = 999;
+    this.lightRig.add(marker);
+    if (target) {
+      const geometry = new THREE.BufferGeometry().setFromPoints([position.clone(), target.clone()]);
+      const line = new THREE.Line(
+        geometry,
+        new THREE.LineBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.55 })
+      );
+      line.renderOrder = 998;
+      this.lightRig.add(line);
+    }
   }
 
   private buildLightRig(): void {
@@ -2284,6 +2347,9 @@ export class WalkthroughViewer {
       light.shadow.camera.near = 0.1;
     }
     this.lightRig.add(light);
+    if (this.lightMarkersVisible) {
+      this.addLightMarker(light.position, config.color ?? "#ffcf5c");
+    }
   }
 
   private addSpotLight(config: SceneLight, shadowAllowed: boolean): void {
@@ -2312,6 +2378,9 @@ export class WalkthroughViewer {
     }
     this.lightRig.add(light);
     this.lightRig.add(target);
+    if (this.lightMarkersVisible) {
+      this.addLightMarker(light.position, config.color ?? "#ffcf5c", target.position);
+    }
   }
 
   private fitLightingToScene(root: THREE.Object3D): void {
@@ -4859,6 +4928,27 @@ export class WalkthroughViewer {
   };
 
   private handleTap(event: PointerEvent): void {
+    if (this.placementPickCallback) {
+      const callback = this.placementPickCallback;
+      this.cancelPlacementPick();
+      this.setPointerFromEvent(event);
+      this.raycaster.setFromCamera(this.pointer, this.camera);
+      const hit = this.raycaster.intersectObjects(this.pickableMeshes, true)[0];
+      if (!hit) {
+        callback(undefined);
+        return;
+      }
+      let normal: { x: number; y: number; z: number } | undefined;
+      if (hit.face) {
+        const worldNormal = hit.face.normal
+          .clone()
+          .applyMatrix3(new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld))
+          .normalize();
+        normal = { x: worldNormal.x, y: worldNormal.y, z: worldNormal.z };
+      }
+      callback({ point: { x: hit.point.x, y: hit.point.y, z: hit.point.z }, normal });
+      return;
+    }
     if (!this.controls.enabled || !this.controls.clickToMove) {
       return;
     }

@@ -22,6 +22,7 @@ import {
   parseSceneManifest,
   type MaterialVariantInteraction,
   type SceneInteraction,
+  type SceneLight,
   type SceneManifest,
   type SceneView
 } from "@walkthrough/scene-schema";
@@ -322,6 +323,29 @@ function App() {
         }
       } else if (event.data?.type === "set-lightmaps") {
         viewerRef.current?.setLightmapsEnabled(event.data.enabled !== false);
+      } else if (event.data?.type === "update-lighting") {
+        viewerRef.current?.updateLighting(
+          event.data.lights as SceneLight[] | undefined,
+          event.data.rendering as SceneManifest["rendering"] | undefined
+        );
+      } else if (event.data?.type === "set-light-markers") {
+        viewerRef.current?.setLightMarkersVisible(event.data.enabled === true);
+      } else if (event.data?.type === "enter-light-placement") {
+        const requestId = event.data.requestId as string | undefined;
+        const source = event.source as Window | null;
+        viewerRef.current?.requestPlacementPick((pick) => {
+          source?.postMessage(
+            {
+              type: "light-placement-pick",
+              requestId,
+              position: pick ? [pick.point.x, pick.point.y, pick.point.z] : null,
+              normal: pick?.normal ? [pick.normal.x, pick.normal.y, pick.normal.z] : null
+            },
+            "*"
+          );
+        });
+      } else if (event.data?.type === "cancel-light-placement") {
+        viewerRef.current?.cancelPlacementPick();
       }
     };
     window.addEventListener("message", handleMessage);
