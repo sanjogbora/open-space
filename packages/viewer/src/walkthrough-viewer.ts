@@ -15,6 +15,7 @@ import type {
   ObjectToggleInteraction,
   SceneControlsDocument,
   SceneInteraction,
+  SceneLight,
   SceneManifest,
   SceneView,
   Vec2,
@@ -22,6 +23,9 @@ import type {
 } from "@walkthrough/scene-schema";
 import {
   closestPolygonPointPair2D,
+  defaultAmbientGroundColor,
+  defaultAmbientSkyColor,
+  defaultSunLight,
   navigationZoneConnectionPadding,
   pointToPolygonDistance2D,
   polygonDistance2D
@@ -208,8 +212,12 @@ export class WalkthroughViewer {
   private quality: ViewerQuality;
   private minBounds: THREE.Vector3 | undefined;
   private maxBounds: THREE.Vector3 | undefined;
-  private sunLight: THREE.DirectionalLight | undefined;
-  private sunTarget: THREE.Object3D | undefined;
+  private sunRigs: Array<{
+    light: THREE.DirectionalLight;
+    target: THREE.Object3D;
+    azimuth: number | undefined;
+    elevation: number | undefined;
+  }> = [];
   private environmentTexture: THREE.Texture | undefined;
   private skyTexture: THREE.Texture | undefined;
   private groundTexture: THREE.Texture | undefined;
@@ -2049,27 +2057,137 @@ export class WalkthroughViewer {
     if (this.lightRig.children.length > 0) {
       return;
     }
+    this.buildLightRig();
+  }
 
-    const ambientIntensity = this.manifest.rendering?.ambientIntensity ?? 1.0;
+  /** Rebuilds the light rig from the current manifest and refits it to the loaded scene. */
+  refreshLighting(): void {
+    this.disposeLightRig();
+    this.buildLightRig();
+    if (this.sceneRoot) {
+      this.fitLightingToScene(this.sceneRoot);
+    }
+  }
 
-    const hemisphere = new THREE.HemisphereLight("#f7fbff", "#716550", 0.9 * ambientIntensity);
+  private disposeLightRig(): void {
+    for (const child of [...this.lightRig.children]) {
+      this.lightRig.remove(child);
+      if (child instanceof THREE.Light) {
+        child.shadow?.map?.dispose();
+        child.dispose();
+      }
+    }
+    this.sunRigs = [];
+  }
+
+  private buildLightRig(): void {
+    const rendering = this.manifest.rendering;
+    const ambientIntensity = rendering?.ambientIntensity ?? 1.0;
+
+    const hemisphere = new THREE.HemisphereLight(
+      rendering?.ambientSkyColor ?? defaultAmbientSkyColor,
+      rendering?.ambientGroundColor ?? defaultAmbientGroundColor,
+      0.9 * ambientIntensity
+    );
     this.lightRig.add(hemisphere);
 
-    const sun = new THREE.DirectionalLight("#fff6e8", 2.2 * ambientIntensity);
+    const lights = this.manifest.lights;
+    if (!lights) {
+      // Legacy scenes without authored lights keep the original auto-fitted sun,
+      // including its coupling to ambientIntensity.
+      const { azimuth: _azimuth, elevation: _elevation, ...legacySun } = defaultSunLight;
+      this.addSunLight({ ...legacySun, intensity: 2.2 * ambientIntensity });
+      return;
+    }
+
+    let shadowBudget = 4;
+    for (const light of lights) {
+      if (light.enabled === false) {
+        continue;
+      }
+      if (light.kind === "sun") {
+        this.addSunLight(light);
+      } else if (light.kind === "point") {
+        this.addPointLight(light, shadowBudget > 0);
+        if (light.castShadow) {
+          shadowBudget -= 1;
+        }
+      } else {
+        this.addSpotLight(light, shadowBudget > 0);
+        if (light.castShadow) {
+          shadowBudget -= 1;
+        }
+      }
+    }
+  }
+
+  private addSunLight(config: SceneLight): void {
+    const sun = new THREE.DirectionalLight(config.color ?? defaultSunLight.color, config.intensity ?? defaultSunLight.intensity);
     sun.position.set(-3.5, 6.5, 3.2);
-    sun.castShadow = true;
+    sun.castShadow = config.castShadow ?? true;
     sun.shadow.bias = -0.00005;
     sun.shadow.normalBias = 0.035;
     sun.shadow.mapSize.set(2048, 2048);
-    this.sunTarget = new THREE.Object3D();
-    sun.target = this.sunTarget;
-    this.sunLight = sun;
+    const target = new THREE.Object3D();
+    sun.target = target;
     this.lightRig.add(sun);
-    this.lightRig.add(this.sunTarget);
+    this.lightRig.add(target);
+    this.sunRigs.push({
+      light: sun,
+      target,
+      azimuth: config.azimuth,
+      elevation: config.elevation
+    });
+  }
+
+  private addPointLight(config: SceneLight, shadowAllowed: boolean): void {
+    const light = new THREE.PointLight(
+      config.color ?? "#ffffff",
+      config.intensity ?? 20,
+      config.distance ?? 0,
+      config.decay ?? 2
+    );
+    light.position.copy(toVector3(config.position ?? [0, 2, 0]));
+    if (config.castShadow && shadowAllowed) {
+      light.castShadow = true;
+      light.shadow.bias = -0.0002;
+      light.shadow.normalBias = 0.02;
+      light.shadow.mapSize.set(1024, 1024);
+      light.shadow.camera.near = 0.1;
+    }
+    this.lightRig.add(light);
+  }
+
+  private addSpotLight(config: SceneLight, shadowAllowed: boolean): void {
+    const light = new THREE.SpotLight(
+      config.color ?? "#ffffff",
+      config.intensity ?? 40,
+      config.distance ?? 0,
+      // Schema stores the full cone angle in degrees; three.js wants the half angle in radians.
+      Math.min(Math.PI / 2, THREE.MathUtils.degToRad(config.angle ?? 60) / 2),
+      config.penumbra ?? 0.25,
+      config.decay ?? 2
+    );
+    const position = toVector3(config.position ?? [0, 2.5, 0]);
+    light.position.copy(position);
+    const target = new THREE.Object3D();
+    target.position.copy(
+      config.target ? toVector3(config.target) : position.clone().add(new THREE.Vector3(0, -1, 0))
+    );
+    light.target = target;
+    if (config.castShadow && shadowAllowed) {
+      light.castShadow = true;
+      light.shadow.bias = -0.0002;
+      light.shadow.normalBias = 0.02;
+      light.shadow.mapSize.set(1024, 1024);
+      light.shadow.camera.near = 0.1;
+    }
+    this.lightRig.add(light);
+    this.lightRig.add(target);
   }
 
   private fitLightingToScene(root: THREE.Object3D): void {
-    if (!this.sunLight || !this.sunTarget) {
+    if (this.sunRigs.length === 0) {
       return;
     }
     const box = new THREE.Box3().setFromObject(root);
@@ -2079,20 +2197,33 @@ export class WalkthroughViewer {
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
     const radius = Math.max(6, size.length() * 0.55);
-    this.sunLight.position.set(
-      center.x - radius * 0.45,
-      center.y + radius * 1.15,
-      center.z + radius * 0.55
-    );
-    this.sunTarget.position.copy(center);
-    const shadowCamera = this.sunLight.shadow.camera;
-    shadowCamera.left = -radius;
-    shadowCamera.right = radius;
-    shadowCamera.top = radius;
-    shadowCamera.bottom = -radius;
-    shadowCamera.near = 0.1;
-    shadowCamera.far = radius * 4;
-    shadowCamera.updateProjectionMatrix();
+    for (const rig of this.sunRigs) {
+      if (rig.azimuth !== undefined || rig.elevation !== undefined) {
+        const azimuth = THREE.MathUtils.degToRad(rig.azimuth ?? 320);
+        const elevation = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(rig.elevation ?? 55, 1, 90));
+        const horizontal = Math.cos(elevation);
+        rig.light.position.set(
+          center.x + Math.sin(azimuth) * horizontal * radius * 1.4,
+          center.y + Math.sin(elevation) * radius * 1.4,
+          center.z + Math.cos(azimuth) * horizontal * radius * 1.4
+        );
+      } else {
+        rig.light.position.set(
+          center.x - radius * 0.45,
+          center.y + radius * 1.15,
+          center.z + radius * 0.55
+        );
+      }
+      rig.target.position.copy(center);
+      const shadowCamera = rig.light.shadow.camera;
+      shadowCamera.left = -radius;
+      shadowCamera.right = radius;
+      shadowCamera.top = radius;
+      shadowCamera.bottom = -radius;
+      shadowCamera.near = 0.1;
+      shadowCamera.far = radius * 4;
+      shadowCamera.updateProjectionMatrix();
+    }
   }
 
   private applyBounds(): void {
