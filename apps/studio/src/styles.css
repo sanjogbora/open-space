@@ -6667,6 +6667,102 @@ button.list-row:hover {
   touch-action: none;
 }
 
+/* ============================================================================
+   Calm UI pass — fixes and overrides (kept last so they win the cascade)
+   1. Checkboxes: the global `input { width: 100%; height: 36px }` rule was
+      stretching bare checkboxes (e.g. autoplay/muted/loop) to giant squares.
+   2. Status cards: completed (.ready) states recede to neutral gray so color
+      is reserved for items that actually need attention. A small green icon
+      keeps done-states scannable.
+   3. Checked toggle rows: state is shown by the checkbox itself; the loud
+      blue fill made panels with several enabled toggles read as alerts.
+   ============================================================================ */
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  justify-self: start;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+label:has(> input[type="checkbox"]:only-of-type) {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.toggle-grid + .field-grid,
+.field-grid + .toggle-grid {
+  margin-top: 12px;
+}
+
+.toggle-row:has(input:checked) {
+  border-color: var(--border);
+  background: var(--bg-raised);
+}
+
+.asset-health-roadmap-step.ready,
+.bake-setup-card.ready,
+.bake-triage-card.ready,
+.bundle-snapshot-card.ready,
+.client-share-step.ready,
+.environment-setup-card.ready,
+.import-symptom-card.ready,
+.interaction-setup-card.ready,
+.material-diagnosis-card.ready,
+.material-setup-card.ready,
+.material-triage-card.ready,
+.movement-comfort-card.ready,
+.movement-setup-card.ready,
+.movement-triage-card.ready,
+.navigation-doorway-card.ready,
+.object-setup-card.ready,
+.optimization-setup-card.ready,
+.optimization-symptom-card.ready,
+.publish-handoff-step.ready,
+.publish-hosting-step.ready,
+.readiness-row.ready,
+.repair-center-card.ready,
+.repair-center-map-card.ready,
+.repair-center-preview-card.ready,
+.repair-center-progress-step.ready,
+.repair-center-risk.ready,
+.room-setup-card.ready,
+.room-walkability-card.ready,
+.selected-interaction-health-card.ready,
+.source-qa-card.ready,
+.source-qa-decision-card.ready,
+.texture-review-card.ready,
+.variant-setup-card.ready,
+.view-setup-card.ready,
+.zone-setup-card.ready {
+  color: var(--text-secondary);
+  border-color: var(--border);
+  background: var(--bg-raised);
+}
+
+.asset-health-roadmap-step.ready span,
+.bake-setup-card.ready span,
+.environment-setup-card.ready span,
+.interaction-setup-card.ready span,
+.material-setup-card.ready span,
+.movement-setup-card.ready span,
+.object-setup-card.ready span,
+.optimization-setup-card.ready span,
+.repair-center-card.ready .repair-center-index,
+.repair-center-map-card.ready .repair-center-map-icon,
+.repair-center-preview-card.ready > span,
+.room-setup-card.ready span,
+.variant-setup-card.ready span,
+.view-setup-card.ready span,
+.zone-setup-card.ready span {
+  color: #1d8a55;
+  border-color: rgba(29, 138, 85, 0.45);
+  background: rgba(29, 138, 85, 0.08);
+}
+
 .zone-map-vertex.pass {
   background: #118c5b;
   box-shadow: 0 0 0 2px rgba(17, 140, 91, 0.32), 0 8px 16px rgba(17, 140, 91, 0.18);
